@@ -1,0 +1,52 @@
+type HeaderProps = {
+  title: string;
+};
+
+export function Header({ title }: HeaderProps) {
+  return (
+    <header className="sticky top-0 z-20 border-b border-border-subtle bg-bg/95 backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-4 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <span className="text-text-muted" aria-hidden>
+            ☰
+          </span>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-text">
+            {title}
+          </h2>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <span className="hidden text-xs text-text-muted md:inline">EN</span>
+          <span className="hidden rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted lg:inline">
+            Jul 11, 2025 – Aug 10, 2025
+          </span>
+          <span className="hidden text-xs text-text-dim xl:inline">
+            Last sync: just now
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success/10 px-2.5 py-1.5 text-xs text-success">
+            <span className="size-1.5 rounded-full bg-success" />
+            Factory Status: Running
+          </span>
+          <span className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted">
+            IT Manager
+          </span>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 border-t border-border-subtle/60 px-5 py-2">
+        <button
+          type="button"
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+        >
+          Refresh
+        </button>
+        <button
+          type="button"
+          className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
+        >
+          Export Dashboard
+        </button>
+      </div>
+    </header>
+  );
+}
