@@ -106,7 +106,12 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         {data.chart.type === "trend" ? (
           <TrendChartPlaceholder legend={data.chart.legend} />
         ) : (
-          <DonutChartPlaceholder legend={data.chart.legend} />
+          <DonutChartPlaceholder
+            legend={data.chart.legend}
+            segments={data.chart.segments}
+            centerValue={data.chart.centerValue}
+            centerLabel={data.chart.centerLabel}
+          />
         )}
       </section>
     </article>

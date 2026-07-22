@@ -18,6 +18,19 @@ export function formatDateOnly(d: Date): string {
 }
 
 /**
+ * Calendar month containing the reference date (1st 00:00:00 → last day 23:59:59).
+ */
+export function getCurrentMonth(reference: Date = new Date()): DateRange {
+  const start = new Date(reference.getFullYear(), reference.getMonth(), 1);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(reference.getFullYear(), reference.getMonth() + 1, 0);
+  end.setHours(23, 59, 59, 0);
+
+  return { start: formatDateTime(start), end: formatDateTime(end) };
+}
+
+/**
  * Operational week: Saturday 00:00:00 to the following Friday 23:59:59.
  * Given a reference date, returns the operational week that contains it.
  */

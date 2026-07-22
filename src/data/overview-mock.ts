@@ -41,6 +41,11 @@ export type ModuleCardData = {
     title: string;
     type: "trend" | "donut";
     legend: { label: string; color: string }[];
+    /** Percentages 0–100 for donut segments, in legend order. */
+    segments?: number[];
+    /** Center label value for donut (e.g. completed %). */
+    centerValue?: string;
+    centerLabel?: string;
   };
 };
 
@@ -91,15 +96,15 @@ export const overviewModules: ModuleCardData[] = [
     title: "DAILY OPERATION OVERVIEW",
     icon: "calendar",
     accentColor: "#22c55e",
-    href: "/daily-operation",
+    href: "/daily-operation/analysis",
     stats: [
-      { label: "Today's Tasks", value: "125", tone: "accent" },
+      { label: "This Month's Tasks", value: "125", tone: "accent" },
       { label: "Completed", value: "98", trend: "78.4%", tone: "success" },
       { label: "In Progress", value: "21", trend: "16.8%", tone: "accent" },
       { label: "Pending", value: "6", trend: "4.8%", tone: "warning" },
     ],
     bars: {
-      title: "Task by Department (Today)",
+      title: "Task by Department (This Month)",
       items: [
         { label: "MES", value: 48, max: 50, color: "#22c55e" },
         { label: "IT", value: 41, max: 50, color: "#4ade80" },
@@ -116,7 +121,7 @@ export const overviewModules: ModuleCardData[] = [
       ],
     },
     chart: {
-      title: "Task Status (Today)",
+      title: "Task Status (This Month)",
       type: "donut",
       legend: [
         { label: "Completed", color: "#22c55e" },

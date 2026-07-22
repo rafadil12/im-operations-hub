@@ -107,12 +107,12 @@ function PieWithLegend({ slices }: { slices: Slice[] }) {
           <Tooltip contentStyle={tooltipStyle} />
         </PieChart>
       </ResponsiveContainer>
-      <ul className="max-h-56 w-full space-y-1 overflow-y-auto sm:w-56">
+      <ul className="max-h-56 w-full space-y-1 overflow-y-auto sm:w-56 sm:shrink-0 scrollbar-none">
         {slices.map((s) => (
           <li key={s.label} className="flex items-center gap-2 text-[11px] text-text-muted">
             <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: s.color }} />
             <span className="flex-1 truncate">{s.label}</span>
-            <span className="text-text-dim">{s.value}</span>
+            <span className="text-white/80">{s.value}</span>
           </li>
         ))}
       </ul>
@@ -234,10 +234,10 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         </ChartCard>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <ChartCard titleCn="状态分布" titleEn="Status Distribution">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* <ChartCard titleCn="状态分布" titleEn="Status Distribution">
           <PieWithLegend slices={statusSlices} />
-        </ChartCard>
+        </ChartCard> */}
         <ChartCard titleCn="子类别分布" titleEn="Sub Category Distribution">
           <PieWithLegend slices={namedSlices(bySubcategory)} />
         </ChartCard>

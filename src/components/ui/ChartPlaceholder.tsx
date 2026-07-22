@@ -80,16 +80,47 @@ export function TrendChartPlaceholder({ legend }: TrendChartPlaceholderProps) {
 
 type DonutChartPlaceholderProps = {
   legend: { label: string; color: string }[];
+  /** Percentages 0–100 aligned with legend order. Defaults to mock split. */
+  segments?: number[];
+  centerValue?: string;
+  centerLabel?: string;
 };
 
-export function DonutChartPlaceholder({ legend }: DonutChartPlaceholderProps) {
+function buildConicGradient(
+  legend: { color: string }[],
+  segments: number[],
+): string {
+  let cursor = 0;
+  const stops: string[] = [];
+  for (let i = 0; i < legend.length; i++) {
+    const share = segments[i] ?? 0;
+    const start = cursor;
+    cursor = Math.min(100, cursor + share);
+    stops.push(`${legend[i].color} ${start}% ${cursor}%`);
+  }
+  if (cursor < 100) {
+    stops.push(`#334155 ${cursor}% 100%`);
+  }
+  return `conic-gradient(${stops.join(", ")})`;
+}
+
+export function DonutChartPlaceholder({
+  legend,
+  segments,
+  centerValue = "78%",
+  centerLabel = "Done",
+}: DonutChartPlaceholderProps) {
+  const resolvedSegments =
+    segments && segments.length === legend.length
+      ? segments
+      : legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
+
   return (
     <div className="flex items-center gap-5">
       <div
         className="relative size-28 shrink-0 rounded-full"
         style={{
-          background:
-            "conic-gradient(#22c55e 0% 78.4%, #3b82f6 78.4% 95.2%, #f59e0b 95.2% 100%)",
+          background: buildConicGradient(legend, resolvedSegments),
         }}
         role="img"
         aria-label="Task status donut chart"
@@ -97,8 +128,8 @@ export function DonutChartPlaceholder({ legend }: DonutChartPlaceholderProps) {
         <div className="absolute inset-3 rounded-full bg-surface" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-lg font-semibold text-text">78%</p>
-            <p className="text-[10px] text-text-dim">Done</p>
+            <p className="text-lg font-semibold text-text">{centerValue}</p>
+            <p className="text-[10px] text-text-dim">{centerLabel}</p>
           </div>
         </div>
       </div>
