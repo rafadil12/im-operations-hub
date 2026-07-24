@@ -9,6 +9,29 @@ import { AnalysisCharts } from "@/components/daily-operation/analysis/AnalysisCh
 
 const week = getOperationalWeek();
 const defaultRange = { start: week.start.slice(0, 10), end: week.end.slice(0, 10) };
+function getCurrentMonthRange() {
+  const now = new Date();
+
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
+}
+
+function getCurrentYearRange() {
+  const now = new Date();
+
+  const start = new Date(now.getFullYear(), 0, 1);
+  const end = new Date(now.getFullYear(), 11, 31);
+
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
+}
 
 type AnalysisResponse = { result: AnalysisResult };
 
@@ -87,19 +110,47 @@ export default function AnalysisPage() {
           >
             {t.analysis.thisWeek}
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const range = getCurrentMonthRange();
+              setDraft(range);
+              setRange(range);
+            }}
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+          >
+            {t.analysis.thisMonth}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const range = getCurrentYearRange();
+              setDraft(range);
+              setRange(range);
+            }}
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+          >
+            {t.analysis.thisYear}
+          </button>
+
           <input
             type="date"
             className={ctrl}
             value={draft.start}
             onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
           />
+
           <span className="text-xs text-text-dim">–</span>
+
           <input
             type="date"
             className={ctrl}
             value={draft.end}
             onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
           />
+
           <button
             type="button"
             onClick={() => setRange(draft)}

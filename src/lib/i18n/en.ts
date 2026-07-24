@@ -74,6 +74,8 @@ const en = {
     topPic: "Top PIC",
     avgDuration: "Avg. Duration (min)",
     thisWeek: "This Week",
+    thisMonth: "This Month",
+    thisYear: "This Year",
     customRange: "Custom Range",
   },
   confirmDelete: {

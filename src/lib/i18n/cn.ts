@@ -76,6 +76,8 @@ const cn: Dict = {
     topPic: "负责人排行",
     avgDuration: "平均时长（分钟）",
     thisWeek: "本周",
+    thisMonth: "本月",
+    thisYear: "今年",
     customRange: "自定义范围",
   },
   confirmDelete: {
