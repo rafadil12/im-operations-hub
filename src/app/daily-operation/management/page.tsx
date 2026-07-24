@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiSend } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
-import { getDict } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
 import { FilterBar, type Filters } from "@/components/daily-operation/FilterBar";
 import { ManagementTable } from "@/components/daily-operation/ManagementTable";
@@ -15,15 +15,15 @@ const defaultFilters: Filters = {
   start: week.start.slice(0, 10),
   end: week.end.slice(0, 10),
   divisionId: "",
-  status: "",
-  type: "",
+  statusId: "",
+  typeId: "",
   q: "",
 };
 
 type ListResponse = { rows: MesDataRow[] };
 
 export default function ManagementPage() {
-  const t = getDict();
+  const { t } = useLang();
   const [masters, setMasters] = useState<Masters | null>(null);
   const [rows, setRows] = useState<MesDataRow[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -43,10 +43,10 @@ export default function ManagementPage() {
       params.set("start", f.start);
       params.set("end", f.end);
       if (f.divisionId) params.set("divisionId", f.divisionId);
-      if (f.status) params.set("status", f.status);
-      if (f.type) params.set("type", f.type);
+      if (f.statusId) params.set("statusId", f.statusId);
+      if (f.typeId) params.set("typeId", f.typeId);
       if (f.q) params.set("q", f.q);
-      const data = await apiGet<ListResponse>(`/mes-data?${params.toString()}`);
+      const data = await apiGet<ListResponse>(`/mes-record?${params.toString()}`);
       setRows(data.rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load.");
@@ -69,7 +69,7 @@ export default function ManagementPage() {
   };
 
   const handleCreate = async (input: MesDataInput) => {
-    await apiSend("/mes-data", "POST", input);
+    await apiSend("/mes-record", "POST", input);
     setFormOpen(false);
     setEditRow(null);
     await loadRows(filters);
@@ -77,7 +77,7 @@ export default function ManagementPage() {
 
   const handleUpdate = async (input: MesDataInput) => {
     if (!editRow) return;
-    await apiSend(`/mes-data/${editRow.id}`, "PUT", input);
+    await apiSend(`/mes-record/${editRow.id}`, "PUT", input);
     setFormOpen(false);
     setEditRow(null);
     await loadRows(filters);
@@ -87,7 +87,7 @@ export default function ManagementPage() {
     if (!deleteRow) return;
     setDeleting(true);
     try {
-      await apiSend(`/mes-data/${deleteRow.id}`, "DELETE");
+      await apiSend(`/mes-record/${deleteRow.id}`, "DELETE");
       setDeleteRow(null);
       await loadRows(filters);
     } catch (e) {

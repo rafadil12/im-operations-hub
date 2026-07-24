@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getDict } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 
 export function MasterTabs() {
   const pathname = usePathname();
-  const t = getDict();
+  const { t } = useLang();
 
   const tabs = [
     { label: t.nav.masterUsers, href: "/daily-operation/master/users" },

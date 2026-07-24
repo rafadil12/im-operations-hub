@@ -1,5 +1,5 @@
 import type { ModuleCardData } from "@/data/overview-mock";
-import { STATUS_VALUES, type AnalysisResult } from "@/lib/types";
+import { namedStatusCount, type AnalysisResult } from "@/lib/types";
 
 const BAR_COLORS = ["#22c55e", "#4ade80", "#86efac", "#bbf7d0"];
 const STATUS_COLORS = {
@@ -7,10 +7,6 @@ const STATUS_COLORS = {
   inProgress: "#3b82f6",
   pending: "#f59e0b",
 } as const;
-
-function statusCount(result: AnalysisResult, status: string): number {
-  return result.byStatus.find((s) => s.label === status)?.count ?? 0;
-}
 
 function pct(part: number, total: number): number {
   if (total <= 0) return 0;
@@ -37,9 +33,9 @@ export function mapAnalysisToOverview(
   result: AnalysisResult,
 ): ModuleCardData {
   const total = result.total;
-  const completed = statusCount(result, STATUS_VALUES[2]);
-  const inProgress = statusCount(result, STATUS_VALUES[0]);
-  const pending = statusCount(result, STATUS_VALUES[1]);
+  const completed = namedStatusCount(result.byStatus, "Completed");
+  const inProgress = namedStatusCount(result.byStatus, "In Progress");
+  const pending = namedStatusCount(result.byStatus, "Pending");
 
   const completedPct = pct(completed, total);
   const inProgressPct = pct(inProgress, total);

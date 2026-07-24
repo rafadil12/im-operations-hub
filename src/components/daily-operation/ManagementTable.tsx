@@ -1,6 +1,6 @@
 "use client";
 
-import { getDict } from "@/lib/i18n";
+import { localizedField, useLang } from "@/lib/i18n";
 import { formatDisplay } from "@/lib/datetime";
 import type { MesDataRow } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
@@ -15,7 +15,7 @@ const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wid
 const td = "px-3 py-2 align-top text-xs text-text-muted";
 
 export function ManagementTable({ rows, onEdit, onDelete }: Props) {
-  const t = getDict();
+  const { lang, t } = useLang();
 
   if (rows.length === 0) {
     return (
@@ -47,22 +47,33 @@ export function ManagementTable({ rows, onEdit, onDelete }: Props) {
               key={row.id}
               className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
             >
-              <td className={`${td} whitespace-nowrap text-text`}>{row.pic ?? "-"}</td>
-              <td className={`${td} whitespace-nowrap`}>{row.division ?? "-"}</td>
+              <td className={`${td} whitespace-nowrap text-text`}>
+                {localizedField(row.pic_en, row.pic_cn, lang)}
+              </td>
               <td className={`${td} whitespace-nowrap`}>
-                {row.category ?? "-"}
-                {row.subcategory ? (
+                {localizedField(row.division_en, row.division_cn, lang)}
+              </td>
+              <td className={`${td} whitespace-nowrap`}>
+                {localizedField(row.category_en, row.category_cn, lang)}
+                {row.subcategory_en || row.subcategory_cn ? (
                   <span className="block text-[10px] text-text-dim">
-                    {row.subcategory}
+                    {localizedField(row.subcategory_en, row.subcategory_cn, lang)}
                   </span>
                 ) : null}
               </td>
               <td className={`${td} max-w-xs`}>
-                <span className="line-clamp-2">{row.description ?? "-"}</span>
+                <span className="line-clamp-2">
+                  {localizedField(row.description_en, row.description_cn, lang)}
+                </span>
               </td>
-              <td className={`${td} whitespace-nowrap`}>{row.type ?? "-"}</td>
+              <td className={`${td} whitespace-nowrap`}>
+                {localizedField(row.type_en, row.type_cn, lang)}
+              </td>
               <td className={td}>
-                <StatusBadge status={row.status} />
+                <StatusBadge
+                  label={localizedField(row.status_en, row.status_cn, lang)}
+                  toneKey={row.status_en}
+                />
               </td>
               <td className={`${td} whitespace-nowrap`}>
                 {formatDisplay(row.start_time)}

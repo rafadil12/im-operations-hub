@@ -47,7 +47,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
         [numId],
       ),
       query<CountRow[]>(
-        "SELECT COUNT(*) AS c FROM mes_data WHERE category_id = ?",
+        "SELECT COUNT(*) AS c FROM mes_record WHERE category_id = ? AND deleted_at IS NULL",
         [numId],
       ),
     ]);

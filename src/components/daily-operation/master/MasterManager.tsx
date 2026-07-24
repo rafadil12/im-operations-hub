@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiSend } from "@/lib/apiClient";
-import { getDict, localizedName } from "@/lib/i18n";
+import { localizedName, useLang } from "@/lib/i18n";
 import type { Category, Division, Masters } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -38,7 +38,7 @@ const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wid
 const td = "px-3 py-2 text-xs text-text-muted";
 
 export function MasterManager({ title, description, endpoint, relation }: Props) {
-  const t = getDict();
+  const { lang, t } = useLang();
   const [rows, setRows] = useState<MasterRow[]>([]);
   const [masters, setMasters] = useState<Masters | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +91,7 @@ export function MasterManager({ title, description, endpoint, relation }: Props)
     if (!id || !masters) return "-";
     const source =
       relation === "division" ? masters.divisions : masters.categories;
-    return localizedName(source.find((x) => x.id === id));
+    return localizedName(source.find((x) => x.id === id), lang);
   };
 
   const openAdd = () => {
@@ -301,7 +301,7 @@ export function MasterManager({ title, description, endpoint, relation }: Props)
                 <option value="">{t.common.none}</option>
                 {relationOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
-                    {localizedName(opt)}
+                    {localizedName(opt, lang)}
                   </option>
                 ))}
               </select>

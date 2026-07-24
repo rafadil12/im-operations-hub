@@ -1,7 +1,7 @@
 "use client";
 
 import { Modal } from "./Modal";
-import { getDict } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 
 type Props = {
   title: string;
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function ConfirmDialog({ title, message, onCancel, onConfirm, busy }: Props) {
-  const t = getDict();
+  const { t } = useLang();
   return (
     <Modal
       title={title}

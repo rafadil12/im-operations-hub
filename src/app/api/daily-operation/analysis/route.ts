@@ -3,7 +3,6 @@ import { query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
 import type {
   AnalysisResult,
-  CountItem,
   DurationPoint,
   NamedCount,
   TopPicItem,
@@ -11,8 +10,8 @@ import type {
   UserRankItem,
 } from "@/lib/types";
 
-type CountRow = { label: string | null; count: number };
 type NamedRow = { name_en: string | null; name_cn: string | null; count: number };
+type CountRow = { label: string | null; count: number };
 type UserRow = NamedRow & { division: string | null };
 type TrendRow = { date: string; count: number };
 type DurationRow = { division: string | null; duration_hours: number | null };
@@ -37,14 +36,17 @@ export async function GET(request: NextRequest) {
       durationRows,
       avg,
     ] = await Promise.all([
-      query<CountRow[]>(
-        `SELECT m.status AS label, COUNT(*) AS count
-         FROM mes_data m WHERE ${filter} GROUP BY m.status`,
+      query<NamedRow[]>(
+        `SELECT st.name_en, st.name_cn, COUNT(*) AS count
+         FROM mes_record m
+         LEFT JOIN mes_status st ON m.status_id = st.id
+         WHERE ${filter}
+         GROUP BY st.id, st.name_en, st.name_cn`,
         range,
       ),
       query<NamedRow[]>(
         `SELECT c.name_en, c.name_cn, COUNT(*) AS count
-         FROM mes_data m
+         FROM mes_record m
          LEFT JOIN categories c ON m.category_id = c.id
          WHERE ${filter}
          GROUP BY c.id, c.name_en, c.name_cn ORDER BY count DESC`,
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
       ),
       query<NamedRow[]>(
         `SELECT s.name_en, s.name_cn, COUNT(*) AS count
-         FROM mes_data m
+         FROM mes_record m
          LEFT JOIN subcategories s ON m.subcategory_id = s.id
          WHERE ${filter}
          GROUP BY s.id, s.name_en, s.name_cn ORDER BY count DESC`,
@@ -60,26 +62,29 @@ export async function GET(request: NextRequest) {
       ),
       query<NamedRow[]>(
         `SELECT d.name_en, d.name_cn, COUNT(*) AS count
-         FROM mes_data m
+         FROM mes_record m
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY d.id, d.name_en, d.name_cn ORDER BY count DESC`,
         range,
       ),
-      query<CountRow[]>(
-        `SELECT m.type AS label, COUNT(*) AS count
-         FROM mes_data m WHERE ${filter} GROUP BY m.type ORDER BY count DESC`,
+      query<NamedRow[]>(
+        `SELECT t.name_en, t.name_cn, COUNT(*) AS count
+         FROM mes_record m
+         LEFT JOIN mes_type t ON m.type_id = t.id
+         WHERE ${filter}
+         GROUP BY t.id, t.name_en, t.name_cn ORDER BY count DESC`,
         range,
       ),
       query<TrendRow[]>(
         `SELECT DATE(m.start_time) AS date, COUNT(*) AS count
-         FROM mes_data m WHERE ${filter}
+         FROM mes_record m WHERE ${filter}
          GROUP BY DATE(m.start_time) ORDER BY date ASC`,
         range,
       ),
       query<CountRow[]>(
         `SELECT u.name_en AS label, COUNT(*) AS count
-         FROM mes_data m
+         FROM mes_record m
          LEFT JOIN users u ON m.user_id = u.id
          WHERE ${filter}
          GROUP BY u.name_en ORDER BY count DESC LIMIT 5`,
@@ -87,7 +92,7 @@ export async function GET(request: NextRequest) {
       ),
       query<UserRow[]>(
         `SELECT u.name_en, u.name_cn, d.name_en AS division, COUNT(*) AS count
-         FROM mes_data m
+         FROM mes_record m
          LEFT JOIN users u ON m.user_id = u.id
          LEFT JOIN divisions d ON u.division_id = d.id
          WHERE ${filter}
@@ -97,20 +102,17 @@ export async function GET(request: NextRequest) {
       query<DurationRow[]>(
         `SELECT d.name_en AS division,
                 TIMESTAMPDIFF(MINUTE, m.start_time, m.end_time) / 60 AS duration_hours
-         FROM mes_data m
+         FROM mes_record m
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter} AND m.end_time IS NOT NULL`,
         range,
       ),
       query<AvgRow[]>(
         `SELECT AVG(TIMESTAMPDIFF(MINUTE, m.start_time, m.end_time)) AS avg_minutes
-         FROM mes_data m WHERE ${filter} AND m.end_time IS NOT NULL`,
+         FROM mes_record m WHERE ${filter} AND m.end_time IS NOT NULL`,
         range,
       ),
     ]);
-
-    const toItems = (rows: CountRow[]): CountItem[] =>
-      rows.map((r) => ({ label: r.label ?? "Unknown", count: Number(r.count) }));
 
     const toNamed = (rows: NamedRow[]): NamedCount[] =>
       rows.map((r) => ({
@@ -123,11 +125,11 @@ export async function GET(request: NextRequest) {
 
     const result: AnalysisResult = {
       total,
-      byStatus: toItems(byStatus),
+      byStatus: toNamed(byStatus),
       byCategory: toNamed(byCategory),
       bySubcategory: toNamed(bySubcategory),
       byDivision: toNamed(byDivision),
-      byType: toItems(byType),
+      byType: toNamed(byType),
       trend: trend.map<TrendItem>((r) => ({
         date: r.date,
         count: Number(r.count),

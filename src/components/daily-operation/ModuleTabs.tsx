@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const tabs = [
-  { label: "Management", href: "/daily-operation/management" },
-  { label: "Analysis", href: "/daily-operation/analysis" },
-  { label: "Master Data", href: "/daily-operation/master/users" },
-];
+import { useLang } from "@/lib/i18n";
 
 export function ModuleTabs() {
   const pathname = usePathname();
+  const { t } = useLang();
+
+  const tabs = [
+    { label: t.nav.management, href: "/daily-operation/management" },
+    { label: t.nav.analysis, href: "/daily-operation/analysis" },
+    { label: t.nav.master, href: "/daily-operation/master/users" },
+  ];
 
   return (
     <div className="mb-5 flex flex-wrap gap-1 border-b border-border-subtle">

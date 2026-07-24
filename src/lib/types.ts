@@ -1,23 +1,5 @@
 export type Lang = "en" | "cn";
 
-export const STATUS_VALUES = [
-  "进行中 In Progress",
-  "待处理 Pending",
-  "已完成 Completed",
-] as const;
-
-export type StatusValue = (typeof STATUS_VALUES)[number];
-
-export const TYPE_VALUES = [
-  "问题 Problem",
-  "变更请求 Change_Request",
-  "维护 Maintenance",
-  "任务Task",
-  "权限申请 Access_Request",
-] as const;
-
-export type TypeValue = string;
-
 export type Division = {
   id: number;
   name_cn: string | null;
@@ -45,45 +27,72 @@ export type User = {
   division_id: number | null;
 };
 
+export type MesType = {
+  id: number;
+  name_cn: string | null;
+  name_en: string | null;
+};
+
+export type MesStatus = {
+  id: number;
+  name_cn: string | null;
+  name_en: string | null;
+};
+
 export type Masters = {
   divisions: Division[];
   categories: Category[];
   subcategories: Subcategory[];
   users: User[];
+  types: MesType[];
+  statuses: MesStatus[];
 };
 
 export type MesData = {
   id: number;
-  user_id: number | null;
-  division_id: number | null;
-  category_id: number | null;
-  subcategory_id: number | null;
-  description: string | null;
-  solution: string | null;
-  type: string | null;
-  status: string | null;
-  start_time: string | null;
+  user_id: number;
+  division_id: number;
+  category_id: number;
+  subcategory_id: number;
+  description_cn: string;
+  description_en: string | null;
+  solution_cn: string | null;
+  solution_en: string | null;
+  type_id: number;
+  status_id: number;
+  start_time: string;
   end_time: string | null;
   created_at: string | null;
+  updated_at: string | null;
 };
 
 export type MesDataRow = MesData & {
-  pic: string | null;
-  division: string | null;
-  category: string | null;
-  subcategory: string | null;
+  pic_en: string | null;
+  pic_cn: string | null;
+  division_en: string | null;
+  division_cn: string | null;
+  category_en: string | null;
+  category_cn: string | null;
+  subcategory_en: string | null;
+  subcategory_cn: string | null;
+  type_en: string | null;
+  type_cn: string | null;
+  status_en: string | null;
+  status_cn: string | null;
 };
 
 export type MesDataInput = {
-  user_id: number | null;
-  division_id: number | null;
-  category_id: number | null;
-  subcategory_id: number | null;
-  description: string | null;
-  solution: string | null;
-  type: string | null;
-  status: string | null;
-  start_time: string | null;
+  user_id: number;
+  division_id: number;
+  category_id: number;
+  subcategory_id: number;
+  description_cn: string;
+  description_en: string | null;
+  solution_cn: string | null;
+  solution_en: string | null;
+  type_id: number;
+  status_id: number;
+  start_time: string;
   end_time: string | null;
 };
 
@@ -122,14 +131,25 @@ export type DurationPoint = {
 
 export type AnalysisResult = {
   total: number;
-  byStatus: CountItem[];
+  byStatus: NamedCount[];
   byCategory: NamedCount[];
   bySubcategory: NamedCount[];
   byDivision: NamedCount[];
-  byType: CountItem[];
+  byType: NamedCount[];
   trend: TrendItem[];
   topPic: TopPicItem[];
   userRanking: UserRankItem[];
   durationPerDivision: DurationPoint[];
   avgDurationMinutes: number;
 };
+
+/** Match status counts by English name keywords (stable across locale). */
+export function namedStatusCount(
+  rows: NamedCount[],
+  keyword: string,
+): number {
+  const key = keyword.toLowerCase();
+  return (
+    rows.find((s) => (s.name_en ?? "").toLowerCase().includes(key))?.count ?? 0
+  );
+}

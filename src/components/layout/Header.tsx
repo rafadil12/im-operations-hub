@@ -1,8 +1,19 @@
+"use client";
+
+import { useLang } from "@/lib/i18n";
+import type { Lang } from "@/lib/types";
+
 type HeaderProps = {
   title: string;
 };
 
 export function Header({ title }: HeaderProps) {
+  const { lang, setLang } = useLang();
+
+  const toggle = (next: Lang) => {
+    if (next !== lang) setLang(next);
+  };
+
   return (
     <header className="sticky top-0 z-20 border-b border-border-subtle bg-bg/95 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-4 px-5 py-3">
@@ -16,7 +27,30 @@ export function Header({ title }: HeaderProps) {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <span className="hidden text-xs text-text-muted md:inline">EN</span>
+          <div className="inline-flex overflow-hidden rounded-md border border-border text-xs">
+            <button
+              type="button"
+              onClick={() => toggle("en")}
+              className={`px-2.5 py-1.5 font-medium transition-colors ${
+                lang === "en"
+                  ? "bg-accent text-white"
+                  : "bg-surface text-text-muted hover:bg-surface-hover hover:text-text"
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => toggle("cn")}
+              className={`px-2.5 py-1.5 font-medium transition-colors ${
+                lang === "cn"
+                  ? "bg-accent text-white"
+                  : "bg-surface text-text-muted hover:bg-surface-hover hover:text-text"
+              }`}
+            >
+              CN
+            </button>
+          </div>
           <span className="hidden rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted lg:inline">
             Jul 11, 2025 – Aug 10, 2025
           </span>

@@ -3,6 +3,7 @@ import en, { type Dict } from "./en";
 import cn from "./cn";
 
 export type { Dict };
+export { LangProvider, useLang } from "./LangProvider";
 
 export const DEFAULT_LANG: Lang = "en";
 
@@ -20,4 +21,14 @@ export function localizedName(
   if (!item) return "-";
   if (lang === "cn") return item.name_cn || item.name_en || "-";
   return item.name_en || item.name_cn || "-";
+}
+
+/** Pick a bilingual free-text field based on the active language. */
+export function localizedField(
+  enValue: string | null | undefined,
+  cnValue: string | null | undefined,
+  lang: Lang = DEFAULT_LANG,
+): string {
+  if (lang === "cn") return cnValue || enValue || "-";
+  return enValue || cnValue || "-";
 }

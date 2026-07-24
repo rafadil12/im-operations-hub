@@ -8,14 +8,8 @@ import {
   usersForDivision,
 } from "@/lib/cascade";
 import { fromDateTimeLocal, toDateTimeLocal } from "@/lib/datetime";
-import { getDict, localizedName } from "@/lib/i18n";
-import {
-  STATUS_VALUES,
-  TYPE_VALUES,
-  type Masters,
-  type MesDataInput,
-  type MesDataRow,
-} from "@/lib/types";
+import { localizedName, useLang } from "@/lib/i18n";
+import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
 
 type Props = {
   masters: Masters;
@@ -29,7 +23,7 @@ const inputCls =
 const labelCls = "mb-1 block text-xs font-medium text-text-muted";
 
 export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
-  const t = getDict();
+  const { lang, t } = useLang();
 
   const [divisionId, setDivisionId] = useState<number | null>(
     initial?.division_id ?? null,
@@ -41,12 +35,20 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
     initial?.subcategory_id ?? null,
   );
   const [userId, setUserId] = useState<number | null>(initial?.user_id ?? null);
-  const [type, setType] = useState<string>(initial?.type ?? TYPE_VALUES[0]);
-  const [status, setStatus] = useState<string>(
-    initial?.status ?? STATUS_VALUES[0],
+  const [typeId, setTypeId] = useState<number | null>(
+    initial?.type_id ?? masters.types[0]?.id ?? null,
   );
-  const [description, setDescription] = useState(initial?.description ?? "");
-  const [solution, setSolution] = useState(initial?.solution ?? "");
+  const [statusId, setStatusId] = useState<number | null>(
+    initial?.status_id ?? masters.statuses[0]?.id ?? null,
+  );
+  const [descriptionCn, setDescriptionCn] = useState(
+    initial?.description_cn ?? "",
+  );
+  const [descriptionEn, setDescriptionEn] = useState(
+    initial?.description_en ?? "",
+  );
+  const [solutionCn, setSolutionCn] = useState(initial?.solution_cn ?? "");
+  const [solutionEn, setSolutionEn] = useState(initial?.solution_en ?? "");
   const [startTime, setStartTime] = useState(
     toDateTimeLocal(initial?.start_time ?? null),
   );
@@ -83,22 +85,41 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
 
   const submit = async () => {
     setError(null);
-    if (!divisionId || !status || !startTime) {
-      setError("Division, Status and Start Time are required.");
+    if (
+      !userId ||
+      !divisionId ||
+      !categoryId ||
+      !subcategoryId ||
+      !typeId ||
+      !statusId ||
+      !descriptionCn.trim() ||
+      !startTime
+    ) {
+      setError(
+        "User, Division, Category, Subcategory, Type, Status, Description (CN) and Start Time are required.",
+      );
       return;
     }
     setSaving(true);
     try {
+      const start = fromDateTimeLocal(startTime);
+      if (!start) {
+        setError("Start Time is required.");
+        setSaving(false);
+        return;
+      }
       await onSubmit({
         user_id: userId,
         division_id: divisionId,
         category_id: categoryId,
         subcategory_id: subcategoryId,
-        description: description.trim() || null,
-        solution: solution.trim() || null,
-        type,
-        status,
-        start_time: fromDateTimeLocal(startTime),
+        description_cn: descriptionCn.trim(),
+        description_en: descriptionEn.trim() || null,
+        solution_cn: solutionCn.trim() || null,
+        solution_en: solutionEn.trim() || null,
+        type_id: typeId,
+        status_id: statusId,
+        start_time: start,
         end_time: fromDateTimeLocal(endTime),
       });
     } catch (e) {
@@ -153,14 +174,16 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
             <option value="">{t.common.none}</option>
             {masters.divisions.map((d) => (
               <option key={d.id} value={d.id}>
-                {localizedName(d)}
+                {localizedName(d, lang)}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className={labelCls}>{t.fields.pic}</label>
+          <label className={labelCls}>
+            {t.fields.pic} <span className="text-danger">*</span>
+          </label>
           <select
             className={inputCls}
             value={userId ?? ""}
@@ -171,14 +194,16 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
             <option value="">{t.common.none}</option>
             {userOptions.map((u) => (
               <option key={u.id} value={u.id}>
-                {localizedName(u)}
+                {localizedName(u, lang)}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className={labelCls}>{t.fields.category}</label>
+          <label className={labelCls}>
+            {t.fields.category} <span className="text-danger">*</span>
+          </label>
           <select
             className={inputCls}
             value={categoryId ?? ""}
@@ -190,14 +215,16 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
             <option value="">{t.common.none}</option>
             {categoryOptions.map((c) => (
               <option key={c.id} value={c.id}>
-                {localizedName(c)}
+                {localizedName(c, lang)}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className={labelCls}>{t.fields.subcategory}</label>
+          <label className={labelCls}>
+            {t.fields.subcategory} <span className="text-danger">*</span>
+          </label>
           <select
             className={inputCls}
             value={subcategoryId ?? ""}
@@ -209,22 +236,27 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
             <option value="">{t.common.none}</option>
             {subcategoryOptions.map((s) => (
               <option key={s.id} value={s.id}>
-                {localizedName(s)}
+                {localizedName(s, lang)}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className={labelCls}>{t.fields.type}</label>
+          <label className={labelCls}>
+            {t.fields.type} <span className="text-danger">*</span>
+          </label>
           <select
             className={inputCls}
-            value={type}
-            onChange={(e) => setType(e.target.value)}
+            value={typeId ?? ""}
+            onChange={(e) =>
+              setTypeId(e.target.value ? Number(e.target.value) : null)
+            }
           >
-            {TYPE_VALUES.map((v) => (
-              <option key={v} value={v}>
-                {v}
+            <option value="">{t.common.none}</option>
+            {masters.types.map((v) => (
+              <option key={v.id} value={v.id}>
+                {localizedName(v, lang)}
               </option>
             ))}
           </select>
@@ -236,12 +268,15 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
           </label>
           <select
             className={inputCls}
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            value={statusId ?? ""}
+            onChange={(e) =>
+              setStatusId(e.target.value ? Number(e.target.value) : null)
+            }
           >
-            {STATUS_VALUES.map((v) => (
-              <option key={v} value={v}>
-                {v}
+            <option value="">{t.common.none}</option>
+            {masters.statuses.map((v) => (
+              <option key={v.id} value={v.id}>
+                {localizedName(v, lang)}
               </option>
             ))}
           </select>
@@ -270,20 +305,40 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelCls}>{t.fields.description}</label>
+          <label className={labelCls}>
+            {t.fields.descriptionCn} <span className="text-danger">*</span>
+          </label>
           <textarea
             className={`${inputCls} min-h-20`}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={descriptionCn}
+            onChange={(e) => setDescriptionCn(e.target.value)}
           />
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelCls}>{t.fields.solution}</label>
+          <label className={labelCls}>{t.fields.descriptionEn}</label>
           <textarea
             className={`${inputCls} min-h-20`}
-            value={solution}
-            onChange={(e) => setSolution(e.target.value)}
+            value={descriptionEn}
+            onChange={(e) => setDescriptionEn(e.target.value)}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className={labelCls}>{t.fields.solutionCn}</label>
+          <textarea
+            className={`${inputCls} min-h-20`}
+            value={solutionCn}
+            onChange={(e) => setSolutionCn(e.target.value)}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className={labelCls}>{t.fields.solutionEn}</label>
+          <textarea
+            className={`${inputCls} min-h-20`}
+            value={solutionEn}
+            onChange={(e) => setSolutionEn(e.target.value)}
           />
         </div>
       </div>

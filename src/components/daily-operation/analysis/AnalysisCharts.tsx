@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { localizedName, useLang } from "@/lib/i18n";
 import type { AnalysisResult, NamedCount } from "@/lib/types";
 
 const PALETTE = [
@@ -35,12 +36,6 @@ const PALETTE = [
   "#64748b",
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  "已完成 Completed": "#06b6d4",
-  "进行中 In Progress": "#3b82f6",
-  "待处理 Pending": "#f59e0b",
-};
-
 const DIVISION_PALETTE = ["#6366f1", "#ef4444", "#22c55e", "#f59e0b"];
 
 const tooltipStyle = {
@@ -50,13 +45,6 @@ const tooltipStyle = {
   color: "#e8eef8",
   fontSize: 12,
 };
-
-function bilingual(name_cn: string | null, name_en: string | null): string {
-  const cn = name_cn?.trim();
-  const en = name_en?.trim();
-  if (cn && en) return `${cn} (${en})`;
-  return en || cn || "Unknown";
-}
 
 type Slice = { label: string; value: number; color: string };
 
@@ -121,7 +109,7 @@ function PieWithLegend({ slices }: { slices: Slice[] }) {
 }
 
 export function AnalysisCharts({ result }: { result: AnalysisResult }) {
-  const byStatus = result.byStatus ?? [];
+  const { lang } = useLang();
   const byCategory = result.byCategory ?? [];
   const bySubcategory = result.bySubcategory ?? [];
   const byDivision = result.byDivision ?? [];
@@ -130,7 +118,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
   const divisionColor = useMemo(() => {
     const map: Record<string, string> = {};
     (result.byDivision ?? []).forEach((d, i) => {
-      const key = d.name_en?.trim() || bilingual(d.name_cn, d.name_en);
+      const key = d.name_en?.trim() || localizedName(d, "en");
       map[key] = DIVISION_PALETTE[i % DIVISION_PALETTE.length];
     });
     return map;
@@ -138,19 +126,13 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
 
   const namedSlices = (rows: NamedCount[]): Slice[] =>
     rows.map((r, i) => ({
-      label: bilingual(r.name_cn, r.name_en),
+      label: localizedName(r, lang),
       value: r.count,
       color: PALETTE[i % PALETTE.length],
     }));
 
-  const statusSlices: Slice[] = byStatus.map((s, i) => ({
-    label: s.label,
-    value: s.count,
-    color: STATUS_COLORS[s.label] ?? PALETTE[i % PALETTE.length],
-  }));
-
   const divisionSlices: Slice[] = byDivision.map((d) => {
-    const label = bilingual(d.name_cn, d.name_en);
+    const label = localizedName(d, lang);
     return {
       label,
       value: d.count,
@@ -159,9 +141,10 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
   });
 
   const divisionBar = byDivision.map((d) => ({
-    label: bilingual(d.name_cn, d.name_en),
+    label: localizedName(d, lang),
     count: d.count,
-    color: divisionColor[d.name_en?.trim() || bilingual(d.name_cn, d.name_en)] ?? "#64748b",
+    color:
+      divisionColor[d.name_en?.trim() || localizedName(d, lang)] ?? "#64748b",
   }));
 
   const maxUser = Math.max(1, ...userRanking.map((u) => u.count));
@@ -195,7 +178,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
                   return (
                     <li key={`${u.name_en}-${u.name_cn}`} className="flex items-center gap-3">
                       <span className="w-32 shrink-0 truncate text-[11px] text-text-muted">
-                        {bilingual(u.name_cn, u.name_en)}
+                        {localizedName(u, lang)}
                       </span>
                       <div className="relative h-4 flex-1">
                         <div className="absolute top-1/2 h-px w-full -translate-y-1/2 bg-border-subtle" />
@@ -217,7 +200,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
               </ul>
               <div className="mt-3 flex flex-wrap gap-3 border-t border-border-subtle pt-2">
                 {byDivision.map((d) => {
-                  const label = bilingual(d.name_cn, d.name_en);
+                  const label = localizedName(d, lang);
                   return (
                     <span key={label} className="flex items-center gap-1.5 text-[11px] text-text-muted">
                       <span

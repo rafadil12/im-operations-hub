@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
-import { getDict } from "@/lib/i18n";
-import { STATUS_VALUES, type AnalysisResult } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
+import { namedStatusCount, type AnalysisResult } from "@/lib/types";
 import { AnalysisCharts } from "@/components/daily-operation/analysis/AnalysisCharts";
 
 const week = getOperationalWeek();
@@ -15,12 +15,8 @@ type AnalysisResponse = { result: AnalysisResult };
 const ctrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
-function statusCount(result: AnalysisResult, status: string): number {
-  return result.byStatus.find((s) => s.label === status)?.count ?? 0;
-}
-
 export default function AnalysisPage() {
-  const t = getDict();
+  const { t } = useLang();
   const [range, setRange] = useState(defaultRange);
   const [draft, setDraft] = useState(defaultRange);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -52,17 +48,17 @@ export default function AnalysisPage() {
         { label: t.analysis.total, value: result.total, tone: "text-text" },
         {
           label: t.analysis.completed,
-          value: statusCount(result, STATUS_VALUES[2]),
+          value: namedStatusCount(result.byStatus, "Completed"),
           tone: "text-success",
         },
         {
           label: t.analysis.inProgress,
-          value: statusCount(result, STATUS_VALUES[0]),
+          value: namedStatusCount(result.byStatus, "In Progress"),
           tone: "text-accent",
         },
         {
           label: t.analysis.pending,
-          value: statusCount(result, STATUS_VALUES[1]),
+          value: namedStatusCount(result.byStatus, "Pending"),
           tone: "text-warning",
         },
         {

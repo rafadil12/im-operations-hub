@@ -48,7 +48,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const numId = Number(id);
 
     const used = await query<CountRow[]>(
-      "SELECT COUNT(*) AS c FROM mes_data WHERE subcategory_id = ?",
+      "SELECT COUNT(*) AS c FROM mes_record WHERE subcategory_id = ? AND deleted_at IS NULL",
       [numId],
     );
     if (Number(used[0]?.c ?? 0) > 0) {

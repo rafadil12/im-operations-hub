@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { getDict, localizedName } from "@/lib/i18n";
-import { STATUS_VALUES, TYPE_VALUES, type Masters } from "@/lib/types";
+import { localizedName, useLang } from "@/lib/i18n";
+import type { Masters } from "@/lib/types";
 
 export type Filters = {
   start: string;
   end: string;
   divisionId: string;
-  status: string;
-  type: string;
+  statusId: string;
+  typeId: string;
   q: string;
 };
 
@@ -23,7 +23,7 @@ const ctrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
 export function FilterBar({ masters, initial, onApply }: Props) {
-  const t = getDict();
+  const { lang, t } = useLang();
   const [draft, setDraft] = useState<Filters>(initial);
 
   const update = (patch: Partial<Filters>) =>
@@ -66,7 +66,7 @@ export function FilterBar({ masters, initial, onApply }: Props) {
           <option value="">{t.common.all}</option>
           {masters?.divisions.map((d) => (
             <option key={d.id} value={d.id}>
-              {localizedName(d)}
+              {localizedName(d, lang)}
             </option>
           ))}
         </select>
@@ -78,13 +78,13 @@ export function FilterBar({ masters, initial, onApply }: Props) {
         </label>
         <select
           className={ctrl}
-          value={draft.status}
-          onChange={(e) => update({ status: e.target.value })}
+          value={draft.statusId}
+          onChange={(e) => update({ statusId: e.target.value })}
         >
           <option value="">{t.common.all}</option>
-          {STATUS_VALUES.map((s) => (
-            <option key={s} value={s}>
-              {s}
+          {masters?.statuses.map((s) => (
+            <option key={s.id} value={s.id}>
+              {localizedName(s, lang)}
             </option>
           ))}
         </select>
@@ -96,13 +96,13 @@ export function FilterBar({ masters, initial, onApply }: Props) {
         </label>
         <select
           className={ctrl}
-          value={draft.type}
-          onChange={(e) => update({ type: e.target.value })}
+          value={draft.typeId}
+          onChange={(e) => update({ typeId: e.target.value })}
         >
           <option value="">{t.common.all}</option>
-          {TYPE_VALUES.map((v) => (
-            <option key={v} value={v}>
-              {v}
+          {masters?.types.map((v) => (
+            <option key={v.id} value={v.id}>
+              {localizedName(v, lang)}
             </option>
           ))}
         </select>
