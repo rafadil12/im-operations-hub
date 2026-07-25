@@ -18,9 +18,6 @@ export function Header({ title }: HeaderProps) {
     <header className="sticky top-0 z-20 border-b border-border-subtle bg-bg/95 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-4 px-5 py-3">
         <div className="flex items-center gap-3">
-          <span className="text-text-muted" aria-hidden>
-            ☰
-          </span>
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-text">
             {title}
           </h2>

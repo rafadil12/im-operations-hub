@@ -1,6 +1,6 @@
 const en = {
   common: {
-    appName: "IT Operations Command Center",
+    appName: "IM Operations Hub",
     loading: "Loading...",
     save: "Save",
     cancel: "Cancel",

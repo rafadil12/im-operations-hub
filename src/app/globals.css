@@ -16,6 +16,7 @@
   --text-muted: #8b9bb8;
   --text-dim: #5c6b86;
   --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
   --background: var(--bg);
   --foreground: var(--text);
 }
