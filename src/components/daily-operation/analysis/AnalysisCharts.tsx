@@ -17,7 +17,7 @@ import {
   YAxis,
 } from "recharts";
 import { localizedName, useLang } from "@/lib/i18n";
-import type { AnalysisResult, NamedCount } from "@/lib/types";
+import type { AnalysisResult, Lang, NamedCount } from "@/lib/types";
 
 const PALETTE = [
   "#ef4444",
@@ -47,6 +47,29 @@ const tooltipStyle = {
 };
 
 type Slice = { label: string; value: number; color: string };
+
+/** Merge rows that share the same display label; keep first-seen color. */
+function mergeNamedCounts(
+  rows: NamedCount[],
+  lang: Lang,
+  colorFor: (row: NamedCount, label: string, index: number) => string,
+): Slice[] {
+  const merged = new Map<string, Slice>();
+  for (const r of rows) {
+    const label = localizedName(r, lang);
+    const existing = merged.get(label);
+    if (existing) {
+      existing.value += r.count;
+    } else {
+      merged.set(label, {
+        label,
+        value: r.count,
+        color: colorFor(r, label, merged.size),
+      });
+    }
+  }
+  return Array.from(merged.values());
+}
 
 function ChartCard({
   titleCn,
@@ -88,16 +111,16 @@ function PieWithLegend({ slices }: { slices: Slice[] }) {
             labelLine={false}
             fontSize={10}
           >
-            {slices.map((s) => (
-              <Cell key={s.label} fill={s.color} />
+            {slices.map((s, i) => (
+              <Cell key={`${s.label}-${i}`} fill={s.color} />
             ))}
           </Pie>
           <Tooltip contentStyle={tooltipStyle} />
         </PieChart>
       </ResponsiveContainer>
       <ul className="max-h-56 w-full space-y-1 overflow-y-auto sm:w-56 sm:shrink-0 scrollbar-none">
-        {slices.map((s) => (
-          <li key={s.label} className="flex items-center gap-2 text-[11px] text-text-muted">
+        {slices.map((s, i) => (
+          <li key={`${s.label}-${i}`} className="flex items-center gap-2 text-[11px] text-text-muted">
             <span className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: s.color }} />
             <span className="flex-1 truncate">{s.label}</span>
             <span className="text-white/80">{s.value}</span>
@@ -125,26 +148,18 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
   }, [result.byDivision]);
 
   const namedSlices = (rows: NamedCount[]): Slice[] =>
-    rows.map((r, i) => ({
-      label: localizedName(r, lang),
-      value: r.count,
-      color: PALETTE[i % PALETTE.length],
-    }));
+    mergeNamedCounts(rows, lang, (_r, _label, i) => PALETTE[i % PALETTE.length]);
 
-  const divisionSlices: Slice[] = byDivision.map((d) => {
-    const label = localizedName(d, lang);
-    return {
-      label,
-      value: d.count,
-      color: divisionColor[d.name_en?.trim() || label] ?? "#64748b",
-    };
-  });
+  const divisionSlices: Slice[] = mergeNamedCounts(
+    byDivision,
+    lang,
+    (d, label) => divisionColor[d.name_en?.trim() || label] ?? "#64748b",
+  );
 
-  const divisionBar = byDivision.map((d) => ({
-    label: localizedName(d, lang),
-    count: d.count,
-    color:
-      divisionColor[d.name_en?.trim() || localizedName(d, lang)] ?? "#64748b",
+  const divisionBar = divisionSlices.map((s) => ({
+    label: s.label,
+    count: s.value,
+    color: s.color,
   }));
 
   const maxUser = Math.max(1, ...userRanking.map((u) => u.count));
@@ -172,11 +187,11 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
           ) : (
             <>
               <ul className="space-y-2.5">
-                {userRanking.slice(0, 8).map((u) => {
+                {userRanking.slice(0, 8).map((u, i) => {
                   const left = Math.max(4, (u.count / maxUser) * 100);
                   const color = divisionColor[u.division?.trim() ?? ""] ?? "#64748b";
                   return (
-                    <li key={`${u.name_en}-${u.name_cn}`} className="flex items-center gap-3">
+                    <li key={`${u.name_en}-${u.name_cn}-${i}`} className="flex items-center gap-3">
                       <span className="w-32 shrink-0 truncate text-[11px] text-text-muted">
                         {localizedName(u, lang)}
                       </span>
@@ -199,18 +214,15 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
                 })}
               </ul>
               <div className="mt-3 flex flex-wrap gap-3 border-t border-border-subtle pt-2">
-                {byDivision.map((d) => {
-                  const label = localizedName(d, lang);
-                  return (
-                    <span key={label} className="flex items-center gap-1.5 text-[11px] text-text-muted">
-                      <span
-                        className="size-2.5 rounded-full"
-                        style={{ backgroundColor: divisionColor[d.name_en?.trim() || label] }}
-                      />
-                      {label}
-                    </span>
-                  );
-                })}
+                {divisionSlices.map((d, i) => (
+                  <span key={`${d.label}-${i}`} className="flex items-center gap-1.5 text-[11px] text-text-muted">
+                    <span
+                      className="size-2.5 rounded-full"
+                      style={{ backgroundColor: d.color }}
+                    />
+                    {d.label}
+                  </span>
+                ))}
               </div>
             </>
           )}
@@ -244,8 +256,8 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
               />
               <Tooltip cursor={{ fill: "rgba(99,102,241,0.1)" }} contentStyle={tooltipStyle} />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                {divisionBar.map((d) => (
-                  <Cell key={d.label} fill={d.color} />
+                {divisionBar.map((d, i) => (
+                  <Cell key={`${d.label}-${i}`} fill={d.color} />
                 ))}
               </Bar>
             </BarChart>
