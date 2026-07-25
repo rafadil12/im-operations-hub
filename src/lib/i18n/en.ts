@@ -77,6 +77,10 @@ const en = {
     thisMonth: "This Month",
     thisYear: "This Year",
     customRange: "Custom Range",
+    allDepartment: "All Department",
+    mes: "MES",
+    it: "IT",
+    intelligentLogistics: "Intelligent Logistics",
   },
   confirmDelete: {
     title: "Delete record?",
