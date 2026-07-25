@@ -17,6 +17,7 @@
   --text-dim: #5c6b86;
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
+  --topbar-height: 64px;
   --background: var(--bg);
   --foreground: var(--text);
 }
@@ -80,3 +81,19 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes sidebar-flyout-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sidebar-flyout {
+  animation: sidebar-flyout-in 160ms ease-out;
+}
+
