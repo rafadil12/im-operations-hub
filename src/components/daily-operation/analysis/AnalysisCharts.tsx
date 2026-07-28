@@ -279,14 +279,12 @@ function PieWithLegend({
 }
 
 function ChartCard({
-  titleCn,
-  titleEn,
+  title,
   children,
   expandedContent,
   className,
 }: {
-  titleCn: string;
-  titleEn: string;
+  title: string;
   children: React.ReactNode;
   expandedContent?: React.ReactNode;
   className?: string;
@@ -297,7 +295,6 @@ function ChartCard({
     "idle",
   );
   const exportRef = useRef<HTMLDivElement>(null);
-  const title = `${titleCn} ${titleEn}`;
 
   const runExport = useCallback(async (mode: "download" | "copy") => {
     const node = exportRef.current;
@@ -307,7 +304,7 @@ function ChartCard({
       if (mode === "download") {
         const dataUrl = (await captureChartImage(node, "png")) as string;
         const link = document.createElement("a");
-        const safeName = titleEn.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const safeName = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         link.download = `${safeName || "chart"}.png`;
         link.href = dataUrl;
         link.click();
@@ -323,7 +320,7 @@ function ChartCard({
       setExportStatus("failed");
       window.setTimeout(() => setExportStatus("idle"), 2200);
     }
-  }, [titleEn]);
+  }, [title]);
 
   const copyLabel =
     exportStatus === "copying"
@@ -349,9 +346,7 @@ function ChartCard({
         className={`cursor-pointer rounded-xl border border-border bg-surface p-4 transition-colors hover:border-accent/50 hover:bg-surface-hover/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${className ?? ""}`}
       >
         <div className="mb-3 flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-text">
-            {titleCn} <span className="text-text-muted">{titleEn}</span>
-          </h3>
+          <h3 className="text-sm font-semibold text-text">{title}</h3>
           <span className="shrink-0 rounded-md border border-border-subtle px-2 py-0.5 text-[10px] text-text-dim">
             {t.analysis.clickToExpand}
           </span>
@@ -388,9 +383,7 @@ function ChartCard({
           }
         >
           <div ref={exportRef} className="rounded-lg bg-surface p-2">
-            <h3 className="mb-3 text-sm font-semibold text-text">
-              {titleCn} <span className="text-text-muted">{titleEn}</span>
-            </h3>
+            <h3 className="mb-3 text-sm font-semibold text-text">{title}</h3>
             {expandedContent ?? children}
           </div>
         </Modal>
@@ -520,8 +513,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          titleCn="类别分布"
-          titleEn="Category Distribution"
+          title={t.analysis.categoryDistribution}
           expandedContent={
             categorySlices.length === 0 ? (
               <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
@@ -550,8 +542,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         </ChartCard>
 
         <ChartCard
-          titleCn="用户排名"
-          titleEn="User Ranking"
+          title={t.analysis.userRanking}
           expandedContent={
             <div className="max-h-[65vh] overflow-y-auto pr-1">
               {renderUserRanking(userRankingExpanded)}
@@ -564,8 +555,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          titleCn="子类别分布"
-          titleEn="Sub Category Distribution"
+          title={t.analysis.subCategoryDistribution}
           expandedContent={
             subcategoryBar.length === 0 ? (
               <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
@@ -601,8 +591,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         </ChartCard>
 
         <ChartCard
-          titleCn="部门分布"
-          titleEn="Division Distribution"
+          title={t.analysis.divisionDistribution}
           expandedContent={
             <PieWithLegend slices={divisionSlices} chartHeight={320} legendMaxHeight={320} />
           }
@@ -613,8 +602,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          titleCn="部门统计"
-          titleEn="Division Analysis"
+          title={t.analysis.divisionAnalysis}
           expandedContent={
             <HorizontalBarChart data={divisionBar} height={360} yAxisWidth={160} />
           }
@@ -623,8 +611,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         </ChartCard>
 
         <ChartCard
-          titleCn="持续时间分析"
-          titleEn="Duration Analysis per Division"
+          title={t.analysis.durationAnalysis}
           expandedContent={
             <ResponsiveContainer width="100%" height={420}>
               <ScatterChart margin={{ bottom: 8, left: 4, right: 8, top: 8 }}>
