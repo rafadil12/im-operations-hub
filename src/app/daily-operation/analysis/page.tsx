@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import { namedStatusCount, type AnalysisResult } from "@/lib/types";
+import { type AnalysisResult, namedStatusCount } from "@/lib/types";
 import { AnalysisCharts } from "@/components/daily-operation/analysis/AnalysisCharts";
 
 const week = getOperationalWeek();
@@ -80,12 +80,12 @@ export default function AnalysisPage() {
         },
         {
           label: t.analysis.inProgress,
-          value: namedStatusCount(result.byStatus, "In Progress"),
+          value: result.totalUsers,
           tone: "text-accent",
         },
         {
           label: t.analysis.pending,
-          value: namedStatusCount(result.byStatus, "Pending"),
+          value: Math.round(result.avgTasks),
           tone: "text-warning",
         },
         {
