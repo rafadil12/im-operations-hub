@@ -38,10 +38,6 @@ type AnalysisResponse = { result: AnalysisResult };
 const ctrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
-function formatKpiValue(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
 export default function AnalysisPage() {
   const { t } = useLang();
   const [activeFilter, setActiveFilter] = useState<
@@ -89,7 +85,7 @@ export default function AnalysisPage() {
         },
         {
           label: t.analysis.pending,
-          value: formatKpiValue(result.avgTasks),
+          value: Math.round(result.avgTasks),
           tone: "text-warning",
         },
         {

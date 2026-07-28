@@ -17,10 +17,6 @@ function pctLabel(part: number, total: number): string {
   return `${pct(part, total)}%`;
 }
 
-function formatMetric(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -76,7 +72,7 @@ export function mapAnalysisToOverview(
       },
       {
         label: "Avg. Tasks",
-        value: formatMetric(result.avgTasks),
+        value: String(Math.round(result.avgTasks)),
         tone: "warning",
       },
     ],
