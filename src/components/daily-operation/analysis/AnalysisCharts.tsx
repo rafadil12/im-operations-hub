@@ -161,6 +161,11 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
     count: s.value,
     color: s.color,
   }));
+  const subcategoryBar = namedSlices(bySubcategory).map((s) => ({
+    label: s.label,
+    count: s.value,
+    color: s.color,
+  }));
 
   const maxUser = Math.max(1, ...userRanking.map((u) => u.count));
 
@@ -234,7 +239,30 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
           <PieWithLegend slices={statusSlices} />
         </ChartCard> */}
         <ChartCard titleCn="子类别分布" titleEn="Sub Category Distribution">
-          <PieWithLegend slices={namedSlices(bySubcategory)} />
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={subcategoryBar} margin={{ top: 8, right: 8, left: 8, bottom: 32 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#243047" vertical={false} />
+              <XAxis
+                dataKey="label"
+                stroke="#5c6b86"
+                fontSize={10}
+                interval={0}
+                angle={-20}
+                textAnchor="end"
+                height={56}
+                tickFormatter={(value) =>
+                  String(value).length > 14 ? `${String(value).slice(0, 14)}…` : String(value)
+                }
+              />
+              <YAxis stroke="#5c6b86" fontSize={11} allowDecimals={false} />
+              <Tooltip cursor={{ fill: "rgba(99,102,241,0.1)" }} contentStyle={tooltipStyle} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                {subcategoryBar.map((d, i) => (
+                  <Cell key={`${d.label}-${i}`} fill={d.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </ChartCard>
         <ChartCard titleCn="部门分布" titleEn="Division Distribution">
           <PieWithLegend slices={divisionSlices} />

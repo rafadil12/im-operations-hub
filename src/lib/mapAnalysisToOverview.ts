@@ -17,6 +17,10 @@ function pctLabel(part: number, total: number): string {
   return `${pct(part, total)}%`;
 }
 
+function formatMetric(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -34,12 +38,13 @@ export function mapAnalysisToOverview(
 ): ModuleCardData {
   const total = result.total;
   const completed = namedStatusCount(result.byStatus, "Completed");
-  const inProgress = namedStatusCount(result.byStatus, "In Progress");
-  const pending = namedStatusCount(result.byStatus, "Pending");
 
   const completedPct = pct(completed, total);
-  const inProgressPct = pct(inProgress, total);
-  const pendingPct = pct(pending, total);
+  const inProgressPct = pct(
+    namedStatusCount(result.byStatus, "In Progress"),
+    total,
+  );
+  const pendingPct = pct(namedStatusCount(result.byStatus, "Pending"), total);
 
   const divisions = result.byDivision.slice(0, 3);
   const maxBar = Math.max(1, ...divisions.map((d) => d.count));
@@ -65,15 +70,13 @@ export function mapAnalysisToOverview(
         tone: "success",
       },
       {
-        label: "In Progress",
-        value: String(inProgress),
-        trend: pctLabel(inProgress, total),
+        label: "Total Users",
+        value: String(result.totalUsers),
         tone: "accent",
       },
       {
-        label: "Pending",
-        value: String(pending),
-        trend: pctLabel(pending, total),
+        label: "Avg. Tasks",
+        value: formatMetric(result.avgTasks),
         tone: "warning",
       },
     ],

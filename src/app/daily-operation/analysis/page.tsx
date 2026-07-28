@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import { namedStatusCount, type AnalysisResult } from "@/lib/types";
+import { type AnalysisResult, namedStatusCount } from "@/lib/types";
 import { AnalysisCharts } from "@/components/daily-operation/analysis/AnalysisCharts";
 
 const week = getOperationalWeek();
@@ -37,6 +37,10 @@ type AnalysisResponse = { result: AnalysisResult };
 
 const ctrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+
+function formatKpiValue(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
 
 export default function AnalysisPage() {
   const { t } = useLang();
@@ -80,12 +84,12 @@ export default function AnalysisPage() {
         },
         {
           label: t.analysis.inProgress,
-          value: namedStatusCount(result.byStatus, "In Progress"),
+          value: result.totalUsers,
           tone: "text-accent",
         },
         {
           label: t.analysis.pending,
-          value: namedStatusCount(result.byStatus, "Pending"),
+          value: formatKpiValue(result.avgTasks),
           tone: "text-warning",
         },
         {

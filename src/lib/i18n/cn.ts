@@ -67,8 +67,8 @@ const cn: Dict = {
   analysis: {
     total: "任务总数",
     completed: "已完成",
-    inProgress: "进行中",
-    pending: "待处理",
+    inProgress: "总用户数",
+    pending: "平均任务数",
     byStatus: "按状态统计",
     byDivision: "按部门统计",
     byType: "按类型统计",

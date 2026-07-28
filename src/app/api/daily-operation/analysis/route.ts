@@ -137,9 +137,13 @@ export async function GET(request: NextRequest) {
       }));
 
     const total = byStatus.reduce((sum, r) => sum + Number(r.count), 0);
+    const totalUsers = userRanking.length;
+    const avgTasks = totalUsers > 0 ? Math.round((total / totalUsers) * 10) / 10 : 0;
 
     const result: AnalysisResult = {
       total,
+      totalUsers,
+      avgTasks,
       byStatus: toNamed(byStatus),
       byCategory: toNamed(byCategory),
       bySubcategory: toNamed(bySubcategory),

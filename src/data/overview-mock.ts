@@ -100,8 +100,8 @@ export const overviewModules: ModuleCardData[] = [
     stats: [
       { label: "This Month's Tasks", value: "125", tone: "accent" },
       { label: "Completed", value: "98", trend: "78.4%", tone: "success" },
-      { label: "In Progress", value: "21", trend: "16.8%", tone: "accent" },
-      { label: "Pending", value: "6", trend: "4.8%", tone: "warning" },
+      { label: "Total Users", value: "21", tone: "accent" },
+      { label: "Avg. Tasks", value: "6", tone: "warning" },
     ],
     bars: {
       title: "Task by Department (This Month)",

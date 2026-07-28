@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useLang } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 
@@ -9,10 +10,37 @@ type HeaderProps = {
 
 export function Header({ title }: HeaderProps) {
   const { lang, setLang } = useLang();
+  const [now, setNow] = useState(() => new Date());
 
   const toggle = (next: Lang) => {
     if (next !== lang) setLang(next);
   };
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const currentDateTime = useMemo(
+    () => {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(now);
+      const valueOf = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((part) => part.type === type)?.value ?? "";
+
+      return `${valueOf("weekday")}, ${valueOf("month")} ${valueOf("day")}, ${valueOf("year")} · ${valueOf("hour")}:${valueOf("minute")}`;
+    },
+    [now],
+  );
 
   return (
     <header className="sticky top-0 z-20 border-b border-border-subtle bg-bg/95 backdrop-blur-sm">
@@ -49,10 +77,7 @@ export function Header({ title }: HeaderProps) {
             </button>
           </div>
           <span className="hidden rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted lg:inline">
-            Jul 11, 2025 – Aug 10, 2025
-          </span>
-          <span className="hidden text-xs text-text-dim xl:inline">
-            Last sync: just now
+            {currentDateTime}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success/10 px-2.5 py-1.5 text-xs text-success">
             <span className="size-1.5 rounded-full bg-success" />

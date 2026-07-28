@@ -65,8 +65,8 @@ const en = {
   analysis: {
     total: "Total Tasks",
     completed: "Completed",
-    inProgress: "In Progress",
-    pending: "Pending",
+    inProgress: "Total Users",
+    pending: "Avg. Tasks",
     byStatus: "Task by Status",
     byDivision: "Task by Division",
     byType: "Task by Type",
