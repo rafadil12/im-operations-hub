@@ -79,6 +79,10 @@ const cn: Dict = {
     thisMonth: "本月",
     thisYear: "今年",
     customRange: "自定义范围",
+    allDepartment: "全部部门",
+    mes: "MES",
+    it: "IT",
+    intelligentLogistics: "智能物流",
   },
   confirmDelete: {
     title: "删除记录？",
