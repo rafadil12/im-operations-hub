@@ -36,7 +36,7 @@ function getCurrentYearRange() {
 type AnalysisResponse = { result: AnalysisResult };
 
 const ctrl =
-  "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+  "cursor-pointer rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
 export default function AnalysisPage() {
   const { t } = useLang();
@@ -111,7 +111,7 @@ export default function AnalysisPage() {
               setDraft(defaultRange);
               setRange(defaultRange);
             }}
-            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
               activeFilter === "week"
                 ? "border-accent bg-accent text-white"
                 : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
@@ -128,7 +128,7 @@ export default function AnalysisPage() {
               setDraft(range);
               setRange(range);
             }}
-            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
               activeFilter === "month"
                 ? "border-accent bg-accent text-white"
                 : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
@@ -145,7 +145,7 @@ export default function AnalysisPage() {
               setDraft(range);
               setRange(range);
             }}
-            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
               activeFilter === "year"
                 ? "border-accent bg-accent text-white"
                 : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
@@ -184,7 +184,7 @@ export default function AnalysisPage() {
           <button
             type="button"
             onClick={() => setRange(draft)}
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+            className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
           >
             {t.common.apply}
           </button>

@@ -56,7 +56,7 @@ export function Header({ title }: HeaderProps) {
             <button
               type="button"
               onClick={() => toggle("en")}
-              className={`px-2.5 py-1.5 font-medium transition-colors ${
+              className={`cursor-pointer px-2.5 py-1.5 font-medium transition-colors ${
                 lang === "en"
                   ? "bg-accent text-white"
                   : "bg-surface text-text-muted hover:bg-surface-hover hover:text-text"
@@ -67,7 +67,7 @@ export function Header({ title }: HeaderProps) {
             <button
               type="button"
               onClick={() => toggle("cn")}
-              className={`px-2.5 py-1.5 font-medium transition-colors ${
+              className={`cursor-pointer px-2.5 py-1.5 font-medium transition-colors ${
                 lang === "cn"
                   ? "bg-accent text-white"
                   : "bg-surface text-text-muted hover:bg-surface-hover hover:text-text"
