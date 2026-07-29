@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { LangProvider } from "@/lib/i18n";
+import {
+  DEFAULT_THEME,
+  THEME_BOOTSTRAP_SCRIPT,
+  ThemeProvider,
+} from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IM Opeartions Hub",
-  description: "IM Operations Hub — overview dashboard for ITSM and Daily Operation",
+  title: "IM ONE",
+  description: "IM ONE — INTELLIGENT OPERATIONS, ONE PLATFORM",
 };
 
 export default function RootLayout({
@@ -26,10 +31,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-theme={DEFAULT_THEME}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
-        <LangProvider>{children}</LangProvider>
+        <ThemeProvider>
+          <LangProvider>{children}</LangProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
