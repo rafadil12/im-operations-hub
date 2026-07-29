@@ -20,6 +20,7 @@
   --topbar-height: 64px;
   --background: var(--bg);
   --foreground: var(--text);
+  color-scheme: dark;
 }
 
 @theme inline {
