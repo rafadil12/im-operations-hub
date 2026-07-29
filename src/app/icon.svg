@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="i" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4cb8f7" />
+      <stop offset="100%" stop-color="#1f7fe0" />
+    </linearGradient>
+    <linearGradient id="m" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="55%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#152f6f" />
+    </linearGradient>
+    <linearGradient id="plane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#2f6fd0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="#0b1220" />
+
+  <g transform="translate(12.2 14) scale(0.9)">
+    <circle cx="5" cy="5" r="4.6" fill="url(#i)" />
+    <rect x="0.6" y="12.6" width="8.8" height="26.4" rx="4.4" fill="url(#i)" />
+    <path d="M13 39V3h8l7 17 7-17h8v36h-6.5V14l-6 14h-5l-6-14v25z" fill="url(#m)" />
+    <path d="M21 3l7 17-2.5 8L19.5 14z" fill="url(#fold)" />
+    <path d="M35 3h8v36h-6.5V14z" fill="url(#plane)" />
+  </g>
+</svg>

@@ -83,11 +83,16 @@ export function ImOneLogo({
       <ImOneMark className={variant === "mark" ? "h-6 w-auto" : "h-7 w-auto"} />
 
       {variant === "full" && (
-        <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-[17px] font-bold leading-none tracking-tight">
-            IM<span className="font-normal"> One</span>
-          </span>
-          <ZhiZaoSeal />
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-[17px] font-bold leading-none tracking-tight">
+              IM<span className="font-normal"> One</span>
+            </span>
+            <ZhiZaoSeal />
+          </div>
+          <p className="mt-1 whitespace-nowrap text-[5.5px] font-medium uppercase leading-none tracking-[0.08em] text-sidebar-text-muted">
+            Intelligent Operations, One Platform
+          </p>
         </div>
       )}
     </div>

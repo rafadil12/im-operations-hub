@@ -1,5 +1,13 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
 import { AppShell } from "@/components/layout/AppShell";
+
+export const metadata = pageMetadata({
+  title: "ITSM",
+  description:
+    "IT Service Management module of IM One: ticket queues, SLA tracking and PIC workload for the factory IT team.",
+  path: "/itsm",
+});
 
 export default function ItsmPage() {
   return (
