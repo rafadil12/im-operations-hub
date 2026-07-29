@@ -16,8 +16,8 @@ function getCurrentMonthRange() {
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   return {
-  start: start.toLocaleDateString("en-CA"),
-  end: end.toLocaleDateString("en-CA"),
+    start: start.toLocaleDateString("en-CA"),
+    end: end.toLocaleDateString("en-CA"),
   };
 }
 
@@ -28,8 +28,8 @@ function getCurrentYearRange() {
   const end = new Date(now.getFullYear(), 11, 31);
 
   return {
-  start: start.toLocaleDateString("en-CA"),
-  end: end.toLocaleDateString("en-CA"),
+    start: start.toLocaleDateString("en-CA"),
+    end: end.toLocaleDateString("en-CA"),
   };
 }
 
@@ -153,18 +153,20 @@ export default function AnalysisPage() {
           >
             {t.analysis.thisYear}
           </button>
-            <select
-              className={ctrl}
-              value={division}
-              onChange={(e) => setDivision(e.target.value)}
-            >
-              <option value="All">{t.analysis.allDepartment}</option>
-              <option value="MES">{t.analysis.mes}</option>
-              <option value="IT">{t.analysis.it}</option>
-              <option value="Intelligent Logistics">
-                {t.analysis.intelligentLogistics}
-              </option>
-            </select>
+
+          <select
+            className={ctrl}
+            value={division}
+            onChange={(e) => setDivision(e.target.value)}
+          >
+            <option value="All">{t.analysis.allDepartment}</option>
+            <option value="MES">{t.analysis.mes}</option>
+            <option value="IT">{t.analysis.it}</option>
+            <option value="Intelligent Logistics">
+              {t.analysis.intelligentLogistics}
+            </option>
+          </select>
+
           <input
             type="date"
             className={ctrl}
