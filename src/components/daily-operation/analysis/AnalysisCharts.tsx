@@ -254,10 +254,12 @@ function CustomXAxisTick({
   x,
   y,
   payload,
+  fill,
 }: {
   x?: number;
   y?: number;
   payload?: { value: string };
+  fill: string;
 }) {
   if (x == null || y == null || !payload) return null;
 
@@ -280,7 +282,7 @@ function CustomXAxisTick({
         y={0}
         dy={14}
         textAnchor="middle"
-        fill="#71809b"
+        fill={fill}
         fontSize={10}
       >
         <tspan x="0">{line1}</tspan>
@@ -304,6 +306,7 @@ function VerticalBarChart({
   height: number;
   compactLabels?: boolean;
 }) {
+  const colors = useChartColors();
   const total = data.reduce((sum, row) => sum + row.count, 0);
 
   // Tambahkan nomor untuk label X-axis saat expanded
@@ -325,7 +328,7 @@ function VerticalBarChart({
       >
         <CartesianGrid
           strokeDasharray="3 3"
-          stroke="#243047"
+          stroke={colors.grid}
           vertical={false}
         />
 
@@ -340,25 +343,26 @@ function VerticalBarChart({
         ) : (
           <XAxis
             dataKey="label"
-            stroke="#5c6b86"
+            stroke={colors.axis}
             interval={0}
             height={55}
-            tick={<CustomXAxisTick />}
+            tick={<CustomXAxisTick fill={colors.axis} />}
           />
         )}
 
         <YAxis
-          stroke="#5c6b86"
+          stroke={colors.axis}
           fontSize={11}
           allowDecimals={false}
         />
 
         <Tooltip
-          cursor={{ fill: "rgba(99,102,241,0.1)" }}
+          cursor={{ fill: colors.cursor }}
           content={
             <ChartValueTooltip
               total={total}
               valueKey="count"
+              colors={colors}
             />
           }
         />
@@ -376,7 +380,7 @@ function VerticalBarChart({
           <LabelList
             dataKey="count"
             position="top"
-            fill="#9aa8c0"
+            fill={colors.tooltipMuted}
             fontSize={10}
           />
         </Bar>
