@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IT Operations Command Center",
+  title: "IM Opeartions Hub",
   description: "IM Operations Hub — overview dashboard for ITSM and Daily Operation",
 };
 

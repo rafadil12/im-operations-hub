@@ -7,10 +7,25 @@ type ModalProps = {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
-  size?: "md" | "lg";
+  headerActions?: ReactNode;
+  size?: "md" | "lg" | "xl" | "2xl";
 };
 
-export function Modal({ title, onClose, children, footer, size = "md" }: ModalProps) {
+const SIZE_CLASS = {
+  md: "max-w-xl",
+  lg: "max-w-3xl",
+  xl: "max-w-5xl",
+  "2xl": "max-w-7xl",
+} as const;
+
+export function Modal({
+  title,
+  onClose,
+  children,
+  footer,
+  headerActions,
+  size = "md",
+}: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -37,20 +52,23 @@ export function Modal({ title, onClose, children, footer, size = "md" }: ModalPr
         aria-modal="true"
         className={[
           "relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50",
-          size === "lg" ? "max-w-3xl" : "max-w-xl",
+          SIZE_CLASS[size],
         ].join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-          <h3 className="text-sm font-semibold text-text">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
-          >
-            ✕
-          </button>
+          <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-text">{title}</h3>
+          <div className="flex shrink-0 items-center gap-2">
+            {headerActions}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <div className="overflow-y-auto p-4">{children}</div>
         {footer ? (

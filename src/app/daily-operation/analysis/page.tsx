@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import { namedStatusCount, type AnalysisResult } from "@/lib/types";
+import { type AnalysisResult, namedStatusCount } from "@/lib/types";
 import { AnalysisCharts } from "@/components/daily-operation/analysis/AnalysisCharts";
 
 const week = getOperationalWeek();
@@ -16,8 +16,8 @@ function getCurrentMonthRange() {
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: start.toLocaleDateString("en-CA"),
+    end: end.toLocaleDateString("en-CA"),
   };
 }
 
@@ -28,18 +28,22 @@ function getCurrentYearRange() {
   const end = new Date(now.getFullYear(), 11, 31);
 
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: start.toLocaleDateString("en-CA"),
+    end: end.toLocaleDateString("en-CA"),
   };
 }
 
 type AnalysisResponse = { result: AnalysisResult };
 
 const ctrl =
-  "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+  "cursor-pointer rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
 export default function AnalysisPage() {
   const { t } = useLang();
+  const [activeFilter, setActiveFilter] = useState<
+    "week" | "month" | "year" | null
+  >("week");
+  const [division, setDivision] = useState("All");
   const [range, setRange] = useState(defaultRange);
   const [draft, setDraft] = useState(defaultRange);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -51,7 +55,7 @@ export default function AnalysisPage() {
     setError(null);
     try {
       const data = await apiGet<AnalysisResponse>(
-        `/analysis?start=${start}&end=${end}`,
+        `/analysis?start=${start}&end=${end}&division=${division}`,
       );
       setResult(data.result);
     } catch (e) {
@@ -59,7 +63,7 @@ export default function AnalysisPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [division]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch data on mount / range change
@@ -76,12 +80,12 @@ export default function AnalysisPage() {
         },
         {
           label: t.analysis.inProgress,
-          value: namedStatusCount(result.byStatus, "In Progress"),
+          value: result.totalUsers,
           tone: "text-accent",
         },
         {
           label: t.analysis.pending,
-          value: namedStatusCount(result.byStatus, "Pending"),
+          value: Math.round(result.avgTasks),
           tone: "text-warning",
         },
         {
@@ -103,10 +107,15 @@ export default function AnalysisPage() {
           <button
             type="button"
             onClick={() => {
+              setActiveFilter("week");
               setDraft(defaultRange);
               setRange(defaultRange);
             }}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+              activeFilter === "week"
+                ? "border-accent bg-accent text-white"
+                : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
+            }`}
           >
             {t.analysis.thisWeek}
           </button>
@@ -114,11 +123,16 @@ export default function AnalysisPage() {
           <button
             type="button"
             onClick={() => {
+              setActiveFilter("month");
               const range = getCurrentMonthRange();
               setDraft(range);
               setRange(range);
             }}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+              activeFilter === "month"
+                ? "border-accent bg-accent text-white"
+                : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
+            }`}
           >
             {t.analysis.thisMonth}
           </button>
@@ -126,14 +140,32 @@ export default function AnalysisPage() {
           <button
             type="button"
             onClick={() => {
+              setActiveFilter("year");
               const range = getCurrentYearRange();
               setDraft(range);
               setRange(range);
             }}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+              activeFilter === "year"
+                ? "border-accent bg-accent text-white"
+                : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
+            }`}
           >
             {t.analysis.thisYear}
           </button>
+
+          <select
+            className={ctrl}
+            value={division}
+            onChange={(e) => setDivision(e.target.value)}
+          >
+            <option value="All">{t.analysis.allDepartment}</option>
+            <option value="MES">{t.analysis.mes}</option>
+            <option value="IT">{t.analysis.it}</option>
+            <option value="Intelligent Logistics">
+              {t.analysis.intelligentLogistics}
+            </option>
+          </select>
 
           <input
             type="date"
@@ -154,7 +186,7 @@ export default function AnalysisPage() {
           <button
             type="button"
             onClick={() => setRange(draft)}
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+            className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
           >
             {t.common.apply}
           </button>

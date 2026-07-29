@@ -20,9 +20,14 @@ type AvgRow = { avg_minutes: number | null };
 export async function GET(request: NextRequest) {
   try {
     const sp = request.nextUrl.searchParams;
+    const division = sp.get("division");
     const { start, end } = resolveRange(sp.get("start"), sp.get("end"));
-    const range = [start, end];
-    const filter = "m.deleted_at IS NULL AND m.start_time BETWEEN ? AND ?";
+    const params: (string | Date)[] = [start, end];
+    let filter = "m.deleted_at IS NULL AND m.start_time BETWEEN ? AND ?";
+    if (division && division !== "All") {
+      filter += " AND d.name_en = ?";
+      params.push(division);
+    }
 
     const [
       byStatus,
@@ -40,25 +45,29 @@ export async function GET(request: NextRequest) {
         `SELECT st.name_en, st.name_cn, COUNT(*) AS count
          FROM mes_record m
          LEFT JOIN mes_status st ON m.status_id = st.id
+         LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY st.id, st.name_en, st.name_cn`,
-        range,
+        params,
       ),
       query<NamedRow[]>(
         `SELECT c.name_en, c.name_cn, COUNT(*) AS count
          FROM mes_record m
          LEFT JOIN categories c ON m.category_id = c.id
+         LEFT JOIN divisions d ON m.division_id = d.id
+         
          WHERE ${filter}
          GROUP BY c.id, c.name_en, c.name_cn ORDER BY count DESC`,
-        range,
+        params,
       ),
       query<NamedRow[]>(
         `SELECT s.name_en, s.name_cn, COUNT(*) AS count
          FROM mes_record m
          LEFT JOIN subcategories s ON m.subcategory_id = s.id
+         LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY s.id, s.name_en, s.name_cn ORDER BY count DESC`,
-        range,
+        params,
       ),
       query<NamedRow[]>(
         `SELECT d.name_en, d.name_cn, COUNT(*) AS count
@@ -66,29 +75,33 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY d.id, d.name_en, d.name_cn ORDER BY count DESC`,
-        range,
+        params,
       ),
       query<NamedRow[]>(
         `SELECT t.name_en, t.name_cn, COUNT(*) AS count
          FROM mes_record m
          LEFT JOIN mes_type t ON m.type_id = t.id
+         LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY t.id, t.name_en, t.name_cn ORDER BY count DESC`,
-        range,
+        params,
       ),
       query<TrendRow[]>(
         `SELECT DATE(m.start_time) AS date, COUNT(*) AS count
-         FROM mes_record m WHERE ${filter}
+         FROM mes_record m 
+         LEFT JOIN divisions d ON m.division_id = d.id
+         WHERE ${filter}
          GROUP BY DATE(m.start_time) ORDER BY date ASC`,
-        range,
+        params,
       ),
       query<CountRow[]>(
         `SELECT u.name_en AS label, COUNT(*) AS count
          FROM mes_record m
          LEFT JOIN users u ON m.user_id = u.id
+         LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY u.name_en ORDER BY count DESC LIMIT 5`,
-        range,
+        params,
       ),
       query<UserRow[]>(
         `SELECT u.name_en, u.name_cn, d.name_en AS division, COUNT(*) AS count
@@ -97,7 +110,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON u.division_id = d.id
          WHERE ${filter}
          GROUP BY u.id, u.name_en, u.name_cn, d.name_en ORDER BY count DESC`,
-        range,
+        params,
       ),
       query<DurationRow[]>(
         `SELECT d.name_en AS division,
@@ -105,12 +118,14 @@ export async function GET(request: NextRequest) {
          FROM mes_record m
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter} AND m.end_time IS NOT NULL`,
-        range,
+        params,
       ),
       query<AvgRow[]>(
         `SELECT AVG(TIMESTAMPDIFF(MINUTE, m.start_time, m.end_time)) AS avg_minutes
-         FROM mes_record m WHERE ${filter} AND m.end_time IS NOT NULL`,
-        range,
+         FROM mes_record m 
+         LEFT JOIN divisions d ON m.division_id = d.id
+         WHERE ${filter} AND m.end_time IS NOT NULL`,
+        params,
       ),
     ]);
 
@@ -122,9 +137,13 @@ export async function GET(request: NextRequest) {
       }));
 
     const total = byStatus.reduce((sum, r) => sum + Number(r.count), 0);
+    const totalUsers = userRanking.length;
+    const avgTasks = totalUsers > 0 ? Math.round((total / totalUsers) * 10) / 10 : 0;
 
     const result: AnalysisResult = {
       total,
+      totalUsers,
+      avgTasks,
       byStatus: toNamed(byStatus),
       byCategory: toNamed(byCategory),
       bySubcategory: toNamed(bySubcategory),

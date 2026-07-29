@@ -131,6 +131,8 @@ export type DurationPoint = {
 
 export type AnalysisResult = {
   total: number;
+  totalUsers: number;
+  avgTasks: number;
   byStatus: NamedCount[];
   byCategory: NamedCount[];
   bySubcategory: NamedCount[];
