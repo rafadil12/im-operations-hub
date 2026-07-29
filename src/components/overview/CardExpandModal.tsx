@@ -33,7 +33,7 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
       <button
         type="button"
         aria-label="Close overlay"
-        className="absolute inset-0 bg-black/65 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
         onClick={onClose}
       />
 
@@ -41,7 +41,7 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="expanded-card-title"
-        className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50"
+        className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">

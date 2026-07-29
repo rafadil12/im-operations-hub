@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ImOneLogo } from "@/components/brand/ImOneLogo";
 
 type NavChild = {
   label: string;
@@ -169,20 +170,20 @@ export function Sidebar() {
       "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
       collapsed ? "justify-center px-2" : "",
       active
-        ? "bg-accent font-medium text-white"
+        ? "bg-sidebar-active font-medium text-white"
         : disabled
-          ? "text-text-dim hover:bg-surface-hover"
-          : "text-text-muted hover:bg-surface-hover hover:text-text",
+          ? "text-sidebar-text-dim hover:bg-sidebar-hover"
+          : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
     ].join(" ");
 
   const childClass = (active: boolean, disabled?: boolean) =>
     [
       "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
       active
-        ? "bg-accent font-medium text-white"
+        ? "bg-sidebar-active font-medium text-white"
         : disabled
-          ? "cursor-not-allowed text-text-dim"
-          : "text-text-muted hover:bg-surface-hover hover:text-text",
+          ? "cursor-not-allowed text-sidebar-text-dim"
+          : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
     ].join(" ");
 
   const renderChild = (
@@ -198,7 +199,7 @@ export function Sidebar() {
           title="Coming soon"
         >
           <span className="flex-1 truncate">{child.label}</span>
-          <span className="text-[9px] uppercase tracking-wide text-text-dim">
+          <span className="text-[9px] uppercase tracking-wide text-sidebar-text-dim">
             Soon
           </span>
         </span>
@@ -224,7 +225,7 @@ export function Sidebar() {
   return (
     <aside
       className={[
-        "relative flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-bg-elevated transition-[width] duration-300 ease-in-out",
+        "relative flex h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar-bg text-sidebar-text transition-[width] duration-300 ease-in-out",
         collapsed
           ? "w-[var(--sidebar-collapsed-width)]"
           : "w-[var(--sidebar-width)]",
@@ -232,39 +233,45 @@ export function Sidebar() {
     >
       <div
         className={[
-          "flex h-[var(--topbar-height)] shrink-0 items-center border-b border-border-subtle transition-all duration-300 ease-in-out",
+          "flex h-[var(--topbar-height)] shrink-0 items-center border-b border-sidebar-border-subtle transition-all duration-300 ease-in-out",
           collapsed ? "justify-center px-2" : "justify-between gap-2 px-4",
         ].join(" ")}
       >
-        <div
-          className={[
-            "min-w-0 overflow-hidden transition-all duration-300 ease-in-out",
-            collapsed
-              ? "pointer-events-none max-w-0 flex-none opacity-0"
-              : "max-w-[180px] flex-1 opacity-100",
-          ].join(" ")}
-        >
-          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-            IM Operations Hub
-          </p>
-          <h1 className="mt-1 truncate text-sm font-semibold leading-snug text-text">
-            Command Center
-          </h1>
-        </div>
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          className="shrink-0 rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!collapsed}
-        >
-          <span aria-hidden className="block text-base leading-none">
-            ☰
-          </span>
-        </button>
+        {collapsed ? (
+          // Collapsed: the mark doubles as the expand control so the header
+          // stays a single row aligned with the topbar.
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="rounded-md p-1 transition-colors hover:bg-sidebar-hover"
+            aria-label="Expand sidebar"
+            aria-expanded={false}
+            title="Expand sidebar"
+          >
+            <ImOneLogo variant="mark" />
+          </button>
+        ) : (
+          <>
+            <ImOneLogo
+              variant="full"
+              className="min-w-0 flex-1 overflow-hidden text-sidebar-text"
+            />
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="shrink-0 rounded-md p-1.5 text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text"
+              aria-label="Collapse sidebar"
+              aria-expanded
+            >
+              <span aria-hidden className="block text-base leading-none">
+                ☰
+              </span>
+            </button>
+          </>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
+      <nav className="sidebar-scroll flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
         {navItems.map((item) => {
           const active = isParentActive(pathname, item);
 
@@ -298,11 +305,11 @@ export function Sidebar() {
                     collapsed ? "justify-center px-2" : "",
                     parentHighlighted
                       ? collapsed
-                        ? "bg-accent font-medium text-white"
-                        : "bg-accent-soft font-medium text-text"
+                        ? "bg-sidebar-active font-medium text-white"
+                        : "bg-sidebar-active-soft font-medium text-sidebar-text"
                       : item.disabled
-                        ? "text-text-dim hover:bg-surface-hover"
-                        : "text-text-muted hover:bg-surface-hover hover:text-text",
+                        ? "text-sidebar-text-dim hover:bg-sidebar-hover"
+                        : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
                   ].join(" ")}
                   aria-expanded={collapsed ? showFlyout : menuOpen}
                   title={collapsed ? item.label : undefined}
@@ -327,13 +334,13 @@ export function Sidebar() {
                       {item.label}
                     </span>
                     {item.disabled && (
-                      <span className="shrink-0 text-[9px] uppercase tracking-wide text-text-dim">
+                      <span className="shrink-0 text-[9px] uppercase tracking-wide text-sidebar-text-dim">
                         Soon
                       </span>
                     )}
                     <span
                       className={[
-                        "shrink-0 text-[18px] text-text-dim transition-transform duration-300 ease-in-out",
+                        "shrink-0 text-[18px] text-sidebar-text-dim transition-transform duration-300 ease-in-out",
                         menuOpen ? "rotate-180" : "rotate-0",
                       ].join(" ")}
                       aria-hidden
@@ -351,7 +358,7 @@ export function Sidebar() {
                     ].join(" ")}
                   >
                     <div className="overflow-hidden">
-                      <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-border pl-3">
+                      <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-sidebar-border pl-3">
                         {item.children.map((child) =>
                           renderChild(
                             child,
@@ -367,7 +374,7 @@ export function Sidebar() {
                 {showFlyout && (
                   <div
                     ref={flyoutRef}
-                    className="sidebar-flyout fixed z-50 min-w-[190px] rounded-lg border border-border bg-bg-elevated p-1.5 shadow-xl shadow-black/40"
+                    className="sidebar-flyout fixed z-50 min-w-[190px] rounded-lg border border-sidebar-border bg-sidebar-bg p-1.5 shadow-xl shadow-[0_12px_32px_var(--sidebar-shadow)]"
                     style={{ top: flyoutPos.top, left: flyoutPos.left }}
                   >
                     {item.children.map((child) =>
@@ -404,7 +411,7 @@ export function Sidebar() {
                   <span className="flex-1 truncate whitespace-nowrap">
                     {item.label}
                   </span>
-                  <span className="shrink-0 text-[9px] uppercase tracking-wide text-text-dim">
+                  <span className="shrink-0 text-[9px] uppercase tracking-wide text-sidebar-text-dim">
                     Soon
                   </span>
                 </span>

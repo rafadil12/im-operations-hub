@@ -57,7 +57,7 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         onOpen
           ? "cursor-pointer hover:border-accent/50 hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           : "",
-        expanded ? "shadow-2xl shadow-black/40" : "",
+        expanded ? "shadow-[0_20px_48px_var(--shadow-color-soft)]" : "",
       ].join(" ")}
     >
       <header className="mb-4 flex items-center gap-2.5">
