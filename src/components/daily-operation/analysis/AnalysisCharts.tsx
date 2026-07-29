@@ -7,6 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Pie,
   PieChart,
@@ -244,6 +245,140 @@ function HorizontalBarChart({
           {data.map((d, i) => (
             <Cell key={`${d.label}-${i}`} fill={d.color} />
           ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+function CustomXAxisTick({
+  x,
+  y,
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+}) {
+  if (x == null || y == null || !payload) return null;
+
+  const text = String(payload.value);
+  const words = text.split(" ");
+
+  let line1 = text;
+  let line2 = "";
+
+  if (words.length > 1) {
+    const middle = Math.ceil(words.length / 2);
+    line1 = words.slice(0, middle).join(" ");
+    line2 = words.slice(middle).join(" ");
+  }
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={14}
+        textAnchor="middle"
+        fill="#71809b"
+        fontSize={10}
+      >
+        <tspan x="0">{line1}</tspan>
+
+        {line2 && (
+          <tspan x="0" dy="13">
+            {line2}
+          </tspan>
+        )}
+      </text>
+    </g>
+  );
+}
+
+function VerticalBarChart({
+  data,
+  height,
+  compactLabels = false,
+}: {
+  data: BarRow[];
+  height: number;
+  compactLabels?: boolean;
+}) {
+  const total = data.reduce((sum, row) => sum + row.count, 0);
+
+  // Tambahkan nomor untuk label X-axis saat expanded
+  const chartData = data.map((row, index) => ({
+    ...row,
+    shortLabel: String(index + 1),
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart
+        data={chartData}
+        margin={{
+          top: 10,
+          right: 10,
+          left: 0,
+          bottom: compactLabels ? 10 : 15,
+        }}
+      >
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="#243047"
+          vertical={false}
+        />
+
+        {compactLabels ? (
+          <XAxis
+            dataKey="shortLabel"
+            tick={false}
+            axisLine={true}
+            tickLine={false}
+            height={10}
+          />
+        ) : (
+          <XAxis
+            dataKey="label"
+            stroke="#5c6b86"
+            interval={0}
+            height={55}
+            tick={<CustomXAxisTick />}
+          />
+        )}
+
+        <YAxis
+          stroke="#5c6b86"
+          fontSize={11}
+          allowDecimals={false}
+        />
+
+        <Tooltip
+          cursor={{ fill: "rgba(99,102,241,0.1)" }}
+          content={
+            <ChartValueTooltip
+              total={total}
+              valueKey="count"
+            />
+          }
+        />
+
+        <Bar
+          dataKey="count"
+          radius={[4, 4, 0, 0]}
+        >
+          {chartData.map((d, i) => (
+            <Cell
+              key={`${d.label}-${i}`}
+              fill={d.color}
+            />
+          ))}
+          <LabelList
+            dataKey="count"
+            position="top"
+            fill="#9aa8c0"
+            fontSize={10}
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -725,28 +860,61 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         <ChartCard
           title={t.analysis.subCategoryDistribution}
           expandedContent={
-            subcategoryBar.length === 0 ? (
-              <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
-            ) : (
-              <div className="max-h-[65vh] overflow-y-auto">
-                <HorizontalBarChart
-                  data={subcategoryBar}
-                  height={subcategoryExpandedHeight}
-                  yAxisWidth={160}
-                />
+          subcategoryBar.length === 0 ? (
+            <p className="py-8 text-center text-sm text-text-muted">
+              {t.common.noData}
+            </p>
+          ) : (
+            <div className="w-full">
+
+              {/* GRAFIK */}
+              <VerticalBarChart
+                data={subcategoryBar}
+                height={500}
+                compactLabels
+              />
+
+              {/* SUB CATEGORY DI BAWAH */}
+              <div className="mt-5 border-t border-border-subtle pt-4">
+
+                <p className="mb-3 text-xs font-semibold text-text">
+                  Sub Category
+                </p>
+
+                <div className="grid grid-cols-8 gap-x-6 gap-y-2">
+                  {subcategoryBar.map((item, index) => (
+                    <div
+                      key={`${item.label}-${index}`}
+                      className="flex min-w-0 items-center gap-2 text-[8.5px]"
+                    >
+                      <span
+                        className="size-2.5 shrink-0 rounded-sm"
+                        style={{ backgroundColor: item.color }}
+                      />
+
+                      <span
+                        className="truncate text-text-muted"
+                        title={item.label}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
               </div>
-            )
-          }
+
+            </div>
+          )
+        }
         >
           {subcategoryBar.length === 0 ? (
             <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
           ) : (
             <div>
-              <HorizontalBarChart
+              <VerticalBarChart
                 data={subcategoryCompact}
-                height={260}
-                yAxisWidth={130}
-                truncateLabels
+                height={300}
               />
               {subcategoryBar.length > COMPACT_TOP_N ? (
                 <p className="mt-2 text-[11px] text-text-dim">
