@@ -1,5 +1,7 @@
 export type Lang = "en" | "cn";
 
+export type Theme = "light" | "dark";
+
 export type Division = {
   id: number;
   name_cn: string | null;

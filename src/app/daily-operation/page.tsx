@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { getDict } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Daily Operation",
+  description:
+    "Manage and analyze daily operational records: create and track tasks, review analytics and maintain the module master data.",
+  path: "/daily-operation",
+});
 
 const cards = [
   {

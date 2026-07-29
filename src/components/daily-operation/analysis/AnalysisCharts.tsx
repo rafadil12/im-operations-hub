@@ -7,6 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Pie,
   PieChart,
@@ -19,6 +20,7 @@ import {
 } from "recharts";
 import { Modal } from "@/components/ui/Modal";
 import { localizedName, useLang } from "@/lib/i18n";
+import { CHART_COLORS, useTheme, type ChartColors } from "@/lib/theme";
 import type { AnalysisResult, Lang, NamedCount } from "@/lib/types";
 
 const PALETTE = [
@@ -41,7 +43,14 @@ const PALETTE = [
 const DIVISION_PALETTE = ["#6366f1", "#ef4444", "#22c55e", "#f59e0b"];
 const COMPACT_TOP_N = 8;
 const USER_RANKING_COMPACT_TOP_N = 9;
-const SURFACE_BG = "#151f32";
+/** Neutral used for aggregated "others" rows; readable on both themes. */
+const NEUTRAL = "#64748b";
+
+/** Hook for the chart neutrals of the active theme. */
+function useChartColors(): ChartColors {
+  const { theme } = useTheme();
+  return CHART_COLORS[theme];
+}
 
 type StyleBackup = { el: HTMLElement; cssText: string };
 
@@ -84,6 +93,7 @@ function prepareFullCapture(root: HTMLElement): () => void {
 async function captureChartImage(
   node: HTMLElement,
   mode: "png" | "blob",
+  backgroundColor: string,
 ): Promise<string | Blob> {
   const restore = prepareFullCapture(node);
   try {
@@ -94,7 +104,7 @@ async function captureChartImage(
 
     const options = {
       pixelRatio: 2,
-      backgroundColor: SURFACE_BG,
+      backgroundColor,
       cacheBust: true,
       width: Math.ceil(node.scrollWidth),
       height: Math.ceil(node.scrollHeight),
@@ -111,13 +121,15 @@ async function captureChartImage(
   }
 }
 
-const tooltipStyle = {
-  background: "#151f32",
-  border: "1px solid #243047",
-  borderRadius: 8,
-  color: "#e8eef8",
-  fontSize: 12,
-};
+function tooltipStyleFor(colors: ChartColors) {
+  return {
+    background: colors.tooltipBg,
+    border: `1px solid ${colors.tooltipBorder}`,
+    borderRadius: 8,
+    color: colors.tooltipText,
+    fontSize: 12,
+  };
+}
 
 type Slice = { label: string; value: number; color: string };
 type BarRow = { label: string; count: number; color: string };
@@ -151,7 +163,7 @@ function takeTopN(rows: BarRow[], n: number, othersLabel: string): BarRow[] {
   const rest = rows.slice(n);
   const othersCount = rest.reduce((sum, r) => sum + r.count, 0);
   if (othersCount <= 0) return top;
-  return [...top, { label: othersLabel, count: othersCount, color: "#64748b" }];
+  return [...top, { label: othersLabel, count: othersCount, color: NEUTRAL }];
 }
 
 function takeTopNSlices(rows: Slice[], n: number, othersLabel: string): Slice[] {
@@ -161,7 +173,7 @@ function takeTopNSlices(rows: Slice[], n: number, othersLabel: string): Slice[] 
   const rest = sorted.slice(n);
   const othersValue = rest.reduce((sum, r) => sum + r.value, 0);
   if (othersValue <= 0) return top;
-  return [...top, { label: othersLabel, value: othersValue, color: "#64748b" }];
+  return [...top, { label: othersLabel, value: othersValue, color: NEUTRAL }];
 }
 
 function ChartValueTooltip({
@@ -169,11 +181,13 @@ function ChartValueTooltip({
   payload,
   total,
   valueKey = "value",
+  colors,
 }: {
   active?: boolean;
   payload?: Array<{ payload?: Record<string, unknown> }>;
   total: number;
   valueKey?: "value" | "count";
+  colors: ChartColors;
 }) {
   if (!active || !payload?.[0]?.payload) return null;
   const row = payload[0].payload;
@@ -181,10 +195,12 @@ function ChartValueTooltip({
   const value = Number(row[valueKey] ?? 0);
   const pct = total ? (value / total) * 100 : 0;
   return (
-    <div style={tooltipStyle} className="px-2.5 py-1.5 shadow-lg">
-      <p className="font-medium text-[#e8eef8]">{label}</p>
-      <p className="text-[#9aa8c0]">total : {value}</p>
-      <p className="text-[#9aa8c0]">{pct.toFixed(1)}%</p>
+    <div style={tooltipStyleFor(colors)} className="px-2.5 py-1.5 shadow-lg">
+      <p className="font-medium" style={{ color: colors.tooltipText }}>
+        {label}
+      </p>
+      <p style={{ color: colors.tooltipMuted }}>total : {value}</p>
+      <p style={{ color: colors.tooltipMuted }}>{pct.toFixed(1)}%</p>
     </div>
   );
 }
@@ -200,16 +216,17 @@ function HorizontalBarChart({
   yAxisWidth?: number;
   truncateLabels?: boolean;
 }) {
+  const colors = useChartColors();
   const total = data.reduce((sum, row) => sum + row.count, 0);
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#243047" horizontal={false} />
-        <XAxis type="number" stroke="#5c6b86" fontSize={11} allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} horizontal={false} />
+        <XAxis type="number" stroke={colors.axis} fontSize={11} allowDecimals={false} />
         <YAxis
           type="category"
           dataKey="label"
-          stroke="#5c6b86"
+          stroke={colors.axis}
           fontSize={10}
           width={yAxisWidth}
           tickFormatter={(value) => {
@@ -219,13 +236,153 @@ function HorizontalBarChart({
           }}
         />
         <Tooltip
-          cursor={{ fill: "rgba(99,102,241,0.1)" }}
-          content={<ChartValueTooltip total={total} valueKey="count" />}
+          cursor={{ fill: colors.cursor }}
+          content={
+            <ChartValueTooltip total={total} valueKey="count" colors={colors} />
+          }
         />
         <Bar dataKey="count" radius={[0, 4, 4, 0]}>
           {data.map((d, i) => (
             <Cell key={`${d.label}-${i}`} fill={d.color} />
           ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+function CustomXAxisTick({
+  x,
+  y,
+  payload,
+  fill,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+  fill: string;
+}) {
+  if (x == null || y == null || !payload) return null;
+
+  const text = String(payload.value);
+  const words = text.split(" ");
+
+  let line1 = text;
+  let line2 = "";
+
+  if (words.length > 1) {
+    const middle = Math.ceil(words.length / 2);
+    line1 = words.slice(0, middle).join(" ");
+    line2 = words.slice(middle).join(" ");
+  }
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={14}
+        textAnchor="middle"
+        fill={fill}
+        fontSize={10}
+      >
+        <tspan x="0">{line1}</tspan>
+
+        {line2 && (
+          <tspan x="0" dy="13">
+            {line2}
+          </tspan>
+        )}
+      </text>
+    </g>
+  );
+}
+
+function VerticalBarChart({
+  data,
+  height,
+  compactLabels = false,
+}: {
+  data: BarRow[];
+  height: number;
+  compactLabels?: boolean;
+}) {
+  const colors = useChartColors();
+  const total = data.reduce((sum, row) => sum + row.count, 0);
+
+  // Tambahkan nomor untuk label X-axis saat expanded
+  const chartData = data.map((row, index) => ({
+    ...row,
+    shortLabel: String(index + 1),
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart
+        data={chartData}
+        margin={{
+          top: 10,
+          right: 10,
+          left: 0,
+          bottom: compactLabels ? 10 : 15,
+        }}
+      >
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke={colors.grid}
+          vertical={false}
+        />
+
+        {compactLabels ? (
+          <XAxis
+            dataKey="shortLabel"
+            tick={false}
+            axisLine={true}
+            tickLine={false}
+            height={10}
+          />
+        ) : (
+          <XAxis
+            dataKey="label"
+            stroke={colors.axis}
+            interval={0}
+            height={55}
+            tick={<CustomXAxisTick fill={colors.axis} />}
+          />
+        )}
+
+        <YAxis
+          stroke={colors.axis}
+          fontSize={11}
+          allowDecimals={false}
+        />
+
+        <Tooltip
+          cursor={{ fill: colors.cursor }}
+          content={
+            <ChartValueTooltip
+              total={total}
+              valueKey="count"
+              colors={colors}
+            />
+          }
+        />
+
+        <Bar
+          dataKey="count"
+          radius={[4, 4, 0, 0]}
+        >
+          {chartData.map((d, i) => (
+            <Cell
+              key={`${d.label}-${i}`}
+              fill={d.color}
+            />
+          ))}
+          <LabelList
+            dataKey="count"
+            position="top"
+            fill={colors.tooltipMuted}
+            fontSize={10}
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -286,7 +443,11 @@ function computePieLabelLayout(slices: Slice[], outerRadius: number): PieLabelLa
   return entries;
 }
 
-function createPiePercentLabel(layouts: PieLabelLayout[], slices: Slice[]) {
+function createPiePercentLabel(
+  layouts: PieLabelLayout[],
+  slices: Slice[],
+  fallbackColor: string,
+) {
   return function PiePercentLabel({
     cx,
     cy,
@@ -313,7 +474,7 @@ function createPiePercentLabel(layouts: PieLabelLayout[], slices: Slice[]) {
       return null;
     }
     const layout = layouts[index];
-    const color = slices[index]?.color ?? "#e8eef8";
+    const color = slices[index]?.color ?? fallbackColor;
     const RADIAN = Math.PI / 180;
     const sin = Math.sin(-midAngle * RADIAN);
     const cos = Math.cos(-midAngle * RADIAN);
@@ -361,6 +522,7 @@ function PieWithLegend({
   chartHeight?: number;
   legendMaxHeight?: number;
 }) {
+  const colors = useChartColors();
   const total = slices.reduce((s, x) => s + x.value, 0);
   // Leave generous margin for outside labels + leader lines on both sides.
   const pieRadius = Math.min(Math.max(64, chartHeight * 0.28), chartHeight / 2 - 72);
@@ -369,8 +531,8 @@ function PieWithLegend({
     [slices, pieRadius],
   );
   const renderLabel = useMemo(
-    () => createPiePercentLabel(labelLayouts, slices),
-    [labelLayouts, slices],
+    () => createPiePercentLabel(labelLayouts, slices, colors.tooltipText),
+    [labelLayouts, slices, colors.tooltipText],
   );
 
   return (
@@ -389,7 +551,15 @@ function PieWithLegend({
               <Cell key={`${s.label}-${i}`} fill={s.color} />
             ))}
           </Pie>
-          <Tooltip content={<ChartValueTooltip total={total} valueKey="value" />} />
+          <Tooltip
+            content={
+              <ChartValueTooltip
+                total={total}
+                valueKey="value"
+                colors={colors}
+              />
+            }
+          />
         </PieChart>
       </ResponsiveContainer>
       <ul
@@ -402,7 +572,7 @@ function PieWithLegend({
             <span className="flex-1 truncate" title={s.label}>
               {s.label}
             </span>
-            <span className="text-white/80">{s.value}</span>
+            <span className="text-text">{s.value}</span>
           </li>
         ))}
       </ul>
@@ -424,11 +594,13 @@ function ChartCard({
   modalSize?: "md" | "lg" | "xl" | "2xl";
 }) {
   const { t } = useLang();
+  const colors = useChartColors();
   const [open, setOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "copying" | "copied" | "failed">(
     "idle",
   );
   const exportRef = useRef<HTMLDivElement>(null);
+  const captureBg = colors.captureBg;
 
   const runExport = useCallback(async (mode: "download" | "copy") => {
     const node = exportRef.current;
@@ -436,7 +608,7 @@ function ChartCard({
 
     try {
       if (mode === "download") {
-        const dataUrl = (await captureChartImage(node, "png")) as string;
+        const dataUrl = (await captureChartImage(node, "png", captureBg)) as string;
         const link = document.createElement("a");
         const safeName = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         link.download = `${safeName || "chart"}.png`;
@@ -446,7 +618,7 @@ function ChartCard({
       }
 
       setExportStatus("copying");
-      const blob = (await captureChartImage(node, "blob")) as Blob;
+      const blob = (await captureChartImage(node, "blob", captureBg)) as Blob;
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       setExportStatus("copied");
       window.setTimeout(() => setExportStatus("idle"), 1800);
@@ -454,7 +626,7 @@ function ChartCard({
       setExportStatus("failed");
       window.setTimeout(() => setExportStatus("idle"), 2200);
     }
-  }, [title]);
+  }, [title, captureBg]);
 
   const copyLabel =
     exportStatus === "copying"
@@ -527,6 +699,7 @@ function ChartCard({
 
 export function AnalysisCharts({ result }: { result: AnalysisResult }) {
   const { lang, t } = useLang();
+  const colors = useChartColors();
   const byCategory = result.byCategory ?? [];
   const bySubcategory = result.bySubcategory ?? [];
   const byDivision = result.byDivision ?? [];
@@ -554,7 +727,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
   const divisionSlices: Slice[] = mergeNamedCounts(
     byDivision,
     lang,
-    (d, label) => divisionColor[d.name_en?.trim() || label] ?? "#64748b",
+    (d, label) => divisionColor[d.name_en?.trim() || label] ?? NEUTRAL,
   );
 
   const divisionBar = divisionSlices.map((s) => ({
@@ -606,7 +779,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         <ul className="space-y-2.5">
           {rows.map((u, i) => {
             const left = Math.max(4, (u.count / maxUser) * 100);
-            const color = divisionColor[u.division?.trim() ?? ""] ?? "#64748b";
+            const color = divisionColor[u.division?.trim() ?? ""] ?? NEUTRAL;
             return (
               <li key={`${u.name_en}-${u.name_cn}-${i}`} className="flex items-center gap-3">
                 <span className="w-32 shrink-0 truncate text-[11px] text-text-muted" title={localizedName(u, lang)}>
@@ -691,28 +864,61 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         <ChartCard
           title={t.analysis.subCategoryDistribution}
           expandedContent={
-            subcategoryBar.length === 0 ? (
-              <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
-            ) : (
-              <div className="max-h-[65vh] overflow-y-auto">
-                <HorizontalBarChart
-                  data={subcategoryBar}
-                  height={subcategoryExpandedHeight}
-                  yAxisWidth={160}
-                />
+          subcategoryBar.length === 0 ? (
+            <p className="py-8 text-center text-sm text-text-muted">
+              {t.common.noData}
+            </p>
+          ) : (
+            <div className="w-full">
+
+              {/* GRAFIK */}
+              <VerticalBarChart
+                data={subcategoryBar}
+                height={500}
+                compactLabels
+              />
+
+              {/* SUB CATEGORY DI BAWAH */}
+              <div className="mt-5 border-t border-border-subtle pt-4">
+
+                <p className="mb-3 text-xs font-semibold text-text">
+                  Sub Category
+                </p>
+
+                <div className="grid grid-cols-8 gap-x-6 gap-y-2">
+                  {subcategoryBar.map((item, index) => (
+                    <div
+                      key={`${item.label}-${index}`}
+                      className="flex min-w-0 items-center gap-2 text-[8.5px]"
+                    >
+                      <span
+                        className="size-2.5 shrink-0 rounded-sm"
+                        style={{ backgroundColor: item.color }}
+                      />
+
+                      <span
+                        className="truncate text-text-muted"
+                        title={item.label}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
               </div>
-            )
-          }
+
+            </div>
+          )
+        }
         >
           {subcategoryBar.length === 0 ? (
             <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
           ) : (
             <div>
-              <HorizontalBarChart
+              <VerticalBarChart
                 data={subcategoryCompact}
-                height={260}
-                yAxisWidth={130}
-                truncateLabels
+                height={300}
               />
               {subcategoryBar.length > COMPACT_TOP_N ? (
                 <p className="mt-2 text-[11px] text-text-dim">
@@ -750,12 +956,12 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
           expandedContent={
             <ResponsiveContainer width="100%" height={420}>
               <ScatterChart margin={{ bottom: 8, left: 4, right: 8, top: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#243047" />
+                <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                 <XAxis
                   type="category"
                   dataKey="division"
                   name="division"
-                  stroke="#5c6b86"
+                  stroke={colors.axis}
                   fontSize={11}
                   allowDuplicatedCategory={false}
                 />
@@ -763,18 +969,21 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
                   type="number"
                   dataKey="duration_hours"
                   name="duration_hours"
-                  stroke="#5c6b86"
+                  stroke={colors.axis}
                   fontSize={11}
                   unit="h"
                 />
-                <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={tooltipStyle} />
+                <Tooltip
+                  cursor={{ strokeDasharray: "3 3" }}
+                  contentStyle={tooltipStyleFor(colors)}
+                />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {Object.entries(durationByDivision).map(([division, points]) => (
                   <Scatter
                     key={division}
                     name={division}
                     data={points}
-                    fill={divisionColor[division] ?? "#64748b"}
+                    fill={divisionColor[division] ?? NEUTRAL}
                   />
                 ))}
               </ScatterChart>
@@ -783,12 +992,12 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
         >
           <ResponsiveContainer width="100%" height={260}>
             <ScatterChart margin={{ bottom: 8, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#243047" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
               <XAxis
                 type="category"
                 dataKey="division"
                 name="division"
-                stroke="#5c6b86"
+                stroke={colors.axis}
                 fontSize={10}
                 allowDuplicatedCategory={false}
               />
@@ -796,18 +1005,21 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
                 type="number"
                 dataKey="duration_hours"
                 name="duration_hours"
-                stroke="#5c6b86"
+                stroke={colors.axis}
                 fontSize={11}
                 unit="h"
               />
-              <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={tooltipStyle} />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
+                contentStyle={tooltipStyleFor(colors)}
+              />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {Object.entries(durationByDivision).map(([division, points]) => (
                 <Scatter
                   key={division}
                   name={division}
                   data={points}
-                  fill={divisionColor[division] ?? "#64748b"}
+                  fill={divisionColor[division] ?? NEUTRAL}
                 />
               ))}
             </ScatterChart>

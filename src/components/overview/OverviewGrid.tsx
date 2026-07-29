@@ -51,12 +51,6 @@ export function OverviewGrid() {
 
   return (
     <>
-      <div className="mb-3">
-        <p className="text-sm text-text-muted">
-          Overview dashboard — click a card to expand, then open the module detail.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {modules.map((module) => (
           <ModuleCard
