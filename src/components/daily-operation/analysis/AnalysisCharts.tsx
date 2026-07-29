@@ -232,6 +232,126 @@ function HorizontalBarChart({
   );
 }
 
+type PieLabelLayout = {
+  index: number;
+  percent: number;
+  midAngle: number;
+  side: "left" | "right";
+  /** Final label Y relative to pie center (after collision spacing). */
+  y: number;
+};
+
+/** Outside-label positions with per-side vertical spacing so small slices stay readable. */
+function computePieLabelLayout(slices: Slice[], outerRadius: number): PieLabelLayout[] {
+  const total = slices.reduce((s, x) => s + x.value, 0) || 1;
+  const RADIAN = Math.PI / 180;
+  const labelRadius = outerRadius + 14;
+  let cumulative = 0;
+
+  const entries: PieLabelLayout[] = slices.map((slice, index) => {
+    const startAngle = (cumulative / total) * 360;
+    cumulative += slice.value;
+    const endAngle = (cumulative / total) * 360;
+    const midAngle = (startAngle + endAngle) / 2;
+    const cos = Math.cos(-midAngle * RADIAN);
+    const sin = Math.sin(-midAngle * RADIAN);
+    return {
+      index,
+      percent: slice.value / total,
+      midAngle,
+      side: cos >= 0 ? "right" : "left",
+      y: labelRadius * sin,
+    };
+  });
+
+  const MIN_GAP = 18;
+  for (const side of ["left", "right"] as const) {
+    const group = entries.filter((e) => e.side === side).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < group.length; i++) {
+      if (group[i].y - group[i - 1].y < MIN_GAP) {
+        group[i].y = group[i - 1].y + MIN_GAP;
+      }
+    }
+    // Keep the block roughly centered around the pie.
+    if (group.length > 1) {
+      const firstIdeal = labelRadius * Math.sin(-group[0].midAngle * RADIAN);
+      const lastIdeal = labelRadius * Math.sin(-group[group.length - 1].midAngle * RADIAN);
+      const idealMid = (firstIdeal + lastIdeal) / 2;
+      const actualMid = (group[0].y + group[group.length - 1].y) / 2;
+      const shift = idealMid - actualMid;
+      for (const item of group) item.y += shift;
+    }
+  }
+
+  return entries;
+}
+
+function createPiePercentLabel(layouts: PieLabelLayout[], slices: Slice[]) {
+  return function PiePercentLabel({
+    cx,
+    cy,
+    midAngle,
+    outerRadius,
+    percent,
+    index,
+  }: {
+    cx?: number;
+    cy?: number;
+    midAngle?: number;
+    outerRadius?: number;
+    percent?: number;
+    index?: number;
+  }) {
+    if (
+      cx == null ||
+      cy == null ||
+      midAngle == null ||
+      outerRadius == null ||
+      percent == null ||
+      index == null
+    ) {
+      return null;
+    }
+    const layout = layouts[index];
+    const color = slices[index]?.color ?? "#e8eef8";
+    const RADIAN = Math.PI / 180;
+    const sin = Math.sin(-midAngle * RADIAN);
+    const cos = Math.cos(-midAngle * RADIAN);
+    const sx = cx + outerRadius * cos;
+    const sy = cy + outerRadius * sin;
+    const mx = cx + (outerRadius + 14) * cos;
+    const my = cy + (outerRadius + 14) * sin;
+    const ex = cx + (cos >= 0 ? 1 : -1) * (outerRadius + 28);
+    const ey = cy + (layout?.y ?? my - cy);
+    const textAnchor = cos >= 0 ? "start" : "end";
+    const textX = ex + (cos >= 0 ? 1 : -1) * 6;
+
+    return (
+      <g style={{ pointerEvents: "none" }}>
+        <path
+          d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+          stroke={color}
+          fill="none"
+          strokeWidth={1}
+          opacity={0.85}
+        />
+        <circle cx={ex} cy={ey} r={2} fill={color} stroke="none" />
+        <text
+          x={textX}
+          y={ey}
+          fill={color}
+          textAnchor={textAnchor}
+          dominantBaseline="central"
+          fontSize={11}
+          fontWeight={600}
+        >
+          {`${(percent * 100).toFixed(1)}%`}
+        </text>
+      </g>
+    );
+  };
+}
+
 function PieWithLegend({
   slices,
   chartHeight = 220,
@@ -242,16 +362,28 @@ function PieWithLegend({
   legendMaxHeight?: number;
 }) {
   const total = slices.reduce((s, x) => s + x.value, 0);
+  // Leave generous margin for outside labels + leader lines on both sides.
+  const pieRadius = Math.min(Math.max(64, chartHeight * 0.28), chartHeight / 2 - 72);
+  const labelLayouts = useMemo(
+    () => computePieLabelLayout(slices, pieRadius),
+    [slices, pieRadius],
+  );
+  const renderLabel = useMemo(
+    () => createPiePercentLabel(labelLayouts, slices),
+    [labelLayouts, slices],
+  );
+
   return (
-    <div className="flex flex-col items-center gap-3 sm:flex-row">
+    <div className="flex flex-col items-center gap-4 lg:flex-row">
       <ResponsiveContainer width="100%" height={chartHeight} minWidth={0}>
-        <PieChart>
+        <PieChart margin={{ top: 24, right: 56, bottom: 24, left: 56 }}>
           <Pie
             data={slices}
             dataKey="value"
             nameKey="label"
-            outerRadius={Math.min(90, chartHeight / 2 - 20)}
-            label={false}
+            outerRadius={pieRadius}
+            label={renderLabel}
+            labelLine={false}
           >
             {slices.map((s, i) => (
               <Cell key={`${s.label}-${i}`} fill={s.color} />
@@ -283,11 +415,13 @@ function ChartCard({
   children,
   expandedContent,
   className,
+  modalSize = "xl",
 }: {
   title: string;
   children: React.ReactNode;
   expandedContent?: React.ReactNode;
   className?: string;
+  modalSize?: "md" | "lg" | "xl" | "2xl";
 }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
@@ -357,7 +491,7 @@ function ChartCard({
       {open ? (
         <Modal
           title={title}
-          size="xl"
+          size={modalSize}
           onClose={() => {
             setOpen(false);
             setExportStatus("idle");
@@ -383,7 +517,6 @@ function ChartCard({
           }
         >
           <div ref={exportRef} className="rounded-lg bg-surface p-2">
-            <h3 className="mb-3 text-sm font-semibold text-text">{title}</h3>
             {expandedContent ?? children}
           </div>
         </Modal>
@@ -514,14 +647,15 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
           title={t.analysis.categoryDistribution}
+          modalSize="2xl"
           expandedContent={
             categorySlices.length === 0 ? (
               <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
             ) : (
               <PieWithLegend
                 slices={categorySlices}
-                chartHeight={320}
-                legendMaxHeight={320}
+                chartHeight={Math.max(560, categorySlices.length * 22 + 200)}
+                legendMaxHeight={Math.max(560, categorySlices.length * 22 + 200)}
               />
             )
           }
@@ -530,7 +664,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
             <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>
           ) : (
             <div>
-              <PieWithLegend slices={categoryCompact} />
+              <PieWithLegend slices={categoryCompact} chartHeight={280} legendMaxHeight={280} />
               {categorySlices.length > COMPACT_TOP_N ? (
                 <p className="mt-2 text-[11px] text-text-dim">
                   {t.analysis.showingTop.replace("{n}", String(COMPACT_TOP_N))} ·{" "}
@@ -592,11 +726,12 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
 
         <ChartCard
           title={t.analysis.divisionDistribution}
+          modalSize="2xl"
           expandedContent={
-            <PieWithLegend slices={divisionSlices} chartHeight={320} legendMaxHeight={320} />
+            <PieWithLegend slices={divisionSlices} chartHeight={560} legendMaxHeight={560} />
           }
         >
-          <PieWithLegend slices={divisionSlices} />
+          <PieWithLegend slices={divisionSlices} chartHeight={280} legendMaxHeight={280} />
         </ChartCard>
       </div>
 
