@@ -25,9 +25,11 @@ type FormState = {
 };
 
 type Props = {
-  title: string;
-  description: string;
-  endpoint: string; // e.g. "/users"
+  titleKey:
+    | "masterUsers"
+    | "masterCategories"
+    | "masterSubcategories";
+  endpoint: string;
   relation: Relation;
 };
 
@@ -37,8 +39,10 @@ const labelCls = "mb-1 block text-xs font-medium text-text-muted";
 const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
 const td = "px-3 py-2 text-xs text-text-muted";
 
-export function MasterManager({ title, description, endpoint, relation }: Props) {
+export function MasterManager({ titleKey, endpoint, relation }: Props) {
   const { lang, t } = useLang();
+  const title = t.nav[titleKey];
+  const description = t.dailyOp.masterDesc;
   const [rows, setRows] = useState<MasterRow[]>([]);
   const [masters, setMasters] = useState<Masters | null>(null);
   const [loading, setLoading] = useState(true);

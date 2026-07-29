@@ -41,9 +41,9 @@ const navItems: NavItem[] = [
     label: "Daily Operation",
     icon: "▤",
     children: [
-      { label: "Management", href: "/daily-operation/management" },
-      { label: "Analysis", href: "/daily-operation/analysis" },
-      { label: "Master Data", href: "/daily-operation/master/users" },
+      { label: "Activities", href: "/daily-operation/management" },
+      { label: "Insights", href: "/daily-operation/analysis" },
+      { label: "Configuration", href: "/daily-operation/master/users" },
     ],
   },
   {
