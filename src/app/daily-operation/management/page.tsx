@@ -12,6 +12,7 @@ import {
 } from "@/components/daily-operation/ManagementTable";
 import { MesDataForm } from "@/components/daily-operation/MesDataForm";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const week = getOperationalWeek();
 const defaultFilters: Filters = {
@@ -29,6 +30,7 @@ type ListResponse = { rows: MesDataRow[] };
 
 export default function ManagementPage() {
   const { t } = useLang();
+  const { success: toastSuccess } = useToast();
   const [masters, setMasters] = useState<Masters | null>(null);
   const [rows, setRows] = useState<MesDataRow[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -90,18 +92,40 @@ export default function ManagementPage() {
   };
 
   const handleCreate = async (input: MesDataInput) => {
-    await apiSend("/mes-record", "POST", input);
-    setFormOpen(false);
-    setEditRow(null);
-    await loadRows(filters);
+    try {
+      await apiSend("/mes-record", "POST", input);
+      setFormOpen(false);
+      setEditRow(null);
+      toastSuccess(t.toast.createSuccess);
+      await loadRows(filters);
+    } catch (e) {
+      const message =
+        e instanceof TypeError
+          ? t.toast.networkError
+          : e instanceof Error
+            ? e.message
+            : t.toast.saveFailed;
+      throw e instanceof Error ? e : new Error(message);
+    }
   };
 
   const handleUpdate = async (input: MesDataInput) => {
     if (!editRow) return;
-    await apiSend(`/mes-record/${editRow.id}`, "PUT", input);
-    setFormOpen(false);
-    setEditRow(null);
-    await loadRows(filters);
+    try {
+      await apiSend(`/mes-record/${editRow.id}`, "PUT", input);
+      setFormOpen(false);
+      setEditRow(null);
+      toastSuccess(t.toast.updateSuccess);
+      await loadRows(filters);
+    } catch (e) {
+      const message =
+        e instanceof TypeError
+          ? t.toast.networkError
+          : e instanceof Error
+            ? e.message
+            : t.toast.saveFailed;
+      throw e instanceof Error ? e : new Error(message);
+    }
   };
 
   const confirmDelete = async () => {

@@ -120,6 +120,21 @@ const cn: Dict = {
     title: "删除记录？",
     message: "该记录将从列表中移除。是否继续？",
   },
+  validation: {
+    required: "请填写所有必填项。",
+    startBeforeEnd: "开始时间必须早于结束时间。",
+    enHasChinese: "英文内容不能包含中文字符。",
+    cnNeedsChinese: "中文内容必须包含中文字符。",
+    invalidDateTime: "请输入有效的日期和时间。",
+    fieldRequired: "此项为必填。",
+  },
+  toast: {
+    createSuccess: "记录创建成功。",
+    updateSuccess: "记录更新成功。",
+    saveFailed: "保存失败。",
+    networkError: "网络异常，请重试。",
+    validationFailed: "请修正标红的字段。",
+  },
 };
 
 export default cn;

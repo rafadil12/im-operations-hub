@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execute, query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
+import {
+  parseAndValidateMesBody,
+  type MesValidationErrorKey,
+} from "@/lib/mesRecordValidation";
 import type { MesDataInput, MesDataRow } from "@/lib/types";
 
 const LIST_SQL = `
@@ -24,6 +28,15 @@ const LIST_SQL = `
   WHERE m.deleted_at IS NULL
     AND m.start_time BETWEEN ? AND ?
 `;
+
+const VALIDATION_MESSAGES: Record<MesValidationErrorKey, string> = {
+  required:
+    "User, Division, Category, Subcategory, Type, Status, Start Time, End Time, Description (CN/EN) and Solution (CN/EN) are required.",
+  startBeforeEnd: "Start time must be before end time.",
+  enHasChinese: "English fields must not contain Chinese characters.",
+  cnNeedsChinese: "Chinese fields must include Chinese characters.",
+  invalidDateTime: "Please enter a valid date and time.",
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,46 +89,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function parseBody(body: Partial<MesDataInput>): MesDataInput | null {
-  const description_cn = body.description_cn?.toString().trim() || "";
-  const user_id = body.user_id ? Number(body.user_id) : NaN;
-  const division_id = body.division_id ? Number(body.division_id) : NaN;
-  const category_id = body.category_id ? Number(body.category_id) : NaN;
-  const subcategory_id = body.subcategory_id
-    ? Number(body.subcategory_id)
-    : NaN;
-  const type_id = body.type_id ? Number(body.type_id) : NaN;
-  const status_id = body.status_id ? Number(body.status_id) : NaN;
-  const start_time = body.start_time?.toString() || "";
-
-  if (
-    !description_cn ||
-    !Number.isFinite(user_id) ||
-    !Number.isFinite(division_id) ||
-    !Number.isFinite(category_id) ||
-    !Number.isFinite(subcategory_id) ||
-    !Number.isFinite(type_id) ||
-    !Number.isFinite(status_id) ||
-    !start_time
-  ) {
-    return null;
-  }
-
-  return {
-    user_id,
-    division_id,
-    category_id,
-    subcategory_id,
-    description_cn,
-    description_en: body.description_en?.toString().trim() || null,
-    solution_cn: body.solution_cn?.toString().trim() || null,
-    solution_en: body.solution_en?.toString().trim() || null,
-    type_id,
-    status_id,
-    start_time,
-    end_time: body.end_time?.toString() || null,
-  };
-}
 async function sendWeComNotification(content: string) {
   const webhookUrl = process.env.WECOM_WEBHOOK_URL;
   if (!webhookUrl) {
@@ -143,26 +116,26 @@ async function sendWeComNotification(content: string) {
   const result = await response.json();
 
   if (result.errcode !== 0) {
-    throw new Error(
-      `WeCom error: ${result.errmsg ?? result.errcode}`,
-    );
+    throw new Error(`WeCom error: ${result.errmsg ?? result.errcode}`);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Partial<MesDataInput>;
-    const data = parseBody(body);
+    const parsed = parseAndValidateMesBody(body);
 
-    if (!data) {
+    if (!parsed.ok) {
       return NextResponse.json(
         {
-          error:
-            "User, Division, Category, Subcategory, Type, Status, Description (CN) and Start Time are required.",
+          error: VALIDATION_MESSAGES[parsed.messageKey],
+          errors: parsed.errors,
         },
         { status: 400 },
       );
     }
+
+    const data = parsed.data;
 
     const result = await execute(
       `INSERT INTO mes_record
@@ -215,13 +188,13 @@ export async function POST(request: NextRequest) {
 
       const record = rows[0];
       const typeColor =
-      record.type_en === "Problem"
-        ? "warning"
-        : record.type_en === "Task"
-          ? "info"
-          : record.type_en === "Maintenance"
-            ? "comment"
-            : "info";
+        record?.type_en === "Problem"
+          ? "warning"
+          : record?.type_en === "Task"
+            ? "info"
+            : record?.type_en === "Maintenance"
+              ? "comment"
+              : "info";
 
       if (record) {
         const start = new Date(record.start_time);

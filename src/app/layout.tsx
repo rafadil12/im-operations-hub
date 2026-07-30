@@ -13,6 +13,7 @@ import {
   THEME_BOOTSTRAP_SCRIPT,
   ThemeProvider,
 } from "@/lib/theme";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -85,7 +86,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <LangProvider>{children}</LangProvider>
+          <LangProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </LangProvider>
         </ThemeProvider>
       </body>
     </html>

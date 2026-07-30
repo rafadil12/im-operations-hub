@@ -118,6 +118,21 @@ const en = {
     title: "Delete record?",
     message: "This record will be removed from the list. Continue?",
   },
+  validation: {
+    required: "Please fill in all required fields.",
+    startBeforeEnd: "Start time must be before end time.",
+    enHasChinese: "English fields must not contain Chinese characters.",
+    cnNeedsChinese: "Chinese fields must include Chinese characters.",
+    invalidDateTime: "Please enter a valid date and time.",
+    fieldRequired: "This field is required.",
+  },
+  toast: {
+    createSuccess: "Record created successfully.",
+    updateSuccess: "Record updated successfully.",
+    saveFailed: "Failed to save record.",
+    networkError: "Network error. Please try again.",
+    validationFailed: "Please fix the highlighted fields.",
+  },
 };
 
 export default en;
