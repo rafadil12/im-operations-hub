@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGet, apiSend } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
 import { FilterBar, type Filters } from "@/components/daily-operation/FilterBar";
-import { ManagementTable } from "@/components/daily-operation/ManagementTable";
+import {
+  ManagementTable,
+  type PageSize,
+} from "@/components/daily-operation/ManagementTable";
 import { MesDataForm } from "@/components/daily-operation/MesDataForm";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
@@ -20,6 +23,8 @@ const defaultFilters: Filters = {
   q: "",
 };
 
+const DEFAULT_PAGE_SIZE: PageSize = 10;
+
 type ListResponse = { rows: MesDataRow[] };
 
 export default function ManagementPage() {
@@ -29,6 +34,8 @@ export default function ManagementPage() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editRow, setEditRow] = useState<MesDataRow | null>(null);
@@ -63,9 +70,23 @@ export default function ManagementPage() {
     loadRows(defaultFilters);
   }, [loadRows]);
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const pagedRows = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, currentPage, pageSize]);
+
   const applyFilters = (f: Filters) => {
     setFilters(f);
+    setPage(1);
     loadRows(f);
+  };
+
+  const handlePageSizeChange = (nextSize: PageSize) => {
+    setPageSize(nextSize);
+    setPage(1);
   };
 
   const handleCreate = async (input: MesDataInput) => {
@@ -131,7 +152,12 @@ export default function ManagementPage() {
         </div>
       ) : (
         <ManagementTable
-          rows={rows}
+          rows={pagedRows}
+          totalCount={rows.length}
+          page={currentPage}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
           onEdit={(row) => {
             setEditRow(row);
             setFormOpen(true);

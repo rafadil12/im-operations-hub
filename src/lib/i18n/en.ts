@@ -19,6 +19,11 @@ const en = {
     noData: "No data found for the selected filters.",
     error: "Something went wrong.",
     required: "This field is required.",
+    rowsPerPage: "Rows per page",
+    previous: "Previous",
+    next: "Next",
+    pageOf: "Page {page} of {total}",
+    showingRange: "Showing {from}–{to} of {total}",
   },
   nav: {
     overview: "Overview",
