@@ -170,7 +170,6 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
           ? t.validation.required
           : fieldErrorMessage(result.messageKey, t);
       setError(summary);
-      toastError(t.toast.validationFailed);
 
       const first = firstErrorField(result.errors);
       if (first) focusField(first);
