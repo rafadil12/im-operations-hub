@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ImOneLogo } from "@/components/brand/ImOneLogo";
+import { NavIcon, type NavIconId } from "@/components/layout/NavIcons";
 import { useLang, type Dict } from "@/lib/i18n";
 
 type NavLabelKey = keyof Dict["nav"];
@@ -19,7 +20,7 @@ type NavItem = {
   id: string;
   labelKey: NavLabelKey;
   href?: string;
-  icon: string;
+  icon: NavIconId;
   disabled?: boolean;
   children?: NavChild[];
 };
@@ -31,11 +32,11 @@ const comingSoonChildren: NavChild[] = [
 ];
 
 const navItems: NavItem[] = [
-  { id: "overview", labelKey: "overview", href: "/", icon: "⊞" },
+  { id: "overview", labelKey: "overview", href: "/", icon: "overview" },
   {
     id: "itsm",
     labelKey: "itsm",
-    icon: "☎",
+    icon: "itsm",
     children: [
       { id: "overview", labelKey: "overview", href: "/itsm" },
       { id: "management", labelKey: "moduleManagement", disabled: true },
@@ -46,7 +47,7 @@ const navItems: NavItem[] = [
   {
     id: "daily-operation",
     labelKey: "dailyOperation",
-    icon: "▤",
+    icon: "daily-operation",
     children: [
       {
         id: "activities",
@@ -68,42 +69,42 @@ const navItems: NavItem[] = [
   {
     id: "safety",
     labelKey: "safety",
-    icon: "🛡",
+    icon: "safety",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "sparepart",
     labelKey: "sparepart",
-    icon: "⚙",
+    icon: "sparepart",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "organization",
     labelKey: "organization",
-    icon: "◎",
+    icon: "organization",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "report",
     labelKey: "report",
-    icon: "▤",
+    icon: "report",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "training",
     labelKey: "training",
-    icon: "✎",
+    icon: "training",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "settings",
     labelKey: "settings",
-    icon: "⚙",
+    icon: "settings",
     disabled: true,
     children: comingSoonChildren,
   },
@@ -360,11 +361,18 @@ export function Sidebar() {
                 >
                   <span
                     className={[
-                      "w-4 shrink-0 text-center text-xs transition-opacity duration-200",
-                      parentHighlighted ? "opacity-100" : "opacity-70",
+                      "flex size-4 shrink-0 items-center justify-center transition-opacity duration-200",
+                      parentHighlighted
+                        ? "opacity-100"
+                        : item.disabled
+                          ? "opacity-55"
+                          : "opacity-90",
                     ].join(" ")}
                   >
-                    {item.icon}
+                    <NavIcon
+                      id={item.icon}
+                      active={collapsed && parentHighlighted}
+                    />
                   </span>
                   <span
                     className={[
@@ -445,8 +453,8 @@ export function Sidebar() {
                     : t.nav.comingSoon
                 }
               >
-                <span className="w-4 shrink-0 text-center text-xs opacity-70">
-                  {item.icon}
+                <span className="flex size-4 shrink-0 items-center justify-center opacity-55">
+                  <NavIcon id={item.icon} />
                 </span>
                 <span
                   className={[
@@ -474,8 +482,8 @@ export function Sidebar() {
               className={itemClass(active)}
               title={collapsed ? label : undefined}
             >
-              <span className="w-4 shrink-0 text-center text-xs opacity-70">
-                {item.icon}
+              <span className="flex size-4 shrink-0 items-center justify-center opacity-90">
+                <NavIcon id={item.icon} active={active} />
               </span>
               <span
                 className={[
