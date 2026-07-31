@@ -13,13 +13,6 @@ export const metadata = pageMetadata({
 export default function Home() {
   return (
     <AppShell title="Overview">
-      <div className="mb-3">
-        <h1 className="text-lg font-semibold text-text">Overview</h1>
-        <p className="text-sm text-text-muted">
-          Overview dashboard — click a card to expand, then open the module
-          detail.
-        </p>
-      </div>
       <OverviewGrid />
     </AppShell>
   );
