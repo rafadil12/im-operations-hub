@@ -1,5 +1,7 @@
 export type Lang = "en" | "cn";
 
+export type Theme = "light" | "dark";
+
 export type Division = {
   id: number;
   name_cn: string | null;
@@ -87,13 +89,13 @@ export type MesDataInput = {
   category_id: number;
   subcategory_id: number;
   description_cn: string;
-  description_en: string | null;
-  solution_cn: string | null;
-  solution_en: string | null;
+  description_en: string;
+  solution_cn: string;
+  solution_en: string;
   type_id: number;
   status_id: number;
   start_time: string;
-  end_time: string | null;
+  end_time: string;
 };
 
 export type CountItem = {

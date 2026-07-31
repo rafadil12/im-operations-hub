@@ -1,6 +1,26 @@
 @import "tailwindcss";
 
+/* Layout metrics and brand colors are theme-independent. */
 :root {
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 64px;
+
+  /* The sidebar stays navy in both themes (see design reference). */
+  --sidebar-bg: #0e1f3d;
+  --sidebar-border: #1b3159;
+  --sidebar-border-subtle: #16294a;
+  --sidebar-hover: #172c4f;
+  --sidebar-active: #2563eb;
+  --sidebar-active-soft: rgba(37, 99, 235, 0.22);
+  --sidebar-text: #eef2f9;
+  --sidebar-text-muted: #9fb0cc;
+  --sidebar-text-dim: #6c7f9f;
+  --sidebar-shadow: rgba(3, 8, 20, 0.55);
+}
+
+:root,
+[data-theme="dark"] {
   --bg: #0b1220;
   --bg-elevated: #111827;
   --surface: #151f32;
@@ -15,12 +35,35 @@
   --text: #e8eef8;
   --text-muted: #8b9bb8;
   --text-dim: #5c6b86;
-  --sidebar-width: 240px;
-  --sidebar-collapsed-width: 64px;
-  --topbar-height: 64px;
+  --overlay: rgba(0, 0, 0, 0.65);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --shadow-color-soft: rgba(0, 0, 0, 0.4);
   --background: var(--bg);
   --foreground: var(--text);
   color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f4f6fa;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --border-subtle: #eef2f7;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.1);
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --text: #0f172a;
+  --text-muted: #55637a;
+  --text-dim: #94a3b8;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --shadow-color: rgba(15, 23, 42, 0.16);
+  --shadow-color-soft: rgba(15, 23, 42, 0.1);
+  --background: var(--bg);
+  --foreground: var(--text);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -40,6 +83,16 @@
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-text-dim: var(--text-dim);
+  --color-overlay: var(--overlay);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-border-subtle: var(--sidebar-border-subtle);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-soft: var(--sidebar-active-soft);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-text-muted: var(--sidebar-text-muted);
+  --color-sidebar-text-dim: var(--sidebar-text-dim);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -81,6 +134,20 @@ body {
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* The sidebar keeps a dark background in both themes, so its scrollbar
+   cannot inherit the light-theme neutrals. */
+.sidebar-scroll {
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--sidebar-border);
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sidebar-text-dim);
 }
 
 @keyframes sidebar-flyout-in {

@@ -99,7 +99,7 @@ function buildConicGradient(
     stops.push(`${legend[i].color} ${start}% ${cursor}%`);
   }
   if (cursor < 100) {
-    stops.push(`#334155 ${cursor}% 100%`);
+    stops.push(`var(--border) ${cursor}% 100%`);
   }
   return `conic-gradient(${stops.join(", ")})`;
 }

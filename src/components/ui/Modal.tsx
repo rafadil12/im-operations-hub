@@ -9,6 +9,8 @@ type ModalProps = {
   footer?: ReactNode;
   headerActions?: ReactNode;
   size?: "md" | "lg" | "xl" | "2xl";
+  /** When true, Escape / overlay / X cannot close the modal. */
+  closeDisabled?: boolean;
 };
 
 const SIZE_CLASS = {
@@ -25,10 +27,11 @@ export function Modal({
   footer,
   headerActions,
   size = "md",
+  closeDisabled = false,
 }: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !closeDisabled) onClose();
     };
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -37,21 +40,24 @@ export function Modal({
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, [onClose, closeDisabled]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close overlay"
-        className="absolute inset-0 bg-black/65 backdrop-blur-[2px]"
-        onClick={onClose}
+        className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
+        onClick={() => {
+          if (!closeDisabled) onClose();
+        }}
+        disabled={closeDisabled}
       />
       <div
         role="dialog"
         aria-modal="true"
         className={[
-          "relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50",
+          "relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]",
           SIZE_CLASS[size],
         ].join(" ")}
         onClick={(e) => e.stopPropagation()}
@@ -63,8 +69,9 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
+              disabled={closeDisabled}
               aria-label="Close"
-              className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
+              className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:pointer-events-none disabled:opacity-50"
             >
               ✕
             </button>

@@ -3,15 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ImOneLogo } from "@/components/brand/ImOneLogo";
+import { useLang, type Dict } from "@/lib/i18n";
+
+type NavLabelKey = keyof Dict["nav"];
 
 type NavChild = {
-  label: string;
+  id: string;
+  labelKey: NavLabelKey;
   href?: string;
   disabled?: boolean;
 };
 
 type NavItem = {
-  label: string;
+  id: string;
+  labelKey: NavLabelKey;
   href?: string;
   icon: string;
   disabled?: boolean;
@@ -19,53 +25,88 @@ type NavItem = {
 };
 
 const comingSoonChildren: NavChild[] = [
-  { label: "Management", disabled: true },
-  { label: "Analysis", disabled: true },
-  { label: "Master Data", disabled: true },
+  { id: "management", labelKey: "moduleManagement", disabled: true },
+  { id: "analysis", labelKey: "moduleAnalysis", disabled: true },
+  { id: "master-data", labelKey: "masterData", disabled: true },
 ];
 
 const navItems: NavItem[] = [
-  { label: "Overview", href: "/", icon: "⊞" },
+  { id: "overview", labelKey: "overview", href: "/", icon: "⊞" },
   {
-    label: "ITSM",
+    id: "itsm",
+    labelKey: "itsm",
     icon: "☎",
     children: [
-      { label: "Overview", href: "/itsm" },
-      { label: "Management", disabled: true },
-      { label: "Analysis", disabled: true },
-      { label: "Master Data", disabled: true },
+      { id: "overview", labelKey: "overview", href: "/itsm" },
+      { id: "management", labelKey: "moduleManagement", disabled: true },
+      { id: "analysis", labelKey: "moduleAnalysis", disabled: true },
+      { id: "master-data", labelKey: "masterData", disabled: true },
     ],
   },
   {
-    label: "Daily Operation",
+    id: "daily-operation",
+    labelKey: "dailyOperation",
     icon: "▤",
     children: [
-      { label: "Management", href: "/daily-operation/management" },
-      { label: "Analysis", href: "/daily-operation/analysis" },
-      { label: "Master Data", href: "/daily-operation/master/users" },
+      {
+        id: "activities",
+        labelKey: "management",
+        href: "/daily-operation/management",
+      },
+      {
+        id: "insights",
+        labelKey: "analysis",
+        href: "/daily-operation/analysis",
+      },
+      {
+        id: "configuration",
+        labelKey: "master",
+        href: "/daily-operation/master/users",
+      },
     ],
   },
   {
-    label: "Security",
+    id: "security",
+    labelKey: "security",
     icon: "🛡",
     disabled: true,
     children: comingSoonChildren,
   },
   {
-    label: "Sparepart",
+    id: "sparepart",
+    labelKey: "sparepart",
     icon: "⚙",
     disabled: true,
     children: comingSoonChildren,
   },
   {
-    label: "Organization",
+    id: "organization",
+    labelKey: "organization",
     icon: "◎",
     disabled: true,
     children: comingSoonChildren,
   },
-  { label: "Report", icon: "▤", disabled: true, children: comingSoonChildren },
-  { label: "Training", icon: "✎", disabled: true, children: comingSoonChildren },
-  { label: "Settings", icon: "⚙", disabled: true, children: comingSoonChildren },
+  {
+    id: "report",
+    labelKey: "report",
+    icon: "▤",
+    disabled: true,
+    children: comingSoonChildren,
+  },
+  {
+    id: "training",
+    labelKey: "training",
+    icon: "✎",
+    disabled: true,
+    children: comingSoonChildren,
+  },
+  {
+    id: "settings",
+    labelKey: "settings",
+    icon: "⚙",
+    disabled: true,
+    children: comingSoonChildren,
+  },
 ];
 
 // Survives AppShell remounts during client-side navigations.
@@ -91,6 +132,7 @@ function isParentActive(pathname: string, item: NavItem) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useLang();
   const [collapsed, setCollapsed] = useState(cachedCollapsed);
   const [openMenus, setOpenMenus] = useState(cachedOpenMenus);
   const [flyoutKey, setFlyoutKey] = useState<string | null>(null);
@@ -122,7 +164,7 @@ export function Sidebar() {
     const rect = triggerRefs.current[key]?.getBoundingClientRect();
     if (!rect) return;
     const childCount =
-      navItems.find((item) => item.label === key)?.children?.length ?? 0;
+      navItems.find((item) => item.id === key)?.children?.length ?? 0;
     const height = flyoutRef.current?.offsetHeight ?? childCount * 40 + 12;
     const top = Math.min(
       rect.top,
@@ -169,37 +211,39 @@ export function Sidebar() {
       "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
       collapsed ? "justify-center px-2" : "",
       active
-        ? "bg-accent font-medium text-white"
+        ? "bg-sidebar-active font-medium text-white"
         : disabled
-          ? "text-text-dim hover:bg-surface-hover"
-          : "text-text-muted hover:bg-surface-hover hover:text-text",
+          ? "text-sidebar-text-dim hover:bg-sidebar-hover"
+          : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
     ].join(" ");
 
   const childClass = (active: boolean, disabled?: boolean) =>
     [
       "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
       active
-        ? "bg-accent font-medium text-white"
+        ? "bg-sidebar-active font-medium text-white"
         : disabled
-          ? "cursor-not-allowed text-text-dim"
-          : "text-text-muted hover:bg-surface-hover hover:text-text",
+          ? "cursor-not-allowed text-sidebar-text-dim"
+          : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
     ].join(" ");
 
   const renderChild = (
     child: NavChild,
     active: boolean,
-    parentLabel: string,
+    parentId: string,
   ) => {
+    const label = t.nav[child.labelKey];
+
     if (child.disabled || !child.href) {
       return (
         <span
-          key={child.label}
+          key={child.id}
           className={childClass(false, true)}
-          title="Coming soon"
+          title={t.nav.comingSoon}
         >
-          <span className="flex-1 truncate">{child.label}</span>
-          <span className="text-[9px] uppercase tracking-wide text-text-dim">
-            Soon
+          <span className="flex-1 truncate">{label}</span>
+          <span className="text-[9px] uppercase tracking-wide text-sidebar-text-dim">
+            {t.nav.soon}
           </span>
         </span>
       );
@@ -212,11 +256,11 @@ export function Sidebar() {
         onClick={() => {
           setFlyoutKey(null);
           // Keep this parent open; never close other expanded menus.
-          updateOpenMenus((prev) => ({ ...prev, [parentLabel]: true }));
+          updateOpenMenus((prev) => ({ ...prev, [parentId]: true }));
         }}
         className={childClass(active)}
       >
-        <span className="flex-1 truncate">{child.label}</span>
+        <span className="flex-1 truncate">{label}</span>
       </Link>
     );
   };
@@ -224,7 +268,7 @@ export function Sidebar() {
   return (
     <aside
       className={[
-        "relative flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-bg-elevated transition-[width] duration-300 ease-in-out",
+        "relative flex h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar-bg text-sidebar-text transition-[width] duration-300 ease-in-out",
         collapsed
           ? "w-[var(--sidebar-collapsed-width)]"
           : "w-[var(--sidebar-width)]",
@@ -232,65 +276,72 @@ export function Sidebar() {
     >
       <div
         className={[
-          "flex h-[var(--topbar-height)] shrink-0 items-center border-b border-border-subtle transition-all duration-300 ease-in-out",
+          "flex h-[var(--topbar-height)] shrink-0 items-center border-b border-sidebar-border-subtle transition-all duration-300 ease-in-out",
           collapsed ? "justify-center px-2" : "justify-between gap-2 px-4",
         ].join(" ")}
       >
-        <div
-          className={[
-            "min-w-0 overflow-hidden transition-all duration-300 ease-in-out",
-            collapsed
-              ? "pointer-events-none max-w-0 flex-none opacity-0"
-              : "max-w-[180px] flex-1 opacity-100",
-          ].join(" ")}
-        >
-          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-            IM Operations Hub
-          </p>
-          <h1 className="mt-1 truncate text-sm font-semibold leading-snug text-text">
-            Command Center
-          </h1>
-        </div>
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          className="shrink-0 rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!collapsed}
-        >
-          <span aria-hidden className="block text-base leading-none">
-            ☰
-          </span>
-        </button>
+        {collapsed ? (
+          // Collapsed: the mark doubles as the expand control so the header
+          // stays a single row aligned with the topbar.
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="rounded-md p-1 transition-colors hover:bg-sidebar-hover"
+            aria-label={t.nav.expandSidebar}
+            aria-expanded={false}
+            title={t.nav.expandSidebar}
+          >
+            <ImOneLogo variant="mark" />
+          </button>
+        ) : (
+          <>
+            <ImOneLogo
+              variant="full"
+              className="min-w-0 flex-1 overflow-hidden text-sidebar-text"
+            />
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="shrink-0 rounded-md p-1.5 text-sidebar-text-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-text"
+              aria-label={t.nav.collapseSidebar}
+              aria-expanded
+            >
+              <span aria-hidden className="block text-base leading-none">
+                ☰
+              </span>
+            </button>
+          </>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
+      <nav className="sidebar-scroll flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
         {navItems.map((item) => {
           const active = isParentActive(pathname, item);
+          const label = t.nav[item.labelKey];
 
           if (item.children?.length) {
-            const menuOpen = openMenus[item.label] ?? active;
+            const menuOpen = openMenus[item.id] ?? active;
             const showAccordion = !collapsed && menuOpen;
-            const showFlyout = collapsed && flyoutKey === item.label;
+            const showFlyout = collapsed && flyoutKey === item.id;
             const parentHighlighted = collapsed ? active : menuOpen || active;
 
             return (
-              <div key={item.label} className="relative">
+              <div key={item.id} className="relative">
                 <button
                   type="button"
                   ref={(node) => {
-                    triggerRefs.current[item.label] = node;
+                    triggerRefs.current[item.id] = node;
                   }}
                   onClick={() => {
                     if (collapsed) {
                       setFlyoutKey((prev) =>
-                        prev === item.label ? null : item.label,
+                        prev === item.id ? null : item.id,
                       );
                       return;
                     }
                     updateOpenMenus((prev) => ({
                       ...prev,
-                      [item.label]: !(prev[item.label] ?? active),
+                      [item.id]: !(prev[item.id] ?? active),
                     }));
                   }}
                   className={[
@@ -298,14 +349,14 @@ export function Sidebar() {
                     collapsed ? "justify-center px-2" : "",
                     parentHighlighted
                       ? collapsed
-                        ? "bg-accent font-medium text-white"
-                        : "bg-accent-soft font-medium text-text"
+                        ? "bg-sidebar-active font-medium text-white"
+                        : "bg-sidebar-active-soft font-medium text-sidebar-text"
                       : item.disabled
-                        ? "text-text-dim hover:bg-surface-hover"
-                        : "text-text-muted hover:bg-surface-hover hover:text-text",
+                        ? "text-sidebar-text-dim hover:bg-sidebar-hover"
+                        : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
                   ].join(" ")}
                   aria-expanded={collapsed ? showFlyout : menuOpen}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? label : undefined}
                 >
                   <span
                     className={[
@@ -324,16 +375,16 @@ export function Sidebar() {
                     ].join(" ")}
                   >
                     <span className="flex-1 truncate whitespace-nowrap">
-                      {item.label}
+                      {label}
                     </span>
                     {item.disabled && (
-                      <span className="shrink-0 text-[9px] uppercase tracking-wide text-text-dim">
-                        Soon
+                      <span className="shrink-0 text-[9px] uppercase tracking-wide text-sidebar-text-dim">
+                        {t.nav.soon}
                       </span>
                     )}
                     <span
                       className={[
-                        "shrink-0 text-[18px] text-text-dim transition-transform duration-300 ease-in-out",
+                        "shrink-0 text-[18px] text-sidebar-text-dim transition-transform duration-300 ease-in-out",
                         menuOpen ? "rotate-180" : "rotate-0",
                       ].join(" ")}
                       aria-hidden
@@ -351,12 +402,12 @@ export function Sidebar() {
                     ].join(" ")}
                   >
                     <div className="overflow-hidden">
-                      <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-border pl-3">
+                      <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-sidebar-border pl-3">
                         {item.children.map((child) =>
                           renderChild(
                             child,
                             isChildActive(pathname, child),
-                            item.label,
+                            item.id,
                           ),
                         )}
                       </div>
@@ -367,14 +418,14 @@ export function Sidebar() {
                 {showFlyout && (
                   <div
                     ref={flyoutRef}
-                    className="sidebar-flyout fixed z-50 min-w-[190px] rounded-lg border border-border bg-bg-elevated p-1.5 shadow-xl shadow-black/40"
+                    className="sidebar-flyout fixed z-50 min-w-[190px] rounded-lg border border-sidebar-border bg-sidebar-bg p-1.5 shadow-xl shadow-[0_12px_32px_var(--sidebar-shadow)]"
                     style={{ top: flyoutPos.top, left: flyoutPos.left }}
                   >
                     {item.children.map((child) =>
                       renderChild(
                         child,
                         isChildActive(pathname, child),
-                        item.label,
+                        item.id,
                       ),
                     )}
                   </div>
@@ -386,9 +437,13 @@ export function Sidebar() {
           if (item.disabled || !item.href) {
             return (
               <span
-                key={item.label}
+                key={item.id}
                 className={itemClass(false, true)}
-                title={collapsed ? `${item.label} (Coming soon)` : "Coming soon"}
+                title={
+                  collapsed
+                    ? `${label} (${t.nav.comingSoon})`
+                    : t.nav.comingSoon
+                }
               >
                 <span className="w-4 shrink-0 text-center text-xs opacity-70">
                   {item.icon}
@@ -402,10 +457,10 @@ export function Sidebar() {
                   ].join(" ")}
                 >
                   <span className="flex-1 truncate whitespace-nowrap">
-                    {item.label}
+                    {label}
                   </span>
-                  <span className="shrink-0 text-[9px] uppercase tracking-wide text-text-dim">
-                    Soon
+                  <span className="shrink-0 text-[9px] uppercase tracking-wide text-sidebar-text-dim">
+                    {t.nav.soon}
                   </span>
                 </span>
               </span>
@@ -414,10 +469,10 @@ export function Sidebar() {
 
           return (
             <Link
-              key={item.label}
+              key={item.id}
               href={item.href}
               className={itemClass(active)}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? label : undefined}
             >
               <span className="w-4 shrink-0 text-center text-xs opacity-70">
                 {item.icon}
@@ -428,7 +483,7 @@ export function Sidebar() {
                   collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100",
                 ].join(" ")}
               >
-                {item.label}
+                {label}
               </span>
             </Link>
           );
