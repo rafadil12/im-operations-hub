@@ -66,8 +66,8 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    id: "security",
-    labelKey: "security",
+    id: "safety",
+    labelKey: "safety",
     icon: "🛡",
     disabled: true,
     children: comingSoonChildren,

@@ -45,7 +45,7 @@ const cn: Dict = {
     moduleManagement: "管理",
     moduleAnalysis: "分析",
     masterData: "主数据",
-    security: "安全管理",
+    safety: "安全",
     sparepart: "备件管理",
     organization: "组织管理",
     report: "报表",

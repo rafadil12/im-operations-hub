@@ -43,7 +43,7 @@ const en = {
     moduleManagement: "Management",
     moduleAnalysis: "Analysis",
     masterData: "Master Data",
-    security: "Security",
+    safety: "Safety",
     sparepart: "Sparepart",
     organization: "Organization",
     report: "Report",
