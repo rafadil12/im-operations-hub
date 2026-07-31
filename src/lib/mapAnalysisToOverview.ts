@@ -1,5 +1,6 @@
 import type { ModuleCardData } from "@/data/overview-mock";
 import { namedStatusCount, type AnalysisResult } from "@/lib/types";
+import type { Lang } from "@/lib/types";
 
 const BAR_COLORS = ["#22c55e", "#4ade80", "#86efac", "#bbf7d0"];
 const STATUS_COLORS = {
@@ -31,6 +32,7 @@ function initialsFromName(name: string): string {
 export function mapAnalysisToOverview(
   base: ModuleCardData,
   result: AnalysisResult,
+  lang: Lang,
 ): ModuleCardData {
   const total = result.total;
   const completed = namedStatusCount(result.byStatus, "Completed");
@@ -46,7 +48,10 @@ export function mapAnalysisToOverview(
   const maxBar = Math.max(1, ...divisions.map((d) => d.count));
 
   const pics = result.userRanking.slice(0, 4).map((u) => {
-    const name = u.name_en?.trim() || u.name_cn?.trim() || "Unknown";
+    const name =
+     lang === "cn"
+      ? u.name_cn?.trim() || u.name_en?.trim() || "Unknown"
+      : u.name_en?.trim() || u.name_cn?.trim() || "Unknown";
     return {
       name,
       role: u.division?.trim() || "—",
@@ -79,7 +84,10 @@ export function mapAnalysisToOverview(
     bars: {
       title: "Task by Department (This Month)",
       items: divisions.map((d, i) => ({
-        label: d.name_en?.trim() || d.name_cn?.trim() || "Unknown",
+        label: 
+          lang === "cn"
+            ? d.name_cn?.trim() || d.name_en?.trim() || "Unknown"
+            : d.name_en?.trim() || d.name_cn?.trim() || "Unknown",
         value: d.count,
         max: maxBar,
         color: BAR_COLORS[i % BAR_COLORS.length],

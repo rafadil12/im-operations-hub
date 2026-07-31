@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useLang } from "@/lib/i18n";
+import { getDict, useLang } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -11,7 +11,10 @@ type HeaderProps = {
 
 export function Header({ title }: HeaderProps) {
   const { lang, setLang } = useLang();
+  
   const [now, setNow] = useState(() => new Date());
+  const t = getDict(lang);
+  
 
   const toggle = (next: Lang) => {
     if (next !== lang) setLang(next);
@@ -49,7 +52,7 @@ export function Header({ title }: HeaderProps) {
         <div className="flex items-center gap-3">
           {/* Route label, not a heading: each page owns its own <h1>. */}
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-text">
-            {title}
+            {title === "Overview"? t.nav.overview: title === "Daily Operation"? t.nav.dailyOperation: title}
           </p>
         </div>
 
