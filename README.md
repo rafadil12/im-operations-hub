@@ -25,6 +25,14 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 | Variable | Required | Description |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | No | Absolute base URL of the deployment (for example `https://im-one.example.com`). Used as `metadataBase` for canonical and Open Graph URLs. Falls back to `http://localhost:3000`, so set it in production to avoid localhost links in shared previews. |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Yes | MySQL connection for MES data. |
+| `AUTH_SECRET` | Later | Needed when switching from mock auth to real JWT/DB login. |
+
+### Auth (current: mock)
+
+Login is **client-side mock** via `localStorage` key `im-ops-auth` until the auth database is ready. Any non-empty email/employee ID + password on `/login` succeeds and redirects to `/`.
+
+When ready for real auth: run [`db/migrations/002_app_accounts.sql`](db/migrations/002_app_accounts.sql), set `AUTH_SECRET`, and wire `AuthProvider` back to `/api/auth/*`.
 
 IM One is an internal tool: every route sends `noindex, nofollow` and `/robots.txt` disallows all crawlers. There is intentionally no `sitemap.xml`.
 
