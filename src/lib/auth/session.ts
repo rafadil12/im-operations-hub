@@ -1,86 +1,122 @@
-import { SignJWT, jwtVerify } from "jose";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import {
-  AUTH_COOKIE_NAME,
-  SESSION_MAX_AGE_DEFAULT,
-  type SessionPayload,
-} from "./types";
+import type { SessionPayload } from "./types";
 
-function getSecretKey(): Uint8Array {
+export const SESSION_COOKIE = "im_ops_session";
+
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
+
+function getSecret(): string {
   const secret = process.env.AUTH_SECRET;
-  if (!secret) {
+  if (!secret || secret.length < 16) {
     throw new Error(
-      "AUTH_SECRET is missing. Set a long random string in .env.local.",
+      "AUTH_SECRET is missing or too short. Set a secret of at least 16 characters in .env.local",
     );
   }
-  return new TextEncoder().encode(secret);
+  return secret;
 }
 
-export async function createSessionToken(
-  payload: SessionPayload,
-  maxAgeSeconds: number,
-): Promise<string> {
-  return new SignJWT({
-    email: payload.email,
-    displayName: payload.displayName,
-    roleLabel: payload.roleLabel,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(String(payload.sub))
-    .setIssuedAt()
-    .setExpirationTime(`${maxAgeSeconds}s`)
-    .sign(getSecretKey());
+function encodePayload(payload: SessionPayload): string {
+  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
 
-export async function verifySessionToken(
-  token: string,
-): Promise<SessionPayload | null> {
+function decodePayload(encoded: string): SessionPayload | null {
   try {
-    const { payload } = await jwtVerify(token, getSecretKey());
-    const sub = Number(payload.sub);
-    if (!Number.isFinite(sub) || sub <= 0) return null;
-    const email = typeof payload.email === "string" ? payload.email : null;
-    const displayName =
-      typeof payload.displayName === "string" ? payload.displayName : null;
-    const roleLabel =
-      typeof payload.roleLabel === "string" ? payload.roleLabel : null;
-    if (!email || !displayName || !roleLabel) return null;
-    return { sub, email, displayName, roleLabel };
+    const json = Buffer.from(encoded, "base64url").toString("utf8");
+    const parsed = JSON.parse(json) as Partial<SessionPayload>;
+    if (
+      typeof parsed.systemUserId !== "number" ||
+      typeof parsed.userId !== "number" ||
+      typeof parsed.exp !== "number"
+    ) {
+      return null;
+    }
+    return {
+      systemUserId: parsed.systemUserId,
+      userId: parsed.userId,
+      roleName:
+        typeof parsed.roleName === "string" || parsed.roleName === null
+          ? parsed.roleName
+          : null,
+      exp: parsed.exp,
+    };
   } catch {
     return null;
   }
 }
 
+function sign(encodedPayload: string): string {
+  return createHmac("sha256", getSecret())
+    .update(encodedPayload)
+    .digest("base64url");
+}
+
+export function createSessionToken(input: {
+  systemUserId: number;
+  userId: number;
+  roleName: string | null;
+  maxAgeSeconds?: number;
+}): string {
+  const maxAge = input.maxAgeSeconds ?? MAX_AGE_SECONDS;
+  const payload: SessionPayload = {
+    systemUserId: input.systemUserId,
+    userId: input.userId,
+    roleName: input.roleName,
+    exp: Math.floor(Date.now() / 1000) + maxAge,
+  };
+  const encoded = encodePayload(payload);
+  return `${encoded}.${sign(encoded)}`;
+}
+
+export function verifySessionToken(token: string): SessionPayload | null {
+  const dot = token.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const encoded = token.slice(0, dot);
+  const signature = token.slice(dot + 1);
+  if (!encoded || !signature) return null;
+
+  const expected = sign(encoded);
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  const payload = decodePayload(encoded);
+  if (!payload) return null;
+  if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+  return payload;
+}
+
+export async function readSession(): Promise<SessionPayload | null> {
+  const jar = await cookies();
+  const raw = jar.get(SESSION_COOKIE)?.value;
+  if (!raw) return null;
+  return verifySessionToken(raw);
+}
+
 export async function setSessionCookie(
   token: string,
-  maxAgeSeconds: number,
+  options?: { maxAgeSeconds?: number },
 ): Promise<void> {
   const jar = await cookies();
-  jar.set(AUTH_COOKIE_NAME, token, {
+  const maxAge = options?.maxAgeSeconds ?? MAX_AGE_SECONDS;
+  jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: maxAgeSeconds,
+    maxAge,
   });
 }
 
 export async function clearSessionCookie(): Promise<void> {
   const jar = await cookies();
-  jar.set(AUTH_COOKIE_NAME, "", {
+  jar.set(SESSION_COOKIE, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,
   });
 }
 
-export async function readSession(): Promise<SessionPayload | null> {
-  const jar = await cookies();
-  const token = jar.get(AUTH_COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifySessionToken(token);
-}
-
-export { SESSION_MAX_AGE_DEFAULT };
+export { MAX_AGE_SECONDS };

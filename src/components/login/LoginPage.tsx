@@ -284,7 +284,7 @@ export function LoginPage() {
             <form className="mt-7 space-y-5" onSubmit={onSubmit}>
               <label className="block">
                 <span className="mb-2 block text-sm text-text-muted">
-                  Employee ID / Email
+                  Employee ID
                 </span>
                 <span className="relative block">
                   <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-dim">
@@ -295,7 +295,7 @@ export function LoginPage() {
                     autoComplete="username"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="employee@imone.com"
+                    placeholder="Enter your employee ID"
                     className="w-full rounded-lg border border-border bg-bg/30 py-3 pl-11 pr-3 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent focus:ring-2 focus:ring-accent/20"
                     required
                   />

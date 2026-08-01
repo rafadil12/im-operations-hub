@@ -1,37 +1,134 @@
+import type { RowDataPacket } from "mysql2";
 import { query, execute } from "@/lib/db";
-import type { AuthAccountPublic, AuthAccountRow } from "./types";
+import type { AuthAccountPublic } from "./types";
+import { verifyPassword } from "./password";
 
-export function toPublicAccount(row: AuthAccountRow): AuthAccountPublic {
+type AccountRow = RowDataPacket & {
+  system_user_id: number;
+  user_id: number;
+  employee_no: string | null;
+  name_en: string | null;
+  name_cn: string | null;
+  password_hash: string;
+  is_active: number;
+  role_id: number | null;
+  role_name: string | null;
+};
+
+function displayName(
+  row: Pick<AccountRow, "user_id" | "name_en" | "name_cn" | "employee_no">,
+): string {
+  return row.name_en || row.name_cn || row.employee_no || `User #${row.user_id}`;
+}
+
+function toPublic(
+  row: AccountRow,
+  permissions: string[],
+): AuthAccountPublic {
+  const roleName = row.role_name;
   return {
-    id: row.id,
-    email: row.email,
-    employeeId: row.employee_id,
-    displayName: row.display_name,
-    roleLabel: row.role_label,
+    id: row.user_id,
+    systemUserId: row.system_user_id,
+    employeeId: row.employee_no,
+    displayName: displayName(row),
+    roleName,
+    roleLabel: roleName
+      ? roleName.charAt(0).toUpperCase() + roleName.slice(1)
+      : "No role",
+    permissions,
   };
 }
 
-export async function findAccountByLogin(
-  login: string,
-): Promise<AuthAccountRow | null> {
-  const trimmed = login.trim();
-  if (!trimmed) return null;
-
-  const rows = await query<AuthAccountRow[]>(
-    `SELECT id, email, employee_id, password_hash, display_name, role_label, is_active
-     FROM app_accounts
-     WHERE is_active = 1
-       AND (LOWER(email) = LOWER(?) OR employee_id = ?)
-     LIMIT 1`,
-    [trimmed, trimmed],
+export async function loadPermissionsForRole(
+  roleId: number | null,
+): Promise<string[]> {
+  if (!roleId) return [];
+  const rows = await query<RowDataPacket[]>(
+    `SELECT p.code
+     FROM role_permissions rp
+     INNER JOIN permissions p ON p.id = rp.permission_id
+     WHERE rp.role_id = ?
+     ORDER BY p.code`,
+    [roleId],
   );
+  return rows.map((r) => String(r.code));
+}
 
+export async function findAccountByEmployeeNo(
+  employeeNo: string,
+): Promise<AccountRow | null> {
+  const rows = await query<AccountRow[]>(
+    `SELECT
+       su.id AS system_user_id,
+       su.user_id,
+       su.password_hash,
+       su.is_active,
+       su.role_id,
+       u.employee_no,
+       u.name_en,
+       u.name_cn,
+       r.name AS role_name
+     FROM system_users su
+     INNER JOIN users u ON u.id = su.user_id
+     LEFT JOIN roles r ON r.id = su.role_id
+     WHERE u.employee_no = ?
+     LIMIT 1`,
+    [employeeNo],
+  );
   return rows[0] ?? null;
 }
 
-export async function touchLastLogin(accountId: number): Promise<void> {
-  await execute(
-    "UPDATE app_accounts SET last_login_at = NOW() WHERE id = ?",
-    [accountId],
+export async function findAccountBySystemUserId(
+  systemUserId: number,
+): Promise<AccountRow | null> {
+  const rows = await query<AccountRow[]>(
+    `SELECT
+       su.id AS system_user_id,
+       su.user_id,
+       su.password_hash,
+       su.is_active,
+       su.role_id,
+       u.employee_no,
+       u.name_en,
+       u.name_cn,
+       r.name AS role_name
+     FROM system_users su
+     INNER JOIN users u ON u.id = su.user_id
+     LEFT JOIN roles r ON r.id = su.role_id
+     WHERE su.id = ?
+     LIMIT 1`,
+    [systemUserId],
   );
+  return rows[0] ?? null;
+}
+
+export async function getAccountPublic(
+  systemUserId: number,
+): Promise<AuthAccountPublic | null> {
+  const row = await findAccountBySystemUserId(systemUserId);
+  if (!row || !row.is_active) return null;
+  const permissions = await loadPermissionsForRole(row.role_id);
+  return toPublic(row, permissions);
+}
+
+export async function authenticateLogin(
+  login: string,
+  password: string,
+): Promise<AuthAccountPublic | null> {
+  const employeeNo = login.trim();
+  if (!employeeNo || !password) return null;
+
+  const row = await findAccountByEmployeeNo(employeeNo);
+  if (!row || !row.is_active) return null;
+
+  const ok = await verifyPassword(password, row.password_hash);
+  if (!ok) return null;
+
+  await execute(
+    "UPDATE system_users SET last_login_at = NOW() WHERE id = ?",
+    [row.system_user_id],
+  );
+
+  const permissions = await loadPermissionsForRole(row.role_id);
+  return toPublic(row, permissions);
 }

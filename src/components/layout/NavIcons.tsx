@@ -24,7 +24,7 @@ function DuotoneSvg({ active, className, children }: DuotoneProps) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden
-      className={["size-8 shrink-0", className].filter(Boolean).join(" ")}
+      className={["size-4 shrink-0", className].filter(Boolean).join(" ")}
     >
       {children({ primary, accent, cutout })}
     </svg>

@@ -136,10 +136,7 @@ export function Header({ title }: HeaderProps) {
           <span className="hidden rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted lg:inline">
             {currentDateTime}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success/10 px-2.5 py-1.5 text-xs text-success">
-            <span className="size-1.5 rounded-full bg-success" />
-            Factory Status: Running
-          </span>
+
 
           {loading ? (
             <span className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-dim">
@@ -155,7 +152,13 @@ export function Header({ title }: HeaderProps) {
                 aria-haspopup="menu"
               >
                 {account ? (
-                  account.roleLabel
+                  <>
+                    <span className="max-w-[8rem] truncate">
+                      {account.displayName}
+                    </span>
+                    <span className="text-text-dim">·</span>
+                    <span>{account.roleLabel}</span>
+                  </>
                 ) : (
                   <>
                     <GuestIcon />

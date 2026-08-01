@@ -1,4 +1,4 @@
-const BASE = "/api/daily-operation";
+const DAILY_OP_BASE = "/api/daily-operation";
 
 async function handle<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => ({}));
@@ -11,7 +11,7 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { cache: "no-store" });
+  const res = await fetch(`${DAILY_OP_BASE}${path}`, { cache: "no-store" });
   return handle<T>(res);
 }
 
@@ -20,7 +20,26 @@ export async function apiSend<T>(
   method: "POST" | "PUT" | "DELETE",
   body?: unknown,
 ): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${DAILY_OP_BASE}${path}`, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return handle<T>(res);
+}
+
+/** Fetch against an absolute API path (e.g. `/api/settings/roles`). */
+export async function apiGetAbs<T>(path: string): Promise<T> {
+  const res = await fetch(path, { cache: "no-store" });
+  return handle<T>(res);
+}
+
+export async function apiSendAbs<T>(
+  path: string,
+  method: "POST" | "PUT" | "DELETE",
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(path, {
     method,
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,

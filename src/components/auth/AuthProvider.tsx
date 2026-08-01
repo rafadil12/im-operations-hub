@@ -10,13 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import type { AuthAccountPublic } from "@/lib/auth/types";
-import {
-  AUTH_STORAGE_KEY,
-  clearStoredAccount,
-  createMockAccount,
-  readStoredAccount,
-  writeStoredAccount,
-} from "@/lib/auth/mockStorage";
 
 type AuthContextValue = {
   account: AuthAccountPublic | null;
@@ -32,24 +25,31 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function fetchMe(): Promise<AuthAccountPublic | null> {
+  const res = await fetch("/api/auth/me", { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { account?: AuthAccountPublic | null };
+  return data.account ?? null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<AuthAccountPublic | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    setAccount(readStoredAccount());
-    setLoading(false);
+    try {
+      const next = await fetchMe();
+      setAccount(next);
+    } catch {
+      setAccount(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate session on mount
     void refresh();
-
-    const onStorage = (event: StorageEvent) => {
-      if (event.key !== null && event.key !== AUTH_STORAGE_KEY) return;
-      setAccount(readStoredAccount());
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
   }, [refresh]);
 
   const login = useCallback(
@@ -60,20 +60,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       const identifier = input.login.trim();
       if (!identifier || !input.password) {
-        throw new Error("Employee ID / email and password are required.");
+        throw new Error("Employee ID and password are required.");
       }
 
-      // Mock auth (localStorage) until DB accounts are ready.
-      const next = createMockAccount(identifier);
-      writeStoredAccount(next);
-      setAccount(next);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          login: identifier,
+          password: input.password,
+          remember: input.remember ?? false,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        account?: AuthAccountPublic;
+        error?: string;
+      };
+      if (!res.ok || !data.account) {
+        throw new Error(data.error || "Login failed.");
+      }
+      setAccount(data.account);
     },
     [],
   );
 
   const logout = useCallback(async () => {
-    clearStoredAccount();
-    setAccount(null);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      setAccount(null);
+    }
   }, []);
 
   const value = useMemo<AuthContextValue>(

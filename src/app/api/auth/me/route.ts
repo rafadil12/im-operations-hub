@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readSession } from "@/lib/auth";
+import { getAccountPublic, readSession } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -7,18 +7,10 @@ export async function GET() {
     if (!session) {
       return NextResponse.json({ account: null });
     }
-
-    return NextResponse.json({
-      account: {
-        id: session.sub,
-        email: session.email,
-        employeeId: null as string | null,
-        displayName: session.displayName,
-        roleLabel: session.roleLabel,
-      },
-    });
+    const account = await getAccountPublic(session.systemUserId);
+    return NextResponse.json({ account });
   } catch (error) {
     console.error("GET /api/auth/me failed", error);
-    return NextResponse.json({ account: null });
+    return NextResponse.json({ error: "Failed to load session." }, { status: 500 });
   }
 }
