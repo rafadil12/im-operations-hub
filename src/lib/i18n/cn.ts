@@ -26,6 +26,11 @@ const cn: Dict = {
     next: "下一页",
     pageOf: "第 {page} 页，共 {total} 页",
     showingRange: "显示第 {from}–{to} 条，共 {total} 条",
+    downloadTemplate: "下载模板",
+    import: "导入",
+    importing: "导入中...",
+    export: "导出",
+    exporting: "导出中...",
   },
   nav: {
     overview: "总览",
@@ -168,6 +173,18 @@ const cn: Dict = {
     saveFailed: "保存失败。",
     networkError: "网络异常，请重试。",
     validationFailed: "请修正标红的字段。",
+    importSuccess: "成功导入 {count} 条记录。",
+    importFailed: "导入失败，未保存任何记录。",
+    templateDownloadFailed: "模板下载失败。",
+    exportFailed: "导出失败。",
+    exportEmpty: "当前筛选条件下没有可导出的记录。",
+  },
+  importModal: {
+    title: "导入活动",
+    selectFile: "选择 Excel（.xlsx）文件",
+    hint: "请使用“下载模板”生成的文件。所有行必须有效——任意一行失败则整批不保存。",
+    upload: "上传并导入",
+    rowError: "第 {row} 行",
   },
 };
 

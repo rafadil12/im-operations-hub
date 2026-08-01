@@ -24,6 +24,11 @@ const en = {
     next: "Next",
     pageOf: "Page {page} of {total}",
     showingRange: "Showing {from}–{to} of {total}",
+    downloadTemplate: "Download Template",
+    import: "Import",
+    importing: "Importing...",
+    export: "Export",
+    exporting: "Exporting...",
   },
   nav: {
     overview: "Overview",
@@ -167,6 +172,18 @@ const en = {
     saveFailed: "Failed to save record.",
     networkError: "Network error. Please try again.",
     validationFailed: "Please fix the highlighted fields.",
+    importSuccess: "Imported {count} record(s) successfully.",
+    importFailed: "Import failed. No records were saved.",
+    templateDownloadFailed: "Failed to download template.",
+    exportFailed: "Failed to export records.",
+    exportEmpty: "No records to export for the selected filters.",
+  },
+  importModal: {
+    title: "Import Activities",
+    selectFile: "Select an Excel (.xlsx) file",
+    hint: "Use the Download Template file. All rows must be valid — if any row fails, nothing is saved.",
+    upload: "Upload & Import",
+    rowError: "Row {row}",
   },
 };
 
