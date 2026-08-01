@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { getDict, useLang } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 import { ThemeToggle } from "./ThemeToggle";
@@ -9,12 +11,50 @@ type HeaderProps = {
   title: string;
 };
 
+function GuestIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-3.5"
+      aria-hidden
+    >
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5.5 19.5c1.5-3.2 4-4.8 6.5-4.8s5 1.6 6.5 4.8" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-3.5"
+      aria-hidden
+    >
+      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
+      <path d="M15 16l4-4-4-4" />
+      <path d="M19 12H10" />
+    </svg>
+  );
+}
+
 export function Header({ title }: HeaderProps) {
   const { lang, setLang } = useLang();
-  
+  const { account, loading, logout } = useAuth();
   const [now, setNow] = useState(() => new Date());
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const t = getDict(lang);
-  
 
   const toggle = (next: Lang) => {
     if (next !== lang) setLang(next);
@@ -27,24 +67,35 @@ export function Header({ title }: HeaderProps) {
     return () => window.clearInterval(timer);
   }, []);
 
-  const currentDateTime = useMemo(
-    () => {
-      const parts = new Intl.DateTimeFormat("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).formatToParts(now);
-      const valueOf = (type: Intl.DateTimeFormatPartTypes) =>
-        parts.find((part) => part.type === type)?.value ?? "";
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [menuOpen]);
 
-      return `${valueOf("weekday")}, ${valueOf("month")} ${valueOf("day")}, ${valueOf("year")} · ${valueOf("hour")}:${valueOf("minute")}`;
-    },
-    [now],
-  );
+  const currentDateTime = useMemo(() => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(now);
+    const valueOf = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((part) => part.type === type)?.value ?? "";
+
+    return `${valueOf("weekday")}, ${valueOf("month")} ${valueOf("day")}, ${valueOf("year")} · ${valueOf("hour")}:${valueOf("minute")}`;
+  }, [now]);
+
+  const triggerClass =
+    "inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text";
 
   return (
     <header className="sticky top-0 z-20 border-b border-border-subtle bg-bg/95 backdrop-blur-sm">
@@ -85,16 +136,72 @@ export function Header({ title }: HeaderProps) {
           <span className="hidden rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted lg:inline">
             {currentDateTime}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success/10 px-2.5 py-1.5 text-xs text-success">
-            <span className="size-1.5 rounded-full bg-success" />
-            Factory Status: Running
-          </span>
-          <span className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted">
-            IT Manager
-          </span>
+
+
+          {loading ? (
+            <span className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-dim">
+              …
+            </span>
+          ) : (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                className={triggerClass}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+              >
+                {account ? (
+                  <>
+                    <span className="max-w-[8rem] truncate">
+                      {account.displayName}
+                    </span>
+                    <span className="text-text-dim">·</span>
+                    <span>{account.roleLabel}</span>
+                  </>
+                ) : (
+                  <>
+                    <GuestIcon />
+                    <span>Guest</span>
+                  </>
+                )}
+              </button>
+
+              {menuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 z-30 mt-1 min-w-[10rem] rounded-md border border-border bg-bg-elevated py-1 shadow-lg"
+                >
+                  {account ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+                      onClick={async () => {
+                        setMenuOpen(false);
+                        await logout();
+                      }}
+                    >
+                      <LogoutIcon />
+                      Logout
+                    </button>
+                  ) : (
+                    <Link
+                      href="/login"
+                      role="menuitem"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <GuestIcon />
+                      Sign in
+                    </Link>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
-
     </header>
   );
 }
