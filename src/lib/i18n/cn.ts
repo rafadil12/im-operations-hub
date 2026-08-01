@@ -50,7 +50,7 @@ const cn: Dict = {
     soon: "即将推出",
     expandSidebar: "展开侧边栏",
     collapseSidebar: "收起侧边栏",
-  },
+  },  
   dailyOp: {
     title: "日常运营",
     subtitle: "跟踪、分析和管理日常运营活动",
@@ -59,6 +59,40 @@ const cn: Dict = {
     analysisTitle: "运营洞察",
     analysisDesc: "查看运营趋势、绩效和数据分析",
     masterDesc: "管理用户、类别、子类别及其他配置数据",
+  },
+  overview: {
+    title: "总览",
+    subtitle: "总览看板 — 点击卡片展开，然后进入模块详情。",
+
+    itsmOverview: "ITSM 总览",
+    dailyOperationOverview: "日常运营总览",
+
+    totalTicket: "工单总数",
+    openTicket: "未关闭工单",
+    closedTicket: "已关闭工单",
+    slaCompliance: "SLA 达成率",
+
+    thisMonthTasks: "本月任务数",
+    completed: "已完成",
+    totalUsers: "用户总数",
+    avgTasks: "平均任务数",
+
+    ticketByDepartment: "本月各部门工单",
+    taskByDepartment: "本月各部门任务",
+
+    topPicTicket: "工单数量最多的负责人",
+    topPicTask: "任务数量最多的负责人",
+
+    ticketTrend: "最近 7 天工单趋势",
+    taskStatus: "本月任务状态",
+
+    open: "未关闭",
+    closed: "已关闭",
+    pending: "待处理",
+    inProgress: "进行中",
+    done: "完成",
+
+    clickDetails: "点击任意卡片查看更多详情。",
   },
   fields: {
     pic: "负责人",

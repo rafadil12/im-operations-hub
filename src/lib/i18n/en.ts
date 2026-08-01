@@ -58,6 +58,41 @@ const en = {
     analysisDesc: "Explore trends, performance, and operational analytics",
     masterDesc: "Manage users, categories, subcategories, and other configurations",
   },
+  overview: {
+    title: "Overview",
+    subtitle:
+      "Overview dashboard — click a card to expand, then open the module detail.",
+
+    itsmOverview: "ITSM Overview",
+    dailyOperationOverview: "Daily Operation Overview",
+
+    totalTicket: "Total Ticket",
+    openTicket: "Open Ticket",
+    closedTicket: "Closed Ticket",
+    slaCompliance: "SLA Compliance",
+
+    thisMonthTasks: "This Month's Tasks",
+    completed: "Completed",
+    totalUsers: "Total Users",
+    avgTasks: "Avg. Tasks",
+
+    ticketByDepartment: "Ticket by Department (This Month)",
+    taskByDepartment: "Task by Department (This Month)",
+
+    topPicTicket: "Top PIC (by Most Ticket)",
+    topPicTask: "Top PIC (by Most Task)",
+
+    ticketTrend: "Ticket Trend (Last 7 Days)",
+    taskStatus: "Task Status (This Month)",
+
+    open: "Open",
+    closed: "Closed",
+    pending: "Pending",
+    inProgress: "In Progress",
+    done: "Done",
+
+    clickDetails: "Click on any card to view more details.",
+  },
   fields: {
     pic: "PIC",
     division: "Division",
