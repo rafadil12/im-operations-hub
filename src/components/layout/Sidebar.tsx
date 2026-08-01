@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { ImOneLogo } from "@/components/brand/ImOneLogo";
+import { NavIcon, type NavIconId } from "@/components/layout/NavIcons";
 import { useLang, type Dict } from "@/lib/i18n";
 
 type NavLabelKey = keyof Dict["nav"];
@@ -19,7 +21,7 @@ type NavItem = {
   id: string;
   labelKey: NavLabelKey;
   href?: string;
-  icon: string;
+  icon: NavIconId;
   disabled?: boolean;
   children?: NavChild[];
 };
@@ -31,11 +33,11 @@ const comingSoonChildren: NavChild[] = [
 ];
 
 const navItems: NavItem[] = [
-  { id: "overview", labelKey: "overview", href: "/", icon: "⊞" },
+  { id: "overview", labelKey: "overview", href: "/", icon: "overview" },
   {
     id: "itsm",
     labelKey: "itsm",
-    icon: "☎",
+    icon: "itsm",
     children: [
       { id: "overview", labelKey: "overview", href: "/itsm" },
       { id: "management", labelKey: "moduleManagement", disabled: true },
@@ -46,7 +48,7 @@ const navItems: NavItem[] = [
   {
     id: "daily-operation",
     labelKey: "dailyOperation",
-    icon: "▤",
+    icon: "daily-operation",
     children: [
       {
         id: "activities",
@@ -66,48 +68,56 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    id: "security",
-    labelKey: "security",
-    icon: "🛡",
+    id: "safety",
+    labelKey: "safety",
+    icon: "safety",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "sparepart",
     labelKey: "sparepart",
-    icon: "⚙",
+    icon: "sparepart",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "organization",
     labelKey: "organization",
-    icon: "◎",
+    icon: "organization",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "report",
     labelKey: "report",
-    icon: "▤",
+    icon: "report",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "training",
     labelKey: "training",
-    icon: "✎",
+    icon: "training",
     disabled: true,
     children: comingSoonChildren,
   },
   {
     id: "settings",
     labelKey: "settings",
-    icon: "⚙",
-    disabled: true,
-    children: comingSoonChildren,
+    icon: "settings",
+    children: [
+      { id: "roles", labelKey: "settingsRoles", href: "/settings/roles" },
+      {
+        id: "accounts",
+        labelKey: "settingsAccounts",
+        href: "/settings/accounts",
+      },
+    ],
   },
 ];
+
+const settingsAdminOnly = true;
 
 // Survives AppShell remounts during client-side navigations.
 let cachedOpenMenus: Record<string, boolean> = {};
@@ -117,6 +127,9 @@ function isChildActive(pathname: string, child: NavChild) {
   if (!child.href) return false;
   if (child.href === "/daily-operation/master/users") {
     return pathname.startsWith("/daily-operation/master");
+  }
+  if (child.href.startsWith("/settings/")) {
+    return pathname.startsWith(child.href);
   }
   return pathname.startsWith(child.href);
 }
@@ -133,12 +146,18 @@ function isParentActive(pathname: string, item: NavItem) {
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLang();
+  const { account } = useAuth();
   const [collapsed, setCollapsed] = useState(cachedCollapsed);
   const [openMenus, setOpenMenus] = useState(cachedOpenMenus);
   const [flyoutKey, setFlyoutKey] = useState<string | null>(null);
   const [flyoutPos, setFlyoutPos] = useState({ top: 0, left: 0 });
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const flyoutRef = useRef<HTMLDivElement | null>(null);
+
+  const visibleNavItems = useMemo(() => {
+    if (!settingsAdminOnly || account?.roleName === "admin") return navItems;
+    return navItems.filter((item) => item.id !== "settings");
+  }, [account?.roleName]);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -164,14 +183,14 @@ export function Sidebar() {
     const rect = triggerRefs.current[key]?.getBoundingClientRect();
     if (!rect) return;
     const childCount =
-      navItems.find((item) => item.id === key)?.children?.length ?? 0;
+      visibleNavItems.find((item) => item.id === key)?.children?.length ?? 0;
     const height = flyoutRef.current?.offsetHeight ?? childCount * 40 + 12;
     const top = Math.min(
       rect.top,
       Math.max(8, window.innerHeight - height - 8),
     );
     setFlyoutPos({ top, left: rect.right + 8 });
-  }, []);
+  }, [visibleNavItems]);
 
   useEffect(() => {
     if (!flyoutKey) return;
@@ -206,12 +225,34 @@ export function Sidebar() {
     };
   }, [flyoutKey, syncFlyoutPos]);
 
+  // Single source for top-level nav row padding/size — leaf (Overview) & parent (ITSM) share this.
+  // min-h keeps leaf & parent rows equal (parent has an 18px chevron).
+  const navItemRowBase = [
+    "flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1 text-left text-sm transition-colors",
+    collapsed ? "justify-center px-2" : "",
+  ].join(" ");
+
   const itemClass = (active: boolean, disabled?: boolean) =>
     [
-      "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
-      collapsed ? "justify-center px-2" : "",
+      navItemRowBase,
       active
         ? "bg-sidebar-active font-medium text-white"
+        : disabled
+          ? "text-sidebar-text-dim hover:bg-sidebar-hover"
+          : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
+    ].join(" ");
+
+  const parentItemClass = (
+    highlighted: boolean,
+    disabled?: boolean,
+  ) =>
+    [
+      navItemRowBase,
+      "duration-200",
+      highlighted
+        ? collapsed
+          ? "bg-sidebar-active font-medium text-white"
+          : "bg-sidebar-active-soft font-medium text-sidebar-text"
         : disabled
           ? "text-sidebar-text-dim hover:bg-sidebar-hover"
           : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
@@ -226,6 +267,14 @@ export function Sidebar() {
           ? "cursor-not-allowed text-sidebar-text-dim"
           : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
     ].join(" ");
+
+  const navIconWrap = (opacity: string) =>
+    `flex size-4 shrink-0 items-center justify-center ${opacity}`;
+
+  const navLabelWrap = [
+    "flex min-w-0 flex-1 items-center gap-2 overflow-hidden transition-all duration-300 ease-in-out",
+    collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100",
+  ].join(" ");
 
   const renderChild = (
     child: NavChild,
@@ -315,7 +364,7 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar-scroll flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const active = isParentActive(pathname, item);
           const label = t.nav[item.labelKey];
 
@@ -344,36 +393,31 @@ export function Sidebar() {
                       [item.id]: !(prev[item.id] ?? active),
                     }));
                   }}
-                  className={[
-                    "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors duration-200",
-                    collapsed ? "justify-center px-2" : "",
-                    parentHighlighted
-                      ? collapsed
-                        ? "bg-sidebar-active font-medium text-white"
-                        : "bg-sidebar-active-soft font-medium text-sidebar-text"
-                      : item.disabled
-                        ? "text-sidebar-text-dim hover:bg-sidebar-hover"
-                        : "text-sidebar-text-muted hover:bg-sidebar-hover hover:text-sidebar-text",
-                  ].join(" ")}
+                  className={parentItemClass(
+                    parentHighlighted,
+                    item.disabled,
+                  )}
                   aria-expanded={collapsed ? showFlyout : menuOpen}
                   title={collapsed ? label : undefined}
                 >
                   <span
                     className={[
-                      "w-4 shrink-0 text-center text-xs transition-opacity duration-200",
-                      parentHighlighted ? "opacity-100" : "opacity-70",
+                      navIconWrap(
+                        parentHighlighted
+                          ? "opacity-100"
+                          : item.disabled
+                            ? "opacity-55"
+                            : "opacity-90",
+                      ),
+                      "transition-opacity duration-200",
                     ].join(" ")}
                   >
-                    {item.icon}
+                    <NavIcon
+                      id={item.icon}
+                      active={collapsed && parentHighlighted}
+                    />
                   </span>
-                  <span
-                    className={[
-                      "flex min-w-0 flex-1 items-center gap-2 overflow-hidden transition-all duration-300 ease-in-out",
-                      collapsed
-                        ? "max-w-0 opacity-0"
-                        : "max-w-[200px] opacity-100",
-                    ].join(" ")}
-                  >
+                  <span className={navLabelWrap}>
                     <span className="flex-1 truncate whitespace-nowrap">
                       {label}
                     </span>
@@ -384,7 +428,7 @@ export function Sidebar() {
                     )}
                     <span
                       className={[
-                        "shrink-0 text-[18px] text-sidebar-text-dim transition-transform duration-300 ease-in-out",
+                        "flex size-[18px] shrink-0 items-center justify-center text-[18px] leading-none text-sidebar-text-dim transition-transform duration-300 ease-in-out",
                         menuOpen ? "rotate-180" : "rotate-0",
                       ].join(" ")}
                       aria-hidden
@@ -445,17 +489,10 @@ export function Sidebar() {
                     : t.nav.comingSoon
                 }
               >
-                <span className="w-4 shrink-0 text-center text-xs opacity-70">
-                  {item.icon}
+                <span className={navIconWrap("opacity-55")}>
+                  <NavIcon id={item.icon} />
                 </span>
-                <span
-                  className={[
-                    "flex min-w-0 flex-1 items-center gap-2 overflow-hidden transition-all duration-300 ease-in-out",
-                    collapsed
-                      ? "max-w-0 opacity-0"
-                      : "max-w-[200px] opacity-100",
-                  ].join(" ")}
-                >
+                <span className={navLabelWrap}>
                   <span className="flex-1 truncate whitespace-nowrap">
                     {label}
                   </span>
@@ -474,16 +511,13 @@ export function Sidebar() {
               className={itemClass(active)}
               title={collapsed ? label : undefined}
             >
-              <span className="w-4 shrink-0 text-center text-xs opacity-70">
-                {item.icon}
+              <span className={navIconWrap("opacity-90")}>
+                <NavIcon id={item.icon} active={active} />
               </span>
-              <span
-                className={[
-                  "flex-1 truncate whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out",
-                  collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100",
-                ].join(" ")}
-              >
-                {label}
+              <span className={navLabelWrap}>
+                <span className="flex-1 truncate whitespace-nowrap">
+                  {label}
+                </span>
               </span>
             </Link>
           );

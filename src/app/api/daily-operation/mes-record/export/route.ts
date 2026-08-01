@@ -1,0 +1,94 @@
+import { NextRequest, NextResponse } from "next/server";
+import { query } from "@/lib/db";
+import { resolveRange } from "@/lib/dateRange";
+import { buildActivitiesExport } from "@/lib/mesRecordImport";
+import type { MesDataRow } from "@/lib/types";
+
+export const runtime = "nodejs";
+
+const LIST_SQL = `
+  SELECT m.id, m.user_id, m.division_id, m.category_id, m.subcategory_id,
+         m.description_cn, m.description_en, m.solution_cn, m.solution_en,
+         m.type_id, m.status_id,
+         m.start_time, m.end_time, m.created_at, m.updated_at,
+         u.name_en AS pic_en, u.name_cn AS pic_cn,
+         d.name_en AS division_en, d.name_cn AS division_cn,
+         c.name_en AS category_en, c.name_cn AS category_cn,
+         s.name_en AS subcategory_en, s.name_cn AS subcategory_cn,
+         t.name_en AS type_en, t.name_cn AS type_cn,
+         st.name_en AS status_en, st.name_cn AS status_cn
+  FROM mes_record m
+  LEFT JOIN users u ON m.user_id = u.id
+  LEFT JOIN divisions d ON m.division_id = d.id
+  LEFT JOIN categories c ON m.category_id = c.id
+  LEFT JOIN subcategories s ON m.subcategory_id = s.id
+  LEFT JOIN mes_type t ON m.type_id = t.id
+  LEFT JOIN mes_status st ON m.status_id = st.id
+  WHERE m.deleted_at IS NULL
+    AND m.start_time BETWEEN ? AND ?
+`;
+
+export async function GET(request: NextRequest) {
+  try {
+    const sp = request.nextUrl.searchParams;
+    const { start, end } = resolveRange(sp.get("start"), sp.get("end"));
+
+    const conditions: string[] = [];
+    const params: unknown[] = [start, end];
+
+    const divisionId = sp.get("divisionId");
+    if (divisionId) {
+      conditions.push("m.division_id = ?");
+      params.push(Number(divisionId));
+    }
+
+    const statusId = sp.get("statusId");
+    if (statusId) {
+      conditions.push("m.status_id = ?");
+      params.push(Number(statusId));
+    }
+
+    const typeId = sp.get("typeId");
+    if (typeId) {
+      conditions.push("m.type_id = ?");
+      params.push(Number(typeId));
+    }
+
+    const q = sp.get("q");
+    if (q) {
+      conditions.push(
+        "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)",
+      );
+      const like = `%${q}%`;
+      params.push(like, like, like, like);
+    }
+
+    const sql =
+      LIST_SQL +
+      (conditions.length ? ` AND ${conditions.join(" AND ")}` : "") +
+      " ORDER BY m.start_time DESC";
+
+    const rows = await query<MesDataRow[]>(sql, params);
+    const buffer = await buildActivitiesExport(rows);
+
+    const startLabel = start.slice(0, 10);
+    const endLabel = end.slice(0, 10);
+    const filename = `daily-activities-export_${startLabel}_${endLabel}.xlsx`;
+
+    return new NextResponse(new Uint8Array(buffer), {
+      status: 200,
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    console.error("GET /mes-record/export failed", error);
+    return NextResponse.json(
+      { error: "Failed to export records." },
+      { status: 500 },
+    );
+  }
+}

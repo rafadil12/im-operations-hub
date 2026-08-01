@@ -13,6 +13,7 @@ import {
   THEME_BOOTSTRAP_SCRIPT,
   ThemeProvider,
 } from "@/lib/theme";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import "./globals.css";
 
@@ -87,7 +88,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <LangProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <AuthProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </AuthProvider>
           </LangProvider>
         </ThemeProvider>
       </body>

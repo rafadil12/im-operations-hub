@@ -6,39 +6,55 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Environment variables
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | No | Absolute base URL of the deployment (for example `https://im-one.example.com`). Used as `metadataBase` for canonical and Open Graph URLs. Falls back to `http://localhost:3000`, so set it in production to avoid localhost links in shared previews. |
+| `NEXT_PUBLIC_SITE_URL` | No | Absolute base URL of the deployment (for example `https://im-one.example.com`). Used as `metadataBase` for canonical and Open Graph URLs. Falls back to `http://localhost:3000`. |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Yes | MySQL connection for MES data. |
+| `AUTH_SECRET` | Yes | Session signing secret (at least 16 characters). Required for login cookies. |
+
+Example `.env.local`:
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=mes_dashboard
+AUTH_SECRET=change-me-to-a-long-random-string
+```
+
+## Database migrations
+
+Apply schema updates and RBAC seed (roles, permissions, admin bootstrap):
+
+```bash
+node --env-file=.env.local db/run-migrations.mjs
+```
+
+This is idempotent. Among other things it:
+
+- Adds `system_users.role_id` and `role_permissions`
+- Seeds roles: `admin`, `manager`, `operator`, `viewer`
+- Assigns **admin** to user `62000970` (user id 1)
+- Resets all login passwords to the test password below
+
+## Auth
+
+Login uses **employee ID** + password against `users` / `system_users`, with an httpOnly session cookie.
+
+**Test admin (after migration):**
+
+| Field | Value |
+| --- | --- |
+| Employee ID | `62000970` |
+| Password | `Admin@123` |
+
+Settings (`/settings/roles`, `/settings/accounts`) is visible and usable only for the **admin** role. Use Accounts to assign roles to other users for testing.
 
 IM One is an internal tool: every route sends `noindex, nofollow` and `/robots.txt` disallows all crawlers. There is intentionally no `sitemap.xml`.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
