@@ -649,7 +649,7 @@ function ChartCard({
             setOpen(true);
           }
         }}
-        className={`cursor-pointer rounded-xl border border-border bg-surface p-4 transition-colors hover:border-accent/50 hover:bg-surface-hover/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${className ?? ""}`}
+        className={`flex h-full cursor-pointer flex-col rounded-xl border border-border bg-surface p-4 transition-colors hover:border-accent/50 hover:bg-surface-hover/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${className ?? ""}`}
       >
         <div className="mb-3 flex items-start justify-between gap-2">
           <h3 className="text-sm font-semibold text-text">{title}</h3>
@@ -657,7 +657,7 @@ function ChartCard({
             {t.analysis.clickToExpand}
           </span>
         </div>
-        <div>{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </section>
 
       {open ? (
@@ -770,22 +770,28 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
   const userRankingExpanded = userRanking;
   const userRankingCompact = userRanking.slice(0, USER_RANKING_COMPACT_TOP_N);
 
-  function renderUserRanking(rows: typeof userRanking) {
+  function renderUserRanking(
+    rows: typeof userRanking,
+    opts?: { fillHeight?: boolean },
+  ) {
     if (rows.length === 0) {
       return <p className="py-8 text-center text-sm text-text-muted">{t.common.noData}</p>;
     }
     return (
-      <>
+      <div className={opts?.fillHeight ? "flex h-full flex-col" : undefined}>
         <ul className="space-y-2.5">
           {rows.map((u, i) => {
             const left = Math.max(4, (u.count / maxUser) * 100);
             const color = divisionColor[u.division?.trim() ?? ""] ?? NEUTRAL;
             return (
               <li key={`${u.name_en}-${u.name_cn}-${i}`} className="flex items-center gap-3">
-                <span className="w-32 shrink-0 truncate text-[11px] text-text-muted" title={localizedName(u, lang)}>
+                <span
+                  className="w-[9.5rem] shrink-0 text-[11px] leading-snug text-text-muted"
+                  title={localizedName(u, lang)}
+                >
                   {localizedName(u, lang)}
                 </span>
-                <div className="relative h-4 flex-1">
+                <div className="relative h-4 min-w-[3.5rem] flex-1">
                   <div className="absolute top-1/2 h-px w-full -translate-y-1/2 bg-border-subtle" />
                   <div
                     className="absolute top-1/2 h-px -translate-y-1/2 bg-border"
@@ -796,14 +802,16 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
                     style={{ left: `${left}%`, backgroundColor: color }}
                   />
                 </div>
-                <span className="w-6 text-right text-[11px] font-semibold text-text">
+                <span className="w-7 shrink-0 text-right text-[11px] font-semibold text-text">
                   {u.count}
                 </span>
               </li>
             );
           })}
         </ul>
-        <div className="mt-3 flex flex-wrap gap-3 border-t border-border-subtle pt-2">
+        <div
+          className={`${opts?.fillHeight ? "mt-auto" : "mt-3"} flex flex-wrap gap-3 border-t border-border-subtle pt-2`}
+        >
           {divisionSlices.map((d, i) => (
             <span key={`${d.label}-${i}`} className="flex items-center gap-1.5 text-[11px] text-text-muted">
               <span className="size-2.5 rounded-full" style={{ backgroundColor: d.color }} />
@@ -811,7 +819,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
             </span>
           ))}
         </div>
-      </>
+      </div>
     );
   }
 
@@ -856,7 +864,7 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
             </div>
           }
         >
-          {renderUserRanking(userRankingCompact)}
+          {renderUserRanking(userRankingCompact, { fillHeight: true })}
         </ChartCard>
       </div>
 
