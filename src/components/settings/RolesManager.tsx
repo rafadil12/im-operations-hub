@@ -39,6 +39,7 @@ export function RolesManager() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editRow, setEditRow] = useState<RoleRow | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -72,9 +73,16 @@ export function RolesManager() {
     void load();
   }, [load]);
 
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditRow(null);
+    setFormError(null);
+  };
+
   const openAdd = () => {
     setEditRow(null);
     setForm({ name: "", description: "", permissionIds: [] });
+    setFormError(null);
     setFormOpen(true);
   };
 
@@ -85,6 +93,7 @@ export function RolesManager() {
       description: row.description ?? "",
       permissionIds: [...row.permissionIds],
     });
+    setFormError(null);
     setFormOpen(true);
   };
 
@@ -98,9 +107,9 @@ export function RolesManager() {
   };
 
   const submit = async () => {
-    setError(null);
+    setFormError(null);
     if (!form.name.trim()) {
-      setError(t.common.required);
+      setFormError(t.common.required);
       return;
     }
     setSaving(true);
@@ -115,11 +124,10 @@ export function RolesManager() {
       } else {
         await apiSendAbs("/api/settings/roles", "POST", body);
       }
-      setFormOpen(false);
-      setEditRow(null);
+      closeForm();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t.common.error);
+      setFormError(e instanceof Error ? e.message : t.common.error);
     } finally {
       setSaving(false);
     }
@@ -243,12 +251,12 @@ export function RolesManager() {
       {formOpen ? (
         <Modal
           title={editRow ? t.common.edit : t.common.add}
-          onClose={() => setFormOpen(false)}
+          onClose={closeForm}
           footer={
             <>
               <button
                 type="button"
-                onClick={() => setFormOpen(false)}
+                onClick={closeForm}
                 className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
               >
                 {t.common.cancel}
@@ -265,6 +273,11 @@ export function RolesManager() {
           }
         >
           <div className="grid grid-cols-1 gap-3">
+            {formError ? (
+              <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+                {formError}
+              </p>
+            ) : null}
             <div>
               <label className={labelCls}>{t.settings.roleName}</label>
               <input

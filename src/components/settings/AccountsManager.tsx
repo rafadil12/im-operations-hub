@@ -38,6 +38,7 @@ export function AccountsManager() {
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<AccountRow | null>(null);
   const [roleId, setRoleId] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(true);
@@ -65,25 +66,31 @@ export function AccountsManager() {
     void load();
   }, [load]);
 
+  const closeForm = () => {
+    setEditRow(null);
+    setFormError(null);
+  };
+
   const openEdit = (row: AccountRow) => {
     setEditRow(row);
     setRoleId(row.roleId);
     setIsActive(row.isActive);
+    setFormError(null);
   };
 
   const submit = async () => {
     if (!editRow) return;
     setSaving(true);
-    setError(null);
+    setFormError(null);
     try {
       await apiSendAbs(`/api/settings/accounts/${editRow.id}`, "PUT", {
         role_id: roleId,
         is_active: isActive,
       });
-      setEditRow(null);
+      closeForm();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t.common.error);
+      setFormError(e instanceof Error ? e.message : t.common.error);
     } finally {
       setSaving(false);
     }
@@ -170,12 +177,12 @@ export function AccountsManager() {
       {editRow ? (
         <Modal
           title={t.common.edit}
-          onClose={() => setEditRow(null)}
+          onClose={closeForm}
           footer={
             <>
               <button
                 type="button"
-                onClick={() => setEditRow(null)}
+                onClick={closeForm}
                 className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
               >
                 {t.common.cancel}
@@ -192,6 +199,11 @@ export function AccountsManager() {
           }
         >
           <div className="grid grid-cols-1 gap-3">
+            {formError ? (
+              <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+                {formError}
+              </p>
+            ) : null}
             <div>
               <label className={labelCls}>{t.settings.employeeNo}</label>
               <p className="text-sm text-text">{editRow.employeeNo ?? "-"}</p>
