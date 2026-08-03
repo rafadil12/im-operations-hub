@@ -1,0 +1,360 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { apiGetAbs } from "@/lib/apiClient";
+import { useLang } from "@/lib/i18n";
+import type { MovementType, SparepartMatDoc } from "@/lib/types";
+import { Modal } from "@/components/ui/Modal";
+import {
+  PAGE_SIZE_OPTIONS,
+  type PageSize,
+} from "@/components/sparepart/StockTable";
+
+const DEFAULT_PAGE_SIZE: PageSize = 10;
+
+type ListResponse = { rows: SparepartMatDoc[] };
+type DetailResponse = { document: SparepartMatDoc };
+
+const th =
+  "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
+const td = "px-3 py-2 align-top text-xs text-text-muted";
+
+function fillTemplate(
+  template: string,
+  values: Record<string, string | number>,
+): string {
+  return Object.entries(values).reduce(
+    (text, [key, value]) => text.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
+}
+
+function movementLabel(
+  type: MovementType,
+  t: ReturnType<typeof useLang>["t"],
+): string {
+  return type === "101" ? t.sparepart.movement101 : t.sparepart.movement201;
+}
+
+export default function MaterialDocumentsPage() {
+  const { t } = useLang();
+  const searchParams = useSearchParams();
+  const [rows, setRows] = useState<SparepartMatDoc[]>([]);
+  const [q, setQ] = useState("");
+  const [movementType, setMovementType] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
+  const [detail, setDetail] = useState<SparepartMatDoc | null>(null);
+
+  const load = useCallback(
+    async (filters: {
+      q: string;
+      movementType: string;
+      start: string;
+      end: string;
+    }) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (filters.q) params.set("q", filters.q);
+        if (filters.movementType) params.set("movementType", filters.movementType);
+        if (filters.start) params.set("start", filters.start);
+        if (filters.end) params.set("end", filters.end);
+        const data = await apiGetAbs<ListResponse>(
+          `/api/sparepart/documents?${params.toString()}`,
+        );
+        setRows(data.rows);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t.common.error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t.common.error],
+  );
+
+  const openDetail = useCallback(
+    async (id: number) => {
+      try {
+        const data = await apiGetAbs<DetailResponse>(
+          `/api/sparepart/documents/${id}`,
+        );
+        setDetail(data.document);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t.common.error);
+      }
+    },
+    [t.common.error],
+  );
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+    load({ q: "", movementType: "", start: "", end: "" });
+  }, [load]);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) {
+      void openDetail(Number(id));
+    }
+  }, [searchParams, openDetail]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize;
+    return rows.slice(startIdx, startIdx + pageSize);
+  }, [rows, currentPage, pageSize]);
+
+  const field =
+    "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h1 className="text-lg font-semibold text-text">
+          {t.sparepart.documentsTitle}
+        </h1>
+        <p className="text-sm text-text-muted">{t.sparepart.documentsDesc}</p>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
+        <div className="min-w-[140px] flex-1">
+          <label className="mb-1 block text-xs text-text-muted">
+            {t.common.search}
+          </label>
+          <input
+            className={`${field} w-full`}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-muted">
+            {t.sparepart.movementType}
+          </label>
+          <select
+            className={field}
+            value={movementType}
+            onChange={(e) => setMovementType(e.target.value)}
+          >
+            <option value="">{t.sparepart.allTypes}</option>
+            <option value="101">{t.sparepart.movement101}</option>
+            <option value="201">{t.sparepart.movement201}</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-muted">
+            {t.fields.from}
+          </label>
+          <input
+            type="date"
+            className={field}
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-muted">
+            {t.fields.to}
+          </label>
+          <input
+            type="date"
+            className={field}
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setPage(1);
+            load({ q, movementType, start, end });
+          }}
+          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          {t.common.apply}
+        </button>
+      </div>
+
+      {error ? (
+        <p className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+          {error}
+        </p>
+      ) : null}
+
+      {loading ? (
+        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
+          {t.common.loading}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
+          {t.common.noData}
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead className="border-b border-border-subtle bg-bg/40">
+                <tr>
+                  <th className={th}>{t.sparepart.docNumber}</th>
+                  <th className={th}>{t.sparepart.movementType}</th>
+                  <th className={th}>{t.sparepart.date}</th>
+                  <th className={th}>{t.sparepart.recipient}</th>
+                  <th className={th}>{t.sparepart.headerText}</th>
+                  <th className={th}>{t.sparepart.lines}</th>
+                  <th className={th}>{t.sparepart.totalQty}</th>
+                  <th className={th}>{t.common.actions}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
+                  >
+                    <td className={`${td} font-medium text-text`}>
+                      {row.doc_number}
+                    </td>
+                    <td className={td}>
+                      {movementLabel(row.movement_type, t)}
+                    </td>
+                    <td className={`${td} whitespace-nowrap`}>
+                      {String(row.posting_date).slice(0, 10)}
+                    </td>
+                    <td className={td}>{row.recipient || "-"}</td>
+                    <td className={`${td} max-w-xs`}>
+                      <span className="line-clamp-2">
+                        {row.header_text || "-"}
+                      </span>
+                    </td>
+                    <td className={`${td} tabular-nums`}>
+                      {row.line_count ?? 0}
+                    </td>
+                    <td className={`${td} tabular-nums`}>
+                      {row.total_qty ?? 0}
+                    </td>
+                    <td className={td}>
+                      <button
+                        type="button"
+                        onClick={() => openDetail(row.id)}
+                        className="text-accent hover:underline"
+                      >
+                        {t.sparepart.viewDocument}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-3 py-2.5">
+            <p className="text-xs text-text-dim">
+              {fillTemplate(t.common.showingRange, {
+                from: (currentPage - 1) * pageSize + 1,
+                to: Math.min(currentPage * pageSize, rows.length),
+                total: rows.length,
+              })}
+            </p>
+            <div className="flex items-center gap-2">
+              <select
+                className="rounded border border-border bg-bg px-2 py-1 text-xs text-text"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value) as PageSize);
+                  setPage(1);
+                }}
+              >
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => setPage(currentPage - 1)}
+                className="rounded border border-border px-2 py-1 text-xs disabled:opacity-40"
+              >
+                {t.common.previous}
+              </button>
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage(currentPage + 1)}
+                className="rounded border border-border px-2 py-1 text-xs disabled:opacity-40"
+              >
+                {t.common.next}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detail ? (
+        <Modal
+          title={`${t.sparepart.documentDetail} ${detail.doc_number}`}
+          onClose={() => setDetail(null)}
+          size="lg"
+        >
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">
+              <p>
+                <span className="text-text-dim">{t.sparepart.movementType}: </span>
+                {movementLabel(detail.movement_type, t)}
+              </p>
+              <p>
+                <span className="text-text-dim">{t.sparepart.date}: </span>
+                {String(detail.posting_date).slice(0, 10)}
+              </p>
+              <p>
+                <span className="text-text-dim">{t.sparepart.recipient}: </span>
+                {detail.recipient || "-"}
+              </p>
+              <p>
+                <span className="text-text-dim">{t.sparepart.headerText}: </span>
+                {detail.header_text || "-"}
+              </p>
+            </div>
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-border-subtle">
+                  <th className={th}>#</th>
+                  <th className={th}>{t.sparepart.code}</th>
+                  <th className={th}>{t.sparepart.name}</th>
+                  <th className={th}>{t.sparepart.qty}</th>
+                  <th className={th}>{t.sparepart.location}</th>
+                  <th className={th}>{t.sparepart.note}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(detail.lines ?? []).map((line) => (
+                  <tr
+                    key={line.id}
+                    className="border-b border-border-subtle/60"
+                  >
+                    <td className={td}>{line.line_no}</td>
+                    <td className={`${td} text-text`}>{line.item_code}</td>
+                    <td className={td}>{line.item_name}</td>
+                    <td className={`${td} tabular-nums text-text`}>
+                      {line.qty}
+                    </td>
+                    <td className={td}>{line.storage_location || "-"}</td>
+                    <td className={td}>{line.note || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
+      ) : null}
+    </div>
+  );
+}

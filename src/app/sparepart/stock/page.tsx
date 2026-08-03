@@ -1,0 +1,203 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { apiGetAbs } from "@/lib/apiClient";
+import { useLang } from "@/lib/i18n";
+import type { SparepartItem } from "@/lib/types";
+import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
+import {
+  StockTable,
+  type PageSize,
+} from "@/components/sparepart/StockTable";
+
+const DEFAULT_PAGE_SIZE: PageSize = 10;
+
+type StockResponse = {
+  rows: SparepartItem[];
+  summary: { totalItems: number; zeroStock: number; totalCurrent: number };
+  locations: string[];
+};
+
+export default function StockOverviewPage() {
+  const { t } = useLang();
+  const [rows, setRows] = useState<SparepartItem[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
+  const [summary, setSummary] = useState({
+    totalItems: 0,
+    zeroStock: 0,
+    totalCurrent: 0,
+  });
+  const [q, setQ] = useState("");
+  const [location, setLocation] = useState("");
+  const [lowStock, setLowStock] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
+  const [detail, setDetail] = useState<SparepartItem | null>(null);
+
+  const load = useCallback(
+    async (filters: { q: string; location: string; lowStock: boolean }) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (filters.q) params.set("q", filters.q);
+        if (filters.location) params.set("location", filters.location);
+        if (filters.lowStock) params.set("lowStock", "1");
+        const data = await apiGetAbs<StockResponse>(
+          `/api/sparepart/stock?${params.toString()}`,
+        );
+        setRows(data.rows);
+        setSummary(data.summary);
+        setLocations(data.locations);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t.common.error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t.common.error],
+  );
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+    load({ q: "", location: "", lowStock: false });
+  }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, currentPage, pageSize]);
+
+  const field =
+    "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-text">
+            {t.sparepart.stockTitle}
+          </h1>
+          <p className="text-sm text-text-muted">{t.sparepart.stockDesc}</p>
+        </div>
+        <Link
+          href="/sparepart/post"
+          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          {t.sparepart.goPost}
+        </Link>
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-border-subtle bg-surface px-4 py-3">
+          <p className="text-[11px] uppercase tracking-wide text-text-dim">
+            {t.sparepart.totalItems}
+          </p>
+          <p className="mt-1 text-xl font-semibold text-text">
+            {summary.totalItems}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border-subtle bg-surface px-4 py-3">
+          <p className="text-[11px] uppercase tracking-wide text-text-dim">
+            {t.sparepart.zeroStock}
+          </p>
+          <p className="mt-1 text-xl font-semibold text-text">
+            {summary.zeroStock}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border-subtle bg-surface px-4 py-3">
+          <p className="text-[11px] uppercase tracking-wide text-text-dim">
+            {t.sparepart.totalUnits}
+          </p>
+          <p className="mt-1 text-xl font-semibold text-text">
+            {summary.totalCurrent}
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
+        <div className="min-w-[160px] flex-1">
+          <label className="mb-1 block text-xs text-text-muted">
+            {t.common.search}
+          </label>
+          <input
+            className={`${field} w-full`}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <div className="min-w-[140px]">
+          <label className="mb-1 block text-xs text-text-muted">
+            {t.sparepart.location}
+          </label>
+          <select
+            className={`${field} w-full`}
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          >
+            <option value="">{t.common.all}</option>
+            {locations.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </select>
+        </div>
+        <label className="mb-2 flex items-center gap-2 text-xs text-text-muted">
+          <input
+            type="checkbox"
+            checked={lowStock}
+            onChange={(e) => setLowStock(e.target.checked)}
+          />
+          {t.sparepart.lowStockOnly}
+        </label>
+        <button
+          type="button"
+          onClick={() => {
+            setPage(1);
+            load({ q, location, lowStock });
+          }}
+          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          {t.common.apply}
+        </button>
+      </div>
+
+      {error ? (
+        <p className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+          {error}
+        </p>
+      ) : null}
+
+      {loading ? (
+        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
+          {t.common.loading}
+        </div>
+      ) : (
+        <StockTable
+          rows={pagedRows}
+          totalCount={rows.length}
+          page={currentPage}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(n) => {
+            setPageSize(n);
+            setPage(1);
+          }}
+          variant="stock"
+          readOnly
+          onRowClick={setDetail}
+        />
+      )}
+
+      {detail ? (
+        <MaterialDetailModal item={detail} onClose={() => setDetail(null)} />
+      ) : null}
+    </div>
+  );
+}

@@ -78,8 +78,28 @@ const navItems: NavItem[] = [
     id: "sparepart",
     labelKey: "sparepart",
     icon: "sparepart",
-    disabled: true,
-    children: comingSoonChildren,
+    children: [
+      {
+        id: "stock",
+        labelKey: "sparepartStock",
+        href: "/sparepart/stock",
+      },
+      {
+        id: "post",
+        labelKey: "sparepartPost",
+        href: "/sparepart/post",
+      },
+      {
+        id: "documents",
+        labelKey: "sparepartDocuments",
+        href: "/sparepart/documents",
+      },
+      {
+        id: "materials",
+        labelKey: "sparepartMaterials",
+        href: "/sparepart/materials",
+      },
+    ],
   },
   {
     id: "organization",

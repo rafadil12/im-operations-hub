@@ -142,5 +142,93 @@ const seedSql = readFileSync(
 await conn.query(seedSql);
 console.log("Applied RBAC seed (roles, permissions, mappings, admin bootstrap).");
 
+// --- 003: Sparepart inventory ---
+if (await tableExists("sparepart_items")) {
+  console.log("sparepart_items already exists.");
+} else {
+  const sparepartSql = readFileSync(
+    join(__dirname, "migrations", "003_sparepart_inventory.sql"),
+    "utf8",
+  );
+  await conn.query(sparepartSql);
+  console.log("Created sparepart_items.");
+}
+
+// --- 004: SAP IM material documents ---
+if (await tableExists("sparepart_mat_docs")) {
+  console.log("sparepart_mat_docs already exists.");
+} else {
+  const sapSql = readFileSync(
+    join(__dirname, "migrations", "004_sparepart_sap_im.sql"),
+    "utf8",
+  );
+  await conn.query(sapSql);
+  console.log("Created sparepart_mat_docs, sparepart_mat_doc_items.");
+
+  // Migrate legacy inbound → docs 101
+  if (await tableExists("sparepart_inbound")) {
+    const [inbounds] = await conn.query(
+      `SELECT id, item_id, txn_date, qty, note FROM sparepart_inbound ORDER BY id ASC`,
+    );
+    for (const row of inbounds) {
+      const docNumber = `MIG-IN-${String(row.id).padStart(6, "0")}`;
+      const [ins] = await conn.query(
+        `INSERT INTO sparepart_mat_docs
+          (doc_number, movement_type, posting_date, header_text, recipient)
+         VALUES (?, '101', ?, ?, NULL)`,
+        [docNumber, row.txn_date, row.note || "Migrated inbound"],
+      );
+      await conn.query(
+        `INSERT INTO sparepart_mat_doc_items
+          (doc_id, item_id, line_no, qty, storage_location, note)
+         VALUES (?, ?, 1, ?, NULL, ?)`,
+        [ins.insertId, row.item_id, row.qty, row.note],
+      );
+    }
+    if (inbounds.length) {
+      console.log(`Migrated ${inbounds.length} inbound row(s) to material docs.`);
+    }
+  }
+
+  // Migrate legacy outbound → docs 201
+  if (await tableExists("sparepart_outbound")) {
+    const [outbounds] = await conn.query(
+      `SELECT id, item_id, txn_date, qty, note FROM sparepart_outbound ORDER BY id ASC`,
+    );
+    for (const row of outbounds) {
+      const docNumber = `MIG-OUT-${String(row.id).padStart(6, "0")}`;
+      const [ins] = await conn.query(
+        `INSERT INTO sparepart_mat_docs
+          (doc_number, movement_type, posting_date, header_text, recipient)
+         VALUES (?, '201', ?, ?, ?)`,
+        [
+          docNumber,
+          row.txn_date,
+          "Migrated outbound",
+          row.note || "unknown",
+        ],
+      );
+      await conn.query(
+        `INSERT INTO sparepart_mat_doc_items
+          (doc_id, item_id, line_no, qty, storage_location, note)
+         VALUES (?, ?, 1, ?, NULL, ?)`,
+        [ins.insertId, row.item_id, row.qty, row.note],
+      );
+    }
+    if (outbounds.length) {
+      console.log(`Migrated ${outbounds.length} outbound row(s) to material docs.`);
+    }
+  }
+}
+
+if (await tableExists("sparepart_inbound")) {
+  await conn.query("DROP TABLE `sparepart_inbound`");
+  console.log("Dropped sparepart_inbound.");
+}
+if (await tableExists("sparepart_outbound")) {
+  await conn.query("DROP TABLE `sparepart_outbound`");
+  console.log("Dropped sparepart_outbound.");
+}
+
 await conn.end();
 console.log("Migrations complete.");

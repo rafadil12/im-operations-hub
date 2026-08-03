@@ -157,3 +157,76 @@ export function namedStatusCount(
     rows.find((s) => (s.name_en ?? "").toLowerCase().includes(key))?.count ?? 0
   );
 }
+
+/* ---- Sparepart / Inventory (SAP IM style) ---- */
+
+export type MovementType = "101" | "201";
+
+export type SparepartItem = {
+  id: number;
+  code: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  location: string | null;
+  stock_in: number;
+  stock_out: number;
+  stock_current: number;
+  image_url: string | null;
+  notes: string | null;
+  deleted_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type SparepartItemInput = {
+  code: string;
+  name: string;
+  brand: string;
+  model: string;
+  location: string;
+  notes: string;
+};
+
+export type SparepartMatDocLine = {
+  id: number;
+  doc_id: number;
+  item_id: number;
+  line_no: number;
+  qty: number;
+  storage_location: string | null;
+  note: string | null;
+  item_code?: string | null;
+  item_name?: string | null;
+  item_brand?: string | null;
+  item_model?: string | null;
+};
+
+export type SparepartMatDoc = {
+  id: number;
+  doc_number: string;
+  movement_type: MovementType;
+  posting_date: string;
+  header_text: string | null;
+  recipient: string | null;
+  created_by: string | null;
+  created_at: string | null;
+  line_count?: number;
+  total_qty?: number;
+  lines?: SparepartMatDocLine[];
+};
+
+export type SparepartGoodsMovementLineInput = {
+  item_id: number;
+  qty: number;
+  note: string;
+};
+
+export type SparepartGoodsMovementInput = {
+  movement_type: MovementType;
+  posting_date: string;
+  header_text: string;
+  recipient: string;
+  lines: SparepartGoodsMovementLineInput[];
+  created_by?: string;
+};
