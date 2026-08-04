@@ -165,3 +165,23 @@ body {
   animation: sidebar-flyout-in 160ms ease-out;
 }
 
+@keyframes bubbleIn {
+  0% {
+    opacity: 0;
+    scale: 0.3;
+  }
+
+  70% {
+    opacity: 1;
+    scale: 1.08;
+  }
+
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+.animate-bubble-in {
+  animation: bubbleIn 0.8s cubic-bezier(.22,1,.36,1) forwards;
+}

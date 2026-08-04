@@ -41,7 +41,7 @@ const navItems: NavItem[] = [
     children: [
       { id: "overview", labelKey: "overview", href: "/itsm" },
       { id: "management", labelKey: "moduleManagement", disabled: true },
-      { id: "analysis", labelKey: "moduleAnalysis", disabled: true },
+      { id: "analysis", labelKey: "moduleAnalysis", href: "/itsm/analysis" },
       { id: "master-data", labelKey: "masterData", disabled: true },
     ],
   },

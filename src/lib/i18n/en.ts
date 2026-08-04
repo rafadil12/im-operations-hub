@@ -82,6 +82,20 @@ const en = {
     analysisDesc: "Explore trends, performance, and operational analytics",
     masterDesc: "Manage users, categories, subcategories, and other configurations",
   },
+  itsm: {
+    title: "ITSM",
+    subtitle: "Track, analyze, and manage IT service requests",
+
+    manageTitle: "Ticket Management",
+    manageDesc: "Track and manage IT service tickets",
+
+    analysisTitle: "ITSM Analysis",
+    analysisDesc:
+      "View ITSM ticket trends, status, technician and support group analysis",
+
+    masterDesc:
+      "Manage support groups, categories, subcategories, and other configurations",
+  },
   overview: {
     title: "Overview",
     subtitle:
@@ -116,6 +130,41 @@ const en = {
     done: "Done",
 
     clickDetails: "Click on any card to view more details.",
+  },
+  itsmAnalysis: {
+    total: "Total Tickets",
+    open: "Open Tickets",
+    closed: "Closed Tickets",
+    activeUsers: "Active Users",
+    avgResolution: "Avg. Resolution Time (Hours)",
+
+    byStatus: "Ticket Status Distribution",
+    byGroup: "Ticket by Support Group",
+    byPriority: "Priority Distribution",
+    byRequestType: "Request Type",
+    trend: "Ticket Trend",
+    technicianRanking: "Technician Ranking",
+
+    thisWeek: "This Week",
+    thisMonth: "This Month",
+    thisYear: "This Year",
+    customRange: "Custom Range",
+
+    allGroup: "All Groups",
+
+    mes: "MES",
+    it: "IT",
+    intelligentLogistics: "Intelligent Logistics",
+
+    clickToExpand: "Click to expand",
+    downloadPng: "Download PNG",
+    copyImage: "Copy Image",
+    copying: "Copying...",
+    copied: "Copied",
+    copyFailed: "Copy failed",
+
+    others: "Others",
+    showingTop: "Showing top {n}",
   },
   fields: {
     pic: "PIC",

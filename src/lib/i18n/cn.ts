@@ -84,6 +84,20 @@ const cn: Dict = {
     analysisDesc: "查看运营趋势、绩效和数据分析",
     masterDesc: "管理用户、类别、子类别及其他配置数据",
   },
+  itsm: {
+    title: "ITSM",
+    subtitle: "跟踪、分析和管理 IT 服务请求",
+
+    manageTitle: "工单管理",
+    manageDesc: "跟踪和管理 IT 服务工单",
+
+    analysisTitle: "ITSM 数据分析",
+    analysisDesc:
+      "查看 ITSM 工单趋势、状态、技术员及支持组分析",
+
+    masterDesc:
+      "管理支持组、分类、子分类及其他配置",
+  },
   overview: {
     title: "总览",
     subtitle: "总览看板 — 点击卡片展开，然后进入模块详情。",
@@ -117,6 +131,41 @@ const cn: Dict = {
     done: "完成",
 
     clickDetails: "点击任意卡片查看更多详情。",
+  },
+  itsmAnalysis: {
+    total: "工单总数",
+    open: "未关闭工单",
+    closed: "已关闭工单",
+    activeUsers: "活跃用户",
+    avgResolution: "平均解决时间（小时）",
+
+    byStatus: "工单状态分布",
+    byGroup: "支持组工单分布",
+    byPriority: "优先级分布",
+    byRequestType: "请求类型",
+    trend: "工单趋势",
+    technicianRanking: "技术员排名",
+
+    thisWeek: "本周",
+    thisMonth: "本月",
+    thisYear: "今年",
+    customRange: "自定义时间",
+
+    allGroup: "全部组",
+
+    mes: "MES",
+    it: "IT",
+    intelligentLogistics: "智能物流",
+
+    clickToExpand: "点击展开",
+    downloadPng: "下载 PNG",
+    copyImage: "复制图片",
+    copying: "复制中...",
+    copied: "已复制",
+    copyFailed: "复制失败",
+
+    others: "其他",
+    showingTop: "显示前 {n} 名",
   },
   fields: {
     pic: "负责人",

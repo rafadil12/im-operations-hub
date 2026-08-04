@@ -1,33 +1,71 @@
 import Link from "next/link";
+import { getDict } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
-import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata = pageMetadata({
-  title: "ITSM",
+  title: "ITSM Analysis",
   description:
-    "IT Service Management module of IM One: ticket queues, SLA tracking and PIC workload for the factory IT team.",
-  path: "/itsm",
+    "Manage and analyze daily operational records: create and track tasks, review analytics and maintain the module master data.",
+  path: "/daily-operation",
 });
 
-export default function ItsmPage() {
+const cards = [
+  {
+    href: "/daily-operation/management",
+    key: "management" as const,
+    icon: "▤",
+  },
+  {
+    href: "/daily-operation/analysis",
+    key: "analysis" as const,
+    icon: "◔",
+  },
+  {
+    href: "/daily-operation/master/users",
+    key: "master" as const,
+    icon: "◎",
+  },
+];
+
+export default function DailyOperationPage() {
+  const t = getDict();
+
+  const titleFor = (key: (typeof cards)[number]["key"]) => {
+    if (key === "management") return t.dailyOp.manageTitle;
+    if (key === "analysis") return t.dailyOp.analysisTitle;
+    return t.nav.master;
+  };
+  const descFor = (key: (typeof cards)[number]["key"]) => {
+    if (key === "management") return t.dailyOp.manageDesc;
+    if (key === "analysis") return t.dailyOp.analysisDesc;
+    return t.dailyOp.masterDesc;
+  };
+
   return (
-    <AppShell title="ITSM">
-      <div className="mx-auto max-w-2xl rounded-xl border border-border bg-surface p-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-          Module
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-text">ITSM Module</h1>
-        <p className="mt-3 text-sm leading-relaxed text-text-muted">
-          Detail page for IT Service Management. Ticket queues, SLA tracking, and
-          PIC workload will live here.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex rounded-md border border-border px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
-        >
-          ← Back to Overview
-        </Link>
+    <div>
+      <div className="mb-5">
+        <h1 className="text-lg font-semibold text-text">{t.dailyOp.title}</h1>
+        <p className="text-sm text-text-muted">{t.dailyOp.subtitle}</p>
       </div>
-    </AppShell>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {cards.map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            className="group flex flex-col rounded-xl border border-border bg-surface p-5 transition-colors hover:border-accent/50 hover:bg-surface-hover"
+          >
+            <span className="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-accent-soft text-accent">
+              {card.icon}
+            </span>
+            <h2 className="text-sm font-semibold text-text">{titleFor(card.key)}</h2>
+            <p className="mt-1 text-xs text-text-muted">{descFor(card.key)}</p>
+            <span className="mt-4 text-xs font-medium text-accent group-hover:underline">
+              Open →
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }

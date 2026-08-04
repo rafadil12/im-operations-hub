@@ -113,9 +113,19 @@ export type TopPicItem = {
   count: number;
 };
 
+export type RequesterCount = {
+  name: string;
+  count: number;
+};
+
 export type NamedCount = {
   name_en: string | null;
   name_cn: string | null;
+  count: number;
+};
+
+export type TechnicianCount = {
+  name: string;
   count: number;
 };
 
@@ -146,7 +156,23 @@ export type AnalysisResult = {
   durationPerDivision: DurationPoint[];
   avgDurationMinutes: number;
 };
+export type ItsmAnalysisResult = {
+  total: number;
 
+  openTickets: number;
+  closedTickets: number;
+  activeUsers: number;
+  avgTicketsPerDay: number;
+
+  byStatus: NamedCount[];
+  byGroup: NamedCount[];
+  technicianRanking: TechnicianCount[];
+  requesterRanking: RequesterCount[];
+  byPriority: NamedCount[];
+  byRequestType: NamedCount[];
+
+  trend: TrendItem[];
+};
 /** Match status counts by English name keywords (stable across locale). */
 export function namedStatusCount(
   rows: NamedCount[],
