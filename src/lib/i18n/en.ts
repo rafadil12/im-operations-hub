@@ -29,6 +29,8 @@ const en = {
     importing: "Importing...",
     export: "Export",
     exporting: "Exporting...",
+    sortAsc: "Sort ascending",
+    sortDesc: "Sort descending",
   },
   nav: {
     overview: "Overview",

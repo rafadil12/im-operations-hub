@@ -9,7 +9,10 @@ import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal"
 import {
   StockTable,
   type PageSize,
+  type SortDir,
+  type SortKey,
 } from "@/components/sparepart/StockTable";
+import { sortSparepartItems } from "@/lib/sparepartSort";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
 
@@ -35,6 +38,8 @@ export default function StockOverviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [detail, setDetail] = useState<SparepartItem | null>(null);
 
   const load = useCallback(
@@ -66,12 +71,22 @@ export default function StockOverviewPage() {
     load({ q: "", location: "", lowStock: false });
   }, [load]);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const sortedRows = useMemo(
+    () => sortSparepartItems(rows, sortKey, sortDir),
+    [rows, sortKey, sortDir],
+  );
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pagedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return rows.slice(start, start + pageSize);
-  }, [rows, currentPage, pageSize]);
+    return sortedRows.slice(start, start + pageSize);
+  }, [sortedRows, currentPage, pageSize]);
+
+  const handleSortChange = (key: SortKey | null, dir: SortDir | null) => {
+    setSortKey(key);
+    if (dir) setSortDir(dir);
+    setPage(1);
+  };
 
   const field =
     "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
@@ -181,7 +196,7 @@ export default function StockOverviewPage() {
       ) : (
         <StockTable
           rows={pagedRows}
-          totalCount={rows.length}
+          totalCount={sortedRows.length}
           page={currentPage}
           pageSize={pageSize}
           onPageChange={setPage}
@@ -192,6 +207,9 @@ export default function StockOverviewPage() {
           variant="stock"
           readOnly
           onRowClick={setDetail}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
         />
       )}
 

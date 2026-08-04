@@ -31,6 +31,8 @@ const cn: Dict = {
     importing: "导入中...",
     export: "导出",
     exporting: "导出中...",
+    sortAsc: "升序排序",
+    sortDesc: "降序排序",
   },
   nav: {
     overview: "总览",

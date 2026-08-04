@@ -11,7 +11,10 @@ import { ItemForm } from "@/components/sparepart/ItemForm";
 import {
   StockTable,
   type PageSize,
+  type SortDir,
+  type SortKey,
 } from "@/components/sparepart/StockTable";
+import { sortSparepartItems } from "@/lib/sparepartSort";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
 
@@ -26,6 +29,8 @@ export default function MaterialMasterPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editRow, setEditRow] = useState<SparepartItem | null>(null);
@@ -59,12 +64,22 @@ export default function MaterialMasterPage() {
     load("");
   }, [load]);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const sortedRows = useMemo(
+    () => sortSparepartItems(rows, sortKey, sortDir),
+    [rows, sortKey, sortDir],
+  );
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pagedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return rows.slice(start, start + pageSize);
-  }, [rows, currentPage, pageSize]);
+    return sortedRows.slice(start, start + pageSize);
+  }, [sortedRows, currentPage, pageSize]);
+
+  const handleSortChange = (key: SortKey | null, dir: SortDir | null) => {
+    setSortKey(key);
+    if (dir) setSortDir(dir);
+    setPage(1);
+  };
 
   const handleCreate = async (input: SparepartItemInput) => {
     await apiSendAbs("/api/sparepart/materials", "POST", input);
@@ -227,7 +242,7 @@ export default function MaterialMasterPage() {
       ) : (
         <StockTable
           rows={pagedRows}
-          totalCount={rows.length}
+          totalCount={sortedRows.length}
           page={currentPage}
           pageSize={pageSize}
           onPageChange={setPage}
@@ -241,6 +256,9 @@ export default function MaterialMasterPage() {
           }}
           onDelete={setDeleteRow}
           variant="master"
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
         />
       )}
 
