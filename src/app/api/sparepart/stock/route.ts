@@ -1,64 +1,80 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import type { SparepartItem } from "@/lib/types";
+import type { SparepartStockBalanceRow } from "@/lib/types";
 
-type LocationRow = { location: string };
 type SummaryRow = {
   total_items: number;
   zero_stock: number;
   total_current: number;
 };
 
+type LocRow = { code: string; name: string };
+
 export async function GET(request: NextRequest) {
   try {
     const sp = request.nextUrl.searchParams;
-    const conditions: string[] = ["deleted_at IS NULL"];
+    const conditions: string[] = ["i.deleted_at IS NULL"];
     const params: unknown[] = [];
 
     const q = sp.get("q")?.trim();
     if (q) {
       conditions.push(
-        "(code LIKE ? OR name LIKE ? OR brand LIKE ? OR model LIKE ? OR location LIKE ?)",
+        `(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ?
+          OR loc.code LIKE ? OR loc.name LIKE ?)`,
       );
       const like = `%${q}%`;
-      params.push(like, like, like, like, like);
+      params.push(like, like, like, like, like, like);
     }
 
     const location = sp.get("location")?.trim();
     if (location) {
-      conditions.push("location = ?");
-      params.push(location);
+      conditions.push("(loc.code = ? OR loc.name = ?)");
+      params.push(location, location);
     }
 
     if (sp.get("lowStock") === "1") {
-      conditions.push("stock_current <= 0");
+      conditions.push("b.qty <= 0");
     }
 
     const where = conditions.join(" AND ");
-    const rows = await query<SparepartItem[]>(
-      `SELECT id, code, name, brand, model, location,
-              stock_in, stock_out, stock_current,
-              image_url, notes, deleted_at, created_at, updated_at
-       FROM sparepart_items
+    const rows = await query<SparepartStockBalanceRow[]>(
+      `SELECT
+         i.id AS item_id,
+         i.code,
+         i.name,
+         i.brand,
+         i.model,
+         b.storage_location_id,
+         loc.code AS location_code,
+         loc.name AS location_name,
+         b.qty,
+         b.qty AS stock_current,
+         i.stock_in,
+         i.stock_out,
+         i.notes,
+         i.default_storage_location_id
+       FROM sparepart_stock_balances b
+       JOIN sparepart_items i ON i.id = b.item_id
+       JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
        WHERE ${where}
-       ORDER BY code ASC`,
+       ORDER BY i.code ASC, loc.name ASC`,
       params,
     );
 
     const [summary] = await query<SummaryRow[]>(
       `SELECT
-         COUNT(*) AS total_items,
-         SUM(CASE WHEN stock_current <= 0 THEN 1 ELSE 0 END) AS zero_stock,
-         COALESCE(SUM(stock_current), 0) AS total_current
-       FROM sparepart_items
-       WHERE deleted_at IS NULL`,
+         COUNT(DISTINCT i.id) AS total_items,
+         SUM(CASE WHEN i.stock_current <= 0 THEN 1 ELSE 0 END) AS zero_stock,
+         COALESCE(SUM(i.stock_current), 0) AS total_current
+       FROM sparepart_items i
+       WHERE i.deleted_at IS NULL`,
     );
 
-    const locations = await query<LocationRow[]>(
-      `SELECT DISTINCT location
-       FROM sparepart_items
-       WHERE deleted_at IS NULL AND location IS NOT NULL AND location != ''
-       ORDER BY location ASC`,
+    const locations = await query<LocRow[]>(
+      `SELECT code, name
+       FROM sparepart_storage_locations
+       WHERE is_active = 1
+       ORDER BY name ASC`,
     );
 
     return NextResponse.json({
@@ -68,7 +84,8 @@ export async function GET(request: NextRequest) {
         zeroStock: Number(summary?.zero_stock ?? 0),
         totalCurrent: Number(summary?.total_current ?? 0),
       },
-      locations: locations.map((r) => r.location),
+      locations: locations.map((r) => r.code),
+      locationOptions: locations,
     });
   } catch (error) {
     console.error("GET /sparepart/stock failed", error);

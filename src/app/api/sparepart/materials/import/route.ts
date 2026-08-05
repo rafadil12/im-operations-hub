@@ -10,6 +10,7 @@ import {
   parseSparepartItemsWorkbook,
   type ImportRowError,
 } from "@/lib/sparepartImport";
+import { ensureStorageLocation } from "@/lib/sparepartLocations";
 
 export const runtime = "nodejs";
 
@@ -80,6 +81,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Pre-validate locations (single string, no comma-split)
+    const locationErrors: ImportRowError[] = [];
+    for (const item of parsed.items) {
+      const loc = (item.location || "").trim();
+      if (loc.includes(",")) {
+        locationErrors.push({
+          row: 0,
+          message: `${item.code}: location must be a single location (no commas).`,
+        });
+      }
+    }
+    if (locationErrors.length) {
+      return NextResponse.json(
+        {
+          error: "Import validation failed.",
+          errors: locationErrors,
+        },
+        { status: 400 },
+      );
+    }
+
     const postingDate = new Date().toISOString().slice(0, 10);
 
     const imported = await withTransaction(async (conn) => {
@@ -87,20 +109,30 @@ export async function POST(request: NextRequest) {
       const grLines: {
         itemId: number;
         qty: number;
-        location: string | null;
+        locationId: number;
+        locationLabel: string;
       }[] = [];
 
       for (const item of parsed.items) {
-        // Upsert master with zero stock; stock applied via GR doc below
+        let defaultLocId: number | null = null;
+        let locationName: string | null = null;
+        if (item.location?.trim()) {
+          const loc = await ensureStorageLocation(conn, item.location.trim());
+          defaultLocId = loc.id;
+          locationName = loc.name;
+        }
+
         await conn.query(
           `INSERT INTO sparepart_items
-            (code, name, brand, model, location, notes, stock_in, stock_out, stock_current)
-           VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
+            (code, name, brand, model, location, default_storage_location_id,
+             notes, stock_in, stock_out, stock_current)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
            ON DUPLICATE KEY UPDATE
              name = VALUES(name),
              brand = VALUES(brand),
              model = VALUES(model),
              location = VALUES(location),
+             default_storage_location_id = VALUES(default_storage_location_id),
              notes = VALUES(notes),
              deleted_at = NULL`,
           [
@@ -108,7 +140,8 @@ export async function POST(request: NextRequest) {
             item.name,
             item.brand || null,
             item.model || null,
-            item.location || null,
+            locationName,
+            defaultLocId,
             item.notes || null,
           ],
         );
@@ -120,20 +153,42 @@ export async function POST(request: NextRequest) {
         const itemId = Number(rows[0]?.id);
         if (!itemId) continue;
 
-        // Reset stock aggregates then rebuild from GR for this import row
+        // Reset stock aggregates and balances for this item
         await conn.query(
           `UPDATE sparepart_items
            SET stock_in = 0, stock_out = 0, stock_current = 0
            WHERE id = ?`,
           [itemId],
         );
+        await conn.query(
+          `DELETE FROM sparepart_stock_balances WHERE item_id = ?`,
+          [itemId],
+        );
 
         if (item.stock_current > 0) {
+          if (!defaultLocId) {
+            const unassigned = await ensureStorageLocation(conn, "UNASSIGNED");
+            defaultLocId = unassigned.id;
+            locationName = unassigned.name;
+            await conn.query(
+              `UPDATE sparepart_items
+               SET default_storage_location_id = ?, location = ?
+               WHERE id = ?`,
+              [defaultLocId, locationName, itemId],
+            );
+          }
           grLines.push({
             itemId,
             qty: item.stock_current,
-            location: item.location || null,
+            locationId: defaultLocId,
+            locationLabel: `${(await ensureStorageLocation(conn, locationName || "UNASSIGNED")).code} — ${locationName}`,
           });
+        } else if (defaultLocId) {
+          await conn.query(
+            `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
+             VALUES (?, ?, 0)`,
+            [itemId, defaultLocId],
+          );
         }
         count += 1;
       }
@@ -152,9 +207,22 @@ export async function POST(request: NextRequest) {
           lineNo += 1;
           await conn.query(
             `INSERT INTO sparepart_mat_doc_items
-              (doc_id, item_id, line_no, qty, storage_location, note)
-             VALUES (?, ?, ?, ?, ?, NULL)`,
-            [docId, line.itemId, lineNo, line.qty, line.location],
+              (doc_id, item_id, line_no, qty, storage_location, storage_location_id, note)
+             VALUES (?, ?, ?, ?, ?, ?, NULL)`,
+            [
+              docId,
+              line.itemId,
+              lineNo,
+              line.qty,
+              line.locationLabel,
+              line.locationId,
+            ],
+          );
+          await conn.query(
+            `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)`,
+            [line.itemId, line.locationId, line.qty],
           );
           await conn.query(
             `UPDATE sparepart_items
@@ -171,9 +239,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ imported });
   } catch (error) {
     console.error("POST /sparepart/materials/import failed", error);
+    const message =
+      error instanceof Error ? error.message : "Import failed. No records were saved.";
     return NextResponse.json(
       {
-        error: "Import failed. No records were saved.",
+        error: message,
         errors: [] as ImportRowError[],
       },
       { status: 500 },

@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import type { SparepartMatDoc } from "@/lib/types";
+import type { MovementType, SparepartMatDoc } from "@/lib/types";
+
+const MOVEMENT_TYPES: MovementType[] = [
+  "101",
+  "201",
+  "311",
+  "102",
+  "202",
+  "312",
+];
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,8 +17,8 @@ export async function GET(request: NextRequest) {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
-    const movementType = sp.get("movementType")?.trim();
-    if (movementType === "101" || movementType === "201") {
+    const movementType = sp.get("movementType")?.trim() as MovementType | "";
+    if (movementType && MOVEMENT_TYPES.includes(movementType)) {
       conditions.push("d.movement_type = ?");
       params.push(movementType);
     }
@@ -34,6 +43,24 @@ export async function GET(request: NextRequest) {
       params.push(like, like, like);
     }
 
+    const location = sp.get("location")?.trim();
+    if (location) {
+      conditions.push(
+        `EXISTS (
+          SELECT 1 FROM sparepart_mat_doc_items li2
+          LEFT JOIN sparepart_storage_locations loc ON loc.id = li2.storage_location_id
+          WHERE li2.doc_id = d.id
+            AND (
+              li2.storage_location LIKE ?
+              OR loc.code = ?
+              OR loc.name LIKE ?
+            )
+        )`,
+      );
+      const like = `%${location}%`;
+      params.push(like, location, like);
+    }
+
     const where = conditions.length
       ? `WHERE ${conditions.join(" AND ")}`
       : "";
@@ -41,6 +68,7 @@ export async function GET(request: NextRequest) {
     const rows = await query<SparepartMatDoc[]>(
       `SELECT d.id, d.doc_number, d.movement_type, d.posting_date,
               d.header_text, d.recipient, d.created_by, d.created_at,
+              d.client_request_id, d.reversal_of_doc_id,
               COUNT(li.id) AS line_count,
               COALESCE(SUM(li.qty), 0) AS total_qty
        FROM sparepart_mat_docs d

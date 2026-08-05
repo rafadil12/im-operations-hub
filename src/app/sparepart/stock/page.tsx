@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
-import type { SparepartItem } from "@/lib/types";
+import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import {
   StockTable,
@@ -12,19 +12,20 @@ import {
   type SortDir,
   type SortKey,
 } from "@/components/sparepart/StockTable";
-import { sortSparepartItems } from "@/lib/sparepartSort";
+import { sortStockBalanceRows } from "@/lib/sparepartSort";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
 
 type StockResponse = {
-  rows: SparepartItem[];
+  rows: SparepartStockBalanceRow[];
   summary: { totalItems: number; zeroStock: number; totalCurrent: number };
   locations: string[];
+  locationOptions?: { code: string; name: string }[];
 };
 
 export default function StockOverviewPage() {
   const { t } = useLang();
-  const [rows, setRows] = useState<SparepartItem[]>([]);
+  const [rows, setRows] = useState<SparepartStockBalanceRow[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [summary, setSummary] = useState({
     totalItems: 0,
@@ -72,7 +73,7 @@ export default function StockOverviewPage() {
   }, [load]);
 
   const sortedRows = useMemo(
-    () => sortSparepartItems(rows, sortKey, sortDir),
+    () => sortStockBalanceRows(rows, sortKey, sortDir),
     [rows, sortKey, sortDir],
   );
   const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
@@ -86,6 +87,17 @@ export default function StockOverviewPage() {
     setSortKey(key);
     if (dir) setSortDir(dir);
     setPage(1);
+  };
+
+  const openDetail = async (row: SparepartStockBalanceRow) => {
+    try {
+      const data = await apiGetAbs<{ row: SparepartItem }>(
+        `/api/sparepart/materials/${row.item_id}`,
+      );
+      setDetail(data.row);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t.common.error);
+    }
   };
 
   const field =
@@ -206,7 +218,9 @@ export default function StockOverviewPage() {
           }}
           variant="stock"
           readOnly
-          onRowClick={setDetail}
+          onRowClick={(row) => {
+            if ("item_id" in row) openDetail(row);
+          }}
           sortKey={sortKey}
           sortDir={sortDir}
           onSortChange={handleSortChange}

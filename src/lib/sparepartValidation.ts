@@ -20,6 +20,11 @@ export function parseSparepartItemBody(
   const model = trim(body.model);
   const location = trim(body.location);
   const notes = trim(body.notes);
+  const defaultLoc =
+    body.default_storage_location_id != null &&
+    body.default_storage_location_id !== ("" as unknown)
+      ? Number(body.default_storage_location_id)
+      : null;
 
   const errors: SparepartFieldError[] = [];
   if (!code) errors.push({ field: "code", message: "Code is required." });
@@ -27,7 +32,27 @@ export function parseSparepartItemBody(
   if (code.length > 32) {
     errors.push({ field: "code", message: "Code must be at most 32 characters." });
   }
+  if (location.includes(",")) {
+    errors.push({
+      field: "location",
+      message: "Default location must be a single location (no commas).",
+    });
+  }
 
   if (errors.length) return { ok: false, errors };
-  return { ok: true, data: { code, name, brand, model, location, notes } };
+  return {
+    ok: true,
+    data: {
+      code,
+      name,
+      brand,
+      model,
+      location,
+      notes,
+      default_storage_location_id:
+        defaultLoc != null && Number.isInteger(defaultLoc) && defaultLoc > 0
+          ? defaultLoc
+          : null,
+    },
+  };
 }

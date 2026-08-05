@@ -20,7 +20,7 @@ type DetailResponse = { row: SparepartItem };
 
 type Props = {
   value: string;
-  onChange: (itemId: string) => void;
+  onChange: (itemId: string, item?: SparepartItem | null) => void;
   className?: string;
 };
 
@@ -151,7 +151,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
 
   const pick = (item: SparepartItem) => {
     setSelected(item);
-    onChange(String(item.id));
+    onChange(String(item.id), item);
     setQuery(labelFor(item));
     setSuggestions([]);
     setOpen(false);
@@ -161,7 +161,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
     const code = query.trim();
     if (!code) {
       setSelected(null);
-      onChange("");
+      onChange("", null);
       return;
     }
     if (selected && labelFor(selected).toLowerCase() === code.toLowerCase()) {
@@ -188,7 +188,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
 
     if (!selected || labelFor(selected) !== query) {
       setSelected(null);
-      onChange("");
+      onChange("", null);
     }
   };
 
@@ -232,7 +232,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
           const next = e.target.value;
           setQuery(next);
           setSelected(null);
-          onChange("");
+          onChange("", null);
           setOpen(true);
           scheduleSuggest(next);
         }}

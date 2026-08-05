@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
-import type { SparepartItem, SparepartItemInput } from "@/lib/types";
+import type {
+  SparepartItem,
+  SparepartItemInput,
+  SparepartStorageLocation,
+} from "@/lib/types";
 
 type Props = {
   initial: SparepartItem | null;
@@ -17,22 +22,46 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [brand, setBrand] = useState(initial?.brand ?? "");
   const [model, setModel] = useState(initial?.model ?? "");
-  const [location, setLocation] = useState(initial?.location ?? "");
+  const [defaultLocId, setDefaultLocId] = useState(
+    initial?.default_storage_location_id
+      ? String(initial.default_storage_location_id)
+      : "",
+  );
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [locations, setLocations] = useState<SparepartStorageLocation[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiGetAbs<{ rows: SparepartStorageLocation[] }>(
+          "/api/sparepart/storage-locations",
+        );
+        if (!cancelled) setLocations(data.rows);
+      } catch {
+        if (!cancelled) setLocations([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
+      const loc = locations.find((l) => String(l.id) === defaultLocId);
       await onSubmit({
         code: code.trim(),
         name: name.trim(),
         brand: brand.trim(),
         model: model.trim(),
-        location: location.trim(),
+        location: loc?.name ?? "",
+        default_storage_location_id: loc ? loc.id : null,
         notes: notes.trim(),
       });
     } catch (err) {
@@ -96,8 +125,19 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
             <input className={field} value={model} onChange={(e) => setModel(e.target.value)} />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>{t.sparepart.location}</label>
-            <input className={field} value={location} onChange={(e) => setLocation(e.target.value)} />
+            <label className={label}>{t.sparepart.defaultLocation}</label>
+            <select
+              className={field}
+              value={defaultLocId}
+              onChange={(e) => setDefaultLocId(e.target.value)}
+            >
+              <option value="">—</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.code} — {loc.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="sm:col-span-2">
             <label className={label}>{t.sparepart.notes}</label>

@@ -3,7 +3,7 @@ import { query } from "@/lib/db";
 import type { SparepartItem } from "@/lib/types";
 
 const SELECT_COLS = `
-  id, code, name, brand, model, location,
+  id, code, name, brand, model, location, default_storage_location_id,
   stock_in, stock_out, stock_current,
   image_url, notes, deleted_at, created_at, updated_at
 `;

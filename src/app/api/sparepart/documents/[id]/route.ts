@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
 
     const headers = await query<SparepartMatDoc[]>(
       `SELECT id, doc_number, movement_type, posting_date, header_text,
-              recipient, created_by, created_at
+              recipient, created_by, created_at, client_request_id, reversal_of_doc_id
        FROM sparepart_mat_docs
        WHERE id = ?
        LIMIT 1`,
@@ -27,7 +27,8 @@ export async function GET(_request: NextRequest, context: Ctx) {
 
     const lines = await query<SparepartMatDocLine[]>(
       `SELECT li.id, li.doc_id, li.item_id, li.line_no, li.qty,
-              li.storage_location, li.note,
+              li.storage_location, li.storage_location_id, li.to_storage_location_id,
+              li.note,
               i.code AS item_code, i.name AS item_name,
               i.brand AS item_brand, i.model AS item_model
        FROM sparepart_mat_doc_items li
@@ -37,8 +38,17 @@ export async function GET(_request: NextRequest, context: Ctx) {
       [docId],
     );
 
+    const alreadyReversed = await query<{ id: number }[]>(
+      `SELECT id FROM sparepart_mat_docs WHERE reversal_of_doc_id = ? LIMIT 1`,
+      [docId],
+    );
+
     return NextResponse.json({
-      document: { ...header, lines },
+      document: {
+        ...header,
+        lines,
+        already_reversed: Boolean(alreadyReversed[0]),
+      },
     });
   } catch (error) {
     console.error("GET /sparepart/documents/[id] failed", error);

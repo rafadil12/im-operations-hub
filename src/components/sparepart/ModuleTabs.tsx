@@ -13,6 +13,7 @@ export function ModuleTabs() {
     { label: t.nav.sparepartPost, href: "/sparepart/post" },
     { label: t.nav.sparepartDocuments, href: "/sparepart/documents" },
     { label: t.nav.sparepartMaterials, href: "/sparepart/materials" },
+    { label: t.nav.sparepartLocations, href: "/sparepart/locations" },
   ];
 
   return (

@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { apiGetAbs } from "@/lib/apiClient";
+import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import type { MovementType, SparepartMatDoc } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/ToastProvider";
 import {
   PAGE_SIZE_OPTIONS,
   type PageSize,
@@ -34,15 +35,32 @@ function movementLabel(
   type: MovementType,
   t: ReturnType<typeof useLang>["t"],
 ): string {
-  return type === "101" ? t.sparepart.movement101 : t.sparepart.movement201;
+  switch (type) {
+    case "101":
+      return t.sparepart.movement101;
+    case "201":
+      return t.sparepart.movement201;
+    case "311":
+      return t.sparepart.movement311;
+    case "102":
+      return t.sparepart.movement102;
+    case "202":
+      return t.sparepart.movement202;
+    case "312":
+      return t.sparepart.movement312;
+    default:
+      return type;
+  }
 }
 
 export default function MaterialDocumentsPage() {
   const { t } = useLang();
+  const { success: toastSuccess, error: toastError } = useToast();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<SparepartMatDoc[]>([]);
   const [q, setQ] = useState("");
   const [movementType, setMovementType] = useState("");
+  const [location, setLocation] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [loading, setLoading] = useState(true);
@@ -50,11 +68,13 @@ export default function MaterialDocumentsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
   const [detail, setDetail] = useState<SparepartMatDoc | null>(null);
+  const [reversing, setReversing] = useState(false);
 
   const load = useCallback(
     async (filters: {
       q: string;
       movementType: string;
+      location: string;
       start: string;
       end: string;
     }) => {
@@ -64,6 +84,7 @@ export default function MaterialDocumentsPage() {
         const params = new URLSearchParams();
         if (filters.q) params.set("q", filters.q);
         if (filters.movementType) params.set("movementType", filters.movementType);
+        if (filters.location) params.set("location", filters.location);
         if (filters.start) params.set("start", filters.start);
         if (filters.end) params.set("end", filters.end);
         const data = await apiGetAbs<ListResponse>(
@@ -95,7 +116,7 @@ export default function MaterialDocumentsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
-    load({ q: "", movementType: "", start: "", end: "" });
+    load({ q: "", movementType: "", location: "", start: "", end: "" });
   }, [load]);
 
   useEffect(() => {
@@ -147,7 +168,22 @@ export default function MaterialDocumentsPage() {
             <option value="">{t.sparepart.allTypes}</option>
             <option value="101">{t.sparepart.movement101}</option>
             <option value="201">{t.sparepart.movement201}</option>
+            <option value="311">{t.sparepart.movement311}</option>
+            <option value="102">{t.sparepart.movement102}</option>
+            <option value="202">{t.sparepart.movement202}</option>
+            <option value="312">{t.sparepart.movement312}</option>
           </select>
+        </div>
+        <div className="min-w-[120px]">
+          <label className="mb-1 block text-xs text-text-muted">
+            {t.sparepart.location}
+          </label>
+          <input
+            className={`${field} w-full`}
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder={t.sparepart.locationCode}
+          />
         </div>
         <div>
           <label className="mb-1 block text-xs text-text-muted">
@@ -175,7 +211,7 @@ export default function MaterialDocumentsPage() {
           type="button"
           onClick={() => {
             setPage(1);
-            load({ q, movementType, start, end });
+            load({ q, movementType, location, start, end });
           }}
           className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
         >
@@ -303,6 +339,49 @@ export default function MaterialDocumentsPage() {
           title={`${t.sparepart.documentDetail} ${detail.doc_number}`}
           onClose={() => setDetail(null)}
           size="lg"
+          footer={
+            ["101", "201", "311"].includes(detail.movement_type) &&
+            !detail.reversal_of_doc_id &&
+            !detail.already_reversed ? (
+              <button
+                type="button"
+                disabled={reversing}
+                onClick={async () => {
+                  setReversing(true);
+                  try {
+                    const result = await apiSendAbs<{
+                      id: number;
+                      doc_number: string;
+                    }>(`/api/sparepart/documents/${detail.id}/reverse`, "POST", {
+                      client_request_id:
+                        typeof crypto !== "undefined" && "randomUUID" in crypto
+                          ? crypto.randomUUID()
+                          : `rev-${Date.now()}`,
+                    });
+                    toastSuccess(
+                      t.sparepart.reverseSuccess.replace(
+                        "{doc}",
+                        result.doc_number,
+                      ),
+                    );
+                    setDetail(null);
+                    await load({ q, movementType, location, start, end });
+                  } catch (e) {
+                    toastError(
+                      e instanceof Error ? e.message : t.toast.saveFailed,
+                    );
+                  } finally {
+                    setReversing(false);
+                  }
+                }}
+                className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+              >
+                {reversing
+                  ? t.sparepart.reversing
+                  : t.sparepart.reverseDocument}
+              </button>
+            ) : null
+          }
         >
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">

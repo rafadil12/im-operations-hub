@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { apiSendAbs } from "@/lib/apiClient";
+import { useEffect, useState } from "react";
+import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
-import type { MovementType } from "@/lib/types";
+import type { MovementType, SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
 
@@ -13,15 +13,26 @@ type LineDraft = {
   item_id: string;
   qty: string;
   note: string;
+  storage_location_id: string;
+  to_storage_location_id: string;
 };
 
-function newLine(): LineDraft {
+function newLine(defaultLocId = ""): LineDraft {
   return {
     key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     item_id: "",
     qty: "1",
     note: "",
+    storage_location_id: defaultLocId,
+    to_storage_location_id: "",
   };
+}
+
+function newClientRequestId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export default function PostGoodsMovementPage() {
@@ -33,11 +44,29 @@ export default function PostGoodsMovementPage() {
   );
   const [headerText, setHeaderText] = useState("");
   const [recipient, setRecipient] = useState("");
+  const [locations, setLocations] = useState<SparepartStorageLocation[]>([]);
   const [lines, setLines] = useState<LineDraft[]>([newLine()]);
   const [busy, setBusy] = useState(false);
   const [lastDoc, setLastDoc] = useState<{ id: number; doc_number: string } | null>(
     null,
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiGetAbs<{ rows: SparepartStorageLocation[] }>(
+          "/api/sparepart/storage-locations",
+        );
+        if (!cancelled) setLocations(data.rows);
+      } catch {
+        if (!cancelled) setLocations([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const field =
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
@@ -55,10 +84,16 @@ export default function PostGoodsMovementPage() {
           posting_date: postingDate,
           header_text: headerText,
           recipient,
+          client_request_id: newClientRequestId(),
           lines: lines.map((l) => ({
             item_id: Number(l.item_id),
             qty: Number(l.qty),
             note: l.note,
+            storage_location_id: Number(l.storage_location_id),
+            to_storage_location_id:
+              movementType === "311"
+                ? Number(l.to_storage_location_id)
+                : undefined,
           })),
         },
       );
@@ -106,6 +141,7 @@ export default function PostGoodsMovementPage() {
             >
               <option value="101">{t.sparepart.movement101}</option>
               <option value="201">{t.sparepart.movement201}</option>
+              <option value="311">{t.sparepart.movement311}</option>
             </select>
           </div>
           <div>
@@ -151,79 +187,142 @@ export default function PostGoodsMovementPage() {
           </div>
 
           <div className="space-y-2">
-            {lines.map((line, index) => {
-              return (
-                <div
-                  key={line.key}
-                  className="grid grid-cols-1 gap-2 rounded-md border border-border-subtle bg-bg/40 p-3 md:grid-cols-12"
-                >
-                  <div className="md:col-span-5">
-                    <label className={label}>
-                      {t.sparepart.item} #{index + 1}
-                    </label>
-                    <MaterialCombobox
-                      value={line.item_id}
-                      onChange={(itemId) =>
-                        setLines((prev) =>
-                          prev.map((l) =>
-                            l.key === line.key
-                              ? { ...l, item_id: itemId }
-                              : l,
-                          ),
-                        )
-                      }
-                      className={field}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className={label}>{t.sparepart.qty}</label>
-                    <input
-                      type="number"
-                      min={1}
-                      className={field}
-                      value={line.qty}
-                      onChange={(e) =>
-                        setLines((prev) =>
-                          prev.map((l) =>
-                            l.key === line.key
-                              ? { ...l, qty: e.target.value }
-                              : l,
-                          ),
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="md:col-span-4">
-                    <label className={label}>{t.sparepart.note}</label>
-                    <input
-                      className={field}
-                      value={line.note}
-                      onChange={(e) =>
-                        setLines((prev) =>
-                          prev.map((l) =>
-                            l.key === line.key
-                              ? { ...l, note: e.target.value }
-                              : l,
-                          ),
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="flex items-end md:col-span-1">
-                    <button
-                      type="button"
-                      disabled={lines.length <= 1}
-                      onClick={() =>
-                        setLines((prev) => prev.filter((l) => l.key !== line.key))
-                      }
-                      className="w-full rounded-md border border-border px-2 py-2 text-xs text-danger disabled:opacity-40"
-                    >
-                      {t.sparepart.removeLine}
-                    </button>
-                  </div>
+            {lines.map((line, index) => (
+              <div
+                key={line.key}
+                className="grid grid-cols-1 gap-2 rounded-md border border-border-subtle bg-bg/40 p-3 md:grid-cols-12"
+              >
+                <div className="md:col-span-4">
+                  <label className={label}>
+                    {t.sparepart.item} #{index + 1}
+                  </label>
+                  <MaterialCombobox
+                    value={line.item_id}
+                    onChange={(itemId, item) =>
+                      setLines((prev) =>
+                        prev.map((l) =>
+                          l.key === line.key
+                            ? {
+                                ...l,
+                                item_id: itemId,
+                                storage_location_id:
+                                  l.storage_location_id ||
+                                  (item?.default_storage_location_id
+                                    ? String(item.default_storage_location_id)
+                                    : l.storage_location_id),
+                              }
+                            : l,
+                        ),
+                      )
+                    }
+                    className={field}
+                  />
                 </div>
-              );
-            })}
+                <div className="md:col-span-2">
+                  <label className={label}>
+                    {movementType === "311"
+                      ? t.sparepart.fromLocation
+                      : t.sparepart.location}{" "}
+                    *
+                  </label>
+                  <select
+                    className={field}
+                    value={line.storage_location_id}
+                    onChange={(e) =>
+                      setLines((prev) =>
+                        prev.map((l) =>
+                          l.key === line.key
+                            ? { ...l, storage_location_id: e.target.value }
+                            : l,
+                        ),
+                      )
+                    }
+                  >
+                    <option value="">—</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.code} — {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {movementType === "311" ? (
+                  <div className="md:col-span-2">
+                    <label className={label}>{t.sparepart.toLocation} *</label>
+                    <select
+                      className={field}
+                      value={line.to_storage_location_id}
+                      onChange={(e) =>
+                        setLines((prev) =>
+                          prev.map((l) =>
+                            l.key === line.key
+                              ? { ...l, to_storage_location_id: e.target.value }
+                              : l,
+                          ),
+                        )
+                      }
+                    >
+                      <option value="">—</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.code} — {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <div className="md:col-span-1">
+                  <label className={label}>{t.sparepart.qty}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className={field}
+                    value={line.qty}
+                    onChange={(e) =>
+                      setLines((prev) =>
+                        prev.map((l) =>
+                          l.key === line.key
+                            ? { ...l, qty: e.target.value }
+                            : l,
+                        ),
+                      )
+                    }
+                  />
+                </div>
+                <div
+                  className={
+                    movementType === "311" ? "md:col-span-2" : "md:col-span-4"
+                  }
+                >
+                  <label className={label}>{t.sparepart.note}</label>
+                  <input
+                    className={field}
+                    value={line.note}
+                    onChange={(e) =>
+                      setLines((prev) =>
+                        prev.map((l) =>
+                          l.key === line.key
+                            ? { ...l, note: e.target.value }
+                            : l,
+                        ),
+                      )
+                    }
+                  />
+                </div>
+                <div className="flex items-end md:col-span-1">
+                  <button
+                    type="button"
+                    disabled={lines.length <= 1}
+                    onClick={() =>
+                      setLines((prev) => prev.filter((l) => l.key !== line.key))
+                    }
+                    className="w-full rounded-md border border-border px-2 py-2 text-xs text-danger disabled:opacity-40"
+                  >
+                    {t.sparepart.removeLine}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

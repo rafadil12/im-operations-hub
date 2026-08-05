@@ -160,7 +160,51 @@ export function namedStatusCount(
 
 /* ---- Sparepart / Inventory (SAP IM style) ---- */
 
-export type MovementType = "101" | "201";
+export type MovementType =
+  | "101"
+  | "201"
+  | "311"
+  | "102"
+  | "202"
+  | "312";
+
+export type SparepartStorageLocation = {
+  id: number;
+  code: string;
+  name: string;
+  is_active: number | boolean;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type SparepartStockBalance = {
+  id: number;
+  item_id: number;
+  storage_location_id: number;
+  qty: number;
+  location_code?: string;
+  location_name?: string;
+  updated_at?: string | null;
+};
+
+/** Stock overview row: one material × one storage location */
+export type SparepartStockBalanceRow = {
+  item_id: number;
+  code: string;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  storage_location_id: number;
+  location_code: string;
+  location_name: string;
+  /** Qty at this location (also aliased as stock_current for table reuse) */
+  qty: number;
+  stock_current: number;
+  stock_in: number;
+  stock_out: number;
+  notes: string | null;
+  default_storage_location_id: number | null;
+};
 
 export type SparepartItem = {
   id: number;
@@ -169,6 +213,7 @@ export type SparepartItem = {
   brand: string | null;
   model: string | null;
   location: string | null;
+  default_storage_location_id?: number | null;
   stock_in: number;
   stock_out: number;
   stock_current: number;
@@ -177,6 +222,7 @@ export type SparepartItem = {
   deleted_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  balances?: SparepartStockBalance[];
 };
 
 export type SparepartItemInput = {
@@ -185,6 +231,7 @@ export type SparepartItemInput = {
   brand: string;
   model: string;
   location: string;
+  default_storage_location_id?: number | null;
   notes: string;
 };
 
@@ -195,6 +242,9 @@ export type SparepartMatDocLine = {
   line_no: number;
   qty: number;
   storage_location: string | null;
+  storage_location_id?: number | null;
+  to_storage_location_id?: number | null;
+  to_storage_location?: string | null;
   note: string | null;
   item_code?: string | null;
   item_name?: string | null;
@@ -210,6 +260,9 @@ export type SparepartMatDoc = {
   header_text: string | null;
   recipient: string | null;
   created_by: string | null;
+  client_request_id?: string | null;
+  reversal_of_doc_id?: number | null;
+  already_reversed?: boolean;
   created_at: string | null;
   line_count?: number;
   total_qty?: number;
@@ -220,6 +273,9 @@ export type SparepartGoodsMovementLineInput = {
   item_id: number;
   qty: number;
   note: string;
+  storage_location_id: number;
+  /** Required for 311 transfer */
+  to_storage_location_id?: number;
 };
 
 export type SparepartGoodsMovementInput = {
@@ -229,4 +285,6 @@ export type SparepartGoodsMovementInput = {
   recipient: string;
   lines: SparepartGoodsMovementLineInput[];
   created_by?: string;
+  client_request_id?: string;
+  reversal_of_doc_id?: number;
 };

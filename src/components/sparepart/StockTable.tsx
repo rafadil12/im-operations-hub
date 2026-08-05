@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/lib/i18n";
-import type { SparepartItem } from "@/lib/types";
+import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import type { SortDir, SortKey } from "@/lib/sparepartSort";
 
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
@@ -10,8 +10,30 @@ export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 export type StockTableVariant = "master" | "stock";
 export type { SortDir, SortKey };
 
+type TableRow = SparepartItem | SparepartStockBalanceRow;
+
+function isBalanceRow(row: TableRow): row is SparepartStockBalanceRow {
+  return "location_name" in row && "item_id" in row;
+}
+
+function rowKey(row: TableRow): string {
+  if (isBalanceRow(row)) {
+    return `${row.item_id}-${row.storage_location_id}`;
+  }
+  return String(row.id);
+}
+
+function rowLocation(row: TableRow): string {
+  if (isBalanceRow(row)) return row.location_name || row.location_code || "-";
+  return row.location || "-";
+}
+
+function rowStock(row: TableRow): number {
+  return row.stock_current;
+}
+
 type Props = {
-  rows: SparepartItem[];
+  rows: TableRow[];
   totalCount: number;
   page: number;
   pageSize: PageSize;
@@ -19,7 +41,7 @@ type Props = {
   onPageSizeChange: (pageSize: PageSize) => void;
   onEdit?: (row: SparepartItem) => void;
   onDelete?: (row: SparepartItem) => void;
-  onRowClick?: (row: SparepartItem) => void;
+  onRowClick?: (row: TableRow) => void;
   variant?: StockTableVariant;
   readOnly?: boolean;
   sortKey?: SortKey | null;
@@ -313,7 +335,7 @@ export function StockTable({
           <tbody>
             {rows.map((row) => (
               <tr
-                key={row.id}
+                key={rowKey(row)}
                 onClick={clickable ? () => onRowClick?.(row) : undefined}
                 className={[
                   "border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50",
@@ -340,16 +362,16 @@ export function StockTable({
                 </td>
                 <td className={td}>
                   <span className="line-clamp-2 break-words">
-                    {row.location || "-"}
+                    {rowLocation(row)}
                   </span>
                 </td>
                 {showCurrentStock ? (
                   <td
                     className={`${td} text-center whitespace-nowrap tabular-nums font-medium ${
-                      row.stock_current <= 0 ? "text-danger" : "text-text"
+                      rowStock(row) <= 0 ? "text-danger" : "text-text"
                     }`}
                   >
-                    {row.stock_current}
+                    {rowStock(row)}
                   </td>
                 ) : null}
                 {showActions ? (
@@ -357,7 +379,7 @@ export function StockTable({
                     className={`${td} whitespace-nowrap`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {onEdit ? (
+                    {!isBalanceRow(row) && onEdit ? (
                       <button
                         type="button"
                         onClick={() => onEdit(row)}
@@ -366,7 +388,7 @@ export function StockTable({
                         {t.common.edit}
                       </button>
                     ) : null}
-                    {onDelete ? (
+                    {!isBalanceRow(row) && onDelete ? (
                       <button
                         type="button"
                         onClick={() => onDelete(row)}

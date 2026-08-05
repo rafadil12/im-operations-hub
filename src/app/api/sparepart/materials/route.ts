@@ -4,7 +4,7 @@ import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 const LIST_SQL = `
-  SELECT id, code, name, brand, model, location,
+  SELECT id, code, name, brand, model, location, default_storage_location_id,
          stock_in, stock_out, stock_current,
          image_url, notes, deleted_at, created_at, updated_at
   FROM sparepart_items
@@ -63,14 +63,16 @@ export async function POST(request: NextRequest) {
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
-          (code, name, brand, model, location, notes, stock_in, stock_out, stock_current)
-         VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+          (code, name, brand, model, location, default_storage_location_id,
+           notes, stock_in, stock_out, stock_current)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
         [
           data.code,
           data.name,
           data.brand || null,
           data.model || null,
           data.location || null,
+          data.default_storage_location_id ?? null,
           data.notes || null,
         ],
       );

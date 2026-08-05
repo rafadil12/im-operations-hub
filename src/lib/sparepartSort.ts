@@ -1,4 +1,4 @@
-import type { SparepartItem } from "@/lib/types";
+import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 
 export type SortKey =
   | "code"
@@ -38,5 +38,28 @@ export function sortSparepartItems(
     }
     if (cmp !== 0) return cmp * dir;
     return compareStrings(a.code, b.code);
+  });
+}
+
+export function sortStockBalanceRows(
+  rows: SparepartStockBalanceRow[],
+  sortKey: SortKey | null,
+  sortDir: SortDir,
+): SparepartStockBalanceRow[] {
+  const key = sortKey ?? "code";
+  const dir = (sortKey == null ? "asc" : sortDir) === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    let cmp = 0;
+    if (key === "stock_current") {
+      cmp = a.stock_current - b.stock_current;
+    } else if (key === "location") {
+      cmp = compareStrings(a.location_name, b.location_name);
+    } else {
+      cmp = compareStrings(a[key], b[key]);
+    }
+    if (cmp !== 0) return cmp * dir;
+    const byCode = compareStrings(a.code, b.code);
+    if (byCode !== 0) return byCode;
+    return compareStrings(a.location_name, b.location_name);
   });
 }
