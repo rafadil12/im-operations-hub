@@ -3,18 +3,22 @@
 import {
   useEffect,
   useId,
-  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
 } from "react";
+import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem } from "@/lib/types";
 
-const MAX_SUGGESTIONS = 10;
+const DEBOUNCE_MS = 300;
+const MIN_CHARS = 1;
+const SUGGEST_LIMIT = 20;
+
+type SuggestResponse = { rows: SparepartItem[] };
+type DetailResponse = { row: SparepartItem };
 
 type Props = {
-  materials: SparepartItem[];
   value: string;
   onChange: (itemId: string) => void;
   className?: string;
@@ -24,28 +28,56 @@ function labelFor(item: SparepartItem): string {
   return `${item.code} — ${item.name}`;
 }
 
-function matchesQuery(item: SparepartItem, q: string): boolean {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return true;
-  return [item.code, item.name, item.brand ?? "", item.model ?? ""].some((f) =>
-    f.toLowerCase().includes(needle),
+function isAbortError(err: unknown): boolean {
+  return (
+    (err instanceof DOMException && err.name === "AbortError") ||
+    (err instanceof Error && err.name === "AbortError")
   );
 }
 
-export function MaterialCombobox({
-  materials,
-  value,
-  onChange,
-  className,
-}: Props) {
+export function MaterialCombobox({ value, onChange, className }: Props) {
   const { t } = useLang();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
-  const selected = materials.find((m) => String(m.id) === value) ?? null;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestAbortRef = useRef<AbortController | null>(null);
+  const resolveAbortRef = useRef<AbortController | null>(null);
 
-  const [query, setQuery] = useState(selected ? labelFor(selected) : "");
+  const [selected, setSelected] = useState<SparepartItem | null>(null);
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<SparepartItem[]>([]);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
+  const [searching, setSearching] = useState(false);
+
+  // Hydrate selected row when parent value is set (e.g. remount) without full catalog.
+  useEffect(() => {
+    if (!value) {
+      setSelected(null);
+      return;
+    }
+    if (selected && String(selected.id) === value) return;
+
+    resolveAbortRef.current?.abort();
+    const ac = new AbortController();
+    resolveAbortRef.current = ac;
+
+    apiGetAbs<DetailResponse>(`/api/sparepart/materials/${value}`, {
+      signal: ac.signal,
+    })
+      .then((data) => {
+        setSelected(data.row);
+        setQuery(labelFor(data.row));
+      })
+      .catch((err) => {
+        if (isAbortError(err)) return;
+        setSelected(null);
+      });
+
+    return () => ac.abort();
+    // intentionally omit `selected` — only react to value changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   useEffect(() => {
     if (selected) {
@@ -55,14 +87,9 @@ export function MaterialCombobox({
     }
   }, [selected, value]);
 
-  const suggestions = useMemo(() => {
-    const filtered = materials.filter((m) => matchesQuery(m, query));
-    return filtered.slice(0, MAX_SUGGESTIONS);
-  }, [materials, query]);
-
   useEffect(() => {
     setHighlight(0);
-  }, [query, open]);
+  }, [suggestions, open]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -74,27 +101,93 @@ export function MaterialCombobox({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      suggestAbortRef.current?.abort();
+      resolveAbortRef.current?.abort();
+    };
+  }, []);
+
+  const runSuggest = (raw: string) => {
+    const needle = raw.trim();
+    suggestAbortRef.current?.abort();
+
+    if (needle.length < MIN_CHARS) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+
+    const ac = new AbortController();
+    suggestAbortRef.current = ac;
+    setSearching(true);
+
+    const params = new URLSearchParams({
+      q: needle,
+      limit: String(SUGGEST_LIMIT),
+    });
+
+    apiGetAbs<SuggestResponse>(
+      `/api/sparepart/materials/suggest?${params.toString()}`,
+      { signal: ac.signal },
+    )
+      .then((data) => {
+        setSuggestions(data.rows);
+      })
+      .catch((err) => {
+        if (isAbortError(err)) return;
+        setSuggestions([]);
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setSearching(false);
+      });
+  };
+
+  const scheduleSuggest = (raw: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => runSuggest(raw), DEBOUNCE_MS);
+  };
+
   const pick = (item: SparepartItem) => {
+    setSelected(item);
     onChange(String(item.id));
     setQuery(labelFor(item));
+    setSuggestions([]);
     setOpen(false);
   };
 
-  const tryExactCode = () => {
-    const code = query.trim().toLowerCase();
+  const tryExactCode = async () => {
+    const code = query.trim();
     if (!code) {
+      setSelected(null);
       onChange("");
       return;
     }
-    const exact = materials.filter((m) => m.code.toLowerCase() === code);
-    if (exact.length === 1) {
-      pick(exact[0]);
+    if (selected && labelFor(selected).toLowerCase() === code.toLowerCase()) {
       return;
     }
-    if (selected && labelFor(selected).toLowerCase() === query.trim().toLowerCase()) {
-      return;
+
+    suggestAbortRef.current?.abort();
+    const ac = new AbortController();
+    suggestAbortRef.current = ac;
+
+    try {
+      const params = new URLSearchParams({ exactCode: code });
+      const data = await apiGetAbs<SuggestResponse>(
+        `/api/sparepart/materials/suggest?${params.toString()}`,
+        { signal: ac.signal },
+      );
+      if (data.rows.length === 1) {
+        pick(data.rows[0]);
+        return;
+      }
+    } catch (err) {
+      if (isAbortError(err)) return;
     }
+
     if (!selected || labelFor(selected) !== query) {
+      setSelected(null);
       onChange("");
     }
   };
@@ -114,13 +207,15 @@ export function MaterialCombobox({
       if (open && suggestions[highlight]) {
         pick(suggestions[highlight]);
       } else {
-        tryExactCode();
+        void tryExactCode();
         setOpen(false);
       }
     } else if (e.key === "Escape") {
       setOpen(false);
     }
   };
+
+  const showList = open && (suggestions.length > 0 || searching);
 
   return (
     <div ref={rootRef} className="relative">
@@ -132,26 +227,36 @@ export function MaterialCombobox({
         aria-autocomplete="list"
         className={className}
         value={query}
-        placeholder={`${t.sparepart.code} / ${t.sparepart.name}`}
+        placeholder={`${t.sparepart.code} / ${t.sparepart.name} / ${t.sparepart.brand} / ${t.sparepart.model}`}
         onChange={(e) => {
-          setQuery(e.target.value);
+          const next = e.target.value;
+          setQuery(next);
+          setSelected(null);
           onChange("");
           setOpen(true);
+          scheduleSuggest(next);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          setOpen(true);
+          if (query.trim().length >= MIN_CHARS && !selected) {
+            scheduleSuggest(query);
+          }
+        }}
         onBlur={() => {
-          // Delay so click on suggestion can fire first
-          window.setTimeout(() => tryExactCode(), 120);
+          window.setTimeout(() => void tryExactCode(), 120);
         }}
         onKeyDown={onKeyDown}
         autoComplete="off"
       />
-      {open && suggestions.length > 0 ? (
+      {showList ? (
         <ul
           id={listId}
           role="listbox"
           className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg"
         >
+          {searching && suggestions.length === 0 ? (
+            <li className="px-3 py-2 text-xs text-text-dim">{t.common.loading}</li>
+          ) : null}
           {suggestions.map((item, index) => (
             <li key={item.id} role="option" aria-selected={index === highlight}>
               <button

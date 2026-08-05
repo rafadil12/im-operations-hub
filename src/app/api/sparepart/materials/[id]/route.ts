@@ -1,9 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execute } from "@/lib/db";
+import { execute, query } from "@/lib/db";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
-import type { SparepartItemInput } from "@/lib/types";
+import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_request: NextRequest, context: Ctx) {
+  try {
+    const { id } = await context.params;
+    const itemId = Number(id);
+    if (!Number.isFinite(itemId) || itemId <= 0) {
+      return NextResponse.json({ error: "Invalid material id." }, { status: 400 });
+    }
+    const rows = await query<SparepartItem[]>(
+      `SELECT id, code, name, brand, model, location,
+              stock_in, stock_out, stock_current,
+              image_url, notes, deleted_at, created_at, updated_at
+       FROM sparepart_items
+       WHERE id = ? AND deleted_at IS NULL
+       LIMIT 1`,
+      [itemId],
+    );
+    if (!rows[0]) {
+      return NextResponse.json({ error: "Material not found." }, { status: 404 });
+    }
+    return NextResponse.json({ row: rows[0] });
+  } catch (error) {
+    console.error("GET /sparepart/materials/[id] failed", error);
+    return NextResponse.json(
+      { error: "Failed to load material." },
+      { status: 500 },
+    );
+  }
+}
 
 export async function PUT(request: NextRequest, context: Ctx) {
   try {

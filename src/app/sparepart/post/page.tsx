@@ -1,17 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
+import { useState } from "react";
+import { apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
-import type {
-  MovementType,
-  SparepartItem,
-} from "@/lib/types";
+import type { MovementType } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
-
-type ListResponse = { rows: SparepartItem[] };
 
 type LineDraft = {
   key: string;
@@ -32,7 +27,6 @@ function newLine(): LineDraft {
 export default function PostGoodsMovementPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
-  const [materials, setMaterials] = useState<SparepartItem[]>([]);
   const [movementType, setMovementType] = useState<MovementType>("101");
   const [postingDate, setPostingDate] = useState(
     () => new Date().toISOString().slice(0, 10),
@@ -44,14 +38,6 @@ export default function PostGoodsMovementPage() {
   const [lastDoc, setLastDoc] = useState<{ id: number; doc_number: string } | null>(
     null,
   );
-
-  useEffect(() => {
-    apiGetAbs<ListResponse>("/api/sparepart/materials")
-      .then((data) => setMaterials(data.rows))
-      .catch((e) =>
-        toastError(e instanceof Error ? e.message : t.common.error),
-      );
-  }, [t.common.error, toastError]);
 
   const field =
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
@@ -176,7 +162,6 @@ export default function PostGoodsMovementPage() {
                       {t.sparepart.item} #{index + 1}
                     </label>
                     <MaterialCombobox
-                      materials={materials}
                       value={line.item_id}
                       onChange={(itemId) =>
                         setLines((prev) =>
