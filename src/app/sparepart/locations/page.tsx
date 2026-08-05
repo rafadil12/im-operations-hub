@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import type { SparepartStorageLocation } from "@/lib/types";
@@ -8,6 +8,39 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { Modal } from "@/components/ui/Modal";
 
 type ListResponse = { rows: SparepartStorageLocation[] };
+type LocationSortKey = "code" | "name" | "is_active";
+type SortDir = "asc" | "desc";
+
+function ChevronIcon({
+  direction,
+  active,
+  className = "",
+}: {
+  direction: "up" | "down";
+  active: boolean;
+  className?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 10 6"
+      className={`h-2 w-2.5 shrink-0 ${
+        active ? "text-text opacity-100" : "text-text-dim opacity-50"
+      } ${className}`}
+      fill="currentColor"
+      aria-hidden
+    >
+      {direction === "up" ? (
+        <path d="M5 0L10 6H0L5 0Z" />
+      ) : (
+        <path d="M5 6L0 0H10L5 6Z" />
+      )}
+    </svg>
+  );
+}
+
+function compareStrings(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
 
 export default function StorageLocationsPage() {
   const { t } = useLang();
@@ -21,6 +54,9 @@ export default function StorageLocationsPage() {
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [sortKey, setSortKey] = useState<LocationSortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [openSortKey, setOpenSortKey] = useState<LocationSortKey | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +148,126 @@ export default function StorageLocationsPage() {
   const td = "px-3 py-2 text-xs text-text-muted";
 
   const showForm = creating || editing;
+  const sortedRows = useMemo(() => {
+    const key = sortKey ?? "code";
+    const dir = (sortKey == null ? "asc" : sortDir) === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      let cmp = 0;
+      if (key === "is_active") {
+        cmp = Number(a.is_active) - Number(b.is_active);
+      } else {
+        cmp = compareStrings(String(a[key] ?? ""), String(b[key] ?? ""));
+      }
+      if (cmp !== 0) return cmp * dir;
+      return compareStrings(a.name, b.name);
+    });
+  }, [rows, sortDir, sortKey]);
+
+  const renderSortHeader = (label: string, columnKey: LocationSortKey) => {
+    const active = sortKey === columnKey;
+    const open = openSortKey === columnKey;
+    const chevronDir = active && sortDir === "asc" ? "up" : "down";
+
+    function SortMenu() {
+      const menuRef = useRef<HTMLDivElement>(null);
+
+      useEffect(() => {
+        if (!open) return;
+        const onPointerDown = (event: PointerEvent) => {
+          if (!menuRef.current?.contains(event.target as Node)) {
+            setOpenSortKey(null);
+          }
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+          if (event.key === "Escape") setOpenSortKey(null);
+        };
+        window.addEventListener("pointerdown", onPointerDown);
+        window.addEventListener("keydown", onKeyDown);
+        return () => {
+          window.removeEventListener("pointerdown", onPointerDown);
+          window.removeEventListener("keydown", onKeyDown);
+        };
+      }, [open]);
+
+      const pick = (dir: SortDir) => {
+        if (active && sortDir === dir) {
+          setSortKey(null);
+        } else {
+          setSortKey(columnKey);
+          setSortDir(dir);
+        }
+        setOpenSortKey(null);
+      };
+
+      return (
+        <div className="relative inline-block" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setOpenSortKey(open ? null : columnKey)}
+            aria-expanded={open}
+            aria-haspopup="menu"
+            className={[
+              "inline-flex items-center rounded-sm uppercase tracking-wide transition-colors",
+              "hover:text-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
+              active || open ? "text-text" : "text-text-dim",
+            ].join(" ")}
+          >
+            {label}
+            <ChevronIcon
+              direction={chevronDir}
+              active={active || open}
+              className="ml-1.5"
+            />
+          </button>
+
+          {open ? (
+            <div
+              role="menu"
+              className="absolute left-0 z-30 mt-1 min-w-[10.5rem] rounded-md border border-border bg-bg-elevated py-1 shadow-lg"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => pick("asc")}
+                className={[
+                  "flex w-full items-center gap-2 px-3 py-2 text-left text-xs",
+                  active && sortDir === "asc"
+                    ? "bg-accent/10 text-text"
+                    : "text-text-muted hover:bg-surface-hover hover:text-text",
+                ].join(" ")}
+              >
+                <ChevronIcon direction="up" active={active && sortDir === "asc"} />
+                <span className="normal-case tracking-normal">
+                  {t.common.sortAsc}
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => pick("desc")}
+                className={[
+                  "flex w-full items-center gap-2 px-3 py-2 text-left text-xs",
+                  active && sortDir === "desc"
+                    ? "bg-accent/10 text-text"
+                    : "text-text-muted hover:bg-surface-hover hover:text-text",
+                ].join(" ")}
+              >
+                <ChevronIcon
+                  direction="down"
+                  active={active && sortDir === "desc"}
+                />
+                <span className="normal-case tracking-normal">
+                  {t.common.sortDesc}
+                </span>
+              </button>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    return <SortMenu />;
+  };
 
   return (
     <div>
@@ -146,14 +302,14 @@ export default function StorageLocationsPage() {
           <table className="w-full border-collapse">
             <thead className="border-b border-border-subtle bg-bg/40">
               <tr>
-                <th className={th}>{t.sparepart.locationCode}</th>
-                <th className={th}>{t.sparepart.locationName}</th>
-                <th className={th}>{t.sparepart.locationActive}</th>
+                <th className={th}>{renderSortHeader(t.sparepart.locationCode, "code")}</th>
+                <th className={th}>{renderSortHeader(t.sparepart.locationName, "name")}</th>
+                <th className={th}>{renderSortHeader(t.sparepart.locationActive, "is_active")}</th>
                 <th className={th}>{t.common.actions}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {sortedRows.map((row) => (
                 <tr
                   key={row.id}
                   className="border-b border-border-subtle/60 last:border-0"
