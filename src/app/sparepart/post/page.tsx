@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
-import type { MovementType, SparepartStorageLocation } from "@/lib/types";
+import type {
+  MovementType,
+  SparepartItem,
+  SparepartStorageLocation,
+} from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
 
@@ -14,7 +18,9 @@ type LineDraft = {
   qty: string;
   note: string;
   storage_location_id: string;
+  storage_location_text: string;
   to_storage_location_id: string;
+  item?: SparepartItem | null;
 };
 
 function newLine(defaultLocId = ""): LineDraft {
@@ -24,7 +30,9 @@ function newLine(defaultLocId = ""): LineDraft {
     qty: "1",
     note: "",
     storage_location_id: defaultLocId,
+    storage_location_text: "",
     to_storage_location_id: "",
+    item: null,
   };
 }
 
@@ -50,6 +58,9 @@ export default function PostGoodsMovementPage() {
   const [lastDoc, setLastDoc] = useState<{ id: number; doc_number: string } | null>(
     null,
   );
+  const [openLocationSuggestKey, setOpenLocationSuggestKey] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -72,10 +83,244 @@ export default function PostGoodsMovementPage() {
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
   const label = "mb-1 block text-xs font-medium text-text-muted";
 
+  const locationLabel = (loc: SparepartStorageLocation) => `${loc.code} — ${loc.name}`;
+
+  const filterLocationList = (
+    options: SparepartStorageLocation[],
+    needle: string,
+  ) => {
+    const q = needle.trim().toLowerCase();
+    const sorted = [...options].sort((a, b) => a.name.localeCompare(b.name));
+    if (!q) return sorted;
+    return sorted.filter(
+      (loc) =>
+        loc.code.toLowerCase().includes(q) ||
+        loc.name.toLowerCase().includes(q) ||
+        locationLabel(loc).toLowerCase().includes(q),
+    );
+  };
+
+  const locationOptionsForItem = (item?: SparepartItem | null) => {
+    if (!item) return [] as SparepartStorageLocation[];
+
+    const byId = new Map<number, SparepartStorageLocation>();
+    for (const balance of item.balances ?? []) {
+      if (Number(balance.qty) <= 0) continue;
+      byId.set(balance.storage_location_id, {
+        id: balance.storage_location_id,
+        code: balance.location_code ?? "",
+        name: balance.location_name ?? "",
+        is_active: 1,
+        created_at: null,
+        updated_at: null,
+      });
+    }
+
+    if (item.default_storage_location_id) {
+      const existing = byId.get(item.default_storage_location_id);
+      if (!existing) {
+        const fallback = locations.find(
+          (loc) => loc.id === item.default_storage_location_id,
+        );
+        if (fallback) byId.set(fallback.id, fallback);
+      }
+    }
+
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const resolveExistingLocation = (value: string) => {
+    const needle = value.trim().toLowerCase();
+    if (!needle) return null;
+    return (
+      locations.find(
+        (loc) =>
+          loc.code.trim().toLowerCase() === needle ||
+          loc.name.trim().toLowerCase() === needle ||
+          locationLabel(loc).trim().toLowerCase() === needle,
+      ) ?? null
+    );
+  };
+
+  /** 101 only: type + verify existing location */
+  const renderTypedLocationField = (line: LineDraft) => {
+    const suggestKey = `${line.key}-from`;
+    const suggestions = filterLocationList(locations, line.storage_location_text);
+    const open = openLocationSuggestKey === suggestKey;
+
+    return (
+      <div className="relative">
+        <input
+          className={field}
+          value={line.storage_location_text}
+          onChange={(e) => {
+            setOpenLocationSuggestKey(suggestKey);
+            setLines((prev) =>
+              prev.map((l) =>
+                l.key === line.key
+                  ? { ...l, storage_location_text: e.target.value }
+                  : l,
+              ),
+            );
+          }}
+          onFocus={() => setOpenLocationSuggestKey(suggestKey)}
+          onBlur={() => {
+            window.setTimeout(() => {
+              setOpenLocationSuggestKey((key) =>
+                key === suggestKey ? null : key,
+              );
+            }, 120);
+          }}
+          placeholder={t.sparepart.locationName}
+          autoComplete="off"
+        />
+        {open ? (
+          <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg">
+            {suggestions.map((loc) => (
+              <li key={loc.id}>
+                <button
+                  type="button"
+                  className="flex w-full px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setLines((prev) =>
+                      prev.map((l) =>
+                        l.key === line.key
+                          ? {
+                              ...l,
+                              storage_location_text: locationLabel(loc),
+                              storage_location_id: String(loc.id),
+                            }
+                          : l,
+                      ),
+                    );
+                    setOpenLocationSuggestKey(null);
+                  }}
+                >
+                  {locationLabel(loc)}
+                </button>
+              </li>
+            ))}
+            {suggestions.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-text-dim">
+                {t.common.noData}
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+      </div>
+    );
+  };
+
+  /**
+   * 201/311: same visual as 101 list, but pick-only (select behavior).
+   * Does not free-type; options and posting logic unchanged.
+   */
+  const renderPickLocationField = ({
+    suggestKey,
+    selectedId,
+    options,
+    disabled,
+    onPick,
+  }: {
+    suggestKey: string;
+    selectedId: string;
+    options: SparepartStorageLocation[];
+    disabled?: boolean;
+    onPick: (locId: string) => void;
+  }) => {
+    const open = openLocationSuggestKey === suggestKey;
+    const selected = options.find((loc) => String(loc.id) === selectedId);
+    const display = selected ? locationLabel(selected) : "";
+
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          disabled={disabled}
+          className={`${field} text-left disabled:opacity-60`}
+          onClick={() => {
+            if (disabled) return;
+            setOpenLocationSuggestKey((key) =>
+              key === suggestKey ? null : suggestKey,
+            );
+          }}
+          onBlur={() => {
+            window.setTimeout(() => {
+              setOpenLocationSuggestKey((key) =>
+                key === suggestKey ? null : key,
+              );
+            }, 120);
+          }}
+        >
+          <span className={display ? "text-text" : "text-text-dim"}>
+            {display || t.sparepart.locationName}
+          </span>
+        </button>
+        {open && !disabled ? (
+          <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg">
+            {options.map((loc) => (
+              <li key={loc.id}>
+                <button
+                  type="button"
+                  className={[
+                    "flex w-full px-3 py-2 text-left text-xs",
+                    String(loc.id) === selectedId
+                      ? "bg-accent/10 text-text"
+                      : "text-text-muted hover:bg-surface-hover hover:text-text",
+                  ].join(" ")}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onPick(String(loc.id));
+                    setOpenLocationSuggestKey(null);
+                  }}
+                >
+                  {locationLabel(loc)}
+                </button>
+              </li>
+            ))}
+            {options.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-text-dim">
+                {t.common.noData}
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+      </div>
+    );
+  };
+
   const handlePost = async () => {
     setBusy(true);
     setLastDoc(null);
     try {
+      const payloadLines = lines.map((l, index) => {
+        if (movementType === "101") {
+          const resolved = resolveExistingLocation(l.storage_location_text);
+          if (!resolved) {
+            throw new Error(
+              `Line ${index + 1}: storage location must match an existing location.`,
+            );
+          }
+          return {
+            item_id: Number(l.item_id),
+            qty: Number(l.qty),
+            note: l.note,
+            storage_location_id: resolved.id,
+            to_storage_location_id: undefined,
+          };
+        }
+
+        return {
+          item_id: Number(l.item_id),
+          qty: Number(l.qty),
+          note: l.note,
+          storage_location_id: Number(l.storage_location_id),
+          to_storage_location_id:
+            movementType === "311" ? Number(l.to_storage_location_id) : undefined,
+        };
+      });
+
       const result = await apiSendAbs<{ id: number; doc_number: string }>(
         "/api/sparepart/goods-movements",
         "POST",
@@ -85,16 +330,7 @@ export default function PostGoodsMovementPage() {
           header_text: headerText,
           recipient,
           client_request_id: newClientRequestId(),
-          lines: lines.map((l) => ({
-            item_id: Number(l.item_id),
-            qty: Number(l.qty),
-            note: l.note,
-            storage_location_id: Number(l.storage_location_id),
-            to_storage_location_id:
-              movementType === "311"
-                ? Number(l.to_storage_location_id)
-                : undefined,
-          })),
+          lines: payloadLines,
         },
       );
       toastSuccess(
@@ -198,23 +434,76 @@ export default function PostGoodsMovementPage() {
                   </label>
                   <MaterialCombobox
                     value={line.item_id}
-                    onChange={(itemId, item) =>
-                      setLines((prev) =>
-                        prev.map((l) =>
-                          l.key === line.key
-                            ? {
-                                ...l,
-                                item_id: itemId,
-                                storage_location_id:
-                                  l.storage_location_id ||
-                                  (item?.default_storage_location_id
-                                    ? String(item.default_storage_location_id)
-                                    : l.storage_location_id),
-                              }
-                            : l,
-                        ),
-                      )
-                    }
+                    onChange={(itemId, item) => {
+                      if (!itemId) {
+                        setLines((prev) =>
+                          prev.map((l) =>
+                            l.key === line.key
+                              ? {
+                                  ...l,
+                                  item_id: "",
+                                  item: null,
+                                  storage_location_id: "",
+                                  storage_location_text: "",
+                                }
+                              : l,
+                          ),
+                        );
+                        return;
+                      }
+
+                      void (async () => {
+                        const fullItem = await apiGetAbs<{ row: SparepartItem }>(
+                          `/api/sparepart/materials/${itemId}`,
+                        )
+                          .then((data) => data.row)
+                          .catch(() => item ?? null);
+
+                        setLines((prev) =>
+                          prev.map((l) =>
+                            l.key === line.key
+                              ? {
+                                  ...l,
+                                  item_id: itemId,
+                                  item: fullItem,
+                                  storage_location_id: (() => {
+                                    const nextOptions =
+                                      locationOptionsForItem(fullItem);
+                                    const currentStillValid = nextOptions.some(
+                                      (loc) =>
+                                        String(loc.id) === l.storage_location_id,
+                                    );
+                                    if (currentStillValid) {
+                                      return l.storage_location_id;
+                                    }
+                                    if (fullItem?.default_storage_location_id) {
+                                      return String(
+                                        fullItem.default_storage_location_id,
+                                      );
+                                    }
+                                    return nextOptions[0]
+                                      ? String(nextOptions[0].id)
+                                      : "";
+                                  })(),
+                                  storage_location_text: (() => {
+                                    if (fullItem?.default_storage_location_id) {
+                                      const defaultLoc = locations.find(
+                                        (loc) =>
+                                          loc.id ===
+                                          fullItem.default_storage_location_id,
+                                      );
+                                      if (defaultLoc) {
+                                        return locationLabel(defaultLoc);
+                                      }
+                                    }
+                                    return l.storage_location_text;
+                                  })(),
+                                }
+                              : l,
+                          ),
+                        );
+                      })();
+                    }}
                     className={field}
                   />
                 </div>
@@ -225,50 +514,39 @@ export default function PostGoodsMovementPage() {
                       : t.sparepart.location}{" "}
                     *
                   </label>
-                  <select
-                    className={field}
-                    value={line.storage_location_id}
-                    onChange={(e) =>
-                      setLines((prev) =>
-                        prev.map((l) =>
-                          l.key === line.key
-                            ? { ...l, storage_location_id: e.target.value }
-                            : l,
-                        ),
-                      )
-                    }
-                  >
-                    <option value="">—</option>
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.code} — {loc.name}
-                      </option>
-                    ))}
-                  </select>
+                  {movementType === "101"
+                    ? renderTypedLocationField(line)
+                    : renderPickLocationField({
+                        suggestKey: `${line.key}-from`,
+                        selectedId: line.storage_location_id,
+                        options: locationOptionsForItem(line.item),
+                        disabled: !line.item_id,
+                        onPick: (locId) =>
+                          setLines((prev) =>
+                            prev.map((l) =>
+                              l.key === line.key
+                                ? { ...l, storage_location_id: locId }
+                                : l,
+                            ),
+                          ),
+                      })}
                 </div>
                 {movementType === "311" ? (
                   <div className="md:col-span-2">
                     <label className={label}>{t.sparepart.toLocation} *</label>
-                    <select
-                      className={field}
-                      value={line.to_storage_location_id}
-                      onChange={(e) =>
+                    {renderPickLocationField({
+                      suggestKey: `${line.key}-to`,
+                      selectedId: line.to_storage_location_id,
+                      options: locations,
+                      onPick: (locId) =>
                         setLines((prev) =>
                           prev.map((l) =>
                             l.key === line.key
-                              ? { ...l, to_storage_location_id: e.target.value }
+                              ? { ...l, to_storage_location_id: locId }
                               : l,
                           ),
-                        )
-                      }
-                    >
-                      <option value="">—</option>
-                      {locations.map((loc) => (
-                        <option key={loc.id} value={loc.id}>
-                          {loc.code} — {loc.name}
-                        </option>
-                      ))}
-                    </select>
+                        ),
+                    })}
                   </div>
                 ) : null}
                 <div className="md:col-span-1">
