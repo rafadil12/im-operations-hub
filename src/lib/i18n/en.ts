@@ -165,6 +165,13 @@ const en = {
 
     others: "Others",
     showingTop: "Showing top {n}",
+    ticketTrend: "Ticket Trend",
+    topTechnician: "Top Technician",
+    topRequester: "Top Requester",
+    requestType: "Request Type",
+    ofTotal: "of Total",
+    tickets: "Tickets",
+
   },
   fields: {
     pic: "PIC",

@@ -136,7 +136,7 @@ const cn: Dict = {
     total: "工单总数",
     open: "未关闭工单",
     closed: "已关闭工单",
-    activeUsers: "活跃用户",
+    activeUsers: "服务请求",
     avgResolution: "平均解决时间（小时）",
 
     byStatus: "工单状态分布",
@@ -166,6 +166,12 @@ const cn: Dict = {
 
     others: "其他",
     showingTop: "显示前 {n} 名",
+    ticketTrend: "工单趋势",
+    topTechnician: "技术员排行",
+    topRequester: "申请人排名",
+    requestType: "请求类型",
+    ofTotal: "占总数",
+    tickets: "工单",
   },
   fields: {
     pic: "负责人",

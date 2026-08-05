@@ -107,7 +107,10 @@ export type TrendItem = {
   date: string;
   count: number;
 };
-
+export type TrendComparison = {
+  current: TrendItem[];
+  previous: TrendItem[];
+};
 export type TopPicItem = {
   name: string;
   count: number;
@@ -171,7 +174,7 @@ export type ItsmAnalysisResult = {
   byPriority: NamedCount[];
   byRequestType: NamedCount[];
 
-  trend: TrendItem[];
+  trend: TrendComparison;
 };
 /** Match status counts by English name keywords (stable across locale). */
 export function namedStatusCount(

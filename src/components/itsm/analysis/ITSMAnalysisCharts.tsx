@@ -26,6 +26,7 @@
     import { CHART_COLORS, useTheme, type ChartColors } from "@/lib/theme";
     import type { ItsmAnalysisResult, Lang, NamedCount } from "@/lib/types";
     
+    
     const PALETTE = [
       "#ef4444",
       "#f97316",
@@ -543,6 +544,7 @@
 }) {
   const colors = useChartColors();
   const { theme } = useTheme();
+  const { t } = useLang();
 
   const total = slices.reduce((s, x) => s + x.value, 0);
 
@@ -597,7 +599,7 @@
                 {total}
               </text>
 
-              <text
+             <text
                 x="50%"
                 y="58%"
                 textAnchor="middle"
@@ -607,7 +609,7 @@
                   fill: theme === "dark" ? "#CBD5E1" : "#64748B",
                 }}
               >
-                Tickets
+                {t.itsmAnalysis.tickets}
               </text>
 
             <Tooltip
@@ -716,14 +718,13 @@
                   {percent}%
                 </span>
 
-                <span
+              <span
                   style={{
                     color: colors.tooltipText,
                   }}
                 >
-                  of Total
+                  {t.itsmAnalysis.ofTotal}
                 </span>
-
               </div>
 
             </div>
@@ -857,8 +858,10 @@
     
 export function ITSMAnalysisCharts({
   result,
+  activeFilter,
 }: {
   result: ItsmAnalysisResult;
+  activeFilter: "week" | "month" | "year" | null;
 }) {
   const { lang, t } = useLang();
   const colors = useChartColors();
@@ -876,7 +879,10 @@ export function ITSMAnalysisCharts({
   const technicians = result.technicianRanking ?? [];
   const requesters = result.requesterRanking ?? [];
   console.log("Technicians:", technicians);
-  const trend = result.trend ?? [];
+  const trend = result.trend ?? {
+    current: [],
+    previous: [],
+  };
 
   // =============================
   // PIE
@@ -1011,131 +1017,296 @@ export function ITSMAnalysisCharts({
 
   const requesterBarCompact = requesterBar.slice(0, 10);
 
-    
+  const chartData = trend.current.map((item, index) => ({
+  date: item.date,
+  current: item.count,
+  previous: trend.previous[index]?.count ?? 0,
+}));
 
-  return (
-    
-    
+return (
   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-    
+
     {/* Ticket Trend */}
-    <ChartCard title="📈 Ticket Trend">
-        <ResponsiveContainer width="100%" height={280}>
-            <LineChart
-            data={trend}
-            margin={{
-                top: 20,
-                right: 20,
-                left: 0,
-                bottom: 0,
+   <ChartCard title={`📈 ${t.itsmAnalysis.ticketTrend}`}>
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart
+          data={chartData}
+          margin={{
+            top: 20,
+            right: 20,
+            left: 0,
+            bottom: 0,
+          }}
+        >
+          <defs>
+            <linearGradient id="ticketTrendGradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#25ebb3" />
+              <stop offset="50%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#cd7364" />
+            </linearGradient>
+          </defs>
+
+          <CartesianGrid
+              vertical={false}
+              stroke={theme === "dark" ? "#E5E7EB" : "#cbd5e1ab"}
+              strokeWidth={theme === "dark" ? 0.5 : 0.8}
+              strokeOpacity={theme === "dark" ? 0.5 : 0.8}
+              strokeDasharray="5 5"
+            />
+
+          <XAxis
+            dataKey="date"
+            stroke={colors.axis}
+            tick={{
+              fill: theme === "dark" ? "#FFFFFF" : "#475569",
+              fontSize: 11,
             }}
-            >
-            {/* Gradient */}
-            <defs>
-                <linearGradient id="ticketTrendGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#25ebb3" />
-                <stop offset="50%" stopColor="#3b82f6" />
-                <stop offset="100%" stopColor="#cd7364" />
-                </linearGradient>
-            </defs>
+            tickFormatter={(value) => {
+              if (/^\d{4}-\d{2}$/.test(value)) {
+                const [year, month] = value.split("-");
 
-            <CartesianGrid
-                vertical={false}
-                strokeDasharray="5 5"
-                stroke="#E5E7EB"
-            />
-
-            <XAxis
-                dataKey="date"
-                stroke={colors.axis}
-                tick={{
-                    fill: theme === "dark" ? "#FFFFFF" : "#475569",
-                    fontSize: 11,
-                }}
-                tickFormatter={(value) => {
-                  // Jika datanya berupa YYYY-MM (contoh: 2026-01)
-                  if (/^\d{4}-\d{2}$/.test(value)) {
-                      const [year, month] = value.split("-");
-
-                      return new Date(
-                          Number(year),
-                          Number(month) - 1
-                      ).toLocaleDateString(
-                          lang === "cn" ? "zh-CN" : "en-US",
-                          {
-                              month: "short",
-                          }
-                      );
+                return new Date(
+                  Number(year),
+                  Number(month) - 1
+                ).toLocaleDateString(
+                  lang === "cn" ? "zh-CN" : "en-US",
+                  {
+                    month: "short",
                   }
+                );
+              }
 
-                  // Jika datanya berupa YYYY-MM-DD
-                  const date = new Date(value);
+              const date = new Date(value);
 
-                  if (lang === "cn") {
-                      return `${date.getMonth() + 1}月${date.getDate()}日`;
-                  }
+              if (lang === "cn") {
+                return `${date.getMonth() + 1}月${date.getDate()}日`;
+              }
 
-                  return date.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                  });
+              return date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              });
+            }}
+          />
+
+          <YAxis
+            allowDecimals={false}
+            stroke="#94A3B8"
+            tickMargin={12}
+            tick={{
+              fill: theme === "dark" ? "#FFFFFF" : "#475569",
+              fontSize: 11,
+            }}
+          />
+
+          <Legend
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{
+                paddingBottom: 10,
+                fontSize: 14,
+                fontWeight: 600,
+                color: theme === "dark" ? "#CBD5E1" : "#475569",
               }}
-                />
-            <YAxis
-                allowDecimals={false} stroke="#94A3B8" tick={{
-                fill: theme === "dark" ? "#FFFFFF" : "#475569",
-                fontSize: 11,
-                }}
-            />
-            <Tooltip
-                contentStyle={{
-                borderRadius: 12,
-                border: "none",
-                background: "#1E293B",
-                color: "#fff",
-                boxShadow: "0 10px 25px rgba(0,0,0,.2)",
-                }}
-                labelStyle={{
-                color: "#CBD5E1",
-                }}
-                itemStyle={{
-                color: "#60A5FA",
-                }}
-            />
-
-            <Line
-                type="natural"
-                dataKey="count"
-                stroke="url(#ticketTrendGradient)"
-                strokeWidth={3}
-                animationDuration={1800}
-                animationEasing="ease-in-out"
-                dot={(props) => {
-                const { cx, cy, payload } = props;
+              formatter={(value) => {
+                if (value === "current") {
+                  return (
+                    <span
+                      style={{
+                        color: theme === "dark" ? "#CBD5E1" : "#475569",
+                      }}
+                    >
+                      {lang === "cn"
+                        ? "当前时间段"
+                        : "Current Period"}
+                    </span>
+                  );
+                }
 
                 return (
-                    <circle
-                    cx={cx}
-                    cy={cy}
-                    r={payload.count >= 15 ? 6 : 4}
-                    fill={payload.count >= 15 ? "#EF4444" : "#2563EB"}
-                    stroke="#ffffff"
-                    strokeWidth={2}
-                    />
+                  <span
+                    style={{
+                      color: theme === "dark" ? "#CBD5E1" : "#475569",
+                    }}
+                  >
+                    {lang === "cn"
+                      ? "对比时间段"
+                      : "Previous Period"}
+                  </span>
                 );
-                }}
-            >
-                <LabelList
-                dataKey="count"
-                position="top"
-                fontSize={10}
-                fill={theme === "dark" ? "#F8FAFC" : "#475569"}
+              }}
+            />
+
+         <Tooltip
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null;
+
+              const current = payload.find((p) => p.dataKey === "current")?.value;
+              const previous = payload.find((p) => p.dataKey === "previous")?.value;
+
+              let currentLabel = "";
+              let previousLabel = "";
+
+              if (activeFilter === "week") {
+                currentLabel = lang === "cn" ? "本周" : "This Week";
+                previousLabel = lang === "cn" ? "上周" : "Last Week";
+              } else if (activeFilter === "month") {
+                const date = new Date(String(label));
+
+                currentLabel = date.toLocaleDateString(
+                  lang === "cn" ? "zh-CN" : "en-US",
+                  { month: "long" }
+                );
+
+                const prev = new Date(date);
+                prev.setMonth(prev.getMonth() - 1);
+
+                previousLabel = prev.toLocaleDateString(
+                  lang === "cn" ? "zh-CN" : "en-US",
+                  { month: "long" }
+                );
+              } else {
+                const date = new Date(String(label));
+
+                currentLabel = String(date.getFullYear());
+                previousLabel = String(date.getFullYear() - 1);
+              }
+
+              return (
+                <div
+                  style={{
+                    background: "#1E293B",
+                    color: "#fff",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    boxShadow: "0 8px 20px rgba(0,0,0,.25)",
+                  }}
+                >
+                  <div
+                    style={{
+                      marginBottom: 10,
+                      fontWeight: 700,
+                      fontSize: 18,
+                    }}
+                  >
+                    {label}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#60A5FA",
+                      fontWeight: 700,
+                      fontSize: 16,
+                      marginBottom: 6,
+                    }}
+                  >
+                   {lang === "cn" ? "当前" : "Current"} ({currentLabel}) : {current}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#CBD5E1",
+                      fontWeight: 700,
+                      fontSize: 16,
+                    }}
+                  >
+                    {lang === "cn" ? "上期" : "Previous"} ({previousLabel}) : {previous}
+                  </div>
+                </div>
+              );
+            }}
+          />
+          {/* Previous */}
+        <Line
+          type="natural"
+          dataKey="previous"
+          stroke="#C9D1DB"
+          name="previous"
+          strokeWidth={2.5}
+          animationDuration={1800}
+          animationEasing="ease-in-out"
+          dot={{
+            r: 4,
+            fill: "#BFC7D4",
+            stroke: "#FFFFFF",
+            strokeWidth: 2,
+          }}
+          activeDot={{
+            r: 5,
+            fill: "#AAB4C3",
+            stroke: "#FFFFFF",
+            strokeWidth: 2,
+          }}
+        >
+          <LabelList
+              dataKey="previous"
+              content={(props: any) => {
+                const { x, y, width, value, index } = props;
+
+                return (
+                  <text
+                    x={x + width / 2 + (index === 0 ? 12 : 0)}
+                    y={y - 20}
+                    textAnchor="middle"
+                    fontSize={15}
+                    fontWeight={700}
+                    fill={theme === "dark" ? "#f8fafc76" : "#33415553"}
+                  >
+                    {value}
+                  </text>
+                );
+              }}
+            />
+        </Line>
+          {/* Current */}
+          <Line
+            type="natural"
+            dataKey="current"
+            name="current"
+            stroke="url(#ticketTrendGradient)"
+            strokeWidth={3}
+            animationDuration={1800}
+            animationEasing="ease-in-out"
+            dot={(props) => {
+              const { cx, cy, payload } = props;
+
+              return (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={payload.current >= 15 ? 6 : 4}
+                  fill={payload.current >= 15 ? "#EF4444" : "#2563EB"}
+                  stroke="#ffffff"
+                  strokeWidth={2}
                 />
-            </Line>
-            </LineChart>
-        </ResponsiveContainer>
-        </ChartCard>
-    <ChartCard title="👨‍🔧 Top Technician">
+              );
+            }}
+          >
+            <LabelList
+              dataKey="current"
+              content={(props: any) => {
+                const { x, y, width, value, index } = props;
+
+                return (
+                  <text
+                    x={x + width / 2 + (index === 0 ? 12 : 0)}
+                    y={y - 20}
+                    textAnchor="middle"
+                    fontSize={15}
+                    fontWeight={700}
+                    fill={theme === "dark" ? "#26d371" : "#22b7af"}
+                  >
+                    {value}
+                  </text>
+                );
+              }}
+            />
+          </Line>
+
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartCard>
+    <ChartCard title={`👨‍💻 ${t.itsmAnalysis.topTechnician}`}>
   <div className="relative h-[280px] w-full overflow-hidden">
 
     {technicians.map((item, index) => {
@@ -1230,7 +1401,7 @@ export function ITSMAnalysisCharts({
 </ChartCard>
 
   <ChartCard
-  title="👤 Top Requester"
+  title={`👤 ${t.itsmAnalysis.topRequester}`}
   expandedContent={
     <div
       style={{
@@ -1293,8 +1464,50 @@ export function ITSMAnalysisCharts({
             }}
           />
 
-          <Tooltip />
+          <Tooltip
+            cursor={{
+              fill:
+                theme === "dark"
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(15,23,42,0.04)",
+            }}
+           content={({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
 
+    return (
+      <div
+        style={{
+          background: theme === "dark" ? "#1E293B" : "#FFFFFF",
+          border: `1px solid ${
+            theme === "dark" ? "#334155" : "#E2E8F0"
+          }`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          boxShadow: "0 8px 20px rgba(0,0,0,.25)",
+        }}
+      >
+        <div
+          style={{
+            color: theme === "dark" ? "#F8FAFC" : "#0F172A",
+            fontWeight: 700,
+            marginBottom: 8,
+          }}
+        >
+          {label}
+        </div>
+
+        <div
+          style={{
+            color: theme === "dark" ? "#CBD5E1" : "#334155",
+            fontWeight: 600,
+          }}
+        >
+          Count : {payload[0].value}
+        </div>
+      </div>
+    );
+  }}
+/>
           <Bar
             dataKey="count"
             radius={[6, 6, 0, 0]}
@@ -1365,7 +1578,57 @@ export function ITSMAnalysisCharts({
         }}
       />
 
-      <Tooltip />
+     <Tooltip
+        cursor={{
+          fill:
+            theme === "dark"
+              ? "rgba(255,255,255,0.06)"
+              : "rgba(15,23,42,0.04)",
+        }}
+        content={({ active, payload }) => {
+          if (!active || !payload?.length) return null;
+
+          const row = payload[0].payload as {
+            label: string;
+            count: number;
+          };
+
+          return (
+            <div
+              style={{
+                background: theme === "dark" ? "#1E293B" : "#FFFFFF",
+                border: `1px solid ${
+                  theme === "dark" ? "#334155" : "#E2E8F0"
+                }`,
+                borderRadius: 10,
+                padding: "10px 14px",
+                boxShadow: "0 8px 20px rgba(0,0,0,.25)",
+              }}
+            >
+              <div
+                style={{
+                  color: theme === "dark" ? "#F8FAFC" : "#0F172A",
+                  fontWeight: 700,
+                  marginBottom: 8,
+                  fontSize: 15,
+                }}
+              >
+                {row.label}
+              </div>
+
+              <div
+                style={{
+                  color: theme === "dark" ? "#CBD5E1" : "#334155",
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
+              >
+                Count : {row.count}
+              </div>
+            </div>
+          );
+        }}
+      />
 
       <Bar
         dataKey="count"
@@ -1394,7 +1657,7 @@ export function ITSMAnalysisCharts({
   </ResponsiveContainer>
 </ChartCard>
     {/* Service Request vs Incident */}
-    <ChartCard title="🔖Request Type">
+    <ChartCard title={`📑 ${t.itsmAnalysis.requestType}`}>
       <PieWithLegend
         slices={requestTypeSlices}
         chartHeight={260}

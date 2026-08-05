@@ -249,7 +249,10 @@ export default function AnalysisPage() {
               </div>
             ))}
           </div>
-          <ITSMAnalysisCharts result={result} />
+          <ITSMAnalysisCharts
+            result={result}
+            activeFilter={activeFilter}
+          />
         </>
       )}
     </div>

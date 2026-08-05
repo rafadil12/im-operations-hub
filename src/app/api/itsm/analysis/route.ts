@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     `;
 
     const params: unknown[] = [start, end];
+    
 
     if (group && group !== "All") {
       filter += ` AND group_name = ?`;
@@ -86,6 +87,22 @@ export async function GET(request: NextRequest) {
     const groupByMonth = diffDays > 90;
 
     const days = Math.max(1, diffDays);
+    const previousStart = new Date(startDate);
+    previousStart.setDate(previousStart.getDate() - diffDays);
+
+    const previousEnd = new Date(endDate);
+    previousEnd.setDate(previousEnd.getDate() - diffDays);
+
+    const formatDate = (d: Date) => d.toISOString().split("T")[0];
+
+    const previousParams: unknown[] = [
+      formatDate(previousStart),
+      formatDate(previousEnd),
+    ];
+
+    if (group && group !== "All") {
+      previousParams.push(group);
+    }
 
     const [
       totalRows,
@@ -95,6 +112,7 @@ export async function GET(request: NextRequest) {
       requesterRows,
       priorityRows,
       trendRows,
+      previousTrendRows,
       requestTypeRows,
       activeUsersRows,
     
@@ -193,27 +211,55 @@ export async function GET(request: NextRequest) {
 
       // 6. TICKET TREND
       query<TrendRow[]>(
-        groupByMonth
-          ? `
-            SELECT
-              DATE_FORMAT(${createdDateSql}, '%Y-%m') AS date,
-              COUNT(*) AS count
-            FROM itsm_requests
-            WHERE ${filter}
-            GROUP BY DATE_FORMAT(${createdDateSql}, '%Y-%m')
-            ORDER BY date ASC
-          `
-          : `
-            SELECT
-              DATE(${createdDateSql}) AS date,
-              COUNT(*) AS count
-            FROM itsm_requests
-            WHERE ${filter}
-            GROUP BY DATE(${createdDateSql})
-            ORDER BY date ASC
-          `,
-        params,
-      ),
+      groupByMonth
+        ? `
+          SELECT
+            DATE_FORMAT(${createdDateSql}, '%Y-%m') AS date,
+            COUNT(*) AS count
+          FROM itsm_requests
+          WHERE ${filter}
+          GROUP BY DATE_FORMAT(${createdDateSql}, '%Y-%m')
+          ORDER BY date ASC
+        `
+        : `
+          SELECT
+            DATE(${createdDateSql}) AS date,
+            COUNT(*) AS count
+          FROM itsm_requests
+          WHERE ${filter}
+          GROUP BY DATE(${createdDateSql})
+          ORDER BY date ASC
+        `,
+      params,
+    ),
+    query<TrendRow[]>(
+      groupByMonth
+        ? `
+          SELECT
+            DATE_FORMAT(${createdDateSql}, '%Y-%m') AS date,
+            COUNT(*) AS count
+          FROM itsm_requests
+          WHERE
+            ${createdDateSql} >= ?
+            AND ${createdDateSql} < DATE_ADD(?, INTERVAL 1 DAY)
+            ${group && group !== "All" ? "AND group_name = ?" : ""}
+          GROUP BY DATE_FORMAT(${createdDateSql}, '%Y-%m')
+          ORDER BY date ASC
+        `
+        : `
+          SELECT
+            DATE(${createdDateSql}) AS date,
+            COUNT(*) AS count
+          FROM itsm_requests
+          WHERE
+            ${createdDateSql} >= ?
+            AND ${createdDateSql} < DATE_ADD(?, INTERVAL 1 DAY)
+            ${group && group !== "All" ? "AND group_name = ?" : ""}
+          GROUP BY DATE(${createdDateSql})
+          ORDER BY date ASC
+        `,
+      previousParams,
+    ),
 
       // 7. INCIDENT / SERVICE REQUEST
       query<RequestTypeRow[]>(
@@ -300,6 +346,10 @@ export async function GET(request: NextRequest) {
       date: row.date,
       count: Number(row.count),
     }));
+    const previousTrend = previousTrendRows.map((row) => ({
+      date: row.date,
+      count: Number(row.count),
+    }));
 
     const byRequestType = requestTypeRows.map((row) => ({
       name_en:
@@ -331,7 +381,10 @@ export async function GET(request: NextRequest) {
         technicianRanking,
         requesterRanking,
         byPriority,
-        trend,
+        trend: {
+          current: trend,
+          previous: previousTrend,
+        },
         byRequestType,
         
       },

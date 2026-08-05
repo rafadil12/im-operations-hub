@@ -8,7 +8,7 @@ export default function DailyOperationLayout({
   children: ReactNode;
 }) {
   return (
-    <AppShell title="Daily Operation">
+    <AppShell title="ITSM">
       <ModuleTabs />
       {children}
     </AppShell>

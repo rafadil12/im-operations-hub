@@ -3,49 +3,54 @@ import { getDict } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "ITSM Analysis",
+  title: "ITSM",
   description:
-    "Manage and analyze daily operational records: create and track tasks, review analytics and maintain the module master data.",
-  path: "/daily-operation",
+    "Manage and analyze ITSM tickets, review analytics, and maintain master data.",
+  path: "/itsm",
 });
 
 const cards = [
   {
-    href: "/daily-operation/management",
+    href: "/itsm/management",
     key: "management" as const,
     icon: "▤",
   },
   {
-    href: "/daily-operation/analysis",
+    href: "/itsm/analysis",
     key: "analysis" as const,
     icon: "◔",
   },
   {
-    href: "/daily-operation/master/users",
+    href: "/itsm/master/users",
     key: "master" as const,
     icon: "◎",
   },
 ];
 
-export default function DailyOperationPage() {
+export default function ITSMPage() {
   const t = getDict();
 
   const titleFor = (key: (typeof cards)[number]["key"]) => {
-    if (key === "management") return t.dailyOp.manageTitle;
-    if (key === "analysis") return t.dailyOp.analysisTitle;
+    if (key === "management") return t.itsm.manageTitle;
+    if (key === "analysis") return t.itsm.analysisTitle;
     return t.nav.master;
   };
+
   const descFor = (key: (typeof cards)[number]["key"]) => {
-    if (key === "management") return t.dailyOp.manageDesc;
-    if (key === "analysis") return t.dailyOp.analysisDesc;
-    return t.dailyOp.masterDesc;
+    if (key === "management") return t.itsm.manageDesc;
+    if (key === "analysis") return t.itsm.analysisDesc;
+    return t.itsm.masterDesc;
   };
 
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-lg font-semibold text-text">{t.dailyOp.title}</h1>
-        <p className="text-sm text-text-muted">{t.dailyOp.subtitle}</p>
+        <h1 className="text-lg font-semibold text-text">
+          {t.itsm.title}
+        </h1>
+        <p className="text-sm text-text-muted">
+          {t.itsm.subtitle}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -58,8 +63,15 @@ export default function DailyOperationPage() {
             <span className="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-accent-soft text-accent">
               {card.icon}
             </span>
-            <h2 className="text-sm font-semibold text-text">{titleFor(card.key)}</h2>
-            <p className="mt-1 text-xs text-text-muted">{descFor(card.key)}</p>
+
+            <h2 className="text-sm font-semibold text-text">
+              {titleFor(card.key)}
+            </h2>
+
+            <p className="mt-1 text-xs text-text-muted">
+              {descFor(card.key)}
+            </p>
+
             <span className="mt-4 text-xs font-medium text-accent group-hover:underline">
               Open →
             </span>
