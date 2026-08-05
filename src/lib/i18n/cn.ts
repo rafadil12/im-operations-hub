@@ -97,6 +97,15 @@ const cn: Dict = {
 
     masterDesc:
       "管理支持组、分类、子分类及其他配置",
+
+    requestId: "请求编号",
+    subject: "主题",
+    requester: "申请人",
+    technician: "技术员",
+    priority: "优先级",
+    dueDate: "截止时间",
+    createdDate: "创建时间",
+    group: "支持组",
   },
   overview: {
     title: "总览",

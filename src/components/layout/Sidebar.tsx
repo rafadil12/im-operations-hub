@@ -40,9 +40,9 @@ const navItems: NavItem[] = [
     icon: "itsm",
     children: [
       { id: "overview", labelKey: "overview", href: "/itsm" },
-      { id: "management", labelKey: "moduleManagement", disabled: true },
+      { id: "management", labelKey: "moduleManagement",  href: "/itsm/management" },
       { id: "analysis", labelKey: "moduleAnalysis", href: "/itsm/analysis" },
-      { id: "master-data", labelKey: "masterData", disabled: true },
+   
     ],
   },
   {
@@ -125,12 +125,22 @@ let cachedCollapsed = false;
 
 function isChildActive(pathname: string, child: NavChild) {
   if (!child.href) return false;
+
+  // ITSM Overview
+  if (child.href === "/itsm") {
+    return pathname === "/itsm";
+  }
+
+  // Daily Operation Master
   if (child.href === "/daily-operation/master/users") {
     return pathname.startsWith("/daily-operation/master");
   }
+
+  // Settings
   if (child.href.startsWith("/settings/")) {
     return pathname.startsWith(child.href);
   }
+
   return pathname.startsWith(child.href);
 }
 

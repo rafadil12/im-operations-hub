@@ -3,52 +3,41 @@ import { query } from "@/lib/db";
 
 export async function GET() {
   try {
+    console.log("=== OVERVIEW ROUTE ===");
+
     const [
       total,
       open,
       progress,
-      serviceRequests,
-      incidents,
       closedToday,
       overdue,
-      topGroups,
       topTechnicians,
       topRequesters,
       recentTickets,
       oldestTickets,
+      serviceRequests
+
+      
     ] = await Promise.all([
+        
       // Total Tickets
       query<any[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
       `),
 
-      // Open Tickets (belum selesai)
+      // Open Tickets
       query<any[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
-        WHERE status NOT IN ('已关闭','已解决')
+        WHERE status='已创建'
       `),
+
       // In Progress
       query<any[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
-        WHERE status = '处理中'
-      `),
-
-      // Service Requests (menggantikan In Progress)
-      query<any[]>(`
-        SELECT
-          COUNT(*) AS total,
-          SUM(is_service_request = 'true') AS serviceRequests
-        FROM itsm_requests
-      `),
-      // Incidents
-      query<any[]>(`
-        SELECT
-          COUNT(*) AS total
-        FROM itsm_requests
-        WHERE is_service_request = 'false'
+        WHERE status='处理中'
       `),
 
       // Closed Today
@@ -69,43 +58,30 @@ export async function GET() {
           AND status NOT IN ('已关闭','已解决')
       `),
 
-      // Most Active Group
-      query<any[]>(`
-        SELECT
-          group_name AS name,
-          COUNT(*) AS count
-        FROM itsm_requests
-        WHERE group_name IS NOT NULL
-          AND group_name <> ''
-        GROUP BY group_name
-        ORDER BY count DESC
-        LIMIT 1
-      `),
-
       // Top Technician
       query<any[]>(`
-       SELECT
-        technician,
-        COUNT(*) AS totalTickets
-      FROM itsm_requests
-      WHERE technician IS NOT NULL
-        AND technician <> ''
-      GROUP BY technician
-      ORDER BY totalTickets DESC
-      LIMIT 5
+        SELECT
+          technician,
+          COUNT(*) AS totalTickets
+        FROM itsm_requests
+        WHERE technician IS NOT NULL
+          AND technician <> ''
+        GROUP BY technician
+        ORDER BY totalTickets DESC
+        LIMIT 5
       `),
 
       // Top Requester
       query<any[]>(`
-       SELECT
-        requester,
-        COUNT(*) AS totalTickets
-      FROM itsm_requests
-      WHERE requester IS NOT NULL
-        AND requester <> ''
-      GROUP BY requester
-      ORDER BY totalTickets DESC
-      LIMIT 5
+        SELECT
+          requester,
+          COUNT(*) AS totalTickets
+        FROM itsm_requests
+        WHERE requester IS NOT NULL
+          AND requester <> ''
+        GROUP BY requester
+        ORDER BY totalTickets DESC
+        LIMIT 5
       `),
 
       // Recent Tickets
@@ -113,8 +89,10 @@ export async function GET() {
         SELECT
           request_id AS requestId,
           subject,
+          requester,
           technician,
-          status
+          status,
+          created_date AS createdDate
         FROM itsm_requests
         ORDER BY
           STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p') DESC
@@ -136,29 +114,32 @@ export async function GET() {
         ORDER BY daysOpen DESC
         LIMIT 5
       `),
-    ]);
-    console.log("progress =", progress);
-console.log("serviceRequests =", serviceRequests);
-
+      // Service Requests
+        query<any[]>(`
+        SELECT COUNT(*) AS total
+        FROM itsm_requests
+        WHERE is_service_request = 'true'
+        `)
+        ]);
+console.log("Service Requests:", serviceRequests);
+console.log("Service Requests Row:", serviceRequests[0]);
     return NextResponse.json({
       kpi: {
         totalTickets: Number(total[0]?.total ?? 0),
         openTickets: Number(open[0]?.total ?? 0),
-
-        // Nilai ini sekarang adalah Service Requests
         inProgressTickets: Number(progress[0]?.total ?? 0),
-        serviceRequests: Number(serviceRequests[0]?.serviceRequests ?? 0),
-
         closedToday: Number(closedToday[0]?.total ?? 0),
         overdueTickets: Number(overdue[0]?.total ?? 0),
-        slaCompliance: 98.5,
+        serviceRequests: Number(serviceRequests[0]?.total ?? 0),
       },
 
       highlights: {
-        highestPriorityGroup: topGroups[0]?.name ?? "-",
-        busiestTechnician: topTechnicians[0]?.technician ?? "-",
-        oldestOpenTicket: String(oldestTickets[0]?.requestId ?? "-"),
-        averageResolutionTime: String(incidents[0]?.total ?? 0),
+        highestPriorityGroup: "-",
+        busiestTechnician:
+          topTechnicians[0]?.technician ?? "-",
+        oldestOpenTicket:
+          String(oldestTickets[0]?.requestId ?? "-"),
+        averageResolutionTime: "-",
       },
 
       topTechnicians,

@@ -176,6 +176,19 @@ export type ItsmAnalysisResult = {
 
   trend: TrendComparison;
 };
+export type ItsmRequest = {
+  request_id: number;
+  subject: string;
+  requester: string;
+  technician: string;
+  due_by_date: string | null;
+  status: string;
+  created_date: string;
+  site: string | null;
+  priority: string | null;
+  group_name: string | null;
+  is_service_request: boolean;
+};
 /** Match status counts by English name keywords (stable across locale). */
 export function namedStatusCount(
   rows: NamedCount[],

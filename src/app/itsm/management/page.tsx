@@ -1,74 +1,72 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiGet, apiSend } from "@/lib/apiClient";
+import { apiGet} from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
-import { FilterBar, type Filters } from "@/components/daily-operation/FilterBar";
+import type { ItsmRequest } from "@/lib/types";
+import { FilterBar, type Filters } from "@/components/itsm/FilterBar";
 import {
   ManagementTable,
   type PageSize,
-} from "@/components/daily-operation/ManagementTable";
-import { MesDataForm } from "@/components/daily-operation/MesDataForm";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { useToast } from "@/components/ui/ToastProvider";
+} from "@/components/itsm/ManagementTable";
 
 const week = getOperationalWeek();
 const defaultFilters: Filters = {
   start: week.start.slice(0, 10),
   end: week.end.slice(0, 10),
-  divisionId: "",
-  statusId: "",
-  typeId: "",
-  q: "",
+  requestId: "",
+  subject: "",
+  requester: "",
+  technician: "",
 };
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
 
-type ListResponse = { rows: MesDataRow[] };
+type ListResponse = { rows: ItsmRequest[] };
 
 export default function ManagementPage() {
   const { t } = useLang();
-  const { success: toastSuccess } = useToast();
-  const [masters, setMasters] = useState<Masters | null>(null);
-  const [rows, setRows] = useState<MesDataRow[]>([]);
+  const [rows, setRows] = useState<ItsmRequest[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
-
-  const [formOpen, setFormOpen] = useState(false);
-  const [editRow, setEditRow] = useState<MesDataRow | null>(null);
-  const [deleteRow, setDeleteRow] = useState<MesDataRow | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const loadRows = useCallback(async (f: Filters) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set("start", f.start);
-      params.set("end", f.end);
-      if (f.divisionId) params.set("divisionId", f.divisionId);
-      if (f.statusId) params.set("statusId", f.statusId);
-      if (f.typeId) params.set("typeId", f.typeId);
-      if (f.q) params.set("q", f.q);
-      const data = await apiGet<ListResponse>(`/mes-record?${params.toString()}`);
-      setRows(data.rows);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load.");
-    } finally {
-      setLoading(false);
-    }
+  setLoading(true);
+  setError(null);
+
+  try {
+    const params = new URLSearchParams();
+
+    params.set("start", f.start);
+    params.set("end", f.end);
+
+    if (f.requestId) params.set("requestId", f.requestId);
+    if (f.subject) params.set("subject", f.subject);
+    if (f.requester) params.set("requester", f.requester);
+    if (f.technician) params.set("technician", f.technician);
+
+    const data = await apiGet<ListResponse>(
+      `/itsm-request?${params.toString()}`,
+        "itsm"
+    );
+    console.log(data.rows);
+    console.log(data.rows.length);
+    console.log(data.rows.map(r => r.request_id));
+
+    setRows(data.rows);
+  } catch (e) {
+    setError(e instanceof Error ? e.message : "Failed to load.");
+  } finally {
+    setLoading(false);
+  }
   }, []);
 
   useEffect(() => {
-    apiGet<Masters>("/masters")
-      .then(setMasters)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load masters."));
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch data on mount
     loadRows(defaultFilters);
   }, [loadRows]);
 
@@ -91,78 +89,42 @@ export default function ManagementPage() {
     setPage(1);
   };
 
-  const handleCreate = async (input: MesDataInput) => {
-    try {
-      await apiSend("/mes-record", "POST", input);
-      setFormOpen(false);
-      setEditRow(null);
-      toastSuccess(t.toast.createSuccess);
-      await loadRows(filters);
-    } catch (e) {
-      const message =
-        e instanceof TypeError
-          ? t.toast.networkError
-          : e instanceof Error
-            ? e.message
-            : t.toast.saveFailed;
-      throw e instanceof Error ? e : new Error(message);
-    }
-  };
-
-  const handleUpdate = async (input: MesDataInput) => {
-    if (!editRow) return;
-    try {
-      await apiSend(`/mes-record/${editRow.id}`, "PUT", input);
-      setFormOpen(false);
-      setEditRow(null);
-      toastSuccess(t.toast.updateSuccess);
-      await loadRows(filters);
-    } catch (e) {
-      const message =
-        e instanceof TypeError
-          ? t.toast.networkError
-          : e instanceof Error
-            ? e.message
-            : t.toast.saveFailed;
-      throw e instanceof Error ? e : new Error(message);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteRow) return;
-    setDeleting(true);
-    try {
-      await apiSend(`/mes-record/${deleteRow.id}`, "DELETE");
-      setDeleteRow(null);
-      await loadRows(filters);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete.");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-text">{t.dailyOp.manageTitle}</h1>
-          <p className="text-sm text-text-muted">{t.dailyOp.manageDesc}</p>
+          <h1 className="text-lg font-semibold text-text">{t.itsm.manageTitle}</h1>
+          <p className="text-sm text-text-muted">{t.itsm.manageDesc}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditRow(null);
-            setFormOpen(true);
-          }}
-          disabled={!masters}
-          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-        >
-          + {t.common.add}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            Import
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+             window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams({
+                start: filters.start,
+                end: filters.end,
+                requestId: filters.requestId,
+                subject: filters.subject,
+                requester: filters.requester,
+                technician: filters.technician,
+              }).toString()}`;
+            }}
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            Export
+          </button>
+        </div>
       </div>
 
-      <FilterBar masters={masters} initial={defaultFilters} onApply={applyFilters} />
+      <FilterBar initial={defaultFilters} onApply={applyFilters} />
 
       {error ? (
         <p className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
@@ -170,47 +132,20 @@ export default function ManagementPage() {
         </p>
       ) : null}
 
-      {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
-      ) : (
-        <ManagementTable
-          rows={pagedRows}
-          totalCount={rows.length}
-          page={currentPage}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={handlePageSizeChange}
-          onEdit={(row) => {
-            setEditRow(row);
-            setFormOpen(true);
-          }}
-          onDelete={(row) => setDeleteRow(row)}
-        />
-      )}
-
-      {formOpen && masters ? (
-        <MesDataForm
-          masters={masters}
-          initial={editRow}
-          onClose={() => {
-            setFormOpen(false);
-            setEditRow(null);
-          }}
-          onSubmit={editRow ? handleUpdate : handleCreate}
-        />
-      ) : null}
-
-      {deleteRow ? (
-        <ConfirmDialog
-          title={t.confirmDelete.title}
-          message={t.confirmDelete.message}
-          busy={deleting}
-          onCancel={() => setDeleteRow(null)}
-          onConfirm={confirmDelete}
-        />
-      ) : null}
-    </div>
+   {loading ? (
+  <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
+    {t.common.loading}
+  </div>
+) : (
+  <ManagementTable
+    rows={pagedRows}
+    totalCount={rows.length}
+    page={currentPage}
+    pageSize={pageSize}
+    onPageChange={setPage}
+    onPageSizeChange={handlePageSizeChange}
+  />
+)}
+</div>
   );
 }

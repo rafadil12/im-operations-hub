@@ -95,6 +95,15 @@ const en = {
 
     masterDesc:
       "Manage support groups, categories, subcategories, and other configurations",
+
+    requestId: "Request ID",
+    subject: "Subject",
+    requester: "Requester",
+    technician: "Technician",
+    priority: "Priority",
+    dueDate: "Due Date",
+    createdDate: "Created Date",
+    group: "Group",
   },
   overview: {
     title: "Overview",
