@@ -127,6 +127,7 @@ const cn: Dict = {
     reversing: "冲销中...",
     reverseSuccess: "冲销凭证已过账为 {doc}。",
     docNumber: "凭证号",
+    createdBy: "创建人",
     lines: "行数",
     totalQty: "总数量",
     documentDetail: "事务详情",

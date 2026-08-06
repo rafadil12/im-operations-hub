@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
 
     const rows = await query<SparepartMatDoc[]>(
       `SELECT d.id, d.doc_number, d.movement_type, d.posting_date,
-              d.header_text, d.recipient, d.created_by, d.created_at,
+              d.header_text, d.recipient, d.created_by_system_user_id,
+              d.created_by, d.created_at,
               d.client_request_id, d.reversal_of_doc_id,
               COUNT(li.id) AS line_count,
               COALESCE(SUM(li.qty), 0) AS total_qty

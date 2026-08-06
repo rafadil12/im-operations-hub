@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
 import {
   reverseMaterialDocument,
   SparepartPostingError,
@@ -7,6 +8,9 @@ import {
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, context: Ctx) {
+  const gate = await requirePermission("sparepart.document.reverse");
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await context.params;
     const docId = Number(id);
@@ -16,13 +20,16 @@ export async function POST(request: NextRequest, context: Ctx) {
 
     const body = (await request.json().catch(() => ({}))) as {
       posting_date?: string;
-      created_by?: string;
       client_request_id?: string;
     };
+    const creatorLabel = gate.account.employeeId
+      ? `${gate.account.employeeId} - ${gate.account.displayName}`
+      : gate.account.displayName;
 
     const result = await reverseMaterialDocument(docId, {
       posting_date: body.posting_date,
-      created_by: body.created_by,
+      created_by_system_user_id: gate.account.systemUserId,
+      created_by: creatorLabel,
       client_request_id: body.client_request_id,
     });
     return NextResponse.json(result, { status: 201 });

@@ -252,6 +252,7 @@ export type SparepartMatDoc = {
   posting_date: string;
   header_text: string | null;
   recipient: string | null;
+  created_by_system_user_id?: number | null;
   created_by: string | null;
   client_request_id?: string | null;
   reversal_of_doc_id?: number | null;
@@ -277,6 +278,7 @@ export type SparepartGoodsMovementInput = {
   header_text: string;
   recipient: string;
   lines: SparepartGoodsMovementLineInput[];
+  created_by_system_user_id?: number;
   created_by?: string;
   client_request_id?: string;
   reversal_of_doc_id?: number;

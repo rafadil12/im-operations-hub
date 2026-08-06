@@ -172,7 +172,6 @@ export function parseGoodsMovementBody(
     recipient:
       movementType === "201" || movementType === "202" ? recipient : "",
     lines,
-    created_by: body.created_by ? String(body.created_by).trim() : undefined,
     client_request_id: clientRequestId || undefined,
     reversal_of_doc_id: reversalOfDocId,
   };
@@ -585,14 +584,15 @@ export async function postGoodsMovement(
     const [docResult] = await conn.query<ResultSetHeader>(
       `INSERT INTO sparepart_mat_docs
         (doc_number, movement_type, posting_date, header_text, recipient,
-         created_by, client_request_id, reversal_of_doc_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         created_by_system_user_id, created_by, client_request_id, reversal_of_doc_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         docNumber,
         input.movement_type,
         input.posting_date,
         input.header_text || null,
         recipient || null,
+        input.created_by_system_user_id ?? null,
         input.created_by || null,
         input.client_request_id || null,
         input.reversal_of_doc_id || null,
@@ -612,7 +612,12 @@ export async function postGoodsMovement(
 
 export async function reverseMaterialDocument(
   docId: number,
-  opts?: { posting_date?: string; created_by?: string; client_request_id?: string },
+  opts?: {
+    posting_date?: string;
+    created_by_system_user_id?: number;
+    created_by?: string;
+    client_request_id?: string;
+  },
 ): Promise<{ id: number; doc_number: string }> {
   const { query } = await import("@/lib/db");
   const docs = await query<RowDataPacket[]>(
@@ -642,6 +647,7 @@ export async function reverseMaterialDocument(
     header_text: `Reversal of document ${doc.doc_number}`,
     recipient: "",
     lines: [],
+    created_by_system_user_id: opts?.created_by_system_user_id,
     created_by: opts?.created_by,
     client_request_id: opts?.client_request_id,
     reversal_of_doc_id: docId,

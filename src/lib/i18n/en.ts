@@ -131,6 +131,7 @@ const en = {
     reversing: "Reversing...",
     reverseSuccess: "Reversal posted as {doc}.",
     docNumber: "Document",
+    createdBy: "Created By",
     lines: "Lines",
     totalQty: "Total Qty",
     documentDetail: "Transaction Detail",

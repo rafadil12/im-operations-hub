@@ -143,6 +143,7 @@ export default function MaterialDocumentsPage() {
   useEffect(() => {
     const id = searchParams.get("id");
     if (id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- opens detail from URL param
       void openDetail(Number(id));
     }
   }, [searchParams, openDetail]);
@@ -424,6 +425,10 @@ export default function MaterialDocumentsPage() {
               <p>
                 <span className="text-text-dim">{t.sparepart.headerText}: </span>
                 {detail.header_text || "-"}
+              </p>
+              <p>
+                <span className="text-text-dim">{t.sparepart.createdBy}: </span>
+                {detail.created_by || "-"}
               </p>
             </div>
             <table className="w-full border-collapse text-xs">

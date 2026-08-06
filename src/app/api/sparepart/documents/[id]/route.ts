@@ -11,7 +11,8 @@ export async function GET(_request: NextRequest, context: Ctx) {
 
     const headers = await query<SparepartMatDoc[]>(
       `SELECT id, doc_number, movement_type, posting_date, header_text,
-              recipient, created_by, created_at, client_request_id, reversal_of_doc_id
+              recipient, created_by_system_user_id, created_by, created_at,
+              client_request_id, reversal_of_doc_id
        FROM sparepart_mat_docs
        WHERE id = ?
        LIMIT 1`,

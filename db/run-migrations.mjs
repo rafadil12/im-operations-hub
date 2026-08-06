@@ -35,6 +35,15 @@ async function columnType(table, column) {
   return rows[0]?.DATA_TYPE?.toLowerCase() ?? null;
 }
 
+async function columnLength(table, column) {
+  const [rows] = await conn.query(
+    `SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [process.env.DB_NAME, table, column],
+  );
+  return Number(rows[0]?.CHARACTER_MAXIMUM_LENGTH ?? 0);
+}
+
 async function tableExists(table) {
   const [rows] = await conn.query(
     `SELECT TABLE_NAME FROM information_schema.TABLES
@@ -366,6 +375,39 @@ if (!(await indexExists("sparepart_mat_docs", "uk_sparepart_mat_docs_client_req"
   }
 }
 
+if (!(await columnExists("sparepart_mat_docs", "created_by_system_user_id"))) {
+  await conn.query(
+    `ALTER TABLE \`sparepart_mat_docs\`
+     ADD COLUMN \`created_by_system_user_id\` INT NULL DEFAULT NULL AFTER \`recipient\``,
+  );
+  console.log("Added sparepart_mat_docs.created_by_system_user_id.");
+} else {
+  console.log("sparepart_mat_docs.created_by_system_user_id already exists.");
+}
+
+if (
+  (await columnType("sparepart_mat_docs", "created_by")) === "varchar" &&
+  (await columnLength("sparepart_mat_docs", "created_by")) > 0 &&
+  (await columnLength("sparepart_mat_docs", "created_by")) < 255
+) {
+  await conn.query(
+    "ALTER TABLE `sparepart_mat_docs` MODIFY COLUMN `created_by` VARCHAR(255) NULL",
+  );
+  console.log("Expanded sparepart_mat_docs.created_by to VARCHAR(255).");
+} else {
+  console.log("sparepart_mat_docs.created_by already supports audit snapshot text.");
+}
+
+if (!(await indexExists("sparepart_mat_docs", "idx_sparepart_mat_docs_created_by_su"))) {
+  await conn.query(
+    `ALTER TABLE \`sparepart_mat_docs\`
+     ADD INDEX \`idx_sparepart_mat_docs_created_by_su\` (\`created_by_system_user_id\`)`,
+  );
+  console.log("Added idx_sparepart_mat_docs_created_by_su.");
+} else {
+  console.log("idx_sparepart_mat_docs_created_by_su already exists.");
+}
+
 // Seed locations + balances once (idempotent: skip if any balance exists)
 const [balanceCountRows] = await conn.query(
   `SELECT COUNT(*) AS c FROM sparepart_stock_balances`,
@@ -548,6 +590,13 @@ await tryAddFk(
    FOREIGN KEY (\`reversal_of_doc_id\`) REFERENCES \`sparepart_mat_docs\` (\`id\`)
    ON DELETE RESTRICT ON UPDATE CASCADE`,
   "fk_sparepart_mat_docs_reversal",
+);
+await tryAddFk(
+  `ALTER TABLE \`sparepart_mat_docs\`
+   ADD CONSTRAINT \`fk_sparepart_mat_docs_created_by_su\`
+   FOREIGN KEY (\`created_by_system_user_id\`) REFERENCES \`system_users\` (\`id\`)
+   ON DELETE RESTRICT ON UPDATE CASCADE`,
+  "fk_sparepart_mat_docs_created_by_su",
 );
 
 // --- 006: drop legacy sparepart_items.location ---
