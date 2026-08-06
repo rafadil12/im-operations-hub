@@ -10,9 +10,10 @@ import { apiGet } from "@/lib/apiClient";
 import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { mapAnalysisToOverview } from "@/lib/mapAnalysisToOverview";
 import { getDict, useLang } from "@/lib/i18n";
-import type { AnalysisResult } from "@/lib/types";
+import type { AnalysisResult, ItsmAnalysisResponse } from "@/lib/types";
 import { ModuleCard } from "./ModuleCard";
 import { CardExpandModal } from "./CardExpandModal";
+import { mapItsmToOverview } from "@/lib/mapItsmToOverview";
 
 type AnalysisResponse = { result: AnalysisResult };
 
@@ -31,21 +32,38 @@ export function OverviewGrid() {
 
     (async () => {
       try {
-        const data = await apiGet<AnalysisResponse>(
-          `/analysis?start=${start}&end=${end}`,
-        );
-        if (cancelled) return;
-        setModules((prev) =>
-          prev.map((mod) =>
-            mod.id === "daily-operation"
-              ? mapAnalysisToOverview(mod, data.result, lang)
-              : mod,
+        const [dailyData, itsmData] = await Promise.all([
+          apiGet<AnalysisResponse>(
+            `/analysis?start=${start}&end=${end}`,
+            "daily",
           ),
+          apiGet<ItsmAnalysisResponse>(
+            `/analysis?start=${start}&end=${end}`,
+            "itsm",
+          ),
+        ]);
+
+        if (cancelled) return;
+
+        setModules((prev) =>
+          prev.map((mod) => {
+            switch (mod.id) {
+              case "itsm":
+                console.log("ITSM");
+                return mapItsmToOverview(mod, itsmData.result, lang);
+
+              case "daily-operation":
+                return mapAnalysisToOverview(mod, dailyData.result, lang);
+
+              default:
+                return mod;
+            }
+          }),
         );
       } catch {
         // Keep mock fallback on failure.
       }
-    })();
+})();
 
     return () => {
       cancelled = true;

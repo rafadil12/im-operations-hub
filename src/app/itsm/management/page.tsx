@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGet} from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
@@ -33,7 +33,7 @@ export default function ManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
-  const [importOpen, setImportOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadRows = useCallback(async (f: Filters) => {
   setLoading(true);
@@ -85,9 +85,47 @@ export default function ManagementPage() {
   };
 
   const handlePageSizeChange = (nextSize: PageSize) => {
-    setPageSize(nextSize);
-    setPage(1);
-  };
+        setPageSize(nextSize);
+        setPage(1);
+      };
+      const handleImport = async (
+      e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+      const file = e.target.files?.[0];
+
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/itsm/itsm-request/import", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error ?? "Import failed.");
+          return;
+        }
+
+        alert(
+          `Import Success!
+
+    Imported : ${data.imported}
+    Updated : ${data.updated}`
+        );
+
+        await loadRows(filters);
+      } catch (err) {
+        console.error(err);
+        alert("Import failed.");
+      }
+
+      e.target.value = "";
+    };
 
   return (
     <div>
@@ -99,16 +137,16 @@ export default function ManagementPage() {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setImportOpen(true)}
-            className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            onClick={() => fileInputRef.current?.click()}
+            className="cursor-pointer rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
           >
-            Import
+             {t.common.import}
           </button>
 
           <button
             type="button"
             onClick={() => {
-             window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams({
+              window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams({
                 start: filters.start,
                 end: filters.end,
                 requestId: filters.requestId,
@@ -117,10 +155,18 @@ export default function ManagementPage() {
                 technician: filters.technician,
               }).toString()}`;
             }}
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="cursor-pointer rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
           >
-            Export
+            {t.common.export}
           </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleImport}
+          />
         </div>
       </div>
 

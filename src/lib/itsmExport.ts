@@ -14,12 +14,12 @@ export async function buildItsmExport(
     { header: "Subject", key: "subject", width: 50 },
     { header: "Requester", key: "requester", width: 25 },
     { header: "Technician", key: "technician", width: 25 },
-    { header: "Status", key: "status", width: 18 },
-    { header: "Priority", key: "priority", width: 18 },
     { header: "Due Date", key: "due_by_date", width: 22 },
+    { header: "Status", key: "status", width: 18 },
     { header: "Created Date", key: "created_date", width: 22 },
-    { header: "Group", key: "group_name", width: 30 },
     { header: "Site", key: "site", width: 20 },
+    { header: "Priority", key: "priority", width: 18 },
+    { header: "Group", key: "group_name", width: 30 },
     { header: "Service Request", key: "is_service_request", width: 18 },
   ];
 
@@ -31,12 +31,12 @@ export async function buildItsmExport(
       subject: row.subject,
       requester: row.requester,
       technician: row.technician,
-      status: row.status,
-      priority: row.priority ?? "",
       due_by_date: row.due_by_date ?? "",
+      status: row.status,
       created_date: row.created_date,
-      group_name: row.group_name ?? "",
       site: row.site ?? "",
+      priority: row.priority ?? "",
+      group_name: row.group_name ?? "",
       is_service_request: row.is_service_request ? "Yes" : "No",
     });
   });

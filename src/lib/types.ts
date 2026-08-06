@@ -176,6 +176,13 @@ export type ItsmAnalysisResult = {
 
   trend: TrendComparison;
 };
+export type ItsmAnalysisResponse = {
+  result: ItsmAnalysisResult;
+};
+export type GroupCount = {
+  name: string;
+  count: number;
+};
 export type ItsmRequest = {
   request_id: number;
   subject: string;
