@@ -16,13 +16,15 @@ type Props = {
   className?: string;
   compact?: boolean;
   disabled?: boolean;
+  /** Open the menu above the trigger (useful in pagination footers clipped by overflow). */
+  menuPlacement?: "bottom" | "top";
 };
 
 export const sparepartDropdownFieldClass =
   "flex w-full items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-sm text-text outline-none focus:border-accent";
 
 export const sparepartDropdownMenuClass =
-  "absolute left-0 right-0 z-30 mt-1 overflow-hidden rounded-md border border-border bg-bg-elevated py-1 shadow-lg";
+  "absolute left-0 right-0 z-30 overflow-hidden rounded-md border border-border bg-bg-elevated py-1 shadow-lg";
 
 function ChevronDown({ className = "" }: { className?: string }) {
   return (
@@ -53,6 +55,7 @@ export function SparepartDropdown({
   className = "",
   compact = false,
   disabled = false,
+  menuPlacement = "bottom",
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -105,7 +108,13 @@ export function SparepartDropdown({
       </button>
 
       {open && !disabled ? (
-        <ul role="listbox" className={sparepartDropdownMenuClass}>
+        <ul
+          role="listbox"
+          className={[
+            sparepartDropdownMenuClass,
+            menuPlacement === "top" ? "bottom-full mb-1" : "mt-1",
+          ].join(" ")}
+        >
           {options.map((option) => {
             const active = option.value === value;
             return (

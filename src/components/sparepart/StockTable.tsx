@@ -407,6 +407,7 @@ export function StockTable({
             <span className="ml-2 inline-block align-middle">
               <SparepartDropdown
                 compact
+                menuPlacement="top"
                 className="min-w-[4.5rem]"
                 value={String(pageSize)}
                 onChange={(next) => onPageSizeChange(Number(next) as PageSize)}

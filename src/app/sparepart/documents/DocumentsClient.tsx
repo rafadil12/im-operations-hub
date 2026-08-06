@@ -353,6 +353,7 @@ export default function MaterialDocumentsPage() {
             <div className="flex items-center gap-2">
               <SparepartDropdown
                 compact
+                menuPlacement="top"
                 value={String(pageSize)}
                 onChange={(next) => {
                   setPageSize(Number(next) as PageSize);
@@ -399,14 +400,14 @@ export default function MaterialDocumentsPage() {
             <div className="flex w-full flex-wrap items-end justify-between gap-3">
               <div className="flex flex-wrap items-stretch gap-4 text-xs">
                 <div>
-                  <p className="text-text-dim">{t.sparepart.createdBy}</p>
+                  <p className="text-text-dim">{t.sparepart.createdBy}:</p>
                   <p className="mt-0.5 font-medium text-text">
                     {detail.created_by || "-"}
                   </p>
                 </div>
                 <div className="hidden w-px self-stretch bg-border-subtle sm:block" />
                 <div>
-                  <p className="text-text-dim">{t.sparepart.createdAt}</p>
+                  <p className="text-text-dim">{t.sparepart.createdAt}:</p>
                   <p className="mt-0.5 font-medium text-text">
                     {formatPostingDateTime(
                       detail.created_at || detail.posting_date,
@@ -476,44 +477,40 @@ export default function MaterialDocumentsPage() {
         >
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-x-10 sm:grid-cols-2">
-              <div className="divide-y divide-border-subtle">
-                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
-                  <span className="shrink-0 text-text-dim">
-                    {t.sparepart.movementType}
-                  </span>
-                  <span
-                    className={`min-w-0 text-right font-semibold ${
-                      isReversalMovement(detail.movement_type)
-                        ? "text-danger"
-                        : "text-text"
-                    }`}
-                  >
-                    {movementLabel(detail.movement_type, t)}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
-                  <span className="shrink-0 text-text-dim">
-                    {t.sparepart.recipient}
-                  </span>
-                  <span className="min-w-0 text-right font-medium text-text">
-                    {detail.recipient || "-"}
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
-                  <span className="shrink-0 text-text-dim">
-                    {t.sparepart.headerText}
-                  </span>
-                  <span className="min-w-0 text-right font-medium text-text">
-                    {detail.header_text || "-"}
-                  </span>
-                </div>
+              <div className="grid w-fit grid-cols-[max-content_1ch_auto] items-baseline gap-x-2 text-xs">
+                <span className="py-2.5 text-text-dim">
+                  {t.sparepart.movementType}
+                </span>
+                <span className="py-2.5 text-text-dim">:</span>
+                <span
+                  className={`py-2.5 font-semibold ${
+                    isReversalMovement(detail.movement_type)
+                      ? "text-danger"
+                      : "text-text"
+                  }`}
+                >
+                  {movementLabel(detail.movement_type, t)}
+                </span>
+                <span className="py-2.5 text-text-dim">
+                  {t.sparepart.recipient}
+                </span>
+                <span className="py-2.5 text-text-dim">:</span>
+                <span className="py-2.5 font-medium text-text">
+                  {detail.recipient || "-"}
+                </span>
+                <span className="py-2.5 text-text-dim">
+                  {t.sparepart.headerText}
+                </span>
+                <span className="py-2.5 text-text-dim">:</span>
+                <span className="py-2.5 font-medium text-text">
+                  {detail.header_text || "-"}
+                </span>
               </div>
-              <div className="divide-y divide-border-subtle">
-                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
-                  <span className="shrink-0 text-text-dim">
-                    {t.sparepart.date}
-                  </span>
-                  <span className="min-w-0 text-right font-medium text-text">
+              <div>
+                <div className="grid w-fit grid-cols-[auto_1ch_auto] items-baseline gap-x-2 py-2.5 text-xs">
+                  <span className="text-text-dim">{t.sparepart.date}</span>
+                  <span className="text-text-dim">:</span>
+                  <span className="whitespace-nowrap font-medium text-text">
                     {formatPostingDateTime(detail.posting_date)}
                   </span>
                 </div>
