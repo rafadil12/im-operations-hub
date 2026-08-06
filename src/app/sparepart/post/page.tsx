@@ -354,7 +354,13 @@ export default function PostGoodsMovementPage() {
       ) : null}
 
       <div className="space-y-4 rounded-lg border border-border-subtle bg-surface p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div
+          className={`grid grid-cols-1 gap-3 ${
+            movementType === "201"
+              ? "md:grid-cols-[2fr_2fr_3fr_3fr]"
+              : "md:grid-cols-[2fr_2fr_6fr]"
+          }`}
+        >
           <div>
             <label className={label}>{t.sparepart.movementType} *</label>
             <TransactionTypeSelect
@@ -371,7 +377,7 @@ export default function PostGoodsMovementPage() {
               onChange={(e) => setPostingDate(e.target.value)}
             />
           </div>
-          <div className="md:col-span-2">
+          <div>
             <label className={label}>{t.sparepart.headerText}</label>
             <input
               className={field}
@@ -381,7 +387,7 @@ export default function PostGoodsMovementPage() {
             />
           </div>
           {movementType === "201" ? (
-            <div className="md:col-span-2">
+            <div>
               <label className={label}>{t.sparepart.recipient} *</label>
               <input
                 className={field}
