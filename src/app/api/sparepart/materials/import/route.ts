@@ -14,11 +14,22 @@ import { ensureStorageLocation } from "@/lib/sparepartLocations";
 
 export const runtime = "nodejs";
 
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function nowLocalDateTime(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())} ${pad2(
+    now.getHours(),
+  )}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+}
+
 async function nextDocNumber(
   conn: PoolConnection,
   postingDate: string,
 ): Promise<string> {
-  const ymd = postingDate.replaceAll("-", "");
+  const ymd = postingDate.slice(0, 10).replaceAll("-", "");
   const prefix = `MD${ymd}`;
   const [rows] = await conn.query<RowDataPacket[]>(
     `SELECT doc_number FROM sparepart_mat_docs
@@ -108,7 +119,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const postingDate = new Date().toISOString().slice(0, 10);
+    const postingDate = nowLocalDateTime();
 
     const imported = await withTransaction(async (conn) => {
       let count = 0;

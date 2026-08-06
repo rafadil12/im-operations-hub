@@ -23,8 +23,30 @@ export class SparepartPostingError extends Error {
 const FORWARD_TYPES: MovementType[] = ["101", "201", "311"];
 const REVERSAL_TYPES: MovementType[] = ["102", "202", "312"];
 
-function todayYmd(): string {
-  return new Date().toISOString().slice(0, 10);
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function nowLocalDateTime(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())} ${pad2(
+    now.getHours(),
+  )}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+}
+
+function normalizePostingDateTime(value: string): string | null {
+  const trimmed = value.trim();
+  const match = trimmed.match(
+    /^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/,
+  );
+  if (!match) return null;
+
+  const [, datePart, hour = "00", minute = "00", second = "00"] = match;
+  return `${datePart} ${hour}:${minute}:${second}`;
+}
+
+function extractPostingDatePart(value: string): string {
+  return value.slice(0, 10);
 }
 
 function isReversalType(t: MovementType): boolean {
@@ -49,9 +71,12 @@ export function parseGoodsMovementBody(
     );
   }
 
-  const postingDate = String(body.posting_date ?? "").trim() || todayYmd();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(postingDate)) {
-    throw new SparepartPostingError("Posting date must be YYYY-MM-DD.");
+  const postingDateInput = String(body.posting_date ?? "").trim() || nowLocalDateTime();
+  const postingDate = normalizePostingDateTime(postingDateInput);
+  if (!postingDate) {
+    throw new SparepartPostingError(
+      "Posting date must be YYYY-MM-DD or YYYY-MM-DD HH:mm:ss.",
+    );
   }
 
   const headerText = String(body.header_text ?? "").trim();
@@ -157,7 +182,7 @@ async function nextDocNumber(
   conn: PoolConnection,
   postingDate: string,
 ): Promise<string> {
-  const ymd = postingDate.replaceAll("-", "");
+  const ymd = extractPostingDatePart(postingDate).replaceAll("-", "");
   const prefix = `MD${ymd}`;
   const [rows] = await conn.query<RowDataPacket[]>(
     `SELECT doc_number FROM sparepart_mat_docs
@@ -613,7 +638,7 @@ export async function reverseMaterialDocument(
 
   return postGoodsMovement({
     movement_type: reversalType,
-    posting_date: opts?.posting_date || todayYmd(),
+    posting_date: opts?.posting_date || nowLocalDateTime(),
     header_text: `Reversal of document ${doc.doc_number}`,
     recipient: "",
     lines: [],

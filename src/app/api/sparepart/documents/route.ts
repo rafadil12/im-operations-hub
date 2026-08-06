@@ -27,11 +27,11 @@ export async function GET(request: NextRequest) {
     const end = sp.get("end");
     if (start) {
       conditions.push("d.posting_date >= ?");
-      params.push(start);
+      params.push(`${start} 00:00:00`);
     }
     if (end) {
       conditions.push("d.posting_date <= ?");
-      params.push(end);
+      params.push(`${end} 23:59:59`);
     }
 
     const q = sp.get("q")?.trim();

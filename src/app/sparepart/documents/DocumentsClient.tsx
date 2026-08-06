@@ -54,6 +54,26 @@ function movementLabel(
   }
 }
 
+function formatPostingDateTime(
+  postingDate: string | null | undefined,
+): string {
+  const postingValue = String(postingDate ?? "").trim();
+  if (!postingValue) return "-";
+
+  const normalizedPosting = postingValue.replace("T", " ");
+  const postingMatch = normalizedPosting.match(
+    /^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}:\d{2}))?/,
+  );
+  if (!postingMatch) return postingValue;
+
+  const [, datePart, timePart] = postingMatch;
+  return timePart ? `${datePart} ${timePart}` : datePart;
+}
+
+function formatPostingDateOnly(postingDate: string | null | undefined): string {
+  return formatPostingDateTime(postingDate).slice(0, 10);
+}
+
 export default function MaterialDocumentsPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -270,7 +290,7 @@ export default function MaterialDocumentsPage() {
                       {movementLabel(row.movement_type, t)}
                     </td>
                     <td className={`${td} whitespace-nowrap`}>
-                      {String(row.posting_date).slice(0, 10)}
+                      {formatPostingDateOnly(row.posting_date)}
                     </td>
                     <td className={td}>{row.recipient || "-"}</td>
                     <td className={`${td} max-w-xs`}>
@@ -395,7 +415,7 @@ export default function MaterialDocumentsPage() {
               </p>
               <p>
                 <span className="text-text-dim">{t.sparepart.date}: </span>
-                {String(detail.posting_date).slice(0, 10)}
+                {formatPostingDateTime(detail.posting_date)}
               </p>
               <p>
                 <span className="text-text-dim">{t.sparepart.recipient}: </span>

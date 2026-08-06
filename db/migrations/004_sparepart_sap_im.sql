@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `sparepart_mat_docs` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `doc_number` VARCHAR(32) NOT NULL,
   `movement_type` VARCHAR(8) NOT NULL,
-  `posting_date` DATE NOT NULL,
+  `posting_date` DATETIME NOT NULL,
   `header_text` VARCHAR(255) NULL,
   `recipient` VARCHAR(255) NULL,
   `created_by` VARCHAR(64) NULL,

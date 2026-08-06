@@ -27,6 +27,22 @@ type LineDraft = {
 
 const MAX_LINES_PER_DOC = 10;
 
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function todayLocalDateInputValue(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+}
+
+function combineDateWithCurrentTime(dateValue: string): string {
+  const now = new Date();
+  return `${dateValue} ${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(
+    now.getSeconds(),
+  )}`;
+}
+
 function newLine(defaultLocId = ""): LineDraft {
   return {
     key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -51,9 +67,7 @@ export default function PostGoodsMovementPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
   const [movementType, setMovementType] = useState<"101" | "201" | "311">("101");
-  const [postingDate, setPostingDate] = useState(
-    () => new Date().toISOString().slice(0, 10),
-  );
+  const [postingDate, setPostingDate] = useState(todayLocalDateInputValue);
   const [headerText, setHeaderText] = useState("");
   const [recipient, setRecipient] = useState("");
   const [locations, setLocations] = useState<SparepartStorageLocation[]>([]);
@@ -242,7 +256,7 @@ export default function PostGoodsMovementPage() {
         "POST",
         {
           movement_type: movementType,
-          posting_date: postingDate,
+          posting_date: combineDateWithCurrentTime(postingDate),
           header_text: headerText,
           recipient,
           client_request_id: newClientRequestId(),

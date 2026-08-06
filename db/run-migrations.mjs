@@ -26,6 +26,15 @@ async function columnExists(table, column) {
   return rows.length > 0;
 }
 
+async function columnType(table, column) {
+  const [rows] = await conn.query(
+    `SELECT DATA_TYPE FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [process.env.DB_NAME, table, column],
+  );
+  return rows[0]?.DATA_TYPE?.toLowerCase() ?? null;
+}
+
 async function tableExists(table) {
   const [rows] = await conn.query(
     `SELECT TABLE_NAME FROM information_schema.TABLES
@@ -571,6 +580,16 @@ if (await columnExists("sparepart_items", "default_storage_location_id")) {
   console.log("Dropped sparepart_items.default_storage_location_id.");
 } else {
   console.log("sparepart_items.default_storage_location_id already dropped.");
+}
+
+// --- 008: upgrade sparepart_mat_docs.posting_date to DATETIME ---
+if ((await columnType("sparepart_mat_docs", "posting_date")) === "date") {
+  await conn.query(
+    "ALTER TABLE `sparepart_mat_docs` MODIFY COLUMN `posting_date` DATETIME NOT NULL",
+  );
+  console.log("Updated sparepart_mat_docs.posting_date to DATETIME.");
+} else {
+  console.log("sparepart_mat_docs.posting_date already DATETIME-compatible.");
 }
 
 // Cleanup: remove empty balance rows (qty <= 0) left by older transfers
