@@ -60,7 +60,6 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
         name: name.trim(),
         brand: brand.trim(),
         model: model.trim(),
-        location: loc?.name ?? "",
         default_storage_location_id: loc ? loc.id : null,
         notes: notes.trim(),
       });

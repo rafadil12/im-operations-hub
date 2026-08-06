@@ -5,7 +5,6 @@ export type SortKey =
   | "name"
   | "brand"
   | "model"
-  | "location"
   | "stock_current";
 
 export type SortDir = "asc" | "desc";
@@ -52,14 +51,10 @@ export function sortStockBalanceRows(
     let cmp = 0;
     if (key === "stock_current") {
       cmp = a.stock_current - b.stock_current;
-    } else if (key === "location") {
-      cmp = compareStrings(a.location_name, b.location_name);
     } else {
       cmp = compareStrings(a[key], b[key]);
     }
     if (cmp !== 0) return cmp * dir;
-    const byCode = compareStrings(a.code, b.code);
-    if (byCode !== 0) return byCode;
-    return compareStrings(a.location_name, b.location_name);
+    return compareStrings(a.code, b.code);
   });
 }

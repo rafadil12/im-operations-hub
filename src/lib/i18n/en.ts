@@ -68,7 +68,7 @@ const en = {
   },
   sparepart: {
     stockTitle: "Stock Overview",
-    stockDesc: "Current stock by material and storage location — stock changes only via goods movements",
+    stockDesc: "Current stock by material — totals across all storage locations; stock changes only via goods movements",
     postTitle: "Post Goods Movement",
     postDesc: "Post Goods Receipt (101), Goods Issue (201), or Transfer (311)",
     documentsTitle: "Material Documents",

@@ -4,11 +4,13 @@ import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 const LIST_SQL = `
-  SELECT id, code, name, brand, model, location, default_storage_location_id,
-         stock_in, stock_out, stock_current,
-         image_url, notes, deleted_at, created_at, updated_at
-  FROM sparepart_items
-  WHERE deleted_at IS NULL
+  SELECT i.id, i.code, i.name, i.brand, i.model, i.default_storage_location_id,
+         dloc.name AS default_location_name,
+         i.stock_in, i.stock_out, i.stock_current,
+         i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
+  FROM sparepart_items i
+  LEFT JOIN sparepart_storage_locations dloc ON dloc.id = i.default_storage_location_id
+  WHERE i.deleted_at IS NULL
 `;
 
 export async function GET(request: NextRequest) {
@@ -20,22 +22,22 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q")?.trim();
     if (q) {
       conditions.push(
-        "(code LIKE ? OR name LIKE ? OR brand LIKE ? OR model LIKE ? OR location LIKE ?)",
+        "(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ? OR dloc.name LIKE ? OR dloc.code LIKE ?)",
       );
       const like = `%${q}%`;
-      params.push(like, like, like, like, like);
+      params.push(like, like, like, like, like, like);
     }
 
     const location = sp.get("location")?.trim();
     if (location) {
-      conditions.push("location = ?");
-      params.push(location);
+      conditions.push("(dloc.code = ? OR dloc.name = ?)");
+      params.push(location, location);
     }
 
     const sql =
       LIST_SQL +
       (conditions.length ? ` AND ${conditions.join(" AND ")}` : "") +
-      " ORDER BY code ASC";
+      " ORDER BY i.code ASC";
 
     const rows = await query<SparepartItem[]>(sql, params);
     return NextResponse.json({ rows });
@@ -63,15 +65,14 @@ export async function POST(request: NextRequest) {
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
-          (code, name, brand, model, location, default_storage_location_id,
+          (code, name, brand, model, default_storage_location_id,
            notes, stock_in, stock_out, stock_current)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+         VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)`,
         [
           data.code,
           data.name,
           data.brand || null,
           data.model || null,
-          data.location || null,
           data.default_storage_location_id ?? null,
           data.notes || null,
         ],

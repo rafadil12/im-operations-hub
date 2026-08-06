@@ -17,12 +17,19 @@ type BalanceExportRow = {
 
 export async function GET() {
   try {
-    const rows = await query<SparepartItem[]>(
-      `SELECT code, name, brand, model, location,
-              stock_in, stock_out, stock_current, notes
-       FROM sparepart_items
-       WHERE deleted_at IS NULL
-       ORDER BY code ASC`,
+    const rows = await query<
+      (Pick<
+        SparepartItem,
+        "code" | "name" | "brand" | "model" | "stock_in" | "stock_out" | "stock_current" | "notes"
+      > & { default_location_name: string | null })[]
+    >(
+      `SELECT i.code, i.name, i.brand, i.model,
+              dloc.name AS default_location_name,
+              i.stock_in, i.stock_out, i.stock_current, i.notes
+       FROM sparepart_items i
+       LEFT JOIN sparepart_storage_locations dloc ON dloc.id = i.default_storage_location_id
+       WHERE i.deleted_at IS NULL
+       ORDER BY i.code ASC`,
     );
 
     const balanceRows = await query<BalanceExportRow[]>(
@@ -55,7 +62,7 @@ export async function GET() {
         name: row.name,
         brand: row.brand ?? "",
         model: row.model ?? "",
-        location: row.location ?? "",
+        location: row.default_location_name ?? "",
         stock_in: row.stock_in,
         stock_out: row.stock_out,
         stock_current: row.stock_current,

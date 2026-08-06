@@ -13,19 +13,14 @@ export type { SortDir, SortKey };
 type TableRow = SparepartItem | SparepartStockBalanceRow;
 
 function isBalanceRow(row: TableRow): row is SparepartStockBalanceRow {
-  return "location_name" in row && "item_id" in row;
+  return "item_id" in row;
 }
 
 function rowKey(row: TableRow): string {
   if (isBalanceRow(row)) {
-    return `${row.item_id}-${row.storage_location_id}`;
+    return String(row.item_id);
   }
   return String(row.id);
-}
-
-function rowLocation(row: TableRow): string {
-  if (isBalanceRow(row)) return row.location_name || row.location_code || "-";
-  return row.location || "-";
 }
 
 function rowStock(row: TableRow): number {
@@ -289,11 +284,10 @@ export function StockTable({
         <table className="w-full table-fixed border-collapse">
           {showCurrentStock ? (
             <colgroup>
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "18.75%" }} />
-              <col style={{ width: "18.75%" }} />
-              <col style={{ width: "18.75%" }} />
-              <col style={{ width: "18.75%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "28%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "25%" }} />
               <col style={{ width: "15%" }} />
               {showActions ? <col style={{ width: "6rem" }} /> : null}
             </colgroup>
@@ -306,7 +300,6 @@ export function StockTable({
                   {renderSortHeader(t.sparepart.name, "name")}
                   {renderSortHeader(t.sparepart.brand, "brand")}
                   {renderSortHeader(t.sparepart.model, "model")}
-                  {renderSortHeader(t.sparepart.location, "location")}
                   {showCurrentStock
                     ? renderSortHeader(
                         t.sparepart.stockCurrent,
@@ -321,7 +314,6 @@ export function StockTable({
                   <th className={th}>{t.sparepart.name}</th>
                   <th className={th}>{t.sparepart.brand}</th>
                   <th className={th}>{t.sparepart.model}</th>
-                  <th className={th}>{t.sparepart.location}</th>
                   {showCurrentStock ? (
                     <th className={`${th} text-center`}>
                       {t.sparepart.stockCurrent}
@@ -358,11 +350,6 @@ export function StockTable({
                 <td className={td}>
                   <span className="line-clamp-2 break-words">
                     {row.model || "-"}
-                  </span>
-                </td>
-                <td className={td}>
-                  <span className="line-clamp-2 break-words">
-                    {rowLocation(row)}
                   </span>
                 </td>
                 {showCurrentStock ? (

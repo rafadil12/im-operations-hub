@@ -70,7 +70,7 @@ const cn: Dict = {
   },
   sparepart: {
     stockTitle: "库存总览",
-    stockDesc: "按物料与库存地点查看当前库存 — 库存仅通过过账变更",
+    stockDesc: "按物料汇总当前库存（各地点合计）— 库存仅通过过账变更",
     postTitle: "过账物料凭证",
     postDesc: "过账收货（101）、发货（201）或转储（311）",
     documentsTitle: "物料凭证",

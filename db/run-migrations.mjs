@@ -394,11 +394,17 @@ if (balanceCount === 0 && (await tableExists("sparepart_items"))) {
 
   const unassignedId = await ensureLocation("UNASSIGNED");
 
+  const hasLegacyLocation = await columnExists("sparepart_items", "location");
   const [itemRows] = await conn.query(
-    `SELECT id, code, location, stock_current
-     FROM sparepart_items
-     WHERE deleted_at IS NULL
-     ORDER BY id ASC`,
+    hasLegacyLocation
+      ? `SELECT id, code, location, stock_current
+         FROM sparepart_items
+         WHERE deleted_at IS NULL
+         ORDER BY id ASC`
+      : `SELECT id, code, NULL AS location, stock_current
+         FROM sparepart_items
+         WHERE deleted_at IS NULL
+         ORDER BY id ASC`,
   );
 
   // Collect all location names first
@@ -457,17 +463,11 @@ if (balanceCount === 0 && (await tableExists("sparepart_items"))) {
       );
     }
 
-    const [locNameRows] = await conn.query(
-      `SELECT name FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
-      [defaultLocId],
-    );
-    const displayName = locNameRows[0]?.name ?? "UNASSIGNED";
-
     await conn.query(
       `UPDATE sparepart_items
-       SET default_storage_location_id = ?, location = ?
+       SET default_storage_location_id = ?
        WHERE id = ?`,
-      [defaultLocId, displayName, item.id],
+      [defaultLocId, item.id],
     );
   }
 
@@ -548,6 +548,20 @@ await tryAddFk(
    ON DELETE RESTRICT ON UPDATE CASCADE`,
   "fk_sparepart_mat_docs_reversal",
 );
+
+// --- 006: drop legacy sparepart_items.location ---
+if (await columnExists("sparepart_items", "location")) {
+  if (await indexExists("sparepart_items", "idx_sparepart_items_location")) {
+    await conn.query(
+      "ALTER TABLE `sparepart_items` DROP INDEX `idx_sparepart_items_location`",
+    );
+    console.log("Dropped index idx_sparepart_items_location.");
+  }
+  await conn.query("ALTER TABLE `sparepart_items` DROP COLUMN `location`");
+  console.log("Dropped sparepart_items.location.");
+} else {
+  console.log("sparepart_items.location already dropped.");
+}
 
 await conn.end();
 console.log("Migrations complete.");

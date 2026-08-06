@@ -3,9 +3,15 @@ import { query } from "@/lib/db";
 import type { SparepartItem } from "@/lib/types";
 
 const SELECT_COLS = `
-  id, code, name, brand, model, location, default_storage_location_id,
-  stock_in, stock_out, stock_current,
-  image_url, notes, deleted_at, created_at, updated_at
+  i.id, i.code, i.name, i.brand, i.model, i.default_storage_location_id,
+  dloc.name AS default_location_name,
+  i.stock_in, i.stock_out, i.stock_current,
+  i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
+`;
+
+const FROM_JOIN = `
+  FROM sparepart_items i
+  LEFT JOIN sparepart_storage_locations dloc ON dloc.id = i.default_storage_location_id
 `;
 
 const DEFAULT_LIMIT = 20;
@@ -30,8 +36,8 @@ export async function GET(request: NextRequest) {
     if (exactCode) {
       const rows = await query<SparepartItem[]>(
         `SELECT ${SELECT_COLS}
-         FROM sparepart_items
-         WHERE deleted_at IS NULL AND code = ?
+         ${FROM_JOIN}
+         WHERE i.deleted_at IS NULL AND i.code = ?
          LIMIT 5`,
         [exactCode],
       );
@@ -49,22 +55,22 @@ export async function GET(request: NextRequest) {
     // Rank: exact code → code prefix → description prefix → other field match
     const rows = await query<SparepartItem[]>(
       `SELECT ${SELECT_COLS}
-       FROM sparepart_items
-       WHERE deleted_at IS NULL
+       ${FROM_JOIN}
+       WHERE i.deleted_at IS NULL
          AND (
-           code LIKE ?
-           OR name LIKE ?
-           OR brand LIKE ?
-           OR model LIKE ?
+           i.code LIKE ?
+           OR i.name LIKE ?
+           OR i.brand LIKE ?
+           OR i.model LIKE ?
          )
        ORDER BY
          CASE
-           WHEN code = ? THEN 0
-           WHEN code LIKE ? THEN 1
-           WHEN name LIKE ? THEN 2
+           WHEN i.code = ? THEN 0
+           WHEN i.code LIKE ? THEN 1
+           WHEN i.name LIKE ? THEN 2
            ELSE 3
          END,
-         code ASC
+         i.code ASC
        LIMIT ?`,
       [like, like, like, like, needle, prefix, prefix, limit],
     );

@@ -19,21 +19,26 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q")?.trim();
     if (q) {
       conditions.push(
-        `(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ?
-          OR loc.code LIKE ? OR loc.name LIKE ?)`,
+        `(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ?)`,
       );
       const like = `%${q}%`;
-      params.push(like, like, like, like, like, like);
+      params.push(like, like, like, like);
     }
 
     const location = sp.get("location")?.trim();
     if (location) {
-      conditions.push("(loc.code = ? OR loc.name = ?)");
+      conditions.push(
+        `EXISTS (
+           SELECT 1 FROM sparepart_stock_balances b
+           JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
+           WHERE b.item_id = i.id AND (loc.code = ? OR loc.name = ?)
+         )`,
+      );
       params.push(location, location);
     }
 
     if (sp.get("lowStock") === "1") {
-      conditions.push("b.qty <= 0");
+      conditions.push("i.stock_current <= 0");
     }
 
     const where = conditions.join(" AND ");
@@ -44,20 +49,17 @@ export async function GET(request: NextRequest) {
          i.name,
          i.brand,
          i.model,
-         b.storage_location_id,
-         loc.code AS location_code,
-         loc.name AS location_name,
-         b.qty,
-         b.qty AS stock_current,
+         i.stock_current,
          i.stock_in,
          i.stock_out,
          i.notes,
-         i.default_storage_location_id
-       FROM sparepart_stock_balances b
-       JOIN sparepart_items i ON i.id = b.item_id
-       JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
+         i.default_storage_location_id,
+         dloc.name AS default_location_name
+       FROM sparepart_items i
+       LEFT JOIN sparepart_storage_locations dloc
+         ON dloc.id = i.default_storage_location_id
        WHERE ${where}
-       ORDER BY i.code ASC, loc.name ASC`,
+       ORDER BY i.code ASC`,
       params,
     );
 

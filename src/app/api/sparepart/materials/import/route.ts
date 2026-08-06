@@ -124,14 +124,13 @@ export async function POST(request: NextRequest) {
 
         await conn.query(
           `INSERT INTO sparepart_items
-            (code, name, brand, model, location, default_storage_location_id,
+            (code, name, brand, model, default_storage_location_id,
              notes, stock_in, stock_out, stock_current)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
+           VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
            ON DUPLICATE KEY UPDATE
              name = VALUES(name),
              brand = VALUES(brand),
              model = VALUES(model),
-             location = VALUES(location),
              default_storage_location_id = VALUES(default_storage_location_id),
              notes = VALUES(notes),
              deleted_at = NULL`,
@@ -140,7 +139,6 @@ export async function POST(request: NextRequest) {
             item.name,
             item.brand || null,
             item.model || null,
-            locationName,
             defaultLocId,
             item.notes || null,
           ],
@@ -172,9 +170,9 @@ export async function POST(request: NextRequest) {
             locationName = unassigned.name;
             await conn.query(
               `UPDATE sparepart_items
-               SET default_storage_location_id = ?, location = ?
+               SET default_storage_location_id = ?
                WHERE id = ?`,
-              [defaultLocId, locationName, itemId],
+              [defaultLocId, itemId],
             );
           }
           grLines.push({

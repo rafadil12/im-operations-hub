@@ -187,23 +187,19 @@ export type SparepartStockBalance = {
   updated_at?: string | null;
 };
 
-/** Stock overview row: one material × one storage location */
+/** Stock overview row: one material with total qty across all locations */
 export type SparepartStockBalanceRow = {
   item_id: number;
   code: string;
   name: string;
   brand: string | null;
   model: string | null;
-  storage_location_id: number;
-  location_code: string;
-  location_name: string;
-  /** Qty at this location (also aliased as stock_current for table reuse) */
-  qty: number;
   stock_current: number;
   stock_in: number;
   stock_out: number;
   notes: string | null;
   default_storage_location_id: number | null;
+  default_location_name?: string | null;
 };
 
 export type SparepartItem = {
@@ -212,8 +208,8 @@ export type SparepartItem = {
   name: string;
   brand: string | null;
   model: string | null;
-  location: string | null;
   default_storage_location_id?: number | null;
+  default_location_name?: string | null;
   stock_in: number;
   stock_out: number;
   stock_current: number;
@@ -230,7 +226,6 @@ export type SparepartItemInput = {
   name: string;
   brand: string;
   model: string;
-  location: string;
   default_storage_location_id?: number | null;
   notes: string;
 };
