@@ -208,7 +208,7 @@ export default function MaterialMasterPage() {
 
       <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
         <div className="min-w-[160px] flex-1">
-          <label className="mb-1 block text-xs text-text-muted">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.common.search}
           </label>
           <input

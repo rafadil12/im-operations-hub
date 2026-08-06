@@ -147,7 +147,7 @@ export default function MaterialDocumentsPage() {
 
       <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
         <div className="min-w-[140px] flex-1">
-          <label className="mb-1 block text-xs text-text-muted">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.common.search}
           </label>
           <input
@@ -157,7 +157,7 @@ export default function MaterialDocumentsPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-text-muted">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.sparepart.movementType}
           </label>
           <select
@@ -175,7 +175,7 @@ export default function MaterialDocumentsPage() {
           </select>
         </div>
         <div className="min-w-[120px]">
-          <label className="mb-1 block text-xs text-text-muted">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.sparepart.location}
           </label>
           <input
@@ -186,7 +186,7 @@ export default function MaterialDocumentsPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-text-muted">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.fields.from}
           </label>
           <input
@@ -197,7 +197,7 @@ export default function MaterialDocumentsPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-text-muted">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.fields.to}
           </label>
           <input
