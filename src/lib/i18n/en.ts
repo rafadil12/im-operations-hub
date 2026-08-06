@@ -104,6 +104,52 @@ const en = {
     dueDate: "Due Date",
     createdDate: "Created Date",
     group: "Group",
+    vsLastMonth: "vs last month",
+    totalTickets: "TOTAL TICKETS",
+    allTickets: "All Tickets",
+
+    openTickets: "OPEN TICKETS",
+    waitingToProcess: "Waiting to Process",
+
+    inProgress: "IN PROGRESS",
+    beingProcessed: "Being Processed",
+
+    closedToday: "CLOSED TODAY",
+    completedToday: "Completed Today",
+
+    overdue: "OVERDUE",
+    needAttention: "Need Attention",
+
+    serviceRequests: "SERVICE REQUESTS",
+    requestType: "Request Type",
+    highestPriorityGroup: "Highest Priority Group",
+    mostActiveSupportGroup: "Most Active Support Group",
+
+    busiestTechnician: "Busiest Technician",
+    highestAssignedTickets: "Highest Assigned Tickets",
+
+    topRequester: "Top Requester",
+    mostSubmittedTickets: "Most Submitted Tickets",
+
+    incidents: "Incidents",
+    nonServiceRequestTickets: "Non-Service Request Tickets",
+    highestSubmittedTickets: "Highest Submitted Tickets",
+    noRequesterData: "No requester data.",
+    rank: "Rank",
+    tickets: "Tickets",
+    topTechnician: "Top Technician",
+    noTechnicianData: "No technician data.",
+
+    recentTickets: "Recent Tickets",
+    latestCreatedItsmRequests: "Latest Created ITSM Requests",
+    noRecentTickets: "No Recent Tickets.",
+    status: "Status",
+
+    oldestOpenTickets: "Oldest Open Tickets",
+    longestPendingRequests: "Longest Pending Requests",
+    noOverdueTickets: "No Overdue Tickets.",
+    days: "Days",
+
   },
   overview: {
     title: "Overview",

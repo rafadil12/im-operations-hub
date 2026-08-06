@@ -3,10 +3,10 @@
 import {
   Building2,
   UserRound,
-  Clock3,
   Timer,
 } from "lucide-react";
 
+import { useLang } from "@/lib/i18n";
 import SummaryCard from "./SummaryCard";
 import type { HighlightData } from "./types";
 
@@ -15,35 +15,42 @@ type Props = {
 };
 
 export default function Highlights({ data }: Props) {
+  const { t } = useLang();
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
 
       <SummaryCard
-        title="Highest Priority Group"
+        title={t.itsm.highestPriorityGroup}
         value={data.highestPriorityGroup}
-        subtitle="Most Active Support Group"
+        subtitle={t.itsm.mostActiveSupportGroup}
         icon={<Building2 size={22} />}
+        badge={`${(data.highestPriorityGroupTickets ?? 0).toLocaleString()} ${t.itsm.tickets} (${data.highestPriorityGroupPercent ?? 0}%)`}
       />
 
       <SummaryCard
-        title="Busiest Technician"
+        title={t.itsm.busiestTechnician}
         value={data.busiestTechnician}
-        subtitle="Highest Assigned Tickets"
+        subtitle={t.itsm.highestAssignedTickets}
         icon={<UserRound size={22} />}
+        badge={`${data.busiestTechnicianTickets.toLocaleString()} ${t.itsm.tickets} (${data.busiestTechnicianPercent}%)`}
       />
 
       <SummaryCard
-        title="Oldest Open Ticket"
-        value={data.oldestOpenTicket}
-        subtitle="Longest Pending Ticket"
-        icon={<Clock3 size={22} />}
+        title={t.itsm.topRequester}
+        value={data.topRequester}
+        subtitle={t.itsm.mostSubmittedTickets}
+        icon={<UserRound size={22} />}
+        color="orange"
+        badge={`${data.topRequesterTickets.toLocaleString()} ${t.itsm.tickets} (${data.topRequesterPercent}%)`}
       />
 
       <SummaryCard
-        title="Incidents"
-        value={data.averageResolutionTime}
-        subtitle="Non-Service Request Tickets"
+        title={t.itsm.incidents}
+        value={data.incidentCount.toLocaleString()}
+        subtitle={t.itsm.nonServiceRequestTickets}
         icon={<Timer size={22} />}
+        badge={`${data.incidentCount.toLocaleString()} ${t.itsm.tickets} (${data.incidentPercent}%)`}
       />
 
     </div>

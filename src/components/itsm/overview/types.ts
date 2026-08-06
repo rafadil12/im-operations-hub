@@ -1,17 +1,33 @@
 export interface KpiData {
   totalTickets: number;
+  totalChange: number;
+
   openTickets: number;
   inProgressTickets: number;
   closedToday: number;
   overdueTickets: number;
   serviceRequests: number;
+  serviceChange: number;
 }
 
 export interface HighlightData {
   highestPriorityGroup: string;
+  highestPriorityGroupTickets: number;
+  highestPriorityGroupPercent: number;
+
   busiestTechnician: string;
+  busiestTechnicianTickets: number;
+  busiestTechnicianPercent: number;
+
   oldestOpenTicket: string;
-  averageResolutionTime: string;
+  oldestOpenDays: number;
+
+  incidentCount: number;
+  incidentPercent: number;
+  topRequester: string;
+  topRequesterTickets: number;
+  topRequesterPercent: number;
+
 }
 
 export interface TechnicianRanking {

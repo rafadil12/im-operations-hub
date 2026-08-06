@@ -106,6 +106,54 @@ const cn: Dict = {
     dueDate: "截止时间",
     createdDate: "创建时间",
     group: "支持组",
+    vsLastMonth: "较上月",
+    totalTickets: "工单总数",
+    allTickets: "全部工单",
+
+    openTickets: "待处理工单",
+    waitingToProcess: "等待处理",
+
+    inProgress: "处理中",
+    beingProcessed: "处理中",
+
+    closedToday: "今日关闭",
+    completedToday: "今日完成",
+
+    overdue: "超期工单",
+    needAttention: "需要关注",
+
+    serviceRequests: "服务请求",
+    requestType: "请求类型",
+    highestPriorityGroup: "最高优先级组",
+    mostActiveSupportGroup: "最活跃支持组",
+
+    busiestTechnician: "最忙工程师",
+    highestAssignedTickets: "工单分配最多",
+
+    topRequester: "最多申请人",
+    mostSubmittedTickets: "提交工单最多",
+
+    incidents: "事件工单",
+    nonServiceRequestTickets: "非服务请求工单",
+
+    tickets: "单",
+    
+    highestSubmittedTickets: "提交工单最多",
+    noRequesterData: "暂无申请人数据。",
+    rank: "排名",
+    topTechnician: "工程师排行",
+    noTechnicianData: "暂无工程师数据。",
+
+    recentTickets: "最新工单",
+    latestCreatedItsmRequests: "最新创建的 ITSM 工单",
+    noRecentTickets: "暂无最新工单。",
+    status: "状态",
+    oldestOpenTickets: "最久未关闭工单",
+    longestPendingRequests: "等待时间最长的工单",
+    noOverdueTickets: "暂无超期工单。",
+    days: "天",
+    
+
   },
   overview: {
     title: "总览",
