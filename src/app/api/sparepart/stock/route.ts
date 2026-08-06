@@ -52,12 +52,8 @@ export async function GET(request: NextRequest) {
          i.stock_current,
          i.stock_in,
          i.stock_out,
-         i.notes,
-         i.default_storage_location_id,
-         dloc.name AS default_location_name
+         i.notes
        FROM sparepart_items i
-       LEFT JOIN sparepart_storage_locations dloc
-         ON dloc.id = i.default_storage_location_id
        WHERE ${where}
        ORDER BY i.code ASC`,
       params,

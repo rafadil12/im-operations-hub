@@ -19,11 +19,6 @@ export function parseSparepartItemBody(
   const brand = trim(body.brand);
   const model = trim(body.model);
   const notes = trim(body.notes);
-  const defaultLoc =
-    body.default_storage_location_id != null &&
-    body.default_storage_location_id !== ("" as unknown)
-      ? Number(body.default_storage_location_id)
-      : null;
 
   const errors: SparepartFieldError[] = [];
   if (!code) errors.push({ field: "code", message: "Code is required." });
@@ -41,10 +36,6 @@ export function parseSparepartItemBody(
       brand,
       model,
       notes,
-      default_storage_location_id:
-        defaultLoc != null && Number.isInteger(defaultLoc) && defaultLoc > 0
-          ? defaultLoc
-          : null,
     },
   };
 }

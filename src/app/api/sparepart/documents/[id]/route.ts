@@ -30,9 +30,23 @@ export async function GET(_request: NextRequest, context: Ctx) {
               li.storage_location, li.storage_location_id, li.to_storage_location_id,
               li.note,
               i.code AS item_code, i.name AS item_name,
-              i.brand AS item_brand, i.model AS item_model
+              i.brand AS item_brand, i.model AS item_model,
+              CASE
+                WHEN loc_from.id IS NOT NULL
+                  THEN CONCAT(loc_from.code, ' — ', loc_from.name)
+                ELSE NULL
+              END AS from_storage_location,
+              CASE
+                WHEN loc_to.id IS NOT NULL
+                  THEN CONCAT(loc_to.code, ' — ', loc_to.name)
+                ELSE NULL
+              END AS to_storage_location
        FROM sparepart_mat_doc_items li
        JOIN sparepart_items i ON i.id = li.item_id
+       LEFT JOIN sparepart_storage_locations loc_from
+         ON loc_from.id = li.storage_location_id
+       LEFT JOIN sparepart_storage_locations loc_to
+         ON loc_to.id = li.to_storage_location_id
        WHERE li.doc_id = ?
        ORDER BY li.line_no ASC`,
       [docId],

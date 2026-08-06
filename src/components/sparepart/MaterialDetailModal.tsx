@@ -14,7 +14,6 @@ type Props = {
     | "name"
     | "brand"
     | "model"
-    | "default_location_name"
     | "notes"
     | "stock_in"
     | "stock_out"
@@ -59,7 +58,6 @@ export function MaterialDetailModal({ item, onClose }: Props) {
     { label: t.sparepart.name, value: item.name },
     { label: t.sparepart.brand, value: item.brand || "-" },
     { label: t.sparepart.model, value: item.model || "-" },
-    { label: t.sparepart.defaultLocation, value: item.default_location_name || "-" },
     { label: t.sparepart.notes, value: item.notes || "-" },
     { label: t.sparepart.stockIn, value: item.stock_in },
     { label: t.sparepart.stockOut, value: item.stock_out },

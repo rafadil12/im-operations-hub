@@ -4,13 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
-import type {
-  MovementType,
-  SparepartItem,
-  SparepartStorageLocation,
-} from "@/lib/types";
+import type { SparepartItem, SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
+import { TransactionTypeSelect } from "@/components/sparepart/TransactionTypeSelect";
 
 type LineDraft = {
   key: string;
@@ -46,7 +43,7 @@ function newClientRequestId(): string {
 export default function PostGoodsMovementPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
-  const [movementType, setMovementType] = useState<MovementType>("101");
+  const [movementType, setMovementType] = useState<"101" | "201" | "311">("101");
   const [postingDate, setPostingDate] = useState(
     () => new Date().toISOString().slice(0, 10),
   );
@@ -114,16 +111,6 @@ export default function PostGoodsMovementPage() {
         created_at: null,
         updated_at: null,
       });
-    }
-
-    if (item.default_storage_location_id) {
-      const existing = byId.get(item.default_storage_location_id);
-      if (!existing) {
-        const fallback = locations.find(
-          (loc) => loc.id === item.default_storage_location_id,
-        );
-        if (fallback) byId.set(fallback.id, fallback);
-      }
     }
 
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -370,15 +357,10 @@ export default function PostGoodsMovementPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
             <label className={label}>{t.sparepart.movementType} *</label>
-            <select
-              className={field}
+            <TransactionTypeSelect
               value={movementType}
-              onChange={(e) => setMovementType(e.target.value as MovementType)}
-            >
-              <option value="101">{t.sparepart.movement101}</option>
-              <option value="201">{t.sparepart.movement201}</option>
-              <option value="311">{t.sparepart.movement311}</option>
-            </select>
+              onChange={setMovementType}
+            />
           </div>
           <div>
             <label className={label}>{t.sparepart.date} *</label>
@@ -395,6 +377,7 @@ export default function PostGoodsMovementPage() {
               className={field}
               value={headerText}
               onChange={(e) => setHeaderText(e.target.value)}
+              placeholder={t.sparepart.headerTextHint}
             />
           </div>
           {movementType === "201" ? (
@@ -466,38 +449,10 @@ export default function PostGoodsMovementPage() {
                                   ...l,
                                   item_id: itemId,
                                   item: fullItem,
-                                  storage_location_id: (() => {
-                                    const nextOptions =
-                                      locationOptionsForItem(fullItem);
-                                    const currentStillValid = nextOptions.some(
-                                      (loc) =>
-                                        String(loc.id) === l.storage_location_id,
-                                    );
-                                    if (currentStillValid) {
-                                      return l.storage_location_id;
-                                    }
-                                    if (fullItem?.default_storage_location_id) {
-                                      return String(
-                                        fullItem.default_storage_location_id,
-                                      );
-                                    }
-                                    return nextOptions[0]
-                                      ? String(nextOptions[0].id)
-                                      : "";
-                                  })(),
-                                  storage_location_text: (() => {
-                                    if (fullItem?.default_storage_location_id) {
-                                      const defaultLoc = locations.find(
-                                        (loc) =>
-                                          loc.id ===
-                                          fullItem.default_storage_location_id,
-                                      );
-                                      if (defaultLoc) {
-                                        return locationLabel(defaultLoc);
-                                      }
-                                    }
-                                    return l.storage_location_text;
-                                  })(),
+                                  // Clear location so user must choose explicitly
+                                  storage_location_id: "",
+                                  storage_location_text: "",
+                                  to_storage_location_id: "",
                                 }
                               : l,
                           ),

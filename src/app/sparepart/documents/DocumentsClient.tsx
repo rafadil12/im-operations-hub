@@ -409,26 +409,51 @@ export default function MaterialDocumentsPage() {
                   <th className={th}>{t.sparepart.code}</th>
                   <th className={th}>{t.sparepart.name}</th>
                   <th className={th}>{t.sparepart.qty}</th>
-                  <th className={th}>{t.sparepart.location}</th>
+                  {detail.movement_type === "311" ||
+                  detail.movement_type === "312" ? (
+                    <>
+                      <th className={th}>{t.sparepart.fromLocation}</th>
+                      <th className={th}>{t.sparepart.toLocation}</th>
+                    </>
+                  ) : (
+                    <th className={th}>{t.sparepart.location}</th>
+                  )}
                   <th className={th}>{t.sparepart.note}</th>
                 </tr>
               </thead>
               <tbody>
-                {(detail.lines ?? []).map((line) => (
-                  <tr
-                    key={line.id}
-                    className="border-b border-border-subtle/60"
-                  >
-                    <td className={td}>{line.line_no}</td>
-                    <td className={`${td} text-text`}>{line.item_code}</td>
-                    <td className={td}>{line.item_name}</td>
-                    <td className={`${td} tabular-nums text-text`}>
-                      {line.qty}
-                    </td>
-                    <td className={td}>{line.storage_location || "-"}</td>
-                    <td className={td}>{line.note || "-"}</td>
-                  </tr>
-                ))}
+                {(detail.lines ?? []).map((line) => {
+                  const fromLabel =
+                    line.from_storage_location ||
+                    line.storage_location ||
+                    "-";
+                  const toLabel = line.to_storage_location || "-";
+                  const isTransfer =
+                    detail.movement_type === "311" ||
+                    detail.movement_type === "312";
+                  return (
+                    <tr
+                      key={line.id}
+                      className="border-b border-border-subtle/60"
+                    >
+                      <td className={td}>{line.line_no}</td>
+                      <td className={`${td} text-text`}>{line.item_code}</td>
+                      <td className={td}>{line.item_name}</td>
+                      <td className={`${td} tabular-nums text-text`}>
+                        {line.qty}
+                      </td>
+                      {isTransfer ? (
+                        <>
+                          <td className={td}>{fromLabel}</td>
+                          <td className={td}>{toLabel}</td>
+                        </>
+                      ) : (
+                        <td className={td}>{fromLabel}</td>
+                      )}
+                      <td className={td}>{line.note || "-"}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

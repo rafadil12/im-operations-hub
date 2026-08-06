@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pre-validate locations (single string, no comma-split)
+    // Pre-validate locations (single string; required when importing stock qty)
     const locationErrors: ImportRowError[] = [];
     for (const item of parsed.items) {
       const loc = (item.location || "").trim();
@@ -89,6 +89,12 @@ export async function POST(request: NextRequest) {
         locationErrors.push({
           row: 0,
           message: `${item.code}: location must be a single location (no commas).`,
+        });
+      }
+      if (item.stock_current > 0 && !loc) {
+        locationErrors.push({
+          row: 0,
+          message: `${item.code}: location is required when stock quantity is greater than 0.`,
         });
       }
     }
@@ -114,24 +120,22 @@ export async function POST(request: NextRequest) {
       }[] = [];
 
       for (const item of parsed.items) {
-        let defaultLocId: number | null = null;
+        let stockLocId: number | null = null;
         let locationName: string | null = null;
         if (item.location?.trim()) {
           const loc = await ensureStorageLocation(conn, item.location.trim());
-          defaultLocId = loc.id;
+          stockLocId = loc.id;
           locationName = loc.name;
         }
 
         await conn.query(
           `INSERT INTO sparepart_items
-            (code, name, brand, model, default_storage_location_id,
-             notes, stock_in, stock_out, stock_current)
-           VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
+            (code, name, brand, model, notes, stock_in, stock_out, stock_current)
+           VALUES (?, ?, ?, ?, ?, 0, 0, 0)
            ON DUPLICATE KEY UPDATE
              name = VALUES(name),
              brand = VALUES(brand),
              model = VALUES(model),
-             default_storage_location_id = VALUES(default_storage_location_id),
              notes = VALUES(notes),
              deleted_at = NULL`,
           [
@@ -139,7 +143,6 @@ export async function POST(request: NextRequest) {
             item.name,
             item.brand || null,
             item.model || null,
-            defaultLocId,
             item.notes || null,
           ],
         );
@@ -163,30 +166,13 @@ export async function POST(request: NextRequest) {
           [itemId],
         );
 
-        if (item.stock_current > 0) {
-          if (!defaultLocId) {
-            const unassigned = await ensureStorageLocation(conn, "UNASSIGNED");
-            defaultLocId = unassigned.id;
-            locationName = unassigned.name;
-            await conn.query(
-              `UPDATE sparepart_items
-               SET default_storage_location_id = ?
-               WHERE id = ?`,
-              [defaultLocId, itemId],
-            );
-          }
+        if (item.stock_current > 0 && stockLocId && locationName) {
           grLines.push({
             itemId,
             qty: item.stock_current,
-            locationId: defaultLocId,
-            locationLabel: `${(await ensureStorageLocation(conn, locationName || "UNASSIGNED")).code} — ${locationName}`,
+            locationId: stockLocId,
+            locationLabel: `${(await ensureStorageLocation(conn, locationName)).code} — ${locationName}`,
           });
-        } else if (defaultLocId) {
-          await conn.query(
-            `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
-             VALUES (?, ?, 0)`,
-            [itemId, defaultLocId],
-          );
         }
         count += 1;
       }

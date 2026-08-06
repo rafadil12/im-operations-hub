@@ -18,16 +18,14 @@ type BalanceExportRow = {
 export async function GET() {
   try {
     const rows = await query<
-      (Pick<
+      Pick<
         SparepartItem,
         "code" | "name" | "brand" | "model" | "stock_in" | "stock_out" | "stock_current" | "notes"
-      > & { default_location_name: string | null })[]
+      >[]
     >(
       `SELECT i.code, i.name, i.brand, i.model,
-              dloc.name AS default_location_name,
               i.stock_in, i.stock_out, i.stock_current, i.notes
        FROM sparepart_items i
-       LEFT JOIN sparepart_storage_locations dloc ON dloc.id = i.default_storage_location_id
        WHERE i.deleted_at IS NULL
        ORDER BY i.code ASC`,
     );
@@ -38,7 +36,7 @@ export async function GET() {
        FROM sparepart_stock_balances b
        JOIN sparepart_items i ON i.id = b.item_id
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
-       WHERE i.deleted_at IS NULL
+       WHERE i.deleted_at IS NULL AND b.qty > 0
        ORDER BY i.code ASC, loc.name ASC`,
     );
 
@@ -49,7 +47,6 @@ export async function GET() {
       { header: "Nama Barang", key: "name", width: 32 },
       { header: "Brand", key: "brand", width: 16 },
       { header: "Model", key: "model", width: 28 },
-      { header: "Default Lokasi", key: "location", width: 20 },
       { header: "Stok Masuk", key: "stock_in", width: 12 },
       { header: "Stok Keluar", key: "stock_out", width: 12 },
       { header: "Stok Sekarang", key: "stock_current", width: 14 },
@@ -62,7 +59,6 @@ export async function GET() {
         name: row.name,
         brand: row.brand ?? "",
         model: row.model ?? "",
-        location: row.default_location_name ?? "",
         stock_in: row.stock_in,
         stock_out: row.stock_out,
         stock_current: row.stock_current,

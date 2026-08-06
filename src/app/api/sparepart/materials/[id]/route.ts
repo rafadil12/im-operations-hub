@@ -13,12 +13,10 @@ export async function GET(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Invalid material id." }, { status: 400 });
     }
     const rows = await query<SparepartItem[]>(
-      `SELECT i.id, i.code, i.name, i.brand, i.model, i.default_storage_location_id,
-              dloc.name AS default_location_name,
+      `SELECT i.id, i.code, i.name, i.brand, i.model,
               i.stock_in, i.stock_out, i.stock_current,
               i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
        FROM sparepart_items i
-       LEFT JOIN sparepart_storage_locations dloc ON dloc.id = i.default_storage_location_id
        WHERE i.id = ? AND i.deleted_at IS NULL
        LIMIT 1`,
       [itemId],
@@ -32,7 +30,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
               loc.code AS location_code, loc.name AS location_name
        FROM sparepart_stock_balances b
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
-       WHERE b.item_id = ?
+       WHERE b.item_id = ? AND b.qty > 0
        ORDER BY loc.name ASC`,
       [itemId],
     );
@@ -64,15 +62,13 @@ export async function PUT(request: NextRequest, context: Ctx) {
     try {
       const result = await execute(
         `UPDATE sparepart_items
-         SET code = ?, name = ?, brand = ?, model = ?,
-             default_storage_location_id = ?, notes = ?
+         SET code = ?, name = ?, brand = ?, model = ?, notes = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
           data.code,
           data.name,
           data.brand || null,
           data.model || null,
-          data.default_storage_location_id ?? null,
           data.notes || null,
           itemId,
         ],

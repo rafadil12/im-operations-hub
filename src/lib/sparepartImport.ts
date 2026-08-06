@@ -14,7 +14,7 @@ export type ParsedImportItem = SparepartItemInput & {
   stock_in: number;
   stock_out: number;
   stock_current: number;
-  /** Excel "Lokasi" — resolved to default_storage_location_id on import */
+  /** Excel "Lokasi" — used only as storage location for imported opening stock (101) */
   location: string;
 };
 

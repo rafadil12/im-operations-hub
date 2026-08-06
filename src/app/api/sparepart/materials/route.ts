@@ -4,12 +4,10 @@ import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 const LIST_SQL = `
-  SELECT i.id, i.code, i.name, i.brand, i.model, i.default_storage_location_id,
-         dloc.name AS default_location_name,
+  SELECT i.id, i.code, i.name, i.brand, i.model,
          i.stock_in, i.stock_out, i.stock_current,
          i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
   FROM sparepart_items i
-  LEFT JOIN sparepart_storage_locations dloc ON dloc.id = i.default_storage_location_id
   WHERE i.deleted_at IS NULL
 `;
 
@@ -22,16 +20,10 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q")?.trim();
     if (q) {
       conditions.push(
-        "(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ? OR dloc.name LIKE ? OR dloc.code LIKE ?)",
+        "(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ?)",
       );
       const like = `%${q}%`;
-      params.push(like, like, like, like, like, like);
-    }
-
-    const location = sp.get("location")?.trim();
-    if (location) {
-      conditions.push("(dloc.code = ? OR dloc.name = ?)");
-      params.push(location, location);
+      params.push(like, like, like, like);
     }
 
     const sql =
@@ -65,15 +57,13 @@ export async function POST(request: NextRequest) {
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
-          (code, name, brand, model, default_storage_location_id,
-           notes, stock_in, stock_out, stock_current)
-         VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+          (code, name, brand, model, notes, stock_in, stock_out, stock_current)
+         VALUES (?, ?, ?, ?, ?, 0, 0, 0)`,
         [
           data.code,
           data.name,
           data.brand || null,
           data.model || null,
-          data.default_storage_location_id ?? null,
           data.notes || null,
         ],
       );

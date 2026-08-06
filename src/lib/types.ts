@@ -198,8 +198,6 @@ export type SparepartStockBalanceRow = {
   stock_in: number;
   stock_out: number;
   notes: string | null;
-  default_storage_location_id: number | null;
-  default_location_name?: string | null;
 };
 
 export type SparepartItem = {
@@ -208,8 +206,6 @@ export type SparepartItem = {
   name: string;
   brand: string | null;
   model: string | null;
-  default_storage_location_id?: number | null;
-  default_location_name?: string | null;
   stock_in: number;
   stock_out: number;
   stock_current: number;
@@ -226,7 +222,6 @@ export type SparepartItemInput = {
   name: string;
   brand: string;
   model: string;
-  default_storage_location_id?: number | null;
   notes: string;
 };
 
@@ -239,6 +234,9 @@ export type SparepartMatDocLine = {
   storage_location: string | null;
   storage_location_id?: number | null;
   to_storage_location_id?: number | null;
+  /** Joined label for storage_location_id */
+  from_storage_location?: string | null;
+  /** Joined label for to_storage_location_id */
   to_storage_location?: string | null;
   note: string | null;
   item_code?: string | null;

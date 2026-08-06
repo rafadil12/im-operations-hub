@@ -3,15 +3,9 @@ import { query } from "@/lib/db";
 import type { SparepartItem } from "@/lib/types";
 
 const SELECT_COLS = `
-  i.id, i.code, i.name, i.brand, i.model, i.default_storage_location_id,
-  dloc.name AS default_location_name,
+  i.id, i.code, i.name, i.brand, i.model,
   i.stock_in, i.stock_out, i.stock_current,
   i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
-`;
-
-const FROM_JOIN = `
-  FROM sparepart_items i
-  LEFT JOIN sparepart_storage_locations dloc ON dloc.id = i.default_storage_location_id
 `;
 
 const DEFAULT_LIMIT = 20;
@@ -36,7 +30,7 @@ export async function GET(request: NextRequest) {
     if (exactCode) {
       const rows = await query<SparepartItem[]>(
         `SELECT ${SELECT_COLS}
-         ${FROM_JOIN}
+         FROM sparepart_items i
          WHERE i.deleted_at IS NULL AND i.code = ?
          LIMIT 5`,
         [exactCode],
@@ -55,7 +49,7 @@ export async function GET(request: NextRequest) {
     // Rank: exact code → code prefix → description prefix → other field match
     const rows = await query<SparepartItem[]>(
       `SELECT ${SELECT_COLS}
-       ${FROM_JOIN}
+       FROM sparepart_items i
        WHERE i.deleted_at IS NULL
          AND (
            i.code LIKE ?

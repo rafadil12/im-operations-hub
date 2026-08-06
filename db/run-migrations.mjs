@@ -323,13 +323,10 @@ if (!(await columnExists("sparepart_mat_doc_items", "to_storage_location_id"))) 
 }
 
 if (!(await columnExists("sparepart_items", "default_storage_location_id"))) {
-  await conn.query(
-    `ALTER TABLE \`sparepart_items\`
-     ADD COLUMN \`default_storage_location_id\` INT NULL DEFAULT NULL AFTER \`location\``,
-  );
-  console.log("Added sparepart_items.default_storage_location_id.");
+  // Intentionally not re-adding: column removed in migration 007.
+  console.log("sparepart_items.default_storage_location_id not present (dropped).");
 } else {
-  console.log("sparepart_items.default_storage_location_id already exists.");
+  console.log("sparepart_items.default_storage_location_id still present (will drop below).");
 }
 
 if (!(await columnExists("sparepart_mat_docs", "client_request_id"))) {
@@ -438,11 +435,11 @@ if (balanceCount === 0 && (await tableExists("sparepart_items"))) {
       }
     }
 
-    let defaultLocId = unassignedId;
+    let firstLocId = unassignedId;
     for (let i = 0; i < seeds.length; i += 1) {
       const seed = seeds[i];
       const locId = await ensureLocation(seed.name);
-      if (i === 0) defaultLocId = locId;
+      if (i === 0) firstLocId = locId;
       await conn.query(
         `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
          VALUES (?, ?, ?)
@@ -463,12 +460,14 @@ if (balanceCount === 0 && (await tableExists("sparepart_items"))) {
       );
     }
 
-    await conn.query(
-      `UPDATE sparepart_items
-       SET default_storage_location_id = ?
-       WHERE id = ?`,
-      [defaultLocId, item.id],
-    );
+    if (await columnExists("sparepart_items", "default_storage_location_id")) {
+      await conn.query(
+        `UPDATE sparepart_items
+         SET default_storage_location_id = ?
+         WHERE id = ?`,
+        [firstLocId, item.id],
+      );
+    }
   }
 
   // Backfill mat_doc_items.storage_location_id from text snapshot
@@ -535,13 +534,6 @@ await tryAddFk(
   "fk_sparepart_mat_doc_items_to_loc",
 );
 await tryAddFk(
-  `ALTER TABLE \`sparepart_items\`
-   ADD CONSTRAINT \`fk_sparepart_items_default_loc\`
-   FOREIGN KEY (\`default_storage_location_id\`) REFERENCES \`sparepart_storage_locations\` (\`id\`)
-   ON DELETE SET NULL ON UPDATE CASCADE`,
-  "fk_sparepart_items_default_loc",
-);
-await tryAddFk(
   `ALTER TABLE \`sparepart_mat_docs\`
    ADD CONSTRAINT \`fk_sparepart_mat_docs_reversal\`
    FOREIGN KEY (\`reversal_of_doc_id\`) REFERENCES \`sparepart_mat_docs\` (\`id\`)
@@ -561,6 +553,37 @@ if (await columnExists("sparepart_items", "location")) {
   console.log("Dropped sparepart_items.location.");
 } else {
   console.log("sparepart_items.location already dropped.");
+}
+
+// --- 007: drop sparepart_items.default_storage_location_id ---
+if (await columnExists("sparepart_items", "default_storage_location_id")) {
+  try {
+    await conn.query(
+      "ALTER TABLE `sparepart_items` DROP FOREIGN KEY `fk_sparepart_items_default_loc`",
+    );
+    console.log("Dropped fk_sparepart_items_default_loc.");
+  } catch (err) {
+    console.log(`Skip drop fk_sparepart_items_default_loc: ${err.message ?? err}`);
+  }
+  await conn.query(
+    "ALTER TABLE `sparepart_items` DROP COLUMN `default_storage_location_id`",
+  );
+  console.log("Dropped sparepart_items.default_storage_location_id.");
+} else {
+  console.log("sparepart_items.default_storage_location_id already dropped.");
+}
+
+// Cleanup: remove empty balance rows (qty <= 0) left by older transfers
+if (await tableExists("sparepart_stock_balances")) {
+  const [delResult] = await conn.query(
+    `DELETE FROM sparepart_stock_balances WHERE qty <= 0`,
+  );
+  const removed = /** @type {{ affectedRows?: number }} */ (delResult).affectedRows ?? 0;
+  if (removed > 0) {
+    console.log(`Removed ${removed} empty stock balance row(s).`);
+  } else {
+    console.log("No empty stock balance rows to remove.");
+  }
 }
 
 await conn.end();

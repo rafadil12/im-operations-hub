@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
               loc.code AS location_code, loc.name AS location_name
        FROM sparepart_stock_balances b
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
-       WHERE b.item_id = ?
+       WHERE b.item_id = ? AND b.qty > 0
        ORDER BY loc.name ASC`,
       [itemId],
     );

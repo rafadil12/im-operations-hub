@@ -241,11 +241,20 @@ async function adjustBalance(
       `Line ${lineNo}: insufficient stock at location. Available: ${current}, requested: ${Math.abs(delta)}.`,
     );
   }
+  const nextQty = current + delta;
+  if (nextQty === 0) {
+    await conn.query(
+      `DELETE FROM sparepart_stock_balances
+       WHERE item_id = ? AND storage_location_id = ?`,
+      [itemId, locationId],
+    );
+    return;
+  }
   await conn.query(
     `UPDATE sparepart_stock_balances
-     SET qty = qty + ?
+     SET qty = ?
      WHERE item_id = ? AND storage_location_id = ?`,
-    [delta, itemId, locationId],
+    [nextQty, itemId, locationId],
   );
 }
 

@@ -285,8 +285,8 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       ) : null}
       {selected ? (
         <p className="mt-1 text-[11px] text-text-dim">
-          {selected.brand ?? "-"} / {selected.model ?? "-"} ·{" "}
-          {selected.default_location_name ?? "-"} · stock: {selected.stock_current}
+          {selected.brand ?? "-"} / {selected.model ?? "-"} · stock:{" "}
+          {selected.stock_current}
         </p>
       ) : null}
     </div>
