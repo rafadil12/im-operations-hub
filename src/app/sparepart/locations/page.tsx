@@ -126,14 +126,18 @@ export default function StorageLocationsPage() {
     }
   };
 
-  const deactivate = async (row: SparepartStorageLocation) => {
-    if (!confirm(t.common.confirmDelete)) return;
+  const remove = async (row: SparepartStorageLocation) => {
+    if (row.is_active) {
+      toastError(t.sparepart.locationDeleteActiveBlocked);
+      return;
+    }
+    if (!confirm(t.sparepart.locationDeleteConfirm)) return;
     try {
       await apiSendAbs(
         `/api/sparepart/storage-locations?id=${row.id}`,
         "DELETE",
       );
-      toastSuccess(t.toast.updateSuccess);
+      toastSuccess(t.toast.deleteSuccess);
       await load();
     } catch (e) {
       toastError(e instanceof Error ? e.message : t.toast.saveFailed);
@@ -327,10 +331,10 @@ export default function StorageLocationsPage() {
                     >
                       {t.common.edit}
                     </button>
-                    {row.is_active ? (
+                    {!row.is_active ? (
                       <button
                         type="button"
-                        onClick={() => deactivate(row)}
+                        onClick={() => remove(row)}
                         className="text-danger hover:underline"
                       >
                         {t.common.delete}

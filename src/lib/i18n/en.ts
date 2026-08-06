@@ -85,6 +85,10 @@ const en = {
     locationCode: "Location code",
     locationName: "Location name",
     locationActive: "Active",
+    locationDeleteConfirm:
+      "This inactive storage location will be permanently deleted. Continue?",
+    locationDeleteActiveBlocked:
+      "Cannot delete an active storage location. Deactivate it first.",
     stockByLocation: "Stock by location",
     noBalances: "No stock balances recorded.",
     notes: "Notes",
@@ -263,6 +267,7 @@ const en = {
   toast: {
     createSuccess: "Record created successfully.",
     updateSuccess: "Record updated successfully.",
+    deleteSuccess: "Record deleted successfully.",
     saveFailed: "Failed to save record.",
     networkError: "Network error. Please try again.",
     validationFailed: "Please fix the highlighted fields.",

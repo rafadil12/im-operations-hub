@@ -175,6 +175,24 @@ export async function DELETE(request: NextRequest) {
     }
 
     return await withTransaction(async (conn) => {
+      const [existingRows] = await conn.query<RowDataPacket[]>(
+        `SELECT id, is_active FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
+        [id],
+      );
+      const existing = existingRows[0];
+      if (!existing) {
+        return NextResponse.json({ error: "Not found." }, { status: 404 });
+      }
+      if (Number(existing.is_active) === 1) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot delete an active storage location. Deactivate it first.",
+          },
+          { status: 400 },
+        );
+      }
+
       const [stockRows] = await conn.query<RowDataPacket[]>(
         `SELECT COALESCE(SUM(qty), 0) AS total
          FROM sparepart_stock_balances WHERE storage_location_id = ?`,
@@ -184,22 +202,40 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Cannot deactivate a storage location that still has non-zero stock.",
+              "Cannot delete a storage location that still has non-zero stock.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const [docRefs] = await conn.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS cnt FROM sparepart_mat_doc_items
+         WHERE storage_location_id = ? OR to_storage_location_id = ?`,
+        [id, id],
+      );
+      if (Number(docRefs[0]?.cnt ?? 0) > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot delete a storage location that is referenced by material documents.",
           },
           { status: 400 },
         );
       }
 
       await conn.query(
-        `UPDATE sparepart_storage_locations SET is_active = 0 WHERE id = ?`,
+        `DELETE FROM sparepart_stock_balances WHERE storage_location_id = ?`,
         [id],
       );
+      await conn.query(`DELETE FROM sparepart_storage_locations WHERE id = ?`, [
+        id,
+      ]);
       return NextResponse.json({ ok: true });
     });
   } catch (error) {
     console.error("DELETE /sparepart/storage-locations failed", error);
     return NextResponse.json(
-      { error: "Failed to deactivate storage location." },
+      { error: "Failed to delete storage location." },
       { status: 500 },
     );
   }

@@ -87,6 +87,8 @@ const cn: Dict = {
     locationCode: "地点代码",
     locationName: "地点名称",
     locationActive: "启用",
+    locationDeleteConfirm: "将永久删除此停用的库存地点。是否继续？",
+    locationDeleteActiveBlocked: "无法删除启用中的库存地点。请先停用。",
     stockByLocation: "按地点库存",
     noBalances: "暂无库存余额。",
     notes: "备注",
@@ -264,6 +266,7 @@ const cn: Dict = {
   toast: {
     createSuccess: "记录创建成功。",
     updateSuccess: "记录更新成功。",
+    deleteSuccess: "记录删除成功。",
     saveFailed: "保存失败。",
     networkError: "网络异常，请重试。",
     validationFailed: "请修正标红的字段。",
