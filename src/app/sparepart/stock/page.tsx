@@ -6,6 +6,7 @@ import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import {
   StockTable,
   type PageSize,
@@ -102,6 +103,10 @@ export default function StockOverviewPage() {
 
   const field =
     "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+  const locationOptions = [
+    { value: "", label: t.common.all },
+    ...locations.map((loc) => ({ value: loc, label: loc })),
+  ];
 
   return (
     <div>
@@ -156,24 +161,20 @@ export default function StockOverviewPage() {
             className={`${field} w-full`}
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            placeholder={t.sparepart.stockSearchHint}
           />
         </div>
         <div className="min-w-[140px]">
           <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.sparepart.location}
           </label>
-          <select
-            className={`${field} w-full`}
+          <SparepartDropdown
+            className="w-full"
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          >
-            <option value="">{t.common.all}</option>
-            {locations.map((loc) => (
-              <option key={loc} value={loc}>
-                {loc}
-              </option>
-            ))}
-          </select>
+            onChange={setLocation}
+            options={locationOptions}
+            placeholder={t.common.all}
+          />
         </div>
         <label className="mb-2 flex items-center gap-2 text-[10px] uppercase text-text-dim">
           <input

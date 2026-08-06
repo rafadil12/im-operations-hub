@@ -69,12 +69,16 @@ const en = {
   sparepart: {
     stockTitle: "Stock Overview",
     stockDesc: "Current stock by material — totals across all storage locations; stock changes only via goods movements",
+    stockSearchHint: "Search by material code, description, brand, or model",
     postTitle: "Stock Transactions",
     postDesc: "Receive, issue, or transfer stock between storage locations",
     documentsTitle: "Transaction History",
     documentsDesc: "History of posted stock transactions",
+    documentsSearchHint:
+      "Search by document number, material code, recipient, or note",
     materialsTitle: "Items",
     materialsDesc: "Maintain item master data (code, name, brand, model)",
+    materialsSearchHint: "Search by material code, description, brand, or model",
     locationsTitle: "Storage Locations",
     locationsDesc: "Maintain storage location master data",
     code: "Material",
@@ -130,7 +134,7 @@ const en = {
     lines: "Lines",
     totalQty: "Total Qty",
     documentDetail: "Transaction Detail",
-    allTypes: "All Types",
+    allTypes: "All Transaction Types",
     goPost: "New Stock Transaction",
     importTitle: "Import Items",
     importHint:

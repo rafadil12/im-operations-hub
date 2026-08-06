@@ -10,6 +10,10 @@ import {
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem } from "@/lib/types";
+import {
+  sparepartDropdownMenuClass,
+  sparepartDropdownOptionClass,
+} from "@/components/sparepart/SparepartDropdown";
 
 const DEBOUNCE_MS = 300;
 const MIN_CHARS = 1;
@@ -252,7 +256,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg"
+          className={`${sparepartDropdownMenuClass} z-20 max-h-56 overflow-auto`}
         >
           {searching && suggestions.length === 0 ? (
             <li className="px-3 py-2 text-xs text-text-dim">{t.common.loading}</li>
@@ -262,19 +266,21 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
               <button
                 type="button"
                 className={[
-                  "flex w-full flex-col items-start px-3 py-2 text-left text-xs",
-                  index === highlight
-                    ? "bg-accent-soft text-text"
-                    : "text-text-muted hover:bg-surface-hover",
+                  sparepartDropdownOptionClass(index === highlight),
+                  "flex-col items-start gap-0 text-xs",
                 ].join(" ")}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(item)}
                 onMouseEnter={() => setHighlight(index)}
               >
-                <span className="font-medium text-text">
+                <span className={`font-medium ${index === highlight ? "text-white" : "text-text"}`}>
                   {item.code} — {item.name}
                 </span>
-                <span className="text-[11px] text-text-dim">
+                <span
+                  className={`text-[11px] ${
+                    index === highlight ? "text-white/80" : "text-text-dim"
+                  }`}
+                >
                   {(item.brand || "-") + " / " + (item.model || "-")} · stock:{" "}
                   {item.stock_current}
                 </span>

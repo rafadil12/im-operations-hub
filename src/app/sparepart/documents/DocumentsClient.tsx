@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import type { MovementType, SparepartMatDoc } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/ToastProvider";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import {
   PAGE_SIZE_OPTIONS,
   type PageSize,
@@ -135,6 +136,19 @@ export default function MaterialDocumentsPage() {
 
   const field =
     "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+  const movementTypeOptions = [
+    { value: "", label: t.sparepart.allTypes },
+    { value: "101", label: t.sparepart.movement101 },
+    { value: "201", label: t.sparepart.movement201 },
+    { value: "311", label: t.sparepart.movement311 },
+    { value: "102", label: t.sparepart.movement102 },
+    { value: "202", label: t.sparepart.movement202 },
+    { value: "312", label: t.sparepart.movement312 },
+  ];
+  const pageSizeOptions = PAGE_SIZE_OPTIONS.map((n) => ({
+    value: String(n),
+    label: String(n),
+  }));
 
   return (
     <div>
@@ -154,25 +168,19 @@ export default function MaterialDocumentsPage() {
             className={`${field} w-full`}
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            placeholder={t.sparepart.documentsSearchHint}
           />
         </div>
         <div>
           <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.sparepart.movementType}
           </label>
-          <select
-            className={field}
+          <SparepartDropdown
             value={movementType}
-            onChange={(e) => setMovementType(e.target.value)}
-          >
-            <option value="">{t.sparepart.allTypes}</option>
-            <option value="101">{t.sparepart.movement101}</option>
-            <option value="201">{t.sparepart.movement201}</option>
-            <option value="311">{t.sparepart.movement311}</option>
-            <option value="102">{t.sparepart.movement102}</option>
-            <option value="202">{t.sparepart.movement202}</option>
-            <option value="312">{t.sparepart.movement312}</option>
-          </select>
+            onChange={setMovementType}
+            options={movementTypeOptions}
+            placeholder={t.sparepart.allTypes}
+          />
         </div>
         <div className="min-w-[120px]">
           <label className="mb-1 block text-[10px] uppercase text-text-dim">
@@ -299,20 +307,16 @@ export default function MaterialDocumentsPage() {
               })}
             </p>
             <div className="flex items-center gap-2">
-              <select
-                className="rounded border border-border bg-bg px-2 py-1 text-xs text-text"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value) as PageSize);
+              <SparepartDropdown
+                compact
+                value={String(pageSize)}
+                onChange={(next) => {
+                  setPageSize(Number(next) as PageSize);
                   setPage(1);
                 }}
-              >
-                {PAGE_SIZE_OPTIONS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
+                options={pageSizeOptions}
+                className="min-w-[4.5rem]"
+              />
               <button
                 type="button"
                 disabled={currentPage <= 1}

@@ -215,6 +215,7 @@ export default function MaterialMasterPage() {
             className={`${field} w-full`}
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            placeholder={t.sparepart.materialsSearchHint}
           />
         </div>
         <button

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import type { SortDir, SortKey } from "@/lib/sparepartSort";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
@@ -241,6 +242,10 @@ export function StockTable({
 }: Props) {
   const { t } = useLang();
   const [openSortKey, setOpenSortKey] = useState<SortKey | null>(null);
+  const pageSizeOptions = PAGE_SIZE_OPTIONS.map((n) => ({
+    value: String(n),
+    label: String(n),
+  }));
 
   if (totalCount === 0) {
     return (
@@ -399,19 +404,15 @@ export function StockTable({
         <div className="flex items-center gap-2">
           <label className="text-xs text-text-muted">
             {t.common.rowsPerPage}
-            <select
-              className="ml-2 rounded border border-border bg-bg px-2 py-1 text-xs text-text"
-              value={pageSize}
-              onChange={(e) =>
-                onPageSizeChange(Number(e.target.value) as PageSize)
-              }
-            >
-              {PAGE_SIZE_OPTIONS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+            <span className="ml-2 inline-block align-middle">
+              <SparepartDropdown
+                compact
+                className="min-w-[4.5rem]"
+                value={String(pageSize)}
+                onChange={(next) => onPageSizeChange(Number(next) as PageSize)}
+                options={pageSizeOptions}
+              />
+            </span>
           </label>
           <button
             type="button"

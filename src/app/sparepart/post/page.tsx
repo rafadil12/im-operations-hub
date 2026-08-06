@@ -7,6 +7,11 @@ import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
+import {
+  SparepartDropdown,
+  sparepartDropdownMenuClass,
+  sparepartDropdownOptionClass,
+} from "@/components/sparepart/SparepartDropdown";
 import { TransactionTypeSelect } from "@/components/sparepart/TransactionTypeSelect";
 
 type LineDraft = {
@@ -164,12 +169,12 @@ export default function PostGoodsMovementPage() {
           autoComplete="off"
         />
         {open ? (
-          <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg">
+          <ul className={`${sparepartDropdownMenuClass} z-20 max-h-48 overflow-auto`}>
             {suggestions.map((loc) => (
               <li key={loc.id}>
                 <button
                   type="button"
-                  className="flex w-full px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+                  className={`${sparepartDropdownOptionClass(false)} text-xs`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setLines((prev) =>
@@ -191,84 +196,6 @@ export default function PostGoodsMovementPage() {
               </li>
             ))}
             {suggestions.length === 0 ? (
-              <li className="px-3 py-2 text-xs text-text-dim">
-                {t.common.noData}
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
-      </div>
-    );
-  };
-
-  /**
-   * 201/311: same visual as 101 list, but pick-only (select behavior).
-   * Does not free-type; options and posting logic unchanged.
-   */
-  const renderPickLocationField = ({
-    suggestKey,
-    selectedId,
-    options,
-    disabled,
-    onPick,
-  }: {
-    suggestKey: string;
-    selectedId: string;
-    options: SparepartStorageLocation[];
-    disabled?: boolean;
-    onPick: (locId: string) => void;
-  }) => {
-    const open = openLocationSuggestKey === suggestKey;
-    const selected = options.find((loc) => String(loc.id) === selectedId);
-    const display = selected ? locationLabel(selected) : "";
-
-    return (
-      <div className="relative">
-        <button
-          type="button"
-          disabled={disabled}
-          className={`${field} text-left disabled:opacity-60`}
-          onClick={() => {
-            if (disabled) return;
-            setOpenLocationSuggestKey((key) =>
-              key === suggestKey ? null : suggestKey,
-            );
-          }}
-          onBlur={() => {
-            window.setTimeout(() => {
-              setOpenLocationSuggestKey((key) =>
-                key === suggestKey ? null : key,
-              );
-            }, 120);
-          }}
-        >
-          <span className={display ? "text-text" : "text-text-dim"}>
-            {display || t.sparepart.locationName}
-          </span>
-        </button>
-        {open && !disabled ? (
-          <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg">
-            {options.map((loc) => (
-              <li key={loc.id}>
-                <button
-                  type="button"
-                  className={[
-                    "flex w-full px-3 py-2 text-left text-xs",
-                    String(loc.id) === selectedId
-                      ? "bg-accent/10 text-text"
-                      : "text-text-muted hover:bg-surface-hover hover:text-text",
-                  ].join(" ")}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    onPick(String(loc.id));
-                    setOpenLocationSuggestKey(null);
-                  }}
-                >
-                  {locationLabel(loc)}
-                </button>
-              </li>
-            ))}
-            {options.length === 0 ? (
               <li className="px-3 py-2 text-xs text-text-dim">
                 {t.common.noData}
               </li>
@@ -491,37 +418,47 @@ export default function PostGoodsMovementPage() {
                   </label>
                   {movementType === "101"
                     ? renderTypedLocationField(line)
-                    : renderPickLocationField({
-                        suggestKey: `${line.key}-from`,
-                        selectedId: line.storage_location_id,
-                        options: locationOptionsForItem(line.item),
-                        disabled: !line.item_id,
-                        onPick: (locId) =>
-                          setLines((prev) =>
-                            prev.map((l) =>
-                              l.key === line.key
-                                ? { ...l, storage_location_id: locId }
-                                : l,
-                            ),
-                          ),
-                      })}
+                    : (
+                        <SparepartDropdown
+                          value={line.storage_location_id}
+                          options={locationOptionsForItem(line.item).map((loc) => ({
+                            value: String(loc.id),
+                            label: locationLabel(loc),
+                          }))}
+                          onChange={(locId) =>
+                            setLines((prev) =>
+                              prev.map((l) =>
+                                l.key === line.key
+                                  ? { ...l, storage_location_id: locId }
+                                  : l,
+                              ),
+                            )
+                          }
+                          placeholder={t.sparepart.locationName}
+                          disabled={!line.item_id}
+                        />
+                      )}
                 </div>
                 {movementType === "311" ? (
                   <div className="md:col-span-2">
                     <label className={label}>{t.sparepart.toLocation} *</label>
-                    {renderPickLocationField({
-                      suggestKey: `${line.key}-to`,
-                      selectedId: line.to_storage_location_id,
-                      options: locations,
-                      onPick: (locId) =>
+                    <SparepartDropdown
+                      value={line.to_storage_location_id}
+                      options={locations.map((loc) => ({
+                        value: String(loc.id),
+                        label: locationLabel(loc),
+                      }))}
+                      onChange={(locId) =>
                         setLines((prev) =>
                           prev.map((l) =>
                             l.key === line.key
                               ? { ...l, to_storage_location_id: locId }
                               : l,
                           ),
-                        ),
-                    })}
+                        )
+                      }
+                      placeholder={t.sparepart.locationName}
+                    />
                   </div>
                 ) : null}
                 <div className="md:col-span-1">
