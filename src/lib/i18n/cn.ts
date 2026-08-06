@@ -117,6 +117,7 @@ const cn: Dict = {
     recipient: "领用人",
     recipientHint: "人员、部门或用途",
     addLine: "添加行",
+    maxLinesReached: "每个凭证最多 10 行",
     removeLine: "删除",
     post: "过账",
     posting: "过账中...",

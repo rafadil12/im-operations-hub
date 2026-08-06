@@ -83,6 +83,12 @@ export function parseGoodsMovementBody(
     }
   }
 
+  if (Array.isArray(body.lines) && body.lines.length > 10) {
+    throw new SparepartPostingError(
+      "A document can have at most 10 line items.",
+    );
+  }
+
   const lines: SparepartGoodsMovementLineInput[] = (body.lines ?? []).map(
     (line, index) => {
       const itemId = Number(line.item_id);

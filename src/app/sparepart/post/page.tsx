@@ -20,6 +20,8 @@ type LineDraft = {
   item?: SparepartItem | null;
 };
 
+const MAX_LINES_PER_DOC = 10;
+
 function newLine(defaultLocId = ""): LineDraft {
   return {
     key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -404,8 +406,20 @@ export default function PostGoodsMovementPage() {
             <h2 className="text-sm font-semibold text-text">{t.sparepart.lines}</h2>
             <button
               type="button"
-              onClick={() => setLines((prev) => [...prev, newLine()])}
-              className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
+              disabled={lines.length >= MAX_LINES_PER_DOC}
+              title={
+                lines.length >= MAX_LINES_PER_DOC
+                  ? t.sparepart.maxLinesReached
+                  : undefined
+              }
+              onClick={() =>
+                setLines((prev) =>
+                  prev.length >= MAX_LINES_PER_DOC
+                    ? prev
+                    : [...prev, newLine()],
+                )
+              }
+              className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
               + {t.sparepart.addLine}
             </button>

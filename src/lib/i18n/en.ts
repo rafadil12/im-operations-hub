@@ -117,6 +117,7 @@ const en = {
     recipient: "Issued To",
     recipientHint: "Person, department, or purpose",
     addLine: "Add line",
+    maxLinesReached: "Maximum 10 lines per document",
     removeLine: "Remove",
     post: "Post",
     posting: "Posting...",
