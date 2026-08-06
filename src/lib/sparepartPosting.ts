@@ -576,10 +576,12 @@ export async function reverseMaterialDocument(
 ): Promise<{ id: number; doc_number: string }> {
   const { query } = await import("@/lib/db");
   const docs = await query<RowDataPacket[]>(
-    `SELECT id, movement_type FROM sparepart_mat_docs WHERE id = ? LIMIT 1`,
+    `SELECT id, doc_number, movement_type FROM sparepart_mat_docs WHERE id = ? LIMIT 1`,
     [docId],
   );
-  const doc = docs[0] as { id: number; movement_type: MovementType } | undefined;
+  const doc = docs[0] as
+    | { id: number; doc_number: string; movement_type: MovementType }
+    | undefined;
   if (!doc) {
     throw new SparepartPostingError("Material document not found.", 404);
   }
@@ -597,7 +599,7 @@ export async function reverseMaterialDocument(
   return postGoodsMovement({
     movement_type: reversalType,
     posting_date: opts?.posting_date || todayYmd(),
-    header_text: `Reversal of document #${docId}`,
+    header_text: `Reversal of document ${doc.doc_number}`,
     recipient: "",
     lines: [],
     created_by: opts?.created_by,
