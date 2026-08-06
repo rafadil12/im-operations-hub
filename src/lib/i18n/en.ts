@@ -33,6 +33,7 @@ const en = {
     sortDesc: "Sort descending",
     yes: "Yes",
     no: "No",
+    close: "Close",
     confirmDelete: "This will be deactivated. Continue?",
   },
   nav: {
@@ -131,7 +132,10 @@ const en = {
     reversing: "Reversing...",
     reverseSuccess: "Reversal posted as {doc}.",
     docNumber: "Document",
+    documentNo: "Document No.",
+    documentItems: "Items",
     createdBy: "Created By",
+    createdAt: "Created At",
     lines: "Lines",
     totalQty: "Total Qty",
     documentDetail: "Transaction Detail",

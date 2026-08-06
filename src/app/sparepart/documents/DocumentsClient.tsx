@@ -62,16 +62,39 @@ function formatPostingDateTime(
 
   const normalizedPosting = postingValue.replace("T", " ");
   const postingMatch = normalizedPosting.match(
-    /^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}:\d{2}))?/,
+    /^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}:\d{2}:\d{2}))?/,
   );
   if (!postingMatch) return postingValue;
 
-  const [, datePart, timePart] = postingMatch;
-  return timePart ? `${datePart} ${timePart}` : datePart;
+  const [, year, month, day, timePart] = postingMatch;
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const monthLabel = months[Number(month) - 1] ?? month;
+  const dateLabel = `${day} ${monthLabel} ${year}`;
+  return timePart ? `${dateLabel} ${timePart}` : dateLabel;
 }
 
 function formatPostingDateOnly(postingDate: string | null | undefined): string {
-  return formatPostingDateTime(postingDate).slice(0, 10);
+  const postingValue = String(postingDate ?? "").trim();
+  if (!postingValue) return "-";
+  const match = postingValue.replace("T", " ").match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? postingValue.slice(0, 10);
+}
+
+function isReversalMovement(type: MovementType): boolean {
+  return type === "102" || type === "202" || type === "312";
 }
 
 export default function MaterialDocumentsPage() {
@@ -361,130 +384,205 @@ export default function MaterialDocumentsPage() {
 
       {detail ? (
         <Modal
-          title={`${t.sparepart.documentDetail} ${detail.doc_number}`}
+          title={t.sparepart.documentDetail}
+          subtitle={
+            <p className="text-xs text-text-muted">
+              {t.sparepart.documentNo}{" "}
+              <span className="font-semibold text-accent">
+                {detail.doc_number}
+              </span>
+            </p>
+          }
           onClose={() => setDetail(null)}
           size="lg"
           footer={
-            ["101", "201", "311"].includes(detail.movement_type) &&
-            !detail.reversal_of_doc_id &&
-            !detail.already_reversed ? (
-              <button
-                type="button"
-                disabled={reversing}
-                onClick={async () => {
-                  setReversing(true);
-                  try {
-                    const result = await apiSendAbs<{
-                      id: number;
-                      doc_number: string;
-                    }>(`/api/sparepart/documents/${detail.id}/reverse`, "POST", {
-                      client_request_id:
-                        typeof crypto !== "undefined" && "randomUUID" in crypto
-                          ? crypto.randomUUID()
-                          : `rev-${Date.now()}`,
-                    });
-                    toastSuccess(
-                      t.sparepart.reverseSuccess.replace(
-                        "{doc}",
-                        result.doc_number,
-                      ),
-                    );
-                    setDetail(null);
-                    await load({ q, movementType, location, start, end });
-                  } catch (e) {
-                    toastError(
-                      e instanceof Error ? e.message : t.toast.saveFailed,
-                    );
-                  } finally {
-                    setReversing(false);
-                  }
-                }}
-                className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
-              >
-                {reversing
-                  ? t.sparepart.reversing
-                  : t.sparepart.reverseDocument}
-              </button>
-            ) : null
+            <div className="flex w-full flex-wrap items-end justify-between gap-3">
+              <div className="flex flex-wrap items-stretch gap-4 text-xs">
+                <div>
+                  <p className="text-text-dim">{t.sparepart.createdBy}</p>
+                  <p className="mt-0.5 font-medium text-text">
+                    {detail.created_by || "-"}
+                  </p>
+                </div>
+                <div className="hidden w-px self-stretch bg-border-subtle sm:block" />
+                <div>
+                  <p className="text-text-dim">{t.sparepart.createdAt}</p>
+                  <p className="mt-0.5 font-medium text-text">
+                    {formatPostingDateTime(
+                      detail.created_at || detail.posting_date,
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {["101", "201", "311"].includes(detail.movement_type) &&
+                !detail.reversal_of_doc_id &&
+                !detail.already_reversed ? (
+                  <button
+                    type="button"
+                    disabled={reversing}
+                    onClick={async () => {
+                      setReversing(true);
+                      try {
+                        const result = await apiSendAbs<{
+                          id: number;
+                          doc_number: string;
+                        }>(
+                          `/api/sparepart/documents/${detail.id}/reverse`,
+                          "POST",
+                          {
+                            client_request_id:
+                              typeof crypto !== "undefined" &&
+                              "randomUUID" in crypto
+                                ? crypto.randomUUID()
+                                : `rev-${Date.now()}`,
+                          },
+                        );
+                        toastSuccess(
+                          t.sparepart.reverseSuccess.replace(
+                            "{doc}",
+                            result.doc_number,
+                          ),
+                        );
+                        setDetail(null);
+                        await load({ q, movementType, location, start, end });
+                      } catch (e) {
+                        toastError(
+                          e instanceof Error
+                            ? e.message
+                            : t.toast.saveFailed,
+                        );
+                      } finally {
+                        setReversing(false);
+                      }
+                    }}
+                    className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+                  >
+                    {reversing
+                      ? t.sparepart.reversing
+                      : t.sparepart.reverseDocument}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setDetail(null)}
+                  className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text hover:bg-surface-hover"
+                >
+                  {t.common.close}
+                </button>
+              </div>
+            </div>
           }
         >
-          <div className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">
-              <p>
-                <span className="text-text-dim">{t.sparepart.movementType}: </span>
-                {movementLabel(detail.movement_type, t)}
-              </p>
-              <p>
-                <span className="text-text-dim">{t.sparepart.date}: </span>
-                {formatPostingDateTime(detail.posting_date)}
-              </p>
-              <p>
-                <span className="text-text-dim">{t.sparepart.recipient}: </span>
-                {detail.recipient || "-"}
-              </p>
-              <p>
-                <span className="text-text-dim">{t.sparepart.headerText}: </span>
-                {detail.header_text || "-"}
-              </p>
-              <p>
-                <span className="text-text-dim">{t.sparepart.createdBy}: </span>
-                {detail.created_by || "-"}
-              </p>
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-x-10 sm:grid-cols-2">
+              <div className="divide-y divide-border-subtle">
+                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
+                  <span className="shrink-0 text-text-dim">
+                    {t.sparepart.movementType}
+                  </span>
+                  <span
+                    className={`min-w-0 text-right font-semibold ${
+                      isReversalMovement(detail.movement_type)
+                        ? "text-danger"
+                        : "text-text"
+                    }`}
+                  >
+                    {movementLabel(detail.movement_type, t)}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
+                  <span className="shrink-0 text-text-dim">
+                    {t.sparepart.recipient}
+                  </span>
+                  <span className="min-w-0 text-right font-medium text-text">
+                    {detail.recipient || "-"}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
+                  <span className="shrink-0 text-text-dim">
+                    {t.sparepart.headerText}
+                  </span>
+                  <span className="min-w-0 text-right font-medium text-text">
+                    {detail.header_text || "-"}
+                  </span>
+                </div>
+              </div>
+              <div className="divide-y divide-border-subtle">
+                <div className="flex items-baseline justify-between gap-4 py-2.5 text-xs">
+                  <span className="shrink-0 text-text-dim">
+                    {t.sparepart.date}
+                  </span>
+                  <span className="min-w-0 text-right font-medium text-text">
+                    {formatPostingDateTime(detail.posting_date)}
+                  </span>
+                </div>
+              </div>
             </div>
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-border-subtle">
-                  <th className={th}>#</th>
-                  <th className={th}>{t.sparepart.code}</th>
-                  <th className={th}>{t.sparepart.name}</th>
-                  <th className={th}>{t.sparepart.qty}</th>
-                  {detail.movement_type === "311" ||
-                  detail.movement_type === "312" ? (
-                    <>
-                      <th className={th}>{t.sparepart.fromLocation}</th>
-                      <th className={th}>{t.sparepart.toLocation}</th>
-                    </>
-                  ) : (
-                    <th className={th}>{t.sparepart.location}</th>
-                  )}
-                  <th className={th}>{t.sparepart.note}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(detail.lines ?? []).map((line) => {
-                  const fromLabel =
-                    line.from_storage_location ||
-                    line.storage_location ||
-                    "-";
-                  const toLabel = line.to_storage_location || "-";
-                  const isTransfer =
-                    detail.movement_type === "311" ||
-                    detail.movement_type === "312";
-                  return (
-                    <tr
-                      key={line.id}
-                      className="border-b border-border-subtle/60"
-                    >
-                      <td className={td}>{line.line_no}</td>
-                      <td className={`${td} text-text`}>{line.item_code}</td>
-                      <td className={td}>{line.item_name}</td>
-                      <td className={`${td} tabular-nums text-text`}>
-                        {line.qty}
-                      </td>
-                      {isTransfer ? (
+
+            <div>
+              <h4 className="mb-2 text-sm font-semibold text-text">
+                {t.sparepart.documentItems}
+              </h4>
+              <div className="overflow-hidden rounded-md border border-border-subtle">
+                <table className="w-full border-collapse text-xs">
+                  <thead className="bg-bg/50">
+                    <tr>
+                      <th className={th}>#</th>
+                      <th className={th}>{t.sparepart.code}</th>
+                      <th className={th}>{t.sparepart.name}</th>
+                      <th className={th}>{t.sparepart.qty}</th>
+                      {detail.movement_type === "311" ||
+                      detail.movement_type === "312" ? (
                         <>
-                          <td className={td}>{fromLabel}</td>
-                          <td className={td}>{toLabel}</td>
+                          <th className={th}>{t.sparepart.fromLocation}</th>
+                          <th className={th}>{t.sparepart.toLocation}</th>
                         </>
                       ) : (
-                        <td className={td}>{fromLabel}</td>
+                        <th className={th}>{t.sparepart.location}</th>
                       )}
-                      <td className={td}>{line.note || "-"}</td>
+                      <th className={th}>{t.sparepart.note}</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {(detail.lines ?? []).map((line) => {
+                      const fromLabel =
+                        line.from_storage_location ||
+                        line.storage_location ||
+                        "-";
+                      const toLabel = line.to_storage_location || "-";
+                      const isTransfer =
+                        detail.movement_type === "311" ||
+                        detail.movement_type === "312";
+                      return (
+                        <tr
+                          key={line.id}
+                          className="border-t border-border-subtle/60"
+                        >
+                          <td className={td}>{line.line_no}</td>
+                          <td className={`${td} font-medium text-text`}>
+                            {line.item_code}
+                          </td>
+                          <td className={td}>{line.item_name}</td>
+                          <td className={`${td} tabular-nums text-text`}>
+                            {line.qty}
+                          </td>
+                          {isTransfer ? (
+                            <>
+                              <td className={td}>{fromLabel}</td>
+                              <td className={td}>{toLabel}</td>
+                            </>
+                          ) : (
+                            <td className={td}>{fromLabel}</td>
+                          )}
+                          <td className={td}>{line.note || "-"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </Modal>
       ) : null}
