@@ -2,17 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
 export function ModuleTabs() {
   const pathname = usePathname();
   const { t } = useLang();
+  const { canManageConfiguration } = useRoleAccess();
 
-  const tabs = [
-    { label: t.nav.management, href: "/daily-operation/management" },
-    { label: t.nav.analysis, href: "/daily-operation/analysis" },
-    { label: t.nav.master, href: "/daily-operation/master/users" },
-  ];
+  const tabs = useMemo(() => {
+    const all = [
+      { label: t.nav.management, href: "/daily-operation/management" },
+      { label: t.nav.analysis, href: "/daily-operation/analysis" },
+      { label: t.nav.master, href: "/daily-operation/master/users" },
+    ];
+    if (canManageConfiguration) return all;
+    return all.filter((tab) => tab.href !== "/daily-operation/master/users");
+  }, [t, canManageConfiguration]);
 
   return (
     <div className="mb-5 flex flex-wrap gap-1 border-b border-border-subtle">

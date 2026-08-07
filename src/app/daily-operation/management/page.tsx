@@ -15,6 +15,7 @@ import { MesDataForm } from "@/components/daily-operation/MesDataForm";
 import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 
 const week = getOperationalWeek();
 const defaultFilters: Filters = {
@@ -33,6 +34,11 @@ type ListResponse = { rows: MesDataRow[] };
 export default function ManagementPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
+  const {
+    canImportExport,
+    canDownloadTemplate,
+    canAddDailyRecord,
+  } = useRoleAccess();
   const [masters, setMasters] = useState<Masters | null>(null);
   const [rows, setRows] = useState<MesDataRow[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -239,43 +245,51 @@ export default function ManagementPage() {
           <p className="text-sm text-text-muted">{t.dailyOp.manageDesc}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleDownloadTemplate}
-            disabled={templateDownloading}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
-          >
-            {t.common.downloadTemplate}
-          </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={exporting || loading}
-            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-          >
-            <ExportIcon />
-            {exporting ? t.common.exporting : t.common.export}
-          </button>
-          <button
-            type="button"
-            onClick={() => setImportOpen(true)}
-            disabled={!masters}
-            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-          >
-            <ImportIcon />
-            {t.common.import}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditRow(null);
-              setFormOpen(true);
-            }}
-            disabled={!masters}
-            className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-          >
-            + {t.common.add}
-          </button>
+          {canDownloadTemplate ? (
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              disabled={templateDownloading}
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+            >
+              {t.common.downloadTemplate}
+            </button>
+          ) : null}
+          {canImportExport ? (
+            <>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting || loading}
+                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+              >
+                <ExportIcon />
+                {exporting ? t.common.exporting : t.common.export}
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                disabled={!masters}
+                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+              >
+                <ImportIcon />
+                {t.common.import}
+              </button>
+            </>
+          ) : null}
+          {canAddDailyRecord ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEditRow(null);
+                setFormOpen(true);
+              }}
+              disabled={!masters}
+              className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+            >
+              + {t.common.add}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -319,7 +333,7 @@ export default function ManagementPage() {
         />
       ) : null}
 
-      {importOpen ? (
+      {importOpen && canImportExport ? (
         <ImportMesDataModal
           onClose={() => setImportOpen(false)}
           onImported={handleImported}

@@ -4,6 +4,7 @@ import { readSession } from "./session";
 import type { AuthAccountPublic, SessionPayload } from "./types";
 
 export type { AuthAccountPublic, SessionPayload } from "./types";
+export { getRoleAccess, type RoleAccess } from "./access";
 export { hashPassword, verifyPassword } from "./password";
 export {
   SESSION_COOKIE,

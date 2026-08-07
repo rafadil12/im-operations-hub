@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { ImOneLogo } from "@/components/brand/ImOneLogo";
 import { NavIcon, type NavIconId } from "@/components/layout/NavIcons";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang, type Dict } from "@/lib/i18n";
 
 type NavLabelKey = keyof Dict["nav"];
@@ -156,7 +156,7 @@ function isParentActive(pathname: string, item: NavItem) {
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLang();
-  const { account } = useAuth();
+  const { canAccessSettings, canManageConfiguration } = useRoleAccess();
   const [collapsed, setCollapsed] = useState(cachedCollapsed);
   const [openMenus, setOpenMenus] = useState(cachedOpenMenus);
   const [flyoutKey, setFlyoutKey] = useState<string | null>(null);
@@ -165,9 +165,24 @@ export function Sidebar() {
   const flyoutRef = useRef<HTMLDivElement | null>(null);
 
   const visibleNavItems = useMemo(() => {
-    if (!settingsAdminOnly || account?.roleName === "admin") return navItems;
-    return navItems.filter((item) => item.id !== "settings");
-  }, [account?.roleName]);
+    return navItems
+      .filter((item) => {
+        if (item.id === "settings") {
+          return !settingsAdminOnly || canAccessSettings;
+        }
+        return true;
+      })
+      .map((item) => {
+        if (item.id !== "daily-operation" || !item.children) return item;
+        if (canManageConfiguration) return item;
+        return {
+          ...item,
+          children: item.children.filter(
+            (child) => child.id !== "configuration",
+          ),
+        };
+      });
+  }, [canAccessSettings, canManageConfiguration]);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {

@@ -142,5 +142,13 @@ const seedSql = readFileSync(
 await conn.query(seedSql);
 console.log("Applied RBAC seed (roles, permissions, mappings, admin bootstrap).");
 
+// --- 004: remove redundant guest role (Guest Mode = not logged in) ---
+const removeGuestSql = readFileSync(
+  join(__dirname, "migrations", "004_remove_guest_role.sql"),
+  "utf8",
+);
+await conn.query(removeGuestSql);
+console.log("Removed guest role (if present).");
+
 await conn.end();
 console.log("Migrations complete.");

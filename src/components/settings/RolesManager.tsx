@@ -149,7 +149,7 @@ export function RolesManager() {
 
   const permissionLabel = (id: number) => {
     const p = permissions.find((x) => x.id === id);
-    return p?.code ?? String(id);
+    return p?.description?.trim() || p?.code || String(id);
   };
 
   return (
@@ -315,10 +315,12 @@ export function RolesManager() {
                       onChange={() => togglePermission(p.id)}
                     />
                     <span>
-                      <span className="font-medium text-text">{p.code}</span>
+                      <span className="font-medium text-text">
+                        {p.description?.trim() || p.code}
+                      </span>
                       {p.description ? (
                         <span className="mt-0.5 block text-text-dim">
-                          {p.description}
+                          {p.code}
                         </span>
                       ) : null}
                     </span>

@@ -16,6 +16,7 @@ import {
 } from "@/components/itsm/ManagementTable";
 import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 
 const week = getOperationalWeek();
 const defaultFilters: Filters = {
@@ -34,6 +35,7 @@ type ListResponse = { rows: ItsmRequest[] };
 export default function ManagementPage() {
   const { t } = useLang();
   const { success: toastSuccess } = useToast();
+  const { canImportExport } = useRoleAccess();
   const [rows, setRows] = useState<ItsmRequest[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [loading, setLoading] = useState(true);
@@ -114,36 +116,38 @@ export default function ManagementPage() {
           </h1>
           <p className="text-sm text-text-muted">{t.itsm.manageDesc}</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setImportOpen(true)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
-            <ImportIcon />
-            {t.common.import}
-          </button>
+        {canImportExport ? (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              <ImportIcon />
+              {t.common.import}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams(
-                {
-                  start: filters.start,
-                  end: filters.end,
-                  requestId: filters.requestId,
-                  subject: filters.subject,
-                  requester: filters.requester,
-                  technician: filters.technician,
-                },
-              ).toString()}`;
-            }}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
-            <ExportIcon />
-            {t.common.export}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams(
+                  {
+                    start: filters.start,
+                    end: filters.end,
+                    requestId: filters.requestId,
+                    subject: filters.subject,
+                    requester: filters.requester,
+                    technician: filters.technician,
+                  },
+                ).toString()}`;
+              }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              <ExportIcon />
+              {t.common.export}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <FilterBar initial={defaultFilters} onApply={applyFilters} />
@@ -169,7 +173,7 @@ export default function ManagementPage() {
         />
       )}
 
-      {importOpen ? (
+      {importOpen && canImportExport ? (
         <ImportItsmRequestModal
           onClose={() => setImportOpen(false)}
           onImported={handleImported}
