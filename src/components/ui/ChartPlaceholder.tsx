@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { BarItem } from "@/data/overview-mock";
 
 type BarChartPlaceholderProps = {
@@ -124,6 +127,20 @@ type DonutChartPlaceholderProps = {
   align?: "start" | "center";
 };
 
+const DONUT_ANIM_MS = 2000;
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function resolveSegments(
+  legend: { color: string }[],
+  segments?: number[],
+): number[] {
+  if (segments && segments.length === legend.length) return segments;
+  return legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
+}
+
 function buildConicGradient(
   legend: { color: string }[],
   segments: number[],
@@ -149,10 +166,41 @@ export function DonutChartPlaceholder({
   centerLabel = "Done",
   align = "start",
 }: DonutChartPlaceholderProps) {
-  const resolvedSegments =
-    segments && segments.length === legend.length
-      ? segments
-      : legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
+  const targetSegments = resolveSegments(legend, segments);
+  const segmentsKey = targetSegments.join("|");
+  const [animatedSegments, setAnimatedSegments] = useState(() =>
+    targetSegments.map(() => 0),
+  );
+
+  useEffect(() => {
+    const targets = segmentsKey.split("|").map(Number);
+    let frame = 0;
+
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReduced) {
+      frame = requestAnimationFrame(() => {
+        setAnimatedSegments(targets);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / DONUT_ANIM_MS);
+      const eased = easeOutCubic(t);
+      setAnimatedSegments(targets.map((v) => v * eased));
+      if (t < 1) {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [segmentsKey]);
 
   const centered = align === "center";
 
@@ -166,7 +214,7 @@ export function DonutChartPlaceholder({
       <div
         className="relative size-28 shrink-0 rounded-full"
         style={{
-          background: buildConicGradient(legend, resolvedSegments),
+          background: buildConicGradient(legend, animatedSegments),
         }}
         role="img"
         aria-label="Task status donut chart"
@@ -191,8 +239,8 @@ export function DonutChartPlaceholder({
             />
             <span>
               {item.label}
-              {resolvedSegments[index] != null
-                ? ` — ${resolvedSegments[index]}%`
+              {targetSegments[index] != null
+                ? ` — ${targetSegments[index]}%`
                 : ""}
             </span>
           </li>

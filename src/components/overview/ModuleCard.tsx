@@ -180,7 +180,7 @@ function ProgressRingItem({ ring }: { ring: ProgressRing }) {
 }
 
 function DefaultBody({ data, expanded }: { data: ModuleCardData; expanded: boolean }) {
-  const centerDonut = data.chart.type === "donut";
+  const isDonut = data.chart.type === "donut";
 
   return (
     <>
@@ -190,14 +190,10 @@ function DefaultBody({ data, expanded }: { data: ModuleCardData; expanded: boole
       <section
         className={[
           "rounded-lg border border-border-subtle bg-bg/30 p-3",
-          centerDonut ? "flex min-h-[188px] flex-col justify-center" : "",
+          isDonut ? "flex min-h-[188px] flex-col justify-center" : "",
         ].join(" ")}
       >
-        <ChartSection
-          data={data}
-          expanded={expanded}
-          align={centerDonut ? "center" : "start"}
-        />
+        <ChartSection data={data} expanded={expanded} align="start" />
       </section>
     </>
   );
@@ -220,7 +216,7 @@ function SafetyBody({ data, expanded }: { data: ModuleCardData; expanded: boolea
         <PicsList data={data} />
       </div>
       <section className="flex min-h-[188px] flex-col justify-center rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <ChartSection data={data} expanded={expanded} align="center" />
+        <ChartSection data={data} expanded={expanded} align="start" />
       </section>
     </>
   );
