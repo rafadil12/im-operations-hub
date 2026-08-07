@@ -1,7 +1,11 @@
 import type { RowDataPacket } from "mysql2";
 import { query, execute } from "@/lib/db";
 import type { AuthAccountPublic } from "./types";
-import { verifyPassword } from "./password";
+import { hashPassword, verifyPassword } from "./password";
+
+export type ChangePasswordResult =
+  | { ok: true }
+  | { ok: false; code: "not_found" | "wrong_current" };
 
 type AccountRow = RowDataPacket & {
   system_user_id: number;
@@ -131,4 +135,38 @@ export async function authenticateLogin(
 
   const permissions = await loadPermissionsForRole(row.role_id);
   return toPublic(row, permissions);
+}
+
+export async function changePassword(
+  systemUserId: number,
+  currentPassword: string,
+  newPassword: string,
+): Promise<ChangePasswordResult> {
+  const row = await findAccountBySystemUserId(systemUserId);
+  if (!row || !row.is_active) return { ok: false, code: "not_found" };
+
+  const ok = await verifyPassword(currentPassword, row.password_hash);
+  if (!ok) return { ok: false, code: "wrong_current" };
+
+  const passwordHash = await hashPassword(newPassword);
+  await execute("UPDATE system_users SET password_hash = ? WHERE id = ?", [
+    passwordHash,
+    systemUserId,
+  ]);
+  return { ok: true };
+}
+
+export async function resetPassword(
+  systemUserId: number,
+  newPassword: string,
+): Promise<boolean> {
+  const row = await findAccountBySystemUserId(systemUserId);
+  if (!row) return false;
+
+  const passwordHash = await hashPassword(newPassword);
+  await execute("UPDATE system_users SET password_hash = ? WHERE id = ?", [
+    passwordHash,
+    systemUserId,
+  ]);
+  return true;
 }

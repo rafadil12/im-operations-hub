@@ -134,7 +134,7 @@ function getClockServerSnapshot() {
 export function LoginPage() {
   const router = useRouter();
   const { login, account, loading: authLoading } = useAuth();
-  const { lang, setLang } = useLang();
+  const { lang, setLang, t } = useLang();
   const { theme, toggleTheme } = useTheme();
   const clock = useSyncExternalStore(
     subscribeClock,
@@ -342,13 +342,12 @@ export function LoginPage() {
                   />
                   Remember me
                 </label>
-                <a
-                  href="#"
+                <Link
+                  href="/"
                   className="font-medium text-accent hover:underline"
-                  onClick={(e) => e.preventDefault()}
                 >
-                  Forgot password?
-                </a>
+                  {t.auth.goToDashboard}
+                </Link>
               </div>
 
               {error ? (

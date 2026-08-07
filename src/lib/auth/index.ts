@@ -21,7 +21,11 @@ export {
   loadPermissionsForRole,
   findAccountByEmployeeNo,
   findAccountBySystemUserId,
+  changePassword,
+  resetPassword,
 } from "./accounts";
+export type { ChangePasswordResult } from "./accounts";
+export { DEFAULT_PASSWORD, MIN_PASSWORD_LENGTH } from "./constants";
 
 export async function requireSession(): Promise<
   { session: SessionPayload; account: AuthAccountPublic } | NextResponse

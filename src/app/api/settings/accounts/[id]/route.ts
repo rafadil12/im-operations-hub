@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { requireAdmin } from "@/lib/auth";
+import {
+  DEFAULT_PASSWORD,
+  MIN_PASSWORD_LENGTH,
+  requireAdmin,
+  resetPassword,
+} from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -23,9 +28,33 @@ export async function PUT(request: NextRequest, context: Ctx) {
         : Number(body.role_id);
     const isActive =
       body.is_active === undefined ? undefined : Boolean(body.is_active);
+    const newPassword =
+      typeof body.password === "string" ? body.password : undefined;
+    const confirmPassword =
+      typeof body.confirm_password === "string"
+        ? body.confirm_password
+        : undefined;
 
     if (roleId !== null && Number.isNaN(roleId)) {
       return NextResponse.json({ error: "Invalid role id." }, { status: 400 });
+    }
+
+    if (newPassword !== undefined && newPassword.length > 0) {
+      if (newPassword !== confirmPassword) {
+        return NextResponse.json(
+          { error: "New password and confirmation do not match." },
+          { status: 400 },
+        );
+      }
+      const isDefaultReset = newPassword === DEFAULT_PASSWORD;
+      if (!isDefaultReset && newPassword.length < MIN_PASSWORD_LENGTH) {
+        return NextResponse.json(
+          {
+            error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     if (roleId !== null) {
@@ -93,26 +122,43 @@ export async function PUT(request: NextRequest, context: Ctx) {
       }
     }
 
-    if (body.role_id !== undefined && isActive !== undefined) {
-      await execute(
-        "UPDATE system_users SET role_id = ?, is_active = ? WHERE id = ?",
-        [roleId, isActive ? 1 : 0, id],
-      );
-    } else if (body.role_id !== undefined) {
-      await execute("UPDATE system_users SET role_id = ? WHERE id = ?", [
-        roleId,
-        id,
-      ]);
-    } else if (isActive !== undefined) {
-      await execute("UPDATE system_users SET is_active = ? WHERE id = ?", [
-        isActive ? 1 : 0,
-        id,
-      ]);
-    } else {
+    const willUpdateRole = body.role_id !== undefined;
+    const willUpdateActive = isActive !== undefined;
+    const willResetPassword =
+      newPassword !== undefined && newPassword.length > 0;
+
+    if (!willUpdateRole && !willUpdateActive && !willResetPassword) {
       return NextResponse.json(
         { error: "Nothing to update." },
         { status: 400 },
       );
+    }
+
+    if (willUpdateRole && willUpdateActive) {
+      await execute(
+        "UPDATE system_users SET role_id = ?, is_active = ? WHERE id = ?",
+        [roleId, isActive ? 1 : 0, id],
+      );
+    } else if (willUpdateRole) {
+      await execute("UPDATE system_users SET role_id = ? WHERE id = ?", [
+        roleId,
+        id,
+      ]);
+    } else if (willUpdateActive) {
+      await execute("UPDATE system_users SET is_active = ? WHERE id = ?", [
+        isActive ? 1 : 0,
+        id,
+      ]);
+    }
+
+    if (willResetPassword) {
+      const ok = await resetPassword(id, newPassword);
+      if (!ok) {
+        return NextResponse.json(
+          { error: "Account not found." },
+          { status: 404 },
+        );
+      }
     }
 
     return NextResponse.json({ ok: true });
