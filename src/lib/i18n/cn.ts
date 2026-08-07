@@ -152,9 +152,11 @@ const cn: Dict = {
     longestPendingRequests: "等待时间最长的工单",
     noOverdueTickets: "暂无超期工单。",
     days: "天",
-    
-    
 
+    importTitle: "导入 ITSM 工单",
+    importHint:
+      "请上传 ManageEngine Requests 导出的 Excel（.xlsx）。表头会自动识别（通常在第 7 行）。已存在的 Request ID 将被覆盖，新 ID 将新增。",
+    importSuccess: "导入完成：新增 {imported}，更新 {updated}（共 {total}）。",
   },
   overview: {
     title: "总览",

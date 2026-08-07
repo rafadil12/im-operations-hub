@@ -149,8 +149,12 @@ const en = {
     longestPendingRequests: "Longest Pending Requests",
     noOverdueTickets: "No Overdue Tickets.",
     days: "Days",
-    
 
+    importTitle: "Import ITSM Requests",
+    importHint:
+      "Upload a ManageEngine Requests export (.xlsx). Header row is detected automatically (usually row 7). Existing Request IDs are overwritten; new IDs are inserted.",
+    importSuccess:
+      "Import complete: {imported} new, {updated} updated ({total} total).",
   },
   overview: {
     title: "Overview",

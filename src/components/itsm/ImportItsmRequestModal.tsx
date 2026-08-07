@@ -10,15 +10,18 @@ type ImportRowError = {
   message: string;
 };
 
-type Props = {
-  onClose: () => void;
-  onImported: (count: number) => void;
+export type ItsmImportResult = {
+  imported: number;
+  updated: number;
+  total: number;
 };
 
-export function ImportItsmRequestModal({
-  onClose,
-  onImported,
-}: Props) {
+type Props = {
+  onClose: () => void;
+  onImported: (result: ItsmImportResult) => void;
+};
+
+export function ImportItsmRequestModal({ onClose, onImported }: Props) {
   const { t } = useLang();
 
   const [file, setFile] = useState<File | null>(null);
@@ -40,8 +43,7 @@ export function ImportItsmRequestModal({
       const form = new FormData();
       form.append("file", file);
 
-      // GANTI endpoint ini sesuai API ITSM milikmu
-      const res = await fetch("/api/itsm/request/import", {
+      const res = await fetch("/api/itsm/itsm-request/import", {
         method: "POST",
         body: form,
       });
@@ -50,16 +52,23 @@ export function ImportItsmRequestModal({
         error?: string;
         errors?: ImportRowError[];
         imported?: number;
+        updated?: number;
+        total?: number;
       };
 
       if (!res.ok) {
         setError(data.error ?? t.toast.importFailed);
-        setRowErrors(data.errors ?? []);
+        setRowErrors(Array.isArray(data.errors) ? data.errors : []);
         return;
       }
 
-      onImported(data.imported ?? 0);
-      onClose();
+      const imported = data.imported ?? 0;
+      const updated = data.updated ?? 0;
+      onImported({
+        imported,
+        updated,
+        total: data.total ?? imported + updated,
+      });
     } catch {
       setError(t.toast.networkError);
     } finally {
@@ -69,7 +78,7 @@ export function ImportItsmRequestModal({
 
   return (
     <Modal
-      title="Import ITSM Requests"
+      title={t.itsm.importTitle}
       onClose={onClose}
       closeDisabled={busy}
       footer={
@@ -89,18 +98,16 @@ export function ImportItsmRequestModal({
             disabled={busy || !file}
             className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
           >
-            {busy ? t.common.importing : "Import"}
+            {busy ? t.common.importing : t.importModal.upload}
           </button>
         </>
       }
     >
-      <p className="mb-3 text-sm text-text-muted">
-        Select an Excel (.xlsx) file containing ITSM requests.
-      </p>
+      <p className="mb-3 text-sm text-text-muted">{t.itsm.importHint}</p>
 
       <input
         type="file"
-        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         disabled={busy}
         className="block w-full text-sm text-text file:mr-3 file:rounded-md file:border-0 file:bg-accent/15 file:px-3 file:py-2 file:text-sm file:font-medium file:text-accent"
         onChange={(e) => {
@@ -110,31 +117,31 @@ export function ImportItsmRequestModal({
         }}
       />
 
-      {file && (
-        <p className="mt-2 text-xs text-text-muted">
-          {file.name}
-        </p>
-      )}
+      {file ? (
+        <p className="mt-2 text-xs text-text-muted">{file.name}</p>
+      ) : null}
 
-      {error && (
+      {error ? (
         <p className="mt-3 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
           {error}
         </p>
-      )}
+      ) : null}
 
-      {rowErrors.length > 0 && (
-        <ul className="mt-3 max-h-48 overflow-y-auto rounded-md border border-border-subtle bg-bg/40 p-3 text-xs text-text space-y-1">
+      {rowErrors.length > 0 ? (
+        <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto rounded-md border border-border-subtle bg-bg/40 p-3 text-xs text-text">
           {rowErrors.map((err, index) => (
-            <li key={`${err.row}-${index}`}>
+            <li key={`${err.row}-${err.field ?? ""}-${index}`}>
               <span className="font-medium text-danger">
-                Row {err.row}
+                {err.row > 0
+                  ? t.importModal.rowError.replace("{row}", String(err.row))
+                  : t.common.error}
                 {err.field ? ` · ${err.field}` : ""}:
               </span>{" "}
               {err.message}
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </Modal>
   );
 }
