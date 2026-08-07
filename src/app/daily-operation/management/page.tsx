@@ -12,6 +12,7 @@ import {
 } from "@/components/daily-operation/ManagementTable";
 import { ImportMesDataModal } from "@/components/daily-operation/ImportMesDataModal";
 import { MesDataForm } from "@/components/daily-operation/MesDataForm";
+import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/ToastProvider";
 
@@ -250,16 +251,18 @@ export default function ManagementPage() {
             type="button"
             onClick={handleExport}
             disabled={exporting || loading}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
           >
+            <ExportIcon />
             {exporting ? t.common.exporting : t.common.export}
           </button>
           <button
             type="button"
             onClick={() => setImportOpen(true)}
             disabled={!masters}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
           >
+            <ImportIcon />
             {t.common.import}
           </button>
           <button

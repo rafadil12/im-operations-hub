@@ -65,8 +65,8 @@ export type ModuleCardData = {
   accentColor: string;
   href: string;
   layout: ModuleLayout;
-  /** Grid column span on xl screens (Training = 2). */
-  colSpan?: 1 | 2;
+  /** Grid column span on xl screens (Training = 3 / full width). */
+  colSpan?: 1 | 2 | 3;
   stats: StatItem[];
   bars?: {
     title: string;
@@ -396,7 +396,7 @@ export const overviewModules: ModuleCardData[] = [
     accentColor: "#6366f1",
     href: "/",
     layout: "training",
-    colSpan: 2,
+    colSpan: 3,
     stats: [
       { label: "Total Training", value: "18", tone: "accent" },
       { label: "Participants", value: "246", tone: "accent" },

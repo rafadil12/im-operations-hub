@@ -43,7 +43,11 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
         aria-labelledby="expanded-card-title"
         className={[
           "relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]",
-          data.colSpan === 2 ? "max-w-6xl" : "max-w-4xl",
+          data.colSpan === 3
+            ? "max-w-7xl"
+            : data.colSpan === 2
+              ? "max-w-6xl"
+              : "max-w-4xl",
         ].join(" ")}
         onClick={(event) => event.stopPropagation()}
       >

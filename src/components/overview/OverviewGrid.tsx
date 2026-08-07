@@ -349,7 +349,13 @@ export function OverviewGrid() {
         {translatedModules.map((module) => (
           <div
             key={module.id}
-            className={module.colSpan === 2 ? "xl:col-span-2" : undefined}
+            className={
+              module.id === "training"
+                ? "col-span-full"
+                : module.colSpan === 2
+                  ? "xl:col-span-2"
+                  : undefined
+            }
           >
             <ModuleCard
               data={module}

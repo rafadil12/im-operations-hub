@@ -14,6 +14,7 @@ import {
   ManagementTable,
   type PageSize,
 } from "@/components/itsm/ManagementTable";
+import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 
 const week = getOperationalWeek();
@@ -117,8 +118,9 @@ export default function ManagementPage() {
           <button
             type="button"
             onClick={() => setImportOpen(true)}
-            className="cursor-pointer rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
           >
+            <ImportIcon />
             {t.common.import}
           </button>
 
@@ -136,8 +138,9 @@ export default function ManagementPage() {
                 },
               ).toString()}`;
             }}
-            className="cursor-pointer rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
           >
+            <ExportIcon />
             {t.common.export}
           </button>
         </div>

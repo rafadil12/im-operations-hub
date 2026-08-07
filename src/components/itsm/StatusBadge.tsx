@@ -1,53 +1,75 @@
-function toneFromKey(toneKey: string |null | undefined): string {
-  const key = (toneKey ?? "").toLowerCase();
+/**
+ * Soft pastel pill badges (solid light bg + dark text), tuned for dark UI.
+ * Matches Chinese ManageEngine labels and English status names.
+ */
+function toneFromKey(toneKey: string | null | undefined): string {
+  const key = (toneKey ?? "").toLowerCase().trim();
 
-  // Open Ticket
-  if (key.includes("open")) {
-    return "border-red-500/40 bg-red-500/10 text-red-600";
+  // Resolved / 已解决
+  if (
+    key.includes("resolved") ||
+    key.includes("已解决") ||
+    key.includes("solved")
+  ) {
+    return "bg-emerald-100 text-emerald-800";
   }
 
-  // Assigned
-  if (key.includes("assigned")) {
-    return "border-blue-500/40 bg-blue-500/10 text-blue-600";
+  // Closed / 已关闭
+  if (key.includes("closed") || key.includes("已关闭")) {
+    return "bg-teal-100 text-teal-800";
   }
 
-  // In Progress
-  if (key.includes("progress")) {
-    return "border-cyan-500/40 bg-cyan-500/10 text-cyan-600";
+  // In Progress / 处理中
+  if (
+    key.includes("progress") ||
+    key.includes("处理中") ||
+    key.includes("processing")
+  ) {
+    return "bg-sky-100 text-sky-800";
   }
 
-  // Pending
-  if (key.includes("pending")) {
-    return "border-yellow-500/40 bg-yellow-500/10 text-yellow-600";
+  // Pending / 待处理 / 挂起
+  if (
+    key.includes("pending") ||
+    key.includes("wait") ||
+    key.includes("待处理") ||
+    key.includes("等待") ||
+    key.includes("挂起")
+  ) {
+    return "bg-amber-100 text-amber-900";
   }
 
-  // Resolved
-  if (key.includes("resolved")) {
-    return "border-green-500/40 bg-green-500/10 text-green-600";
+  // Open / Created / 已创建
+  if (
+    key.includes("open") ||
+    key.includes("created") ||
+    key.includes("已创建") ||
+    key === "新建"
+  ) {
+    return "bg-rose-100 text-rose-800";
   }
 
-  // Closed
-  if (key.includes("closed")) {
-    return "border-emerald-500/40 bg-emerald-500/10 text-emerald-600";
+  // Assigned / 已分配
+  if (key.includes("assigned") || key.includes("已分配") || key.includes("分配")) {
+    return "bg-blue-100 text-blue-800";
   }
 
-  // Cancelled
-  if (key.includes("cancel")) {
-    return "border-gray-500/40 bg-gray-500/10 text-gray-600";
+  // Cancelled / 已取消
+  if (key.includes("cancel") || key.includes("取消")) {
+    return "bg-slate-200 text-slate-700";
   }
 
-  // Rejected
-  if (key.includes("reject")) {
-    return "border-orange-500/40 bg-orange-500/10 text-orange-600";
+  // Rejected / 已拒绝
+  if (key.includes("reject") || key.includes("拒绝")) {
+    return "bg-orange-100 text-orange-900";
   }
 
-  // Overdue
-  if (key.includes("overdue")) {
-    return "border-red-700/40 bg-red-700/10 text-red-700";
+  // Overdue / 逾期
+  if (key.includes("overdue") || key.includes("逾期")) {
+    return "bg-red-100 text-red-800";
   }
 
-  // Default
-  return "border-border bg-surface text-text-muted";
+  return "bg-slate-200 text-slate-700";
 }
 
 type TicketStatusBadgeProps = {
@@ -65,8 +87,8 @@ export default function TicketStatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${toneFromKey(
-        toneKey ?? label
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${toneFromKey(
+        toneKey ?? label,
       )}`}
     >
       {label}
