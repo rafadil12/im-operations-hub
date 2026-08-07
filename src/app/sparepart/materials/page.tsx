@@ -215,6 +215,12 @@ export default function MaterialMasterPage() {
             className={`${field} w-full`}
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setPage(1);
+                load(q);
+              }
+            }}
             placeholder={t.sparepart.materialsSearchHint}
           />
         </div>

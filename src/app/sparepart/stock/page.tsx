@@ -161,6 +161,12 @@ export default function StockOverviewPage() {
             className={`${field} w-full`}
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setPage(1);
+                load({ q, location, lowStock });
+              }
+            }}
             placeholder={t.sparepart.stockSearchHint}
           />
         </div>
