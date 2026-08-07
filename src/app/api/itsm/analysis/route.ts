@@ -290,31 +290,43 @@ export async function GET(request: NextRequest) {
 
     const total = Number(totalRows[0]?.total ?? 0);
 
+    const toNamedCount = (raw: string | null) => {
+      const name = raw?.trim() || "Unknown";
+      return { name_en: name, name_cn: name };
+    };
+
     const byStatus = statusRows.map((row) => ({
-      name: row.status ?? "Unknown",
+      ...toNamedCount(row.status),
       count: Number(row.count),
     }));
     const activeUsers = Number(
       activeUsersRows[0]?.active_users ?? 0
     );
 
+    const statusLabel = (item: { name_en: string | null; name_cn: string | null }) =>
+      (item.name_en ?? item.name_cn ?? "").trim();
+
     const closedTickets = byStatus
-      .filter(
-        (item) =>
-          item.name === "已关闭" ||
-          item.name === "已解决" ||
-          item.name.toLowerCase() === "closed" ||
-          item.name.toLowerCase() === "resolved",
-      )
+      .filter((item) => {
+        const name = statusLabel(item);
+        return (
+          name === "已关闭" ||
+          name === "已解决" ||
+          name.toLowerCase() === "closed" ||
+          name.toLowerCase() === "resolved"
+        );
+      })
       .reduce((sum, item) => sum + item.count, 0);
 
     const cancelledTickets = byStatus
-      .filter(
-        (item) =>
-          item.name === "已取消" ||
-          item.name.toLowerCase() === "cancelled" ||
-          item.name.toLowerCase() === "canceled",
-      )
+      .filter((item) => {
+        const name = statusLabel(item);
+        return (
+          name === "已取消" ||
+          name.toLowerCase() === "cancelled" ||
+          name.toLowerCase() === "canceled"
+        );
+      })
       .reduce((sum, item) => sum + item.count, 0);
 
     const openTickets = Math.max(
@@ -323,7 +335,7 @@ export async function GET(request: NextRequest) {
     );
 
     const byGroup = groupRows.map((row) => ({
-      name: row.group_name ?? "Unknown",
+      ...toNamedCount(row.group_name),
       count: Number(row.count),
     }));
 
@@ -338,7 +350,7 @@ export async function GET(request: NextRequest) {
     }));
 
     const byPriority = priorityRows.map((row) => ({
-      name: row.priority ?? "Unknown",
+      ...toNamedCount(row.priority),
       count: Number(row.count),
     }));
 

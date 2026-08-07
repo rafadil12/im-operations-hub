@@ -33,9 +33,9 @@ export default function OldestTickets({ rows }: Props) {
   }, [rows, startIndex]);
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface shadow-sm">
+    <div className="min-w-0 rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-text">
             {t.itsm.oldestOpenTickets}
           </h2>
@@ -45,7 +45,7 @@ export default function OldestTickets({ rows }: Props) {
           </p>
         </div>
 
-        <AlertTriangle className="h-5 w-5 text-red-500" />
+        <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
       </div>
 
       {visibleRows.length === 0 ? (
@@ -53,23 +53,30 @@ export default function OldestTickets({ rows }: Props) {
           {t.itsm.noOverdueTickets}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="min-w-0 overflow-hidden">
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[18%]" />
+              <col className="w-[42%]" />
+              <col className="w-[22%]" />
+              <col className="w-[18%]" />
+            </colgroup>
+
             <thead className="bg-bg/40">
               <tr className="border-b border-border-subtle">
-                <th className="px-4 py-3 text-left font-semibold">
+                <th className="px-3 py-3 text-left font-semibold">
                   {t.itsm.requestId}
                 </th>
 
-                <th className="px-4 py-3 text-left font-semibold">
+                <th className="px-3 py-3 text-left font-semibold">
                   {t.itsm.subject}
                 </th>
 
-                <th className="px-4 py-3 text-left font-semibold">
+                <th className="px-3 py-3 text-left font-semibold">
                   {t.itsm.technician}
                 </th>
 
-                <th className="px-4 py-3 text-center font-semibold">
+                <th className="px-3 py-3 text-center font-semibold">
                   {t.itsm.days}
                 </th>
               </tr>
@@ -81,22 +88,24 @@ export default function OldestTickets({ rows }: Props) {
                   key={`${row.requestId}-${startIndex}`}
                   className="border-b border-border-subtle transition-all duration-700 hover:bg-surface-hover"
                 >
-                  <td className="px-4 py-3 font-medium">
-                    {row.requestId}
+                  <td className="px-3 py-3 font-medium">
+                    <div className="truncate">{row.requestId}</div>
                   </td>
 
-                  <td className="px-4 py-3">
-                    <div className="max-w-xs truncate">
+                  <td className="min-w-0 px-3 py-3">
+                    <div className="truncate" title={row.subject}>
                       {row.subject}
                     </div>
                   </td>
 
-                  <td className="px-4 py-3">
-                    {row.technician}
+                  <td className="min-w-0 px-3 py-3">
+                    <div className="truncate" title={row.technician}>
+                      {row.technician}
+                    </div>
                   </td>
 
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-full bg-red-100 px-4 py-1.5 text-xs font-semibold text-red-600">
+                  <td className="px-3 py-3 text-center">
+                    <span className="inline-flex max-w-full items-center truncate rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-red-600">
                       {row.daysOpen} {t.itsm.days}
                     </span>
                   </td>

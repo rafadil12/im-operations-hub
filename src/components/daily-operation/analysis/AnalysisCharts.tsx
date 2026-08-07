@@ -700,8 +700,6 @@ function ChartCard({
 export function AnalysisCharts({ result }: { result: AnalysisResult }) {
   const { lang, t } = useLang();
   const colors = useChartColors();
-  const byCategory = result.byCategory ?? [];
-  const bySubcategory = result.bySubcategory ?? [];
   const byDivision = result.byDivision ?? [];
   const userRanking = result.userRanking ?? [];
 
@@ -716,10 +714,12 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
 
   const categorySlices = useMemo(
     () =>
-      mergeNamedCounts(byCategory, lang, (_r, _label, i) => PALETTE[i % PALETTE.length]).sort(
-        (a, b) => b.value - a.value,
-      ),
-    [byCategory, lang],
+      mergeNamedCounts(
+        result.byCategory ?? [],
+        lang,
+        (_r, _label, i) => PALETTE[i % PALETTE.length],
+      ).sort((a, b) => b.value - a.value),
+    [result.byCategory, lang],
   );
 
   const categoryCompact = takeTopNSlices(categorySlices, COMPACT_TOP_N, t.analysis.others);
@@ -738,14 +738,18 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
 
   const subcategoryBar = useMemo(
     () =>
-      mergeNamedCounts(bySubcategory, lang, (_r, _label, i) => PALETTE[i % PALETTE.length])
+      mergeNamedCounts(
+        result.bySubcategory ?? [],
+        lang,
+        (_r, _label, i) => PALETTE[i % PALETTE.length],
+      )
         .map((s) => ({
           label: s.label,
           count: s.value,
           color: s.color,
         }))
         .sort((a, b) => b.count - a.count),
-    [bySubcategory, lang],
+    [result.bySubcategory, lang],
   );
 
   const subcategoryCompact = takeTopN(
@@ -766,7 +770,6 @@ export function AnalysisCharts({ result }: { result: AnalysisResult }) {
     return groups;
   }, [result.durationPerDivision]);
 
-  const subcategoryExpandedHeight = Math.max(360, subcategoryBar.length * 28 + 40);
   const userRankingExpanded = userRanking;
   const userRankingCompact = userRanking.slice(0, USER_RANKING_COMPACT_TOP_N);
 

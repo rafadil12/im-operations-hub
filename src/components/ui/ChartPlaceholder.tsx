@@ -28,6 +28,42 @@ export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
   );
 }
 
+type VerticalBarChartPlaceholderProps = {
+  items: BarItem[];
+};
+
+export function VerticalBarChartPlaceholder({
+  items,
+}: VerticalBarChartPlaceholderProps) {
+  const max = Math.max(...items.map((item) => item.max), 1);
+
+  return (
+    <div className="flex h-28 items-end gap-1.5 pt-4">
+      {items.map((item) => {
+        const height = Math.max(8, Math.round((item.value / max) * 100));
+        return (
+          <div
+            key={item.label}
+            className="flex min-w-0 flex-1 flex-col items-center gap-1"
+          >
+            <span className="text-[10px] font-semibold text-text">{item.value}</span>
+            <div className="flex h-20 w-full items-end justify-center">
+              <div
+                className="w-full max-w-[18px] rounded-t-sm transition-all"
+                style={{
+                  height: `${height}%`,
+                  backgroundColor: item.color,
+                }}
+              />
+            </div>
+            <span className="truncate text-[9px] text-text-dim">{item.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 type TrendChartPlaceholderProps = {
   legend: { label: string; color: string }[];
 };
@@ -84,6 +120,8 @@ type DonutChartPlaceholderProps = {
   segments?: number[];
   centerValue?: string;
   centerLabel?: string;
+  /** Center pie + legend as a block (e.g. Daily Operation / Safety category). */
+  align?: "start" | "center";
 };
 
 function buildConicGradient(
@@ -109,14 +147,22 @@ export function DonutChartPlaceholder({
   segments,
   centerValue = "78%",
   centerLabel = "Done",
+  align = "start",
 }: DonutChartPlaceholderProps) {
   const resolvedSegments =
     segments && segments.length === legend.length
       ? segments
       : legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
 
+  const centered = align === "center";
+
   return (
-    <div className="flex items-center gap-5">
+    <div
+      className={[
+        "flex items-center gap-5",
+        centered ? "justify-center" : "",
+      ].join(" ")}
+    >
       <div
         className="relative size-28 shrink-0 rounded-full"
         style={{
@@ -134,16 +180,21 @@ export function DonutChartPlaceholder({
         </div>
       </div>
       <ul className="space-y-2">
-        {legend.map((item) => (
+        {legend.map((item, index) => (
           <li
             key={item.label}
             className="flex items-center gap-2 text-xs text-text-muted"
           >
             <span
-              className="size-2.5 rounded-sm"
+              className="size-2.5 rounded-full"
               style={{ backgroundColor: item.color }}
             />
-            {item.label}
+            <span>
+              {item.label}
+              {resolvedSegments[index] != null
+                ? ` — ${resolvedSegments[index]}%`
+                : ""}
+            </span>
           </li>
         ))}
       </ul>

@@ -47,7 +47,7 @@ export function mapAnalysisToOverview(
   const divisions = result.byDivision.slice(0, 3);
   const maxBar = Math.max(1, ...divisions.map((d) => d.count));
 
-  const pics = result.userRanking.slice(0, 4).map((u) => {
+  const pics = result.userRanking.slice(0, 3).map((u) => {
     const name =
      lang === "cn"
       ? u.name_cn?.trim() || u.name_en?.trim() || "Unknown"

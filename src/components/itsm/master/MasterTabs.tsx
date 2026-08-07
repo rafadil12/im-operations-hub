@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLang } from "@/lib/i18n";
 
 export function MasterTabs() {
   const pathname = usePathname();
-  const { t } = useLang();
 
   const tabs = [
     {

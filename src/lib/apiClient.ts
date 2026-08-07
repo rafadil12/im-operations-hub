@@ -47,3 +47,28 @@ export async function apiSend<T>(
 
   return handle<T>(res);
 }
+
+/** Absolute-path GET (e.g. `/api/settings/...`). */
+export async function apiGetAbs<T>(path: string): Promise<T> {
+  const res = await fetch(path, { cache: "no-store" });
+  return handle<T>(res);
+}
+
+/** Absolute-path mutation (e.g. `/api/settings/...`). */
+export async function apiSendAbs<T>(
+  path: string,
+  method: "POST" | "PUT" | "DELETE",
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: body
+      ? {
+          "Content-Type": "application/json",
+        }
+      : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  return handle<T>(res);
+}

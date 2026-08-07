@@ -21,27 +21,27 @@ export async function GET() {
     ] = await Promise.all([
         
       // Total Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
       `),
 
       // Open Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE status='已创建'
       `),
 
       // In Progress
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE status='处理中'
       `),
 
       // Closed Today
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE status IN ('已关闭','已解决')
@@ -51,7 +51,7 @@ export async function GET() {
       `),
 
       // Overdue
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE STR_TO_DATE(due_by_date,'%d/%m/%Y %h:%i %p') < NOW()
@@ -59,7 +59,7 @@ export async function GET() {
       `),
 
       // Top Technician
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           technician,
           COUNT(*) AS totalTickets
@@ -72,7 +72,7 @@ export async function GET() {
       `),
 
       // Top Requester
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           requester,
           COUNT(*) AS totalTickets
@@ -85,7 +85,7 @@ export async function GET() {
       `),
 
       // Recent Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           request_id AS requestId,
           subject,
@@ -100,7 +100,7 @@ export async function GET() {
       `),
 
       // Oldest Open Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           request_id AS requestId,
           subject,
@@ -115,7 +115,7 @@ export async function GET() {
         LIMIT 5
       `),
       // Service Requests
-        query<any[]>(`
+        query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE is_service_request = 'true'

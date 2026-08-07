@@ -22,12 +22,12 @@ export async function GET() {
       oldestTickets,
     ] = await Promise.all([
       // Total Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
       `),
       // Current Month Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p')
@@ -37,7 +37,7 @@ export async function GET() {
       `),
 
       // Previous Month Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p')
@@ -46,7 +46,7 @@ export async function GET() {
             < DATE_FORMAT(CURDATE(), '%Y-%m-01')
       `),
       // Current Month Service Requests
-        query<any[]>(`
+        query<Record<string, unknown>[]>(`
           SELECT COUNT(*) AS total
           FROM itsm_requests
           WHERE is_service_request = 'true'
@@ -57,7 +57,7 @@ export async function GET() {
         `),
 
         // Previous Month Service Requests
-        query<any[]>(`
+        query<Record<string, unknown>[]>(`
           SELECT COUNT(*) AS total
           FROM itsm_requests
           WHERE is_service_request = 'true'
@@ -68,27 +68,27 @@ export async function GET() {
         `),
 
       // Open Tickets (belum selesai)
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE status NOT IN ('已关闭','已解决')
       `),
       // In Progress
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE status = '处理中'
       `),
 
       // Service Requests (menggantikan In Progress)
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           COUNT(*) AS total,
           SUM(is_service_request = 'true') AS serviceRequests
         FROM itsm_requests
       `),
       // Incidents
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           COUNT(*) AS total
         FROM itsm_requests
@@ -96,7 +96,7 @@ export async function GET() {
       `),
 
       // Closed Today
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE status IN ('已关闭','已解决')
@@ -106,7 +106,7 @@ export async function GET() {
       `),
 
       // Overdue
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT COUNT(*) AS total
         FROM itsm_requests
         WHERE STR_TO_DATE(due_by_date,'%d/%m/%Y %h:%i %p') < NOW()
@@ -114,7 +114,7 @@ export async function GET() {
       `),
 
       // Most Active Group
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           group_name AS name,
           COUNT(*) AS count
@@ -127,7 +127,7 @@ export async function GET() {
       `),
 
       // Top Technician
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
        SELECT
         technician,
         COUNT(*) AS totalTickets
@@ -140,7 +140,7 @@ export async function GET() {
       `),
 
       // Top Requester
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
        SELECT
         requester,
         COUNT(*) AS totalTickets
@@ -153,7 +153,7 @@ export async function GET() {
       `),
 
       // Recent Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           request_id AS requestId,
           subject,
@@ -165,7 +165,7 @@ export async function GET() {
       `),
 
       // Oldest Open Tickets
-      query<any[]>(`
+      query<Record<string, unknown>[]>(`
         SELECT
           request_id AS requestId,
           subject,

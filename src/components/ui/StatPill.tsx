@@ -20,7 +20,17 @@ export function StatPill({ stat }: StatPillProps) {
           {stat.value}
         </p>
         {stat.trend ? (
-          <span className="text-[11px] text-success">{stat.trend}</span>
+          <span
+            className={`text-[11px] ${
+              stat.tone === "warning"
+                ? "text-warning"
+                : stat.tone === "accent"
+                  ? "text-accent"
+                  : "text-success"
+            }`}
+          >
+            {stat.trend}
+          </span>
         ) : null}
       </div>
     </div>

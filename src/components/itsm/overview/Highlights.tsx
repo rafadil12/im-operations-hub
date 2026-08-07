@@ -18,8 +18,7 @@ export default function Highlights({ data }: Props) {
   const { t } = useLang();
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
-
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
         title={t.itsm.highestPriorityGroup}
         value={data.highestPriorityGroup}
@@ -52,7 +51,6 @@ export default function Highlights({ data }: Props) {
         icon={<Timer size={22} />}
         badge={`${data.incidentCount.toLocaleString()} ${t.itsm.tickets} (${data.incidentPercent}%)`}
       />
-
     </div>
   );
 }

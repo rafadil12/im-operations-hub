@@ -24,13 +24,13 @@ export default function ItsmOverview({ data }: Props) {
       <Highlights data={data.highlights} />
 
       {/* Ranking */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:[&>*]:min-w-0">
         <TopTechnician rows={data.topTechnicians} />
         <TopRequester rows={data.topRequesters} />
       </div>
 
       {/* Ticket */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:[&>*]:min-w-0">
         <RecentTickets rows={data.recentTickets} />
         <OldestTickets rows={data.oldestTickets} />
       </div>

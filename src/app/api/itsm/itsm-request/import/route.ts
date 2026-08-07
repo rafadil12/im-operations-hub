@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    const rows = XLSX.utils.sheet_to_json<any>(sheet);
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
 
     let success = 0;
 

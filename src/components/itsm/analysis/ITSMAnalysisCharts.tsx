@@ -3,9 +3,6 @@
     import { useCallback, useMemo, useRef, useState } from "react";
     import { toBlob, toPng } from "html-to-image";
     import {
-      ScatterChart,
-      Scatter,
-      ZAxis,
       LineChart,
       Line,
       CartesianGrid,
@@ -22,33 +19,14 @@
       YAxis,
     } from "recharts";
     import { Modal } from "@/components/ui/Modal";
-    import { localizedName, useLang } from "@/lib/i18n";
+    import { useLang } from "@/lib/i18n";
     import { CHART_COLORS, useTheme, type ChartColors } from "@/lib/theme";
-    import type { ItsmAnalysisResult, Lang, NamedCount } from "@/lib/types";
-    
-    
-    const PALETTE = [
-      "#ef4444",
-      "#f97316",
-      "#f59e0b",
-      "#eab308",
-      "#84cc16",
-      "#22c55e",
-      "#14b8a6",
-      "#06b6d4",
-      "#3b82f6",
-      "#6366f1",
-      "#8b5cf6",
-      "#a855f7",
-      "#ec4899",
-      "#64748b",
+    import type { ItsmAnalysisResult } from "@/lib/types";
+
+    const REQUEST_TYPE_COLORS = [
+      "#3B82F6", // Incident
+      "#10B981", // Service Request
     ];
-    
-    const GROUP_PALETTE = ["#6366f1", "#ef4444", "#22c55e", "#f59e0b"];
-    const COMPACT_TOP_N = 8;
-    const TECHNICIAN_TOP_N = 10;
-    /** Neutral used for aggregated "others" rows; readable on both themes. */
-    const NEUTRAL = "#64748b";
     
     /** Hook for the chart neutrals of the active theme. */
     function useChartColors(): ChartColors {
@@ -136,50 +114,7 @@
     }
     
     type Slice = { label: string; value: number; color: string };
-    type BarRow = { label: string; count: number; color: string };
-    
-    /** Merge rows that share the same display label; keep first-seen color. */
-    function mergeNamedCounts(
-      rows: NamedCount[],
-      lang: Lang,
-      colorFor: (row: NamedCount, label: string, index: number) => string,
-    ): Slice[] {
-      const merged = new Map<string, Slice>();
-      for (const r of rows) {
-        const label = localizedName(r, lang);
-        const existing = merged.get(label);
-        if (existing) {
-          existing.value += r.count;
-        } else {
-          merged.set(label, {
-            label,
-            value: r.count,
-            color: colorFor(r, label, merged.size),
-          });
-        }
-      }
-      return Array.from(merged.values());
-    }
-    
-    function takeTopN(rows: BarRow[], n: number, othersLabel: string): BarRow[] {
-      if (rows.length <= n) return rows;
-      const top = rows.slice(0, n);
-      const rest = rows.slice(n);
-      const othersCount = rest.reduce((sum, r) => sum + r.count, 0);
-      if (othersCount <= 0) return top;
-      return [...top, { label: othersLabel, count: othersCount, color: NEUTRAL }];
-    }
-    
-    function takeTopNSlices(rows: Slice[], n: number, othersLabel: string): Slice[] {
-      const sorted = [...rows].sort((a, b) => b.value - a.value);
-      if (sorted.length <= n) return sorted;
-      const top = sorted.slice(0, n);
-      const rest = sorted.slice(n);
-      const othersValue = rest.reduce((sum, r) => sum + r.value, 0);
-      if (othersValue <= 0) return top;
-      return [...top, { label: othersLabel, value: othersValue, color: NEUTRAL }];
-    }
-    
+
     function ChartValueTooltip({
       active,
       payload,
@@ -209,330 +144,6 @@
       );
     }
     
-    function HorizontalBarChart({
-      data,
-      height,
-      yAxisWidth = 120,
-      truncateLabels = false,
-    }: {
-      data: BarRow[];
-      height: number;
-      yAxisWidth?: number;
-      truncateLabels?: boolean;
-    }) {
-      const colors = useChartColors();
-      const total = data.reduce((sum, row) => sum + row.count, 0);
-      return (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}margin={{top: 20,right: 20,left: 0,bottom: 5,}}>
-            <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} horizontal={false} />
-            <XAxis type="number" stroke={colors.axis} fontSize={11} allowDecimals={false} />
-            <YAxis
-              type="category"
-              dataKey="label"
-              stroke={colors.axis}
-              fontSize={10}
-              width={yAxisWidth}
-              tickFormatter={(value) => {
-                const text = String(value);
-                if (!truncateLabels) return text;
-                return text.length > 16 ? `${text.slice(0, 16)}…` : text;
-              }}
-            />
-            <Tooltip
-              cursor={{ fill: colors.cursor }}
-              content={
-                <ChartValueTooltip total={total} valueKey="count" colors={colors} />
-              }
-            />
-            <Line type="monotone"dataKey="count"stroke="#2563eb"strokeWidth={3}
-                dot={{
-                r: 5,
-                fill: "#2563eb",
-                }}
-                activeDot={{
-                r: 7,
-                }}>
-              {data.map((d, i) => (
-                <Cell key={`${d.label}-${i}`} fill={d.color} />
-              ))}
-            </Line>
-          </LineChart>
-        </ResponsiveContainer>
-      );
-    }
-    function CustomXAxisTick({
-      x,
-      y,
-      payload,
-      fill,
-    }: {
-      x?: number;
-      y?: number;
-      payload?: { value: string };
-      fill: string;
-    }) {
-      if (x == null || y == null || !payload) return null;
-    
-      const text = String(payload.value);
-      const words = text.split(" ");
-    
-      let line1 = text;
-      let line2 = "";
-    
-      if (words.length > 1) {
-        const middle = Math.ceil(words.length / 2);
-        line1 = words.slice(0, middle).join(" ");
-        line2 = words.slice(middle).join(" ");
-      }
-    
-      return (
-        <g transform={`translate(${x},${y})`}>
-          <text
-            x={0}
-            y={0}
-            dy={14}
-            textAnchor="middle"
-            fill={fill}
-            fontSize={10}
-          >
-            <tspan x="0">{line1}</tspan>
-    
-            {line2 && (
-              <tspan x="0" dy="13">
-                {line2}
-              </tspan>
-            )}
-          </text>
-        </g>
-      );
-    }
-    
-    function VerticalBarChart({
-      data,
-      height,
-      compactLabels = false,
-    }: {
-      data: BarRow[];
-      height: number;
-      compactLabels?: boolean;
-    }) {
-      const colors = useChartColors();
-      const total = data.reduce((sum, row) => sum + row.count, 0);
-    
-      // Tambahkan nomor untuk label X-axis saat expanded
-      const chartData = data.map((row, index) => ({
-        ...row,
-        shortLabel: String(index + 1),
-      }));
-    
-      return (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart
-            data={chartData}
-            margin={{
-              top: 10,
-              right: 10,
-              left: 0,
-              bottom: compactLabels ? 10 : 15,
-            }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={colors.grid}
-              vertical={false}
-            />
-    
-            {compactLabels ? (
-              <XAxis
-                dataKey="shortLabel"
-                tick={false}
-                axisLine={true}
-                tickLine={false}
-                height={10}
-              />
-            ) : (
-              <XAxis
-                dataKey="label"
-                stroke={colors.axis}
-                interval={0}
-                height={55}
-                tick={<CustomXAxisTick fill={colors.axis} />}
-              />
-            )}
-    
-            <YAxis
-              stroke={colors.axis}
-              fontSize={11}
-              allowDecimals={false}
-            />
-    
-            <Tooltip
-              cursor={{ fill: colors.cursor }}
-              content={
-                <ChartValueTooltip
-                  total={total}
-                  valueKey="count"
-                  colors={colors}
-                />
-              }
-            />
-    
-            <Line
-              type="monotone"
-                dataKey="count"
-                stroke="#2563eb"
-                strokeWidth={3}
-                dot={{
-                    r: 5,
-                    fill: "#2563eb",
-                }}
-                activeDot={{
-                    r: 7,
-                }}
-            >
-              {chartData.map((d, i) => (
-                <Cell
-                  key={`${d.label}-${i}`}
-                  fill={d.color}
-                />
-              ))}
-              <LabelList
-                dataKey="count"
-                position="top"
-                fill={colors.tooltipMuted}
-                fontSize={10}
-              />
-            </Line>
-          </LineChart> 
-        </ResponsiveContainer>
-      );
-    }
-    
-    type PieLabelLayout = {
-      index: number;
-      percent: number;
-      midAngle: number;
-      side: "left" | "right";
-      /** Final label Y relative to pie center (after collision spacing). */
-      y: number;
-    };
-    
-    /** Outside-label positions with per-side vertical spacing so small slices stay readable. */
-    function computePieLabelLayout(slices: Slice[], outerRadius: number): PieLabelLayout[] {
-      const total = slices.reduce((s, x) => s + x.value, 0) || 1;
-      const RADIAN = Math.PI / 180;
-      const labelRadius = outerRadius + 14;
-      let cumulative = 0;
-    
-      const entries: PieLabelLayout[] = slices.map((slice, index) => {
-        const startAngle = (cumulative / total) * 360;
-        cumulative += slice.value;
-        const endAngle = (cumulative / total) * 360;
-        const midAngle = (startAngle + endAngle) / 2;
-        const cos = Math.cos(-midAngle * RADIAN);
-        const sin = Math.sin(-midAngle * RADIAN);
-        return {
-          index,
-          percent: slice.value / total,
-          midAngle,
-          side: cos >= 0 ? "right" : "left",
-          y: labelRadius * sin,
-        };
-      });
-    
-      const MIN_GAP = 18;
-      for (const side of ["left", "right"] as const) {
-        const group = entries.filter((e) => e.side === side).sort((a, b) => a.y - b.y);
-        for (let i = 1; i < group.length; i++) {
-          if (group[i].y - group[i - 1].y < MIN_GAP) {
-            group[i].y = group[i - 1].y + MIN_GAP;
-          }
-        }
-        // Keep the block roughly centered around the pie.
-        if (group.length > 1) {
-          const firstIdeal = labelRadius * Math.sin(-group[0].midAngle * RADIAN);
-          const lastIdeal = labelRadius * Math.sin(-group[group.length - 1].midAngle * RADIAN);
-          const idealMid = (firstIdeal + lastIdeal) / 2;
-          const actualMid = (group[0].y + group[group.length - 1].y) / 2;
-          const shift = idealMid - actualMid;
-          for (const item of group) item.y += shift;
-        }
-      }
-    
-      return entries;
-    }
-    
-    function createPiePercentLabel(
-      layouts: PieLabelLayout[],
-      slices: Slice[],
-      fallbackColor: string,
-    ) {
-      return function PiePercentLabel({
-        cx,
-        cy,
-        midAngle,
-        outerRadius,
-        percent,
-        index,
-      }: {
-        cx?: number;
-        cy?: number;
-        midAngle?: number;
-        outerRadius?: number;
-        percent?: number;
-        index?: number;
-      }) {
-        if (
-          cx == null ||
-          cy == null ||
-          midAngle == null ||
-          outerRadius == null ||
-          percent == null ||
-          index == null
-        ) {
-          return null;
-        }
-        const layout = layouts[index];
-        const color = slices[index]?.color ?? fallbackColor;
-        const RADIAN = Math.PI / 180;
-        const sin = Math.sin(-midAngle * RADIAN);
-        const cos = Math.cos(-midAngle * RADIAN);
-        const sx = cx + outerRadius * cos;
-        const sy = cy + outerRadius * sin;
-        const mx = cx + (outerRadius + 14) * cos;
-        const my = cy + (outerRadius + 14) * sin;
-        const ex = cx + (cos >= 0 ? 1 : -1) * (outerRadius + 28);
-        const ey = cy + (layout?.y ?? my - cy);
-        const textAnchor = cos >= 0 ? "start" : "end";
-        const textX = ex + (cos >= 0 ? 1 : -1) * 6;
-    
-        return (
-          <g style={{ pointerEvents: "none" }}>
-            <path
-              d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
-              stroke={color}
-              fill="none"
-              strokeWidth={1}
-              opacity={0.85}
-            />
-            <circle cx={ex} cy={ey} r={2} fill={color} stroke="none" />
-            <text
-              x={textX}
-              y={ey}
-              fill={color}
-              textAnchor={textAnchor}
-              dominantBaseline="central"
-              fontSize={11}
-              fontWeight={600}
-            >
-              {`${(percent * 100).toFixed(1)}%`}
-            </text>
-          </g>
-        );
-      };
-    }
-    
  function PieWithLegend({
   slices,
   chartHeight = 280,
@@ -547,12 +158,6 @@
   const { t } = useLang();
 
   const total = slices.reduce((s, x) => s + x.value, 0);
-
-  const textColor = theme === "dark" ? "#F8FAFC" : "#0F172A";
-  const subTextColor = theme === "dark" ? "#CBD5E1" : "#64748B";
-  const cardBg = theme === "dark" ? "#1E293B" : "#FFFFFF";
-  const cardBorder = theme === "dark" ? "#334155" : "#E2E8F0";
-  const progressBg = theme === "dark" ? "#334155" : "#E2E8F0";
 
   return (
     <div className="flex items-center justify-center gap-4">
@@ -872,13 +477,8 @@ export function ITSMAnalysisCharts({
   // DATA
   // =============================
 
-  const status = result.byStatus ?? [];
-  const groups = result.byGroup ?? [];
-  const priority = result.byPriority ?? [];
-  const requestType = result.byRequestType ?? [];
   const technicians = result.technicianRanking ?? [];
   const requesters = result.requesterRanking ?? [];
-  console.log("Technicians:", technicians);
   const trend = result.trend ?? {
     current: [],
     previous: [],
@@ -888,95 +488,21 @@ export function ITSMAnalysisCharts({
   // PIE
   // =============================
 
-  const statusSlices = useMemo(
-    () =>
-      mergeNamedCounts(
-        status,
-        lang,
-        (_r, _label, index) => PALETTE[index % PALETTE.length],
-      ).sort((a, b) => b.value - a.value),
-    [status, lang],
-  );
-  const REQUEST_TYPE_COLORS = [
-  "#3B82F6", // Incident
-  "#10B981", // Service Request
-];
-
   const requestTypeSlices = useMemo(
   () =>
-    requestType
+    (result.byRequestType ?? [])
       .map((item, index) => ({
         label: (lang === "cn" ? item.name_cn : item.name_en) ?? "Unknown",
         value: item.count,
         color: REQUEST_TYPE_COLORS[index % REQUEST_TYPE_COLORS.length],
       }))
       .sort((a, b) => b.value - a.value),
-  [requestType, lang],
+  [result.byRequestType, lang],
 );
 
   // =============================
-  // SUPPORT GROUP
+  // TECHNICIAN / REQUESTER
   // =============================
-
-  const groupBar = useMemo(
-    () =>
-      mergeNamedCounts(
-        groups,
-        lang,
-        (_r, _label, index) => GROUP_PALETTE[index % GROUP_PALETTE.length],
-      )
-        .map((item) => ({
-          label: item.label,
-          count: item.value,
-          color: item.color,
-        }))
-        .sort((a, b) => b.count - a.count),
-    [groups, lang],
-  );
-
-  // =============================
-  // PRIORITY
-  // =============================
-
-  const priorityBar = useMemo(
-    () =>
-      mergeNamedCounts(
-        priority,
-        lang,
-        (_r, _label, index) => PALETTE[index % PALETTE.length],
-      )
-        .map((item) => ({
-          label: item.label,
-          count: item.value,
-          color: item.color,
-        }))
-        .sort((a, b) => b.count - a.count),
-    [priority, lang],
-  );
-
-  // =============================
-  // TECHNICIAN
-  // =============================
-    const bubbleX = technicians.length === 2
-        ? [35, 65]
-        : technicians.map((_, i) => ((i + 1) * 100) / (technicians.length + 1));
-
-   const technicianBubble = technicians.map((item, index) => ({
-        x: bubbleX[index],
-        y: item.count,
-        z: 80 + item.count * 0.7,
-        label: item.name,
-        count: item.count,
-        rank: index + 1,
-    }));
-    const BUBBLE_COLORS = [
-        "#2563EB", // Biru
-        "#F59E0B", // Orange
-        "#10B981", // Hijau
-        "#EC4899", // Pink
-        "#8B5CF6", // Ungu
-        "#EF4444", // Merah 
-    ];
     const BAR_COLORS = [
         "#3B82F6",
         "#10B981",
@@ -1240,8 +766,11 @@ return (
         >
           <LabelList
               dataKey="previous"
-              content={(props: any) => {
-                const { x, y, width, value, index } = props;
+              content={(props) => {
+                const x = Number(props.x ?? 0);
+                const y = Number(props.y ?? 0);
+                const width = Number(props.width ?? 0);
+                const index = props.index ?? 0;
 
                 return (
                   <text
@@ -1252,7 +781,7 @@ return (
                     fontWeight={700}
                     fill={theme === "dark" ? "#f8fafc76" : "#33415553"}
                   >
-                    {value}
+                    {props.value}
                   </text>
                 );
               }}
@@ -1284,8 +813,11 @@ return (
           >
             <LabelList
               dataKey="current"
-              content={(props: any) => {
-                const { x, y, width, value, index } = props;
+              content={(props) => {
+                const x = Number(props.x ?? 0);
+                const y = Number(props.y ?? 0);
+                const width = Number(props.width ?? 0);
+                const index = props.index ?? 0;
 
                 return (
                   <text
@@ -1296,7 +828,7 @@ return (
                     fontWeight={700}
                     fill={theme === "dark" ? "#26d371" : "#22b7af"}
                   >
-                    {value}
+                    {props.value}
                   </text>
                 );
               }}

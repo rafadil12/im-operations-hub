@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import { type ItsmAnalysisResult,namedStatusCount  } from "@/lib/types";
+import { type ItsmAnalysisResult } from "@/lib/types";
 import { ITSMAnalysisCharts } from "@/components/itsm/analysis/ITSMAnalysisCharts";
 
 const week = getOperationalWeek();
@@ -108,12 +108,12 @@ export default function AnalysisPage() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-lg font-semibold text-text">{t.itsm.analysisTitle}</h1>
           <p className="text-sm text-text-muted">{t.itsm.analysisDesc}</p>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => {
