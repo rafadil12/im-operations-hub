@@ -62,18 +62,43 @@ export async function GET(request: NextRequest) {
       params.push(group);
     }
 
-    const q = sp.get("q");
+    const requestId = sp.get("requestId")?.trim();
+    if (requestId) {
+      sql += " AND CAST(request_id AS CHAR) LIKE ?";
+      params.push(`%${requestId}%`);
+    }
+
+    const subject = sp.get("subject")?.trim();
+    if (subject) {
+      sql += " AND subject LIKE ?";
+      params.push(`%${subject}%`);
+    }
+
+    const requester = sp.get("requester")?.trim();
+    if (requester) {
+      sql += " AND requester LIKE ?";
+      params.push(`%${requester}%`);
+    }
+
+    const technician = sp.get("technician")?.trim();
+    if (technician) {
+      sql += " AND technician LIKE ?";
+      params.push(`%${technician}%`);
+    }
+
+    const q = sp.get("q")?.trim();
     if (q) {
       sql += `
         AND (
-          subject LIKE ?
+          CAST(request_id AS CHAR) LIKE ?
+          OR subject LIKE ?
           OR requester LIKE ?
           OR technician LIKE ?
         )
       `;
 
       const like = `%${q}%`;
-      params.push(like, like, like);
+      params.push(like, like, like, like);
     }
 
     sql += ` ORDER BY ${CREATED_DATE_SQL} DESC`;

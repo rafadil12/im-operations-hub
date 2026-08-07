@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { useLang } from "@/lib/i18n";
 
 export type Filters = {
@@ -33,6 +33,12 @@ export function FilterBar({
       ...prev,
       ...patch,
     }));
+
+  const apply = () => onApply(draft);
+
+  const onSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") apply();
+  };
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
@@ -71,6 +77,7 @@ export function FilterBar({
           placeholder={t.itsm.requestId}
           value={draft.requestId}
           onChange={(e) => update({ requestId: e.target.value })}
+          onKeyDown={onSearchKeyDown}
         />
       </div>
 
@@ -84,6 +91,7 @@ export function FilterBar({
           placeholder={t.itsm.subject}
           value={draft.subject}
           onChange={(e) => update({ subject: e.target.value })}
+          onKeyDown={onSearchKeyDown}
         />
       </div>
 
@@ -97,6 +105,7 @@ export function FilterBar({
           placeholder={t.itsm.requester}
           value={draft.requester}
           onChange={(e) => update({ requester: e.target.value })}
+          onKeyDown={onSearchKeyDown}
         />
       </div>
 
@@ -110,17 +119,13 @@ export function FilterBar({
           placeholder={t.itsm.technician}
           value={draft.technician}
           onChange={(e) => update({ technician: e.target.value })}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              onApply(draft);
-            }
-          }}
+          onKeyDown={onSearchKeyDown}
         />
       </div>
 
       <button
         type="button"
-        onClick={() => onApply(draft)}
+        onClick={apply}
         className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
       >
         {t.common.apply}

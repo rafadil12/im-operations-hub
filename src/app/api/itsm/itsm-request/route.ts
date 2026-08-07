@@ -11,7 +11,11 @@ export async function GET(request: NextRequest) {
     const status = sp.get("status");
     const priority = sp.get("priority");
     const group = sp.get("group");
-    const q = sp.get("q");
+    const requestId = sp.get("requestId")?.trim();
+    const subject = sp.get("subject")?.trim();
+    const requester = sp.get("requester")?.trim();
+    const technician = sp.get("technician")?.trim();
+    const q = sp.get("q")?.trim();
 
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -40,18 +44,38 @@ export async function GET(request: NextRequest) {
       params.push(group);
     }
 
+    if (requestId) {
+      conditions.push("CAST(request_id AS CHAR) LIKE ?");
+      params.push(`%${requestId}%`);
+    }
+
+    if (subject) {
+      conditions.push("subject LIKE ?");
+      params.push(`%${subject}%`);
+    }
+
+    if (requester) {
+      conditions.push("requester LIKE ?");
+      params.push(`%${requester}%`);
+    }
+
+    if (technician) {
+      conditions.push("technician LIKE ?");
+      params.push(`%${technician}%`);
+    }
+
     if (q) {
       conditions.push(`
         (
-          subject LIKE ?
+          CAST(request_id AS CHAR) LIKE ?
+          OR subject LIKE ?
           OR requester LIKE ?
           OR technician LIKE ?
         )
       `);
 
       const like = `%${q}%`;
-
-      params.push(like, like, like);
+      params.push(like, like, like, like);
     }
 
     const sql = `
