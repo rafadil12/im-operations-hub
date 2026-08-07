@@ -159,7 +159,7 @@ const en = {
 
     itsmOverview: "ITSM Overview",
     dailyOperationOverview: "Daily Operation Overview",
-    safetyOverview: "Security (Safety) Overview",
+    safetyOverview: "Safety Overview",
     sparepartOverview: "Sparepart Overview",
     organizationOverview: "Organization Overview",
     reportOverview: "Report Overview",
@@ -170,7 +170,7 @@ const en = {
     closedTicket: "Closed Ticket",
     slaCompliance: "SLA Compliance",
 
-    thisMonthTasks: "This Month's Tasks",
+    thisMonthTasks: "Total Task",
     completed: "Completed",
     totalUsers: "Total Users",
     avgTasks: "Avg. Tasks",
@@ -178,7 +178,7 @@ const en = {
     todaysFinding: "Today's Finding",
     openFinding: "Open Finding",
     closedFinding: "Closed Finding",
-    overdueFinding: "Overdue Finding",
+    avgFinding: "AVG. Finding",
 
     totalItems: "Total Items",
     lowStock: "Low Stock",
@@ -237,9 +237,9 @@ const en = {
     completion: "Completion",
     avgScore: "Avg Score",
 
-    ticketByGroup: "Ticket by Group",
+    ticketByGroup: "Ticket by Group (This Month)",
     ticketByDepartment: "Ticket by Department (This Month)",
-    taskByDepartment: "Task by Department (This Month)",
+    taskByDepartment: "Task by Dept (This Month)",
     findingByDepartment: "Finding by Department (This Month)",
 
     topPicTicket: "Top PIC (by Most Ticket)",

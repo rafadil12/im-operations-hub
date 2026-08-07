@@ -63,7 +63,7 @@ export function mapAnalysisToOverview(
   return {
     ...base,
     stats: [
-      { label: "This Month's Tasks", value: String(total), tone: "accent" },
+      { label: "Total Task", value: String(total), tone: "accent" },
       {
         label: "Completed",
         value: String(completed),

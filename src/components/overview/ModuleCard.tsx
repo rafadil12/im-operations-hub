@@ -93,9 +93,11 @@ function PicsList({ data }: { data: ModuleCardData }) {
   if (!data.pics) return null;
 
   return (
-    <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-      <h4 className="mb-3 text-xs font-medium text-text-muted">{data.pics.title}</h4>
-      <ul className="space-y-2">
+    <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+      <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
+        {data.pics.title}
+      </h4>
+      <ul className="flex min-h-0 flex-1 flex-col justify-between gap-2">
         {data.pics.items.map((pic) => (
           <li key={pic.name} className="flex items-center gap-2.5">
             <span
@@ -121,9 +123,13 @@ function BarsAndPics({ data }: { data: ModuleCardData }) {
 
   return (
     <>
-      <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <h4 className="mb-3 text-xs font-medium text-text-muted">{data.bars.title}</h4>
-        <BarChartPlaceholder items={data.bars.items} />
+      <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+        <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
+          {data.bars.title}
+        </h4>
+        <div className="min-h-0 flex-1">
+          <BarChartPlaceholder items={data.bars.items} />
+        </div>
       </section>
 
       <PicsList data={data} />
@@ -181,7 +187,12 @@ function DefaultBody({ data, expanded }: { data: ModuleCardData; expanded: boole
       <div className="mb-4 grid flex-1 gap-4 md:grid-cols-2">
         <BarsAndPics data={data} />
       </div>
-      <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
+      <section
+        className={[
+          "rounded-lg border border-border-subtle bg-bg/30 p-3",
+          centerDonut ? "flex min-h-[188px] flex-col justify-center" : "",
+        ].join(" ")}
+      >
         <ChartSection
           data={data}
           expanded={expanded}
@@ -198,15 +209,17 @@ function SafetyBody({ data, expanded }: { data: ModuleCardData; expanded: boolea
   return (
     <>
       <div className="mb-4 grid flex-1 gap-4 md:grid-cols-2">
-        <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <h4 className="mb-3 text-xs font-medium text-text-muted">
+        <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+          <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
             {data.trendBars.title}
           </h4>
-          <VerticalBarChartPlaceholder items={data.trendBars.items} />
+          <div className="min-h-0 flex-1">
+            <VerticalBarChartPlaceholder items={data.trendBars.items} />
+          </div>
         </section>
         <PicsList data={data} />
       </div>
-      <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
+      <section className="flex min-h-[188px] flex-col justify-center rounded-lg border border-border-subtle bg-bg/30 p-3">
         <ChartSection data={data} expanded={expanded} align="center" />
       </section>
     </>
@@ -227,18 +240,22 @@ function SparepartBody({
           <ChartSection data={data} expanded={expanded} />
         </section>
         {data.bars ? (
-          <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-            <h4 className="mb-3 text-xs font-medium text-text-muted">
+          <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+            <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
               {data.bars.title}
             </h4>
-            <BarChartPlaceholder items={data.bars.items} />
+            <div className="min-h-0 flex-1">
+              <BarChartPlaceholder items={data.bars.items} />
+            </div>
           </section>
         ) : null}
       </div>
       {data.stockFlows ? (
         <div className="grid grid-cols-3 gap-2">
           {data.stockFlows.map((flow) => (
-            <StatPill key={flow.label} stat={flow} />
+            <div key={flow.label} className="min-w-0">
+              <StatPill stat={flow} />
+            </div>
           ))}
         </div>
       ) : null}
@@ -488,7 +505,9 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
 
       <div className="mb-4 grid grid-cols-2 gap-2 xl:grid-cols-4">
         {data.stats.map((stat) => (
-          <StatPill key={stat.label} stat={stat} />
+          <div key={stat.label} className="min-w-0">
+            <StatPill stat={stat} />
+          </div>
         ))}
       </div>
 

@@ -6,12 +6,12 @@ type BarChartPlaceholderProps = {
 
 export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
   return (
-    <div className="space-y-2.5">
+    <div className="flex h-full flex-col justify-between gap-2.5">
       {items.map((item) => {
         const width = Math.max(8, Math.round((item.value / item.max) * 100));
         return (
           <div key={item.label}>
-            <div className="mb-1 flex items-center justify-between text-[11px] text-text-muted">
+            <div className="mb-0 flex items-center justify-between text-[11px] text-text-muted">
               <span className="truncate pr-2">{item.label}</span>
               <span className="text-text">{item.value}</span>
             </div>
@@ -38,16 +38,16 @@ export function VerticalBarChartPlaceholder({
   const max = Math.max(...items.map((item) => item.max), 1);
 
   return (
-    <div className="flex h-28 items-end gap-1.5 pt-4">
+    <div className="flex h-full min-h-28 items-end gap-1.5 pt-4">
       {items.map((item) => {
         const height = Math.max(8, Math.round((item.value / max) * 100));
         return (
           <div
             key={item.label}
-            className="flex min-w-0 flex-1 flex-col items-center gap-1"
+            className="flex h-full min-w-0 flex-1 flex-col items-center gap-1"
           >
             <span className="text-[10px] font-semibold text-text">{item.value}</span>
-            <div className="flex h-20 w-full items-end justify-center">
+            <div className="flex min-h-0 w-full flex-1 items-end justify-center">
               <div
                 className="w-full max-w-[18px] rounded-t-sm transition-all"
                 style={{

@@ -173,7 +173,7 @@ const cn: Dict = {
     closedTicket: "已关闭工单",
     slaCompliance: "SLA 达成率",
 
-    thisMonthTasks: "本月任务数",
+    thisMonthTasks: "总任务",
     completed: "已完成",
     totalUsers: "用户总数",
     avgTasks: "平均任务数",
@@ -240,7 +240,7 @@ const cn: Dict = {
     completion: "完成率",
     avgScore: "平均分",
 
-    ticketByGroup: "按支持组工单",
+    ticketByGroup: "按支持组工单 (本月)",
     ticketByDepartment: "本月各部门工单",
     taskByDepartment: "本月各部门任务",
     findingByDepartment: "本月各部门发现",
