@@ -191,6 +191,8 @@ export default function StorageLocationsPage() {
           window.removeEventListener("pointerdown", onPointerDown);
           window.removeEventListener("keydown", onKeyDown);
         };
+        // `open` is render-scoped in nested SortMenu; parent re-render refreshes it.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [open]);
 
       const pick = (dir: SortDir) => {

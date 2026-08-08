@@ -36,7 +36,6 @@ const cn: Dict = {
     sortDesc: "降序排序",
     yes: "是",
     no: "否",
-    close: "关闭",
     confirmDelete: "将停用此记录。是否继续？",
   },
   nav: {

@@ -12,8 +12,6 @@ export default function ItsmPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     apiGet<ItsmOverviewData>("/overview", "itsm")
       .then((next) => {

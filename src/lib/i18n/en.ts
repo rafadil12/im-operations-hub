@@ -34,7 +34,6 @@ const en = {
     sortDesc: "Sort descending",
     yes: "Yes",
     no: "No",
-    close: "Close",
     confirmDelete: "This will be deactivated. Continue?",
   },
   nav: {

@@ -24,26 +24,23 @@ type Props = {
 
 export function MaterialDetailModal({ item, onClose }: Props) {
   const { t } = useLang();
-  const [balances, setBalances] = useState<SparepartStockBalance[]>(
-    item.balances ?? [],
-  );
+  const [fetchedBalances, setFetchedBalances] = useState<
+    SparepartStockBalance[] | null
+  >(null);
   const [loadingBalances, setLoadingBalances] = useState(!item.balances);
 
   useEffect(() => {
-    if (item.balances) {
-      setBalances(item.balances);
-      setLoadingBalances(false);
-      return;
-    }
+    if (item.balances) return;
+
     let cancelled = false;
     (async () => {
       try {
         const data = await apiGetAbs<{ balances: SparepartStockBalance[] }>(
           `/api/sparepart/materials/${item.id}/balances`,
         );
-        if (!cancelled) setBalances(data.balances);
+        if (!cancelled) setFetchedBalances(data.balances);
       } catch {
-        if (!cancelled) setBalances([]);
+        if (!cancelled) setFetchedBalances([]);
       } finally {
         if (!cancelled) setLoadingBalances(false);
       }
@@ -52,6 +49,9 @@ export function MaterialDetailModal({ item, onClose }: Props) {
       cancelled = true;
     };
   }, [item.id, item.balances]);
+
+  const balances = item.balances ?? fetchedBalances ?? [];
+  const showLoading = !item.balances && loadingBalances;
 
   const rows: { label: string; value: string | number }[] = [
     { label: t.sparepart.code, value: item.code },
@@ -93,7 +93,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
         <h3 className="mb-2 text-sm font-semibold text-text">
           {t.sparepart.stockByLocation}
         </h3>
-        {loadingBalances ? (
+        {showLoading ? (
           <p className="text-xs text-text-muted">{t.common.loading}</p>
         ) : balances.length === 0 ? (
           <p className="text-xs text-text-muted">{t.sparepart.noBalances}</p>

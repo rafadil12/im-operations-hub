@@ -54,12 +54,17 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
   const [highlight, setHighlight] = useState(0);
   const [searching, setSearching] = useState(false);
 
+  // Clear local selection when parent clears the controlled value (render-time sync).
+  if (!value && selected !== null) {
+    setSelected(null);
+  }
+  if (!value && query !== "") {
+    setQuery("");
+  }
+
   // Hydrate selected row when parent value is set (e.g. remount) without full catalog.
   useEffect(() => {
-    if (!value) {
-      setSelected(null);
-      return;
-    }
+    if (!value) return;
     if (selected && String(selected.id) === value) return;
 
     resolveAbortRef.current?.abort();
@@ -82,18 +87,6 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
     // intentionally omit `selected` — only react to value changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
-
-  useEffect(() => {
-    if (selected) {
-      setQuery(labelFor(selected));
-    } else if (!value) {
-      setQuery("");
-    }
-  }, [selected, value]);
-
-  useEffect(() => {
-    setHighlight(0);
-  }, [suggestions, open]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -119,6 +112,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
 
     if (needle.length < MIN_CHARS) {
       setSuggestions([]);
+      setHighlight(0);
       setSearching(false);
       return;
     }
@@ -138,10 +132,12 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
     )
       .then((data) => {
         setSuggestions(data.rows);
+        setHighlight(0);
       })
       .catch((err) => {
         if (isAbortError(err)) return;
         setSuggestions([]);
+        setHighlight(0);
       })
       .finally(() => {
         if (!ac.signal.aborted) setSearching(false);

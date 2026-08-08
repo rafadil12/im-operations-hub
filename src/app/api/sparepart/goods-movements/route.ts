@@ -10,16 +10,20 @@ import type { SparepartGoodsMovementInput } from "@/lib/types";
 export async function POST(request: NextRequest) {
   const gate = await requirePermission("sparepart.document.post");
   if (gate instanceof NextResponse) return gate;
+  if (!gate.account) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
   try {
     const body = (await request.json()) as Partial<SparepartGoodsMovementInput>;
     const parsed = parseGoodsMovementBody(body);
-    const creatorLabel = gate.account.employeeId
-      ? `${gate.account.employeeId} - ${gate.account.displayName}`
-      : gate.account.displayName;
+    const account = gate.account;
+    const creatorLabel = account.employeeId
+      ? `${account.employeeId} - ${account.displayName}`
+      : account.displayName;
     const input: SparepartGoodsMovementInput = {
       ...parsed,
-      created_by_system_user_id: gate.account.systemUserId,
+      created_by_system_user_id: account.systemUserId,
       created_by: creatorLabel,
     };
     const result = await postGoodsMovement(input);

@@ -10,6 +10,9 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function POST(request: NextRequest, context: Ctx) {
   const gate = await requirePermission("sparepart.document.reverse");
   if (gate instanceof NextResponse) return gate;
+  if (!gate.account) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
   try {
     const { id } = await context.params;
@@ -22,13 +25,14 @@ export async function POST(request: NextRequest, context: Ctx) {
       posting_date?: string;
       client_request_id?: string;
     };
-    const creatorLabel = gate.account.employeeId
-      ? `${gate.account.employeeId} - ${gate.account.displayName}`
-      : gate.account.displayName;
+    const account = gate.account;
+    const creatorLabel = account.employeeId
+      ? `${account.employeeId} - ${account.displayName}`
+      : account.displayName;
 
     const result = await reverseMaterialDocument(docId, {
       posting_date: body.posting_date,
-      created_by_system_user_id: gate.account.systemUserId,
+      created_by_system_user_id: account.systemUserId,
       created_by: creatorLabel,
       client_request_id: body.client_request_id,
     });
