@@ -42,5 +42,8 @@ export const CHART_COLORS: Record<Theme, ChartColors> = {
   },
 };
 
-/** Inlined in the document head so the theme is set before first paint. */
-export const THEME_BOOTSTRAP_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");if(t!=="light"&&t!=="dark")t="${DEFAULT_THEME}";var r=document.documentElement;r.dataset.theme=t;r.style.colorScheme=t;}catch(e){}})();`;
+/**
+ * Inlined in the document head so the theme is set before first paint.
+ * Also sets background immediately to avoid a frame of the wrong :root colors.
+ */
+export const THEME_BOOTSTRAP_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");if(t!=="light"&&t!=="dark")t="${DEFAULT_THEME}";var r=document.documentElement;r.dataset.theme=t;r.style.colorScheme=t;r.style.backgroundColor=t==="light"?"#f4f6fa":"#0b1220";}catch(e){}})();`;

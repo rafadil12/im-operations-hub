@@ -8,11 +8,7 @@ import {
   SITE_TITLE,
   SITE_URL,
 } from "@/lib/seo";
-import {
-  DEFAULT_THEME,
-  THEME_BOOTSTRAP_SCRIPT,
-  ThemeProvider,
-} from "@/lib/theme";
+import { THEME_BOOTSTRAP_SCRIPT, ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import "./globals.css";
@@ -78,11 +74,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme={DEFAULT_THEME}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
+        {/* Blocking: sets data-theme before paint. Do not put data-theme on
+            <html> in JSX — React hydrate would reset it and flash the wrong theme. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
