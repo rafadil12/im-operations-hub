@@ -59,6 +59,14 @@ INSERT INTO `permissions` (`code`, `description`)
 SELECT 'admin.accounts.manage', 'Manage login accounts and role assignment'
 WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'admin.accounts.manage');
 
+INSERT INTO `permissions` (`code`, `description`)
+SELECT 'sparepart.document.post', 'Post sparepart material documents'
+WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'sparepart.document.post');
+
+INSERT INTO `permissions` (`code`, `description`)
+SELECT 'sparepart.document.reverse', 'Reverse sparepart material documents'
+WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'sparepart.document.reverse');
+
 -- role_permissions: admin gets all
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
@@ -81,7 +89,9 @@ JOIN `permissions` p ON p.code IN (
   'daily_operation.record.delete',
   'daily_operation.analysis.view',
   'daily_operation.master.manage',
-  'itsm.view'
+  'itsm.view',
+  'sparepart.document.post',
+  'sparepart.document.reverse'
 )
 WHERE r.name = 'manager'
   AND NOT EXISTS (
@@ -98,7 +108,9 @@ JOIN `permissions` p ON p.code IN (
   'daily_operation.record.create',
   'daily_operation.record.update',
   'daily_operation.analysis.view',
-  'itsm.view'
+  'itsm.view',
+  'sparepart.document.post',
+  'sparepart.document.reverse'
 )
 WHERE r.name = 'operator'
   AND NOT EXISTS (

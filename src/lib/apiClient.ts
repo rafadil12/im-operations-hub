@@ -29,8 +29,11 @@ export async function apiSend<T>(
 }
 
 /** Fetch against an absolute API path (e.g. `/api/settings/roles`). */
-export async function apiGetAbs<T>(path: string): Promise<T> {
-  const res = await fetch(path, { cache: "no-store" });
+export async function apiGetAbs<T>(
+  path: string,
+  init?: { signal?: AbortSignal },
+): Promise<T> {
+  const res = await fetch(path, { cache: "no-store", signal: init?.signal });
   return handle<T>(res);
 }
 
