@@ -65,6 +65,8 @@ const en = {
     roleName: "Role",
     roleDescription: "Description",
     permissions: "Permissions",
+    permissionsAccess: "Access",
+    permissionsOther: "Other",
     employeeNo: "Employee ID",
     accountName: "Name",
     active: "Active",

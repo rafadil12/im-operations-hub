@@ -38,3 +38,5 @@
 {"sessionId":"72cffc","runId":"pre-fix","hypothesisId":"B-D","location":"auth/index.ts:requireSession","message":"no session cookie","data":{"reason":"no_session"},"timestamp":1786170245865}
 {"sessionId":"72cffc","runId":"pre-fix","hypothesisId":"B-D","location":"auth/index.ts:requireSession","message":"no session cookie","data":{"reason":"no_session"},"timestamp":1786170855664}
 {"sessionId":"72cffc","runId":"pre-fix","hypothesisId":"B-D","location":"auth/index.ts:requireSession","message":"no session cookie","data":{"reason":"no_session"},"timestamp":1786170855684}
+{"sessionId":"72cffc","runId":"pre-fix","hypothesisId":"B-D","location":"auth/index.ts:requireSession","message":"no session cookie","data":{"reason":"no_session"},"timestamp":1786173776373}
+{"sessionId":"72cffc","runId":"pre-fix","hypothesisId":"B-D","location":"auth/index.ts:requireSession","message":"no session cookie","data":{"reason":"no_session"},"timestamp":1786173776443}

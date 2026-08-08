@@ -22,14 +22,13 @@ type AnalysisResponse = { result: AnalysisResult };
 export function OverviewGrid() {
   const { lang } = useLang();
   const t = getDict(lang);
-  const { account, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
   const { canViewDailyAnalysis, canViewItsmAnalysis } = useRoleAccess();
   const [modules, setModules] = useState<ModuleCardData[]>(overviewModules);
   const [expandedId, setExpandedId] = useState<ModuleId | null>(null);
 
   useEffect(() => {
-    // Avoid unauthenticated API calls that return 401 after RBAC hardening.
-    if (authLoading || !account) return;
+    if (authLoading) return;
     if (!canViewDailyAnalysis && !canViewItsmAnalysis) return;
 
     let cancelled = false;
@@ -86,7 +85,6 @@ export function OverviewGrid() {
       cancelled = true;
     };
   }, [
-    account,
     authLoading,
     canViewDailyAnalysis,
     canViewItsmAnalysis,

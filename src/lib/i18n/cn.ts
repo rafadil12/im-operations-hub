@@ -67,6 +67,8 @@ const cn: Dict = {
     roleName: "角色",
     roleDescription: "说明",
     permissions: "权限",
+    permissionsAccess: "访问",
+    permissionsOther: "其他",
     employeeNo: "工号",
     accountName: "姓名",
     active: "启用",

@@ -29,6 +29,9 @@ async function roleIsPrivileged(roleId: number): Promise<boolean> {
 export async function PUT(request: NextRequest, context: Ctx) {
   const gate = await requirePermission(PERMISSIONS.adminAccountsManage);
   if (gate instanceof NextResponse) return gate;
+  if (!gate.session || !gate.account) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
   try {
     const { id: idParam } = await context.params;

@@ -3,6 +3,8 @@ import {
   accountHasPermission,
   canAssignPrivilegedRoles,
   getRoleAccess,
+  GUEST_PERMISSIONS,
+  guestHasPermission,
   permissionsIncludeAdminManage,
   PERMISSIONS,
 } from "@/lib/auth/access";
@@ -24,36 +26,56 @@ function account(
 }
 
 describe("accountHasPermission", () => {
-  it("returns false for null/undefined account", () => {
-    expect(accountHasPermission(null, PERMISSIONS.itsmRequestRead)).toBe(
+  it("applies guest defaults when account is missing", () => {
+    expect(accountHasPermission(null, PERMISSIONS.itsmRequestRead)).toBe(true);
+    expect(accountHasPermission(undefined, PERMISSIONS.overviewView)).toBe(
+      true,
+    );
+    expect(accountHasPermission(null, PERMISSIONS.settingsAccess)).toBe(false);
+    expect(accountHasPermission(null, PERMISSIONS.dailyRecordCreate)).toBe(
       false,
     );
-    expect(
-      accountHasPermission(undefined, PERMISSIONS.itsmRequestRead),
-    ).toBe(false);
   });
 
-  it("returns true only when code is present", () => {
+  it("returns true only when code is present for logged-in accounts", () => {
     const a = account({ permissions: [PERMISSIONS.itsmRequestRead] });
     expect(accountHasPermission(a, PERMISSIONS.itsmRequestRead)).toBe(true);
     expect(accountHasPermission(a, PERMISSIONS.settingsAccess)).toBe(false);
   });
 });
 
+describe("guestHasPermission", () => {
+  it("matches GUEST_PERMISSIONS catalog", () => {
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.overviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.itsmRequestExport);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyRecordExport);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyAnalysisView);
+    expect(guestHasPermission(PERMISSIONS.itsmAnalysisView)).toBe(true);
+    expect(guestHasPermission(PERMISSIONS.adminRolesManage)).toBe(false);
+  });
+});
+
 describe("getRoleAccess", () => {
-  it("treats missing account as guest with no capabilities", () => {
+  it("grants guest the configured public browse capabilities", () => {
     const access = getRoleAccess(null);
     expect(access.isGuest).toBe(true);
-    expect(access.canViewOverview).toBe(false);
+    expect(access.canViewOverview).toBe(true);
+    expect(access.canViewItsmOverview).toBe(true);
+    expect(access.canViewItsmRequests).toBe(true);
+    expect(access.canExportItsmRequest).toBe(true);
+    expect(access.canViewItsmAnalysis).toBe(true);
+    expect(access.canExportDailyRecord).toBe(true);
+    expect(access.canViewDailyAnalysis).toBe(true);
+    expect(access.canViewDailyRecords).toBe(true);
     expect(access.canAddDailyRecord).toBe(false);
     expect(access.canUpdateDailyRecord).toBe(false);
     expect(access.canDeleteDailyRecord).toBe(false);
+    expect(access.canImportDailyRecord).toBe(false);
+    expect(access.canImportItsmRequest).toBe(false);
     expect(access.canAccessSettings).toBe(false);
     expect(access.canManageRoles).toBe(false);
     expect(access.canManageAccounts).toBe(false);
-    expect(access.canImportDailyRecord).toBe(false);
-    expect(access.canExportDailyRecord).toBe(false);
-    expect(access.canImportItsmRequest).toBe(false);
+    expect(access.canManageConfiguration).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {

@@ -25,6 +25,21 @@ export const PERMISSIONS = {
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
+/**
+ * Default capabilities for unauthenticated visitors (Guest Mode).
+ * Not a DB role — mirrors the read-oriented set configured for public browse.
+ */
+export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
+  PERMISSIONS.overviewView,
+  PERMISSIONS.itsmOverviewView,
+  PERMISSIONS.itsmRequestRead,
+  PERMISSIONS.itsmRequestExport,
+  PERMISSIONS.itsmAnalysisView,
+  PERMISSIONS.dailyRecordRead,
+  PERMISSIONS.dailyRecordExport,
+  PERMISSIONS.dailyAnalysisView,
+] as const;
+
 export type RoleAccess = {
   isGuest: boolean;
   isAdmin: boolean;
@@ -55,7 +70,14 @@ export function accountHasPermission(
   account: AuthAccountPublic | null | undefined,
   code: string,
 ): boolean {
-  return Boolean(account?.permissions?.includes(code));
+  if (!account) {
+    return (GUEST_PERMISSIONS as readonly string[]).includes(code);
+  }
+  return Boolean(account.permissions?.includes(code));
+}
+
+export function guestHasPermission(code: string): boolean {
+  return (GUEST_PERMISSIONS as readonly string[]).includes(code);
 }
 
 /** Privileged admin-management capabilities (role assignment / RBAC). */
