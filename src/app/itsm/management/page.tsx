@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiGet } from "@/lib/apiClient";
+import { apiGet, getApiErrorMessage } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import type { ItsmRequest } from "@/lib/types";
@@ -35,7 +35,7 @@ type ListResponse = { rows: ItsmRequest[] };
 export default function ManagementPage() {
   const { t } = useLang();
   const { success: toastSuccess } = useToast();
-  const { canImportExport } = useRoleAccess();
+  const { canImportItsmRequest, canExportItsmRequest } = useRoleAccess();
   const [rows, setRows] = useState<ItsmRequest[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ export default function ManagementPage() {
 
       setRows(data.rows);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load.");
+      setError(getApiErrorMessage(e) || "Failed to load.");
     } finally {
       setLoading(false);
     }
@@ -116,36 +116,40 @@ export default function ManagementPage() {
           </h1>
           <p className="text-sm text-text-muted">{t.itsm.manageDesc}</p>
         </div>
-        {canImportExport ? (
+        {(canImportItsmRequest || canExportItsmRequest) ? (
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setImportOpen(true)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-            >
-              <ImportIcon />
-              {t.common.import}
-            </button>
+            {canImportItsmRequest ? (
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+              >
+                <ImportIcon />
+                {t.common.import}
+              </button>
+            ) : null}
 
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams(
-                  {
-                    start: filters.start,
-                    end: filters.end,
-                    requestId: filters.requestId,
-                    subject: filters.subject,
-                    requester: filters.requester,
-                    technician: filters.technician,
-                  },
-                ).toString()}`;
-              }}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-            >
-              <ExportIcon />
-              {t.common.export}
-            </button>
+            {canExportItsmRequest ? (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams(
+                    {
+                      start: filters.start,
+                      end: filters.end,
+                      requestId: filters.requestId,
+                      subject: filters.subject,
+                      requester: filters.requester,
+                      technician: filters.technician,
+                    },
+                  ).toString()}`;
+                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+              >
+                <ExportIcon />
+                {t.common.export}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -173,7 +177,7 @@ export default function ManagementPage() {
         />
       )}
 
-      {importOpen && canImportExport ? (
+      {importOpen && canImportItsmRequest ? (
         <ImportItsmRequestModal
           onClose={() => setImportOpen(false)}
           onImported={handleImported}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiGet, apiSend } from "@/lib/apiClient";
+import { apiGet, apiSend, getApiErrorMessage } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
@@ -35,9 +35,12 @@ export default function ManagementPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
   const {
-    canImportExport,
-    canDownloadTemplate,
+    canImportDailyRecord,
+    canExportDailyRecord,
+    canDownloadDailyTemplate,
     canAddDailyRecord,
+    canUpdateDailyRecord,
+    canDeleteDailyRecord,
   } = useRoleAccess();
   const [masters, setMasters] = useState<Masters | null>(null);
   const [rows, setRows] = useState<MesDataRow[]>([]);
@@ -69,7 +72,7 @@ export default function ManagementPage() {
       const data = await apiGet<ListResponse>(`/mes-record?${params.toString()}`);
       setRows(data.rows);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load.");
+      setError(getApiErrorMessage(e) || "Failed to load.");
     } finally {
       setLoading(false);
     }
@@ -78,7 +81,9 @@ export default function ManagementPage() {
   useEffect(() => {
     apiGet<Masters>("/masters")
       .then(setMasters)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load masters."));
+      .catch((e) =>
+        setError(getApiErrorMessage(e) || "Failed to load masters."),
+      );
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch data on mount
     loadRows(defaultFilters);
   }, [loadRows]);
@@ -245,7 +250,7 @@ export default function ManagementPage() {
           <p className="text-sm text-text-muted">{t.dailyOp.manageDesc}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {canDownloadTemplate ? (
+          {canDownloadDailyTemplate ? (
             <button
               type="button"
               onClick={handleDownloadTemplate}
@@ -255,27 +260,27 @@ export default function ManagementPage() {
               {t.common.downloadTemplate}
             </button>
           ) : null}
-          {canImportExport ? (
-            <>
-              <button
-                type="button"
-                onClick={handleExport}
-                disabled={exporting || loading}
-                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-              >
-                <ExportIcon />
-                {exporting ? t.common.exporting : t.common.export}
-              </button>
-              <button
-                type="button"
-                onClick={() => setImportOpen(true)}
-                disabled={!masters}
-                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-              >
-                <ImportIcon />
-                {t.common.import}
-              </button>
-            </>
+          {canExportDailyRecord ? (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || loading}
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+            >
+              <ExportIcon />
+              {exporting ? t.common.exporting : t.common.export}
+            </button>
+          ) : null}
+          {canImportDailyRecord ? (
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              disabled={!masters}
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+            >
+              <ImportIcon />
+              {t.common.import}
+            </button>
           ) : null}
           {canAddDailyRecord ? (
             <button
@@ -313,11 +318,17 @@ export default function ManagementPage() {
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={handlePageSizeChange}
-          onEdit={(row) => {
-            setEditRow(row);
-            setFormOpen(true);
-          }}
-          onDelete={(row) => setDeleteRow(row)}
+          onEdit={
+            canUpdateDailyRecord
+              ? (row) => {
+                  setEditRow(row);
+                  setFormOpen(true);
+                }
+              : undefined
+          }
+          onDelete={
+            canDeleteDailyRecord ? (row) => setDeleteRow(row) : undefined
+          }
         />
       )}
 
@@ -333,7 +344,7 @@ export default function ManagementPage() {
         />
       ) : null}
 
-      {importOpen && canImportExport ? (
+      {importOpen && canImportDailyRecord ? (
         <ImportMesDataModal
           onClose={() => setImportOpen(false)}
           onImported={handleImported}

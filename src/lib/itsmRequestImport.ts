@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import * as XLSX from "xlsx";
+import { isServiceRequestValue } from "@/lib/itsmServiceRequest";
 
 export const ITSM_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 export const ITSM_IMPORT_MAX_ROWS = 20_000;
@@ -129,10 +129,7 @@ function nullableText(value: unknown): string | null {
 }
 
 function parseServiceRequest(value: unknown): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value === 1;
-  const s = cellToString(value).toLowerCase();
-  return s === "true" || s === "yes" || s === "y" || s === "1";
+  return isServiceRequestValue(value);
 }
 
 function parseRequestId(value: unknown): number | null {
@@ -173,32 +170,59 @@ function getCell(row: unknown[], col: number | undefined): unknown {
   return row[col];
 }
 
+function excelCellValue(value: ExcelJS.CellValue): unknown {
+  if (value == null) return null;
+  if (value instanceof Date) return value;
+  if (typeof value !== "object") return value;
+  if ("richText" in value && Array.isArray(value.richText)) {
+    return value.richText.map((part) => part.text).join("");
+  }
+  if ("text" in value && typeof value.text === "string") {
+    return value.text;
+  }
+  if ("result" in value) {
+    return excelCellValue(value.result as ExcelJS.CellValue);
+  }
+  return String(value);
+}
+
+async function workbookToMatrix(
+  buffer: ArrayBuffer | Buffer,
+): Promise<unknown[][] | null> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(
+    (Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer)) as never,
+  );
+  const sheet = workbook.worksheets[0];
+  if (!sheet) return null;
+
+  const matrix: unknown[][] = [];
+  const rowCount = sheet.rowCount;
+  for (let r = 1; r <= rowCount; r++) {
+    const row = sheet.getRow(r);
+    const values: unknown[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      values[colNumber - 1] = excelCellValue(cell.value);
+    });
+    matrix.push(values);
+  }
+  return matrix;
+}
+
 /**
- * Parse a ManageEngine / ITSM Excel export.
+ * Parse a ManageEngine / ITSM Excel export (.xlsx).
  * Header row is detected dynamically (commonly row 7); data starts on the next row.
  */
-export function parseItsmRequestWorkbook(
+export async function parseItsmRequestWorkbook(
   buffer: ArrayBuffer | Buffer,
-): ItsmImportParseResult {
-  const workbook = XLSX.read(buffer, {
-    type: "buffer",
-    cellDates: true,
-  });
-
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
+): Promise<ItsmImportParseResult> {
+  const matrix = await workbookToMatrix(buffer);
+  if (!matrix) {
     return {
       ok: false,
       errors: [{ row: 0, message: "Workbook has no sheets." }],
     };
   }
-
-  const sheet = workbook.Sheets[sheetName];
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    defval: null,
-    raw: true,
-  });
 
   const found = findHeaderRow(matrix);
   if (!found) {
@@ -270,6 +294,14 @@ export function parseItsmRequestWorkbook(
         row: excelRow,
         field: "Subject",
         message: "Subject is required.",
+      });
+      continue;
+    }
+    if (!status) {
+      errors.push({
+        row: excelRow,
+        field: "Status",
+        message: "Status is required.",
       });
       continue;
     }

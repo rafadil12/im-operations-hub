@@ -16,5 +16,7 @@ export function fromDateTimeLocal(value: string): string | null {
 /** Short display for table cells. */
 export function formatDisplay(value: string | null): string {
   if (!value) return "-";
+  // ManageEngine ITSM: "DD/MM/YYYY hh:mm AM/PM" — keep AM/PM (slice(0,16) drops it).
+  if (/\b(AM|PM)\b/i.test(value)) return value.trim();
   return value.slice(0, 16).replace("T", " ");
 }

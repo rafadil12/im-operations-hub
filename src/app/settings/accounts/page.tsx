@@ -1,4 +1,5 @@
 import { pageMetadata } from "@/lib/seo";
+import { AdminGate } from "@/components/settings/AdminGate";
 import { AccountsManager } from "@/components/settings/AccountsManager";
 
 export const metadata = pageMetadata({
@@ -8,5 +9,9 @@ export const metadata = pageMetadata({
 });
 
 export default function SettingsAccountsPage() {
-  return <AccountsManager />;
+  return (
+    <AdminGate require="accounts">
+      <AccountsManager />
+    </AdminGate>
+  );
 }

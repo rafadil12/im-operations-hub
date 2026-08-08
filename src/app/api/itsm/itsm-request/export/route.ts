@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { buildItsmExport } from "@/lib/itsmExport";
 import type { ItsmRequest } from "@/lib/types";
@@ -10,15 +11,29 @@ const CREATED_DATE_SQL = `
 `;
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.itsmRequestExport);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
 
-    const start = sp.get("start");
-    const end = sp.get("end");
+    const startRaw = sp.get("start");
+    const endRaw = sp.get("end");
 
-    if (!start || !end) {
+    if (!startRaw || !endRaw) {
       return NextResponse.json(
         { error: "Start and end date are required." },
+        { status: 400 },
+      );
+    }
+
+    // Strict date-only form for SQL params and Content-Disposition filename.
+    const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+    const start = startRaw.slice(0, 10);
+    const end = endRaw.slice(0, 10);
+    if (!DATE_ONLY.test(start) || !DATE_ONLY.test(end)) {
+      return NextResponse.json(
+        { error: "Start and end must be YYYY-MM-DD dates." },
         { status: 400 },
       );
     }

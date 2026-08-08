@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 import type { Subcategory } from "@/lib/types";
 
 export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.dailyMasterManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const rows = await query<Subcategory[]>(
       "SELECT id, category_id, name_cn, name_en FROM subcategories ORDER BY name_en",
@@ -18,6 +22,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.dailyMasterManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = await request.json();
     const name_en = body.name_en?.toString().trim() || null;

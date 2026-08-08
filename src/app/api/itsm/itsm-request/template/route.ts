@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { buildItsmImportTemplate } from "@/lib/itsmRequestImport";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.itsmRequestTemplate);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const buffer = await buildItsmImportTemplate();
 

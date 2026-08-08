@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { requireAdmin } from "@/lib/auth";
-import { execute, query } from "@/lib/db";
+import {
+  PERMISSIONS,
+  requireAnyPermission,
+  requirePermission,
+} from "@/lib/auth";
+import { query, withTransaction } from "@/lib/db";
 
 type RoleRow = RowDataPacket & {
   id: number;
@@ -10,7 +14,11 @@ type RoleRow = RowDataPacket & {
 };
 
 export async function GET() {
-  const gate = await requireAdmin();
+  // Accounts UI needs role options for the assign dropdown.
+  const gate = await requireAnyPermission([
+    PERMISSIONS.adminRolesManage,
+    PERMISSIONS.adminAccountsManage,
+  ]);
   if (gate instanceof NextResponse) return gate;
 
   try {
@@ -44,7 +52,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const gate = await requireAdmin();
+  const gate = await requirePermission(PERMISSIONS.adminRolesManage);
   if (gate instanceof NextResponse) return gate;
 
   try {
@@ -65,18 +73,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await execute(
-      "INSERT INTO roles (name, description) VALUES (?, ?)",
-      [name, description],
-    );
-    const roleId = result.insertId;
-
-    for (const permissionId of permissionIds) {
-      await execute(
-        "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-        [roleId, permissionId],
+    const roleId = await withTransaction(async (conn) => {
+      const [result] = await conn.execute(
+        "INSERT INTO roles (name, description) VALUES (?, ?)",
+        [name, description],
       );
-    }
+      const insertId = Number((result as { insertId: number }).insertId);
+      for (const permissionId of permissionIds) {
+        await conn.execute(
+          "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
+          [insertId, permissionId],
+        );
+      }
+      return insertId;
+    });
 
     return NextResponse.json({ id: roleId }, { status: 201 });
   } catch (error) {

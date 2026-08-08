@@ -6,11 +6,13 @@ import {
   type ModuleCardData,
   type ModuleId,
 } from "@/data/overview-mock";
-import { apiGet } from "@/lib/apiClient";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { apiGet, getApiErrorMessage } from "@/lib/apiClient";
 import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { mapAnalysisToOverview } from "@/lib/mapAnalysisToOverview";
 import { getDict, useLang } from "@/lib/i18n";
 import type { AnalysisResult, ItsmAnalysisResponse } from "@/lib/types";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { ModuleCard } from "./ModuleCard";
 import { CardExpandModal } from "./CardExpandModal";
 import { mapItsmToOverview } from "@/lib/mapItsmToOverview";
@@ -20,10 +22,16 @@ type AnalysisResponse = { result: AnalysisResult };
 export function OverviewGrid() {
   const { lang } = useLang();
   const t = getDict(lang);
+  const { account, loading: authLoading } = useAuth();
+  const { canViewDailyAnalysis, canViewItsmAnalysis } = useRoleAccess();
   const [modules, setModules] = useState<ModuleCardData[]>(overviewModules);
   const [expandedId, setExpandedId] = useState<ModuleId | null>(null);
 
   useEffect(() => {
+    // Avoid unauthenticated API calls that return 401 after RBAC hardening.
+    if (authLoading || !account) return;
+    if (!canViewDailyAnalysis && !canViewItsmAnalysis) return;
+
     let cancelled = false;
     const month = getCurrentMonth();
     const start = toDateInput(month.start);
@@ -32,14 +40,18 @@ export function OverviewGrid() {
     (async () => {
       try {
         const [dailyData, itsmData] = await Promise.all([
-          apiGet<AnalysisResponse>(
-            `/analysis?start=${start}&end=${end}`,
-            "daily",
-          ),
-          apiGet<ItsmAnalysisResponse>(
-            `/analysis?start=${start}&end=${end}`,
-            "itsm",
-          ),
+          canViewDailyAnalysis
+            ? apiGet<AnalysisResponse>(
+                `/analysis?start=${start}&end=${end}`,
+                "daily",
+              )
+            : Promise.resolve(null),
+          canViewItsmAnalysis
+            ? apiGet<ItsmAnalysisResponse>(
+                `/analysis?start=${start}&end=${end}`,
+                "itsm",
+              )
+            : Promise.resolve(null),
         ]);
 
         if (cancelled) return;
@@ -48,17 +60,24 @@ export function OverviewGrid() {
           prev.map((mod) => {
             switch (mod.id) {
               case "itsm":
-                return mapItsmToOverview(mod, itsmData.result, lang);
+                return itsmData
+                  ? mapItsmToOverview(mod, itsmData.result, lang)
+                  : mod;
 
               case "daily-operation":
-                return mapAnalysisToOverview(mod, dailyData.result, lang);
+                return dailyData
+                  ? mapAnalysisToOverview(mod, dailyData.result, lang)
+                  : mod;
 
               default:
                 return mod;
             }
           }),
         );
-      } catch {
+      } catch (err) {
+        // #region agent log
+        fetch('http://127.0.0.1:7441/ingest/b0db2ec0-9a05-4761-88ea-3462e0be0a54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'72cffc'},body:JSON.stringify({sessionId:'72cffc',runId:'post-fix',hypothesisId:'B',location:'OverviewGrid.tsx:useEffect',message:'overview fetch caught error',data:{errorMessage:getApiErrorMessage(err)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         // Keep mock fallback on failure.
       }
     })();
@@ -66,7 +85,13 @@ export function OverviewGrid() {
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [
+    account,
+    authLoading,
+    canViewDailyAnalysis,
+    canViewItsmAnalysis,
+    lang,
+  ]);
 
   const translatedModules = useMemo(() => {
     return modules.map((module): ModuleCardData => {
@@ -81,7 +106,7 @@ export function OverviewGrid() {
                 t.overview.totalTicket,
                 t.overview.openTicket,
                 t.overview.closedTicket,
-                t.overview.slaCompliance,
+                t.itsmAnalysis.activeUsers,
               ][index] ?? stat.label,
           })),
           bars: module.bars

@@ -17,6 +17,7 @@ type AccountRow = RowDataPacket & {
   is_active: number;
   role_id: number | null;
   role_name: string | null;
+  session_version: number;
 };
 
 function displayName(
@@ -40,8 +41,22 @@ function toPublic(
       ? roleName.charAt(0).toUpperCase() + roleName.slice(1)
       : "No role",
     permissions,
+    sessionVersion: Number(row.session_version) || 1,
   };
 }
+
+const ACCOUNT_SELECT = `
+  su.id AS system_user_id,
+  su.user_id,
+  su.password_hash,
+  su.is_active,
+  su.role_id,
+  COALESCE(su.session_version, 1) AS session_version,
+  u.employee_no,
+  u.name_en,
+  u.name_cn,
+  r.name AS role_name
+`;
 
 export async function loadPermissionsForRole(
   roleId: number | null,
@@ -62,16 +77,7 @@ export async function findAccountByEmployeeNo(
   employeeNo: string,
 ): Promise<AccountRow | null> {
   const rows = await query<AccountRow[]>(
-    `SELECT
-       su.id AS system_user_id,
-       su.user_id,
-       su.password_hash,
-       su.is_active,
-       su.role_id,
-       u.employee_no,
-       u.name_en,
-       u.name_cn,
-       r.name AS role_name
+    `SELECT ${ACCOUNT_SELECT}
      FROM system_users su
      INNER JOIN users u ON u.id = su.user_id
      LEFT JOIN roles r ON r.id = su.role_id
@@ -86,16 +92,7 @@ export async function findAccountBySystemUserId(
   systemUserId: number,
 ): Promise<AccountRow | null> {
   const rows = await query<AccountRow[]>(
-    `SELECT
-       su.id AS system_user_id,
-       su.user_id,
-       su.password_hash,
-       su.is_active,
-       su.role_id,
-       u.employee_no,
-       u.name_en,
-       u.name_cn,
-       r.name AS role_name
+    `SELECT ${ACCOUNT_SELECT}
      FROM system_users su
      INNER JOIN users u ON u.id = su.user_id
      LEFT JOIN roles r ON r.id = su.role_id
@@ -149,10 +146,12 @@ export async function changePassword(
   if (!ok) return { ok: false, code: "wrong_current" };
 
   const passwordHash = await hashPassword(newPassword);
-  await execute("UPDATE system_users SET password_hash = ? WHERE id = ?", [
-    passwordHash,
-    systemUserId,
-  ]);
+  await execute(
+    `UPDATE system_users
+     SET password_hash = ?, session_version = COALESCE(session_version, 1) + 1
+     WHERE id = ?`,
+    [passwordHash, systemUserId],
+  );
   return { ok: true };
 }
 
@@ -164,9 +163,11 @@ export async function resetPassword(
   if (!row) return false;
 
   const passwordHash = await hashPassword(newPassword);
-  await execute("UPDATE system_users SET password_hash = ? WHERE id = ?", [
-    passwordHash,
-    systemUserId,
-  ]);
+  await execute(
+    `UPDATE system_users
+     SET password_hash = ?, session_version = COALESCE(session_version, 1) + 1
+     WHERE id = ?`,
+    [passwordHash, systemUserId],
+  );
   return true;
 }

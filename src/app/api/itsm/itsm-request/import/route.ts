@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { withTransaction } from "@/lib/db";
 import {
@@ -107,14 +108,23 @@ async function dedupeExistingRequestIds(
         continue;
       }
       await conn.query(
-        `DELETE FROM itsm_requests WHERE request_id = ? LIMIT ?`,
-        [requestId, count - 1],
+        `DELETE FROM itsm_requests
+         WHERE request_id = ?
+           AND id NOT IN (
+             SELECT id FROM (
+               SELECT MAX(id) AS id FROM itsm_requests WHERE request_id = ?
+             ) keep_row
+           )`,
+        [requestId, requestId],
       );
     }
   }
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.itsmRequestImport);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file");
@@ -140,10 +150,10 @@ export async function POST(req: NextRequest) {
     }
 
     const name = file.name.toLowerCase();
-    if (!name.endsWith(".xlsx") && !name.endsWith(".xls")) {
+    if (!name.endsWith(".xlsx")) {
       return NextResponse.json(
         {
-          error: "Only .xlsx / .xls files are supported.",
+          error: "Only .xlsx files are supported.",
           errors: [] as ItsmImportRowError[],
         },
         { status: 400 },
@@ -151,7 +161,7 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const parsed = parseItsmRequestWorkbook(buffer);
+    const parsed = await parseItsmRequestWorkbook(buffer);
 
     if (!parsed.ok) {
       return NextResponse.json(

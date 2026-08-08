@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
+import { formatDateOnly } from "@/lib/dateRange";
 import { query } from "@/lib/db";
+import { isServiceRequestValue } from "@/lib/itsmServiceRequest";
 
 type TotalRow = {
   total: number;
@@ -45,6 +48,9 @@ type ActiveUsersRow = {
 };
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.itsmAnalysisView);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
 
@@ -93,11 +99,9 @@ export async function GET(request: NextRequest) {
     const previousEnd = new Date(endDate);
     previousEnd.setDate(previousEnd.getDate() - diffDays);
 
-    const formatDate = (d: Date) => d.toISOString().split("T")[0];
-
     const previousParams: unknown[] = [
-      formatDate(previousStart),
-      formatDate(previousEnd),
+      formatDateOnly(previousStart),
+      formatDateOnly(previousEnd),
     ];
 
     if (group && group !== "All") {
@@ -364,14 +368,12 @@ export async function GET(request: NextRequest) {
     }));
 
     const byRequestType = requestTypeRows.map((row) => ({
-      name_en:
-        String(row.is_service_request).toLowerCase() === "true"
-          ? "Service Request"
-          : "Incident",
-      name_cn:
-        String(row.is_service_request).toLowerCase() === "true"
-          ? "服务请求"
-          : "事件",
+      name_en: isServiceRequestValue(row.is_service_request)
+        ? "Service Request"
+        : "Incident",
+      name_cn: isServiceRequestValue(row.is_service_request)
+        ? "服务请求"
+        : "事件",
       count: Number(row.count),
     }));
     /*

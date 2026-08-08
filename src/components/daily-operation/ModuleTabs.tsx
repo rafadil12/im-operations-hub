@@ -9,17 +9,37 @@ import { useLang } from "@/lib/i18n";
 export function ModuleTabs() {
   const pathname = usePathname();
   const { t } = useLang();
-  const { canManageConfiguration } = useRoleAccess();
+  const {
+    canViewDailyRecords,
+    canViewDailyAnalysis,
+    canManageConfiguration,
+  } = useRoleAccess();
 
   const tabs = useMemo(() => {
     const all = [
-      { label: t.nav.management, href: "/daily-operation/management" },
-      { label: t.nav.analysis, href: "/daily-operation/analysis" },
-      { label: t.nav.master, href: "/daily-operation/master/users" },
+      {
+        label: t.nav.management,
+        href: "/daily-operation/management",
+        show: canViewDailyRecords,
+      },
+      {
+        label: t.nav.analysis,
+        href: "/daily-operation/analysis",
+        show: canViewDailyAnalysis,
+      },
+      {
+        label: t.nav.master,
+        href: "/daily-operation/master/users",
+        show: canManageConfiguration,
+      },
     ];
-    if (canManageConfiguration) return all;
-    return all.filter((tab) => tab.href !== "/daily-operation/master/users");
-  }, [t, canManageConfiguration]);
+    return all.filter((tab) => tab.show);
+  }, [
+    t,
+    canViewDailyRecords,
+    canViewDailyAnalysis,
+    canManageConfiguration,
+  ]);
 
   return (
     <div className="mb-5 flex flex-wrap gap-1 border-b border-border-subtle">

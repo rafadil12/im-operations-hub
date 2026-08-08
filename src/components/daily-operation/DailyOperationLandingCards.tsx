@@ -25,12 +25,20 @@ const cards = [
 
 export function DailyOperationLandingCards() {
   const { t } = useLang();
-  const { canManageConfiguration } = useRoleAccess();
+  const {
+    canViewDailyRecords,
+    canViewDailyAnalysis,
+    canManageConfiguration,
+  } = useRoleAccess();
 
   const visibleCards = useMemo(() => {
-    if (canManageConfiguration) return cards;
-    return cards.filter((card) => card.key !== "master");
-  }, [canManageConfiguration]);
+    return cards.filter((card) => {
+      if (card.key === "management") return canViewDailyRecords;
+      if (card.key === "analysis") return canViewDailyAnalysis;
+      if (card.key === "master") return canManageConfiguration;
+      return false;
+    });
+  }, [canViewDailyRecords, canViewDailyAnalysis, canManageConfiguration]);
 
   const titleFor = (key: (typeof cards)[number]["key"]) => {
     if (key === "management") return t.dailyOp.manageTitle;

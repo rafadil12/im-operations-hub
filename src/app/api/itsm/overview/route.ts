@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { IS_SERVICE_REQUEST_SQL } from "@/lib/itsmServiceRequest";
 
 export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.itsmOverviewView);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const [
       total,
@@ -49,7 +54,7 @@ export async function GET() {
         query<Record<string, unknown>[]>(`
           SELECT COUNT(*) AS total
           FROM itsm_requests
-          WHERE is_service_request = 'true'
+          WHERE ${IS_SERVICE_REQUEST_SQL}
             AND STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p')
                 >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
             AND STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p')
@@ -60,7 +65,7 @@ export async function GET() {
         query<Record<string, unknown>[]>(`
           SELECT COUNT(*) AS total
           FROM itsm_requests
-          WHERE is_service_request = 'true'
+          WHERE ${IS_SERVICE_REQUEST_SQL}
             AND STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p')
                 >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01')
             AND STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p')
@@ -84,7 +89,7 @@ export async function GET() {
       query<Record<string, unknown>[]>(`
         SELECT
           COUNT(*) AS total,
-          SUM(is_service_request = 'true') AS serviceRequests
+          SUM(CASE WHEN ${IS_SERVICE_REQUEST_SQL} THEN 1 ELSE 0 END) AS serviceRequests
         FROM itsm_requests
       `),
       // Incidents
@@ -92,7 +97,7 @@ export async function GET() {
         SELECT
           COUNT(*) AS total
         FROM itsm_requests
-        WHERE is_service_request = 'false'
+        WHERE NOT (${IS_SERVICE_REQUEST_SQL})
       `),
 
       // Closed Today

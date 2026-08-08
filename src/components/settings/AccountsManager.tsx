@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
-import { DEFAULT_PASSWORD } from "@/lib/auth/constants";
 import { useLang } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
 import { SettingsTabs } from "./SettingsTabs";
@@ -46,6 +45,9 @@ export function AccountsManager() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,6 +76,7 @@ export function AccountsManager() {
     setFormError(null);
     setPassword("");
     setConfirmPassword("");
+    setTemporaryPassword(null);
   };
 
   const openEdit = (row: AccountRow) => {
@@ -83,17 +86,18 @@ export function AccountsManager() {
     setPassword("");
     setConfirmPassword("");
     setFormError(null);
+    setTemporaryPassword(null);
   };
 
-  const submit = async () => {
+  const submit = async (generateTemporaryPassword = false) => {
     if (!editRow) return;
 
-    if (password || confirmPassword) {
+    if (!generateTemporaryPassword && (password || confirmPassword)) {
       if (password !== confirmPassword) {
         setFormError(t.auth.passwordMismatch);
         return;
       }
-      if (password !== DEFAULT_PASSWORD && password.length < 8) {
+      if (password.length < 8) {
         setFormError(t.auth.passwordTooShort);
         return;
       }
@@ -107,15 +111,28 @@ export function AccountsManager() {
         is_active: boolean;
         password?: string;
         confirm_password?: string;
+        generate_temporary_password?: boolean;
       } = {
         role_id: roleId,
         is_active: isActive,
       };
-      if (password) {
+      if (generateTemporaryPassword) {
+        body.generate_temporary_password = true;
+      } else if (password) {
         body.password = password;
         body.confirm_password = confirmPassword;
       }
-      await apiSendAbs(`/api/settings/accounts/${editRow.id}`, "PUT", body);
+      const res = await apiSendAbs<{
+        ok: true;
+        temporaryPassword?: string;
+      }>(`/api/settings/accounts/${editRow.id}`, "PUT", body);
+      if (res.temporaryPassword) {
+        setTemporaryPassword(res.temporaryPassword);
+        setPassword("");
+        setConfirmPassword("");
+        await load();
+        return;
+      }
       closeForm();
       await load();
     } catch (e) {
@@ -214,16 +231,18 @@ export function AccountsManager() {
                 onClick={closeForm}
                 className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
               >
-                {t.common.cancel}
+                {temporaryPassword ? t.common.close : t.common.cancel}
               </button>
-              <button
-                type="button"
-                onClick={submit}
-                disabled={saving}
-                className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
-              >
-                {saving ? t.common.loading : t.common.save}
-              </button>
+              {!temporaryPassword ? (
+                <button
+                  type="button"
+                  onClick={() => void submit(false)}
+                  disabled={saving}
+                  className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  {saving ? t.common.loading : t.common.save}
+                </button>
+              ) : null}
             </>
           }
         >
@@ -232,6 +251,19 @@ export function AccountsManager() {
               <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
                 {formError}
               </p>
+            ) : null}
+            {temporaryPassword ? (
+              <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-3 text-xs text-text">
+                <p className="mb-2 font-medium">
+                  {t.settings.temporaryPasswordShown}
+                </p>
+                <code className="block break-all rounded bg-bg/60 px-2 py-1.5 font-mono text-sm text-text">
+                  {temporaryPassword}
+                </code>
+                <p className="mt-2 text-[11px] text-text-dim">
+                  {t.settings.temporaryPasswordHint}
+                </p>
+              </div>
             ) : null}
             <div>
               <label className={labelCls}>{t.settings.employeeNo}</label>
@@ -246,6 +278,7 @@ export function AccountsManager() {
               <select
                 className={inputCls}
                 value={roleId ?? ""}
+                disabled={Boolean(temporaryPassword)}
                 onChange={(e) =>
                   setRoleId(e.target.value ? Number(e.target.value) : null)
                 }
@@ -263,60 +296,60 @@ export function AccountsManager() {
                 <input
                   type="checkbox"
                   checked={isActive}
+                  disabled={Boolean(temporaryPassword)}
                   onChange={(e) => setIsActive(e.target.checked)}
                 />
                 {t.settings.active}
               </label>
             </div>
-            <div className="border-t border-border-subtle pt-3">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-medium text-text">
-                  {t.settings.resetPassword}
+            {!temporaryPassword ? (
+              <div className="border-t border-border-subtle pt-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-text">
+                    {t.settings.resetPassword}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void submit(true)}
+                    className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-60"
+                  >
+                    {t.settings.generateTemporaryPassword}
+                  </button>
+                </div>
+                <p className="mb-3 text-[11px] text-text-dim">
+                  {t.settings.passwordOptionalHint}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPassword(DEFAULT_PASSWORD);
-                    setConfirmPassword(DEFAULT_PASSWORD);
-                    setFormError(null);
-                  }}
-                  className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted hover:bg-surface-hover hover:text-text"
-                >
-                  {t.settings.resetToDefaultPassword}
-                </button>
-              </div>
-              <p className="mb-3 text-[11px] text-text-dim">
-                {t.settings.passwordOptionalHint}
-              </p>
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className={labelCls} htmlFor="admin-new-password">
-                    {t.settings.newPassword}
-                  </label>
-                  <input
-                    id="admin-new-password"
-                    type="password"
-                    autoComplete="new-password"
-                    className={inputCls}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className={labelCls} htmlFor="admin-confirm-password">
-                    {t.settings.confirmPassword}
-                  </label>
-                  <input
-                    id="admin-confirm-password"
-                    type="password"
-                    autoComplete="new-password"
-                    className={inputCls}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className={labelCls} htmlFor="admin-new-password">
+                      {t.settings.newPassword}
+                    </label>
+                    <input
+                      id="admin-new-password"
+                      type="password"
+                      autoComplete="new-password"
+                      className={inputCls}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls} htmlFor="admin-confirm-password">
+                      {t.settings.confirmPassword}
+                    </label>
+                    <input
+                      id="admin-confirm-password"
+                      type="password"
+                      autoComplete="new-password"
+                      className={inputCls}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </Modal>
       ) : null}

@@ -41,20 +41,31 @@ This is idempotent. Among other things it:
 
 - Adds `system_users.role_id` and `role_permissions`
 - Seeds roles: `admin`, `manager`, `operator`, `viewer`
+- Seeds the 19-code permission catalog and migrates legacy `itsm.view` / settings-coupled I/O
 - Assigns **admin** to user `62000970` (user id 1)
-- Resets all login passwords to the test password below
+- Does **not** reset passwords unless you opt in (see below)
+
+For **local bootstrap only**, you can reset all login passwords to the test password:
+
+```bash
+ALLOW_DEV_PASSWORD_RESET=1 node db/run-migrations.mjs
+```
+
+Never set `ALLOW_DEV_PASSWORD_RESET=1` against shared, staging, or production databases.
 
 ## Auth
 
 Login uses **employee ID** + password against `users` / `system_users`, with an httpOnly session cookie.
 
-**Test admin (after migration):**
+If the app sits behind a reverse proxy, set `TRUST_PROXY=1` so login rate limiting uses the real client IP from `X-Forwarded-For` / `X-Real-IP` (ensure the proxy strips client-supplied forwarded headers).
+
+**Test admin (after migration with `ALLOW_DEV_PASSWORD_RESET=1`):**
 
 | Field | Value |
 | --- | --- |
 | Employee ID | `62000970` |
 | Password | `Admin@123` |
 
-Settings (`/settings/roles`, `/settings/accounts`) is visible and usable only for the **admin** role. Use Accounts to assign roles to other users for testing.
+Settings (`/settings/roles`, `/settings/accounts`) requires `admin.roles.manage` / `admin.accounts.manage` (or `settings.access` for entry). Assign capabilities from **Settings → Roles** using the 19-code permission catalog (overview, daily I/O, ITSM split view/import/export, admin).
 
 IM One is an internal tool: every route sends `noindex, nofollow` and `/robots.txt` disallows all crawlers. There is intentionally no `sitemap.xml`.

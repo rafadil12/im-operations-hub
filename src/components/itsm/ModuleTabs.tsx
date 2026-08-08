@@ -2,29 +2,44 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
 export function ModuleTabs() {
   const pathname = usePathname();
   const { t } = useLang();
+  const {
+    canViewItsmOverview,
+    canViewItsmRequests,
+    canViewItsmAnalysis,
+  } = useRoleAccess();
 
-  const tabs = [
-    {
-      label: t.nav.overview,
-      href: "/itsm",
-      disabled: false,
-    },
-    {
-      label: t.itsm.manageTitle,
-      href: "/itsm/management",
-      disabled: false,
-    },
-    {
-      label: t.itsm.analysisTitle,
-      href: "/itsm/analysis",
-      disabled: false,
-    },
-  ];
+  const tabs = useMemo(() => {
+    const all = [
+      {
+        label: t.nav.overview,
+        href: "/itsm",
+        show: canViewItsmOverview,
+      },
+      {
+        label: t.itsm.manageTitle,
+        href: "/itsm/management",
+        show: canViewItsmRequests,
+      },
+      {
+        label: t.itsm.analysisTitle,
+        href: "/itsm/analysis",
+        show: canViewItsmAnalysis,
+      },
+    ];
+    return all.filter((tab) => tab.show);
+  }, [
+    t,
+    canViewItsmOverview,
+    canViewItsmRequests,
+    canViewItsmAnalysis,
+  ]);
 
   return (
     <div className="mb-5 flex gap-2 border-b border-border-subtle">

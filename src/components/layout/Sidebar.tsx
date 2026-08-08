@@ -156,7 +156,18 @@ function isParentActive(pathname: string, item: NavItem) {
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLang();
-  const { canAccessSettings, canManageConfiguration } = useRoleAccess();
+  const {
+    canViewOverview,
+    canViewDailyRecords,
+    canViewDailyAnalysis,
+    canManageConfiguration,
+    canViewItsmOverview,
+    canViewItsmRequests,
+    canViewItsmAnalysis,
+    canAccessSettings,
+    canManageRoles,
+    canManageAccounts,
+  } = useRoleAccess();
   const [collapsed, setCollapsed] = useState(cachedCollapsed);
   const [openMenus, setOpenMenus] = useState(cachedOpenMenus);
   const [flyoutKey, setFlyoutKey] = useState<string | null>(null);
@@ -167,22 +178,79 @@ export function Sidebar() {
   const visibleNavItems = useMemo(() => {
     return navItems
       .filter((item) => {
+        if (item.id === "overview") return canViewOverview;
         if (item.id === "settings") {
           return !settingsAdminOnly || canAccessSettings;
+        }
+        if (item.id === "itsm") {
+          return (
+            canViewItsmOverview ||
+            canViewItsmRequests ||
+            canViewItsmAnalysis
+          );
+        }
+        if (item.id === "daily-operation") {
+          return (
+            canViewDailyRecords ||
+            canViewDailyAnalysis ||
+            canManageConfiguration
+          );
         }
         return true;
       })
       .map((item) => {
-        if (item.id !== "daily-operation" || !item.children) return item;
-        if (canManageConfiguration) return item;
-        return {
-          ...item,
-          children: item.children.filter(
-            (child) => child.id !== "configuration",
-          ),
-        };
+        if (item.id === "settings" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "roles") return canManageRoles;
+              if (child.id === "accounts") return canManageAccounts;
+              return true;
+            }),
+          };
+        }
+        if (item.id === "itsm" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "overview") return canViewItsmOverview;
+              if (child.id === "management") return canViewItsmRequests;
+              if (child.id === "analysis") return canViewItsmAnalysis;
+              return true;
+            }),
+          };
+        }
+        if (item.id === "daily-operation" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "activities") return canViewDailyRecords;
+              if (child.id === "insights") return canViewDailyAnalysis;
+              if (child.id === "configuration") return canManageConfiguration;
+              return true;
+            }),
+          };
+        }
+        return item;
+      })
+      .filter((item) => {
+        if (item.children) {
+          return Boolean(item.children.length);
+        }
+        return true;
       });
-  }, [canAccessSettings, canManageConfiguration]);
+  }, [
+    canAccessSettings,
+    canManageAccounts,
+    canManageConfiguration,
+    canManageRoles,
+    canViewDailyAnalysis,
+    canViewDailyRecords,
+    canViewItsmAnalysis,
+    canViewItsmOverview,
+    canViewItsmRequests,
+    canViewOverview,
+  ]);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {

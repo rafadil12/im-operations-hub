@@ -5,5 +5,5 @@ export default function DailyOperationMasterLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AdminGate>{children}</AdminGate>;
+  return <AdminGate require="configuration">{children}</AdminGate>;
 }

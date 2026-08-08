@@ -31,6 +31,9 @@ function decodePayload(encoded: string): SessionPayload | null {
     ) {
       return null;
     }
+    // Pre-session_version cookies are treated as version 0 (always invalid vs DB default 1).
+    const sessionVersion =
+      typeof parsed.sessionVersion === "number" ? parsed.sessionVersion : 0;
     return {
       systemUserId: parsed.systemUserId,
       userId: parsed.userId,
@@ -38,6 +41,7 @@ function decodePayload(encoded: string): SessionPayload | null {
         typeof parsed.roleName === "string" || parsed.roleName === null
           ? parsed.roleName
           : null,
+      sessionVersion,
       exp: parsed.exp,
     };
   } catch {
@@ -55,6 +59,7 @@ export function createSessionToken(input: {
   systemUserId: number;
   userId: number;
   roleName: string | null;
+  sessionVersion: number;
   maxAgeSeconds?: number;
 }): string {
   const maxAge = input.maxAgeSeconds ?? MAX_AGE_SECONDS;
@@ -62,6 +67,7 @@ export function createSessionToken(input: {
     systemUserId: input.systemUserId,
     userId: input.userId,
     roleName: input.roleName,
+    sessionVersion: input.sessionVersion,
     exp: Math.floor(Date.now() / 1000) + maxAge,
   };
   const encoded = encodePayload(payload);

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { requireAdmin } from "@/lib/auth";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export async function GET() {
-  const gate = await requireAdmin();
+  const gate = await requirePermission(PERMISSIONS.adminRolesManage);
   if (gate instanceof NextResponse) return gate;
 
   try {

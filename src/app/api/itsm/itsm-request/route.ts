@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import type { ItsmRequest } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.itsmRequestRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
 

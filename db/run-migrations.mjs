@@ -142,6 +142,25 @@ const seedSql = readFileSync(
 await conn.query(seedSql);
 console.log("Applied RBAC seed (roles, permissions, mappings, admin bootstrap).");
 
+// Dev-only: reset all login passwords to the documented local test password.
+// Never enable ALLOW_DEV_PASSWORD_RESET against shared/staging/production DBs.
+if (process.env.ALLOW_DEV_PASSWORD_RESET === "1") {
+  await conn.query(
+    "UPDATE `system_users` SET `password_hash` = ?",
+    [
+      // bcrypt hash of the local test password documented in README (dev bootstrap only)
+      "$2b$12$cI4pxfYd4Rl7BCh28HcnJOjYPSgw2e83P4xhntednum009ojIEp/W",
+    ],
+  );
+  console.warn(
+    "ALLOW_DEV_PASSWORD_RESET=1: all system_users passwords were reset (local bootstrap only).",
+  );
+} else {
+  console.log(
+    "Skipped mass password reset (set ALLOW_DEV_PASSWORD_RESET=1 for local bootstrap only).",
+  );
+}
+
 // --- 004: remove redundant guest role (Guest Mode = not logged in) ---
 const removeGuestSql = readFileSync(
   join(__dirname, "migrations", "004_remove_guest_role.sql"),
@@ -149,6 +168,24 @@ const removeGuestSql = readFileSync(
 );
 await conn.query(removeGuestSql);
 console.log("Removed guest role (if present).");
+
+// --- 005: session_version for password-change invalidation ---
+if (!(await columnExists("system_users", "session_version"))) {
+  await conn.query(
+    "ALTER TABLE `system_users` ADD COLUMN `session_version` INT NOT NULL DEFAULT 1",
+  );
+  console.log("Added system_users.session_version.");
+} else {
+  console.log("system_users.session_version already exists.");
+}
+
+// --- 006: expand permission catalog (19 codes) + migrate legacy ---
+const catalogV2Sql = readFileSync(
+  join(__dirname, "migrations", "006_permissions_catalog_v2.sql"),
+  "utf8",
+);
+await conn.query(catalogV2Sql);
+console.log("Applied permissions catalog v2 (19 codes + legacy migration).");
 
 await conn.end();
 console.log("Migrations complete.");

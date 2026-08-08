@@ -4,6 +4,7 @@ const en = {
     loading: "Loading...",
     save: "Save",
     cancel: "Cancel",
+    close: "Close",
     add: "Add",
     edit: "Edit",
     delete: "Delete",
@@ -73,10 +74,14 @@ const en = {
     adminOnly: "Settings are only available to administrators.",
     deleteRoleConfirm: "This role will be permanently deleted. Continue?",
     resetPassword: "Reset password",
-    resetToDefaultPassword: "Reset to default password",
+    generateTemporaryPassword: "Generate temporary password",
+    temporaryPasswordShown: "Temporary password (copy now — shown once):",
+    temporaryPasswordHint:
+      "Share this password securely. The user should change it after signing in.",
     newPassword: "New password",
     confirmPassword: "Confirm password",
-    passwordOptionalHint: "Leave blank to keep the current password.",
+    passwordOptionalHint:
+      "Leave blank to keep the current password, or set a new one manually.",
     passwordResetSuccess: "Password reset successfully.",
   },
   auth: {
@@ -205,7 +210,7 @@ const en = {
     todaysFinding: "Today's Finding",
     openFinding: "Open Finding",
     closedFinding: "Closed Finding",
-    avgFinding: "AVG. Finding",
+    overdueFinding: "Overdue Finding",
 
     totalItems: "Total Items",
     lowStock: "Low Stock",

@@ -1,4 +1,5 @@
 import { pageMetadata } from "@/lib/seo";
+import { AdminGate } from "@/components/settings/AdminGate";
 import { RolesManager } from "@/components/settings/RolesManager";
 
 export const metadata = pageMetadata({
@@ -8,5 +9,9 @@ export const metadata = pageMetadata({
 });
 
 export default function SettingsRolesPage() {
-  return <RolesManager />;
+  return (
+    <AdminGate require="roles">
+      <RolesManager />
+    </AdminGate>
+  );
 }

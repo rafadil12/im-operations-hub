@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Modal } from "@/components/ui/Modal";
@@ -65,6 +65,14 @@ export function ChangePasswordModal({ onClose }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!success) return;
+    const timer = window.setTimeout(() => {
+      router.replace("/login");
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [success, router]);
+
   const validateLocal = (): string | null => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       return t.common.required;
@@ -112,9 +120,6 @@ export function ChangePasswordModal({ onClose }: Props) {
 
       setSuccess(t.auth.passwordChanged);
       await logout();
-      window.setTimeout(() => {
-        router.replace("/login");
-      }, 800);
     } catch (e) {
       setError(e instanceof Error ? e.message : t.common.error);
     } finally {

@@ -1,17 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import {
-  DEFAULT_PASSWORD,
+  canAssignPrivilegedRoles,
+  generateTemporaryPassword,
+  loadPermissionsForRole,
   MIN_PASSWORD_LENGTH,
-  requireAdmin,
+  PERMISSIONS,
+  permissionsIncludeAdminManage,
+  requirePermission,
   resetPassword,
 } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+async function roleIsPrivileged(roleId: number): Promise<boolean> {
+  const roles = await query<RowDataPacket[]>(
+    "SELECT name FROM roles WHERE id = ? LIMIT 1",
+    [roleId],
+  );
+  const name = roles[0]?.name;
+  if (typeof name !== "string") return false;
+  if (name === "admin") return true;
+  const permissions = await loadPermissionsForRole(roleId);
+  return permissionsIncludeAdminManage(permissions);
+}
+
 export async function PUT(request: NextRequest, context: Ctx) {
-  const gate = await requireAdmin();
+  const gate = await requirePermission(PERMISSIONS.adminAccountsManage);
   if (gate instanceof NextResponse) return gate;
 
   try {
@@ -28,6 +44,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
         : Number(body.role_id);
     const isActive =
       body.is_active === undefined ? undefined : Boolean(body.is_active);
+    const generateTemp = Boolean(body.generate_temporary_password);
     const newPassword =
       typeof body.password === "string" ? body.password : undefined;
     const confirmPassword =
@@ -39,15 +56,24 @@ export async function PUT(request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Invalid role id." }, { status: 400 });
     }
 
-    if (newPassword !== undefined && newPassword.length > 0) {
+    if (generateTemp && newPassword !== undefined && newPassword.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Provide either a manual password or generate_temporary_password, not both.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!generateTemp && newPassword !== undefined && newPassword.length > 0) {
       if (newPassword !== confirmPassword) {
         return NextResponse.json(
           { error: "New password and confirmation do not match." },
           { status: 400 },
         );
       }
-      const isDefaultReset = newPassword === DEFAULT_PASSWORD;
-      if (!isDefaultReset && newPassword.length < MIN_PASSWORD_LENGTH) {
+      if (newPassword.length < MIN_PASSWORD_LENGTH) {
         return NextResponse.json(
           {
             error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
@@ -92,6 +118,40 @@ export async function PUT(request: NextRequest, context: Ctx) {
       nextIsAdmin = false;
     }
 
+    const willUpdateRole = body.role_id !== undefined;
+    if (willUpdateRole) {
+      const currentRoleId =
+        current[0].role_id === null || current[0].role_id === undefined
+          ? null
+          : Number(current[0].role_id);
+      const roleChanged = currentRoleId !== roleId;
+
+      if (roleChanged) {
+        // Delegated account managers cannot change their own role.
+        if (
+          id === gate.session.systemUserId &&
+          !canAssignPrivilegedRoles(gate.account)
+        ) {
+          return NextResponse.json(
+            { error: "You cannot change your own role." },
+            { status: 403 },
+          );
+        }
+
+        const assigningPrivileged =
+          roleId !== null ? await roleIsPrivileged(roleId) : false;
+        if (assigningPrivileged && !canAssignPrivilegedRoles(gate.account)) {
+          return NextResponse.json(
+            {
+              error:
+                "Assigning admin or privileged roles requires roles-manage permission.",
+            },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     if (wasAdmin && !nextIsAdmin) {
       const adminCount = await query<RowDataPacket[]>(
         `SELECT COUNT(*) AS c
@@ -122,10 +182,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
       }
     }
 
-    const willUpdateRole = body.role_id !== undefined;
     const willUpdateActive = isActive !== undefined;
     const willResetPassword =
-      newPassword !== undefined && newPassword.length > 0;
+      generateTemp ||
+      (newPassword !== undefined && newPassword.length > 0);
 
     if (!willUpdateRole && !willUpdateActive && !willResetPassword) {
       return NextResponse.json(
@@ -136,32 +196,50 @@ export async function PUT(request: NextRequest, context: Ctx) {
 
     if (willUpdateRole && willUpdateActive) {
       await execute(
-        "UPDATE system_users SET role_id = ?, is_active = ? WHERE id = ?",
+        `UPDATE system_users
+         SET role_id = ?, is_active = ?,
+             session_version = COALESCE(session_version, 1) + 1
+         WHERE id = ?`,
         [roleId, isActive ? 1 : 0, id],
       );
     } else if (willUpdateRole) {
-      await execute("UPDATE system_users SET role_id = ? WHERE id = ?", [
-        roleId,
-        id,
-      ]);
+      await execute(
+        `UPDATE system_users
+         SET role_id = ?,
+             session_version = COALESCE(session_version, 1) + 1
+         WHERE id = ?`,
+        [roleId, id],
+      );
     } else if (willUpdateActive) {
-      await execute("UPDATE system_users SET is_active = ? WHERE id = ?", [
-        isActive ? 1 : 0,
-        id,
-      ]);
+      await execute(
+        `UPDATE system_users
+         SET is_active = ?,
+             session_version = COALESCE(session_version, 1) + 1
+         WHERE id = ?`,
+        [isActive ? 1 : 0, id],
+      );
     }
 
+    let temporaryPassword: string | undefined;
     if (willResetPassword) {
-      const ok = await resetPassword(id, newPassword);
+      const passwordToSet = generateTemp
+        ? generateTemporaryPassword()
+        : (newPassword as string);
+      const ok = await resetPassword(id, passwordToSet);
       if (!ok) {
         return NextResponse.json(
           { error: "Account not found." },
           { status: 404 },
         );
       }
+      if (generateTemp) {
+        temporaryPassword = passwordToSet;
+      }
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(
+      temporaryPassword ? { ok: true, temporaryPassword } : { ok: true },
+    );
   } catch (error) {
     console.error("PUT /api/settings/accounts/[id] failed", error);
     return NextResponse.json(
