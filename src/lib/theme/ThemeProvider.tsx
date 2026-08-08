@@ -20,18 +20,21 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /**
- * The active theme lives on the <html> element, written by the bootstrap script
- * before first paint. Treating that as an external store keeps the React value
- * in sync without a post-hydration effect.
+ * The active theme is driven by localStorage and applied to <html>.
+ * subscribe() re-applies after mount so SSR data-theme={DEFAULT_THEME} cannot
+ * desync the toggle from the visible theme.
  */
 const listeners = new Set<() => void>();
 let cachedTheme: Theme | null = null;
 
-function readAppliedTheme(): Theme {
-  const applied = document.documentElement.dataset.theme;
-  if (applied === "light" || applied === "dark") return applied;
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return stored === "light" || stored === "dark" ? stored : DEFAULT_THEME;
+function readStoredTheme(): Theme {
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // Private browsing or blocked storage.
+  }
+  return DEFAULT_THEME;
 }
 
 function applyTheme(theme: Theme) {
@@ -40,7 +43,7 @@ function applyTheme(theme: Theme) {
 }
 
 function getSnapshot(): Theme {
-  cachedTheme ??= readAppliedTheme();
+  cachedTheme ??= readStoredTheme();
   return cachedTheme;
 }
 
@@ -49,6 +52,12 @@ function getServerSnapshot(): Theme {
 }
 
 function subscribe(onChange: () => void): () => void {
+  // Prefer localStorage over SSR data-theme default so toggle and DOM stay aligned
+  // after React hydrates <html data-theme={DEFAULT_THEME}>.
+  const preferred = readStoredTheme();
+  cachedTheme = preferred;
+  applyTheme(preferred);
+
   listeners.add(onChange);
   // Keep tabs of the same app in sync.
   const onStorage = (event: StorageEvent) => {

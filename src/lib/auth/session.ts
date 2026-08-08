@@ -16,6 +16,12 @@ function getSecret(): string {
   return secret;
 }
 
+/** Secure cookies only when COOKIE_SECURE=true|1 (HTTPS). Default off for HTTP LAN. */
+function sessionCookieSecure(): boolean {
+  const raw = process.env.COOKIE_SECURE?.trim().toLowerCase();
+  return raw === "true" || raw === "1";
+}
+
 function encodePayload(payload: SessionPayload): string {
   return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
@@ -108,7 +114,7 @@ export async function setSessionCookie(
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: sessionCookieSecure(),
     path: "/",
     maxAge,
   });
@@ -119,7 +125,7 @@ export async function clearSessionCookie(): Promise<void> {
   jar.set(SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: sessionCookieSecure(),
     path: "/",
     maxAge: 0,
   });

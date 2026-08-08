@@ -17,6 +17,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 | `NEXT_PUBLIC_SITE_URL` | No | Absolute base URL of the deployment (for example `https://im-one.example.com`). Used as `metadataBase` for canonical and Open Graph URLs. Falls back to `http://localhost:3000`. |
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Yes | MySQL connection for MES data. |
 | `AUTH_SECRET` | Yes | Session signing secret (at least 16 characters). Required for login cookies. |
+| `COOKIE_SECURE` | No | Set to `true` or `1` to mark the session cookie `Secure` (HTTPS only). Leave unset or `false` for HTTP LAN deploys so browsers can store `im_ops_session`. |
 
 Example `.env.local`:
 
@@ -27,6 +28,7 @@ DB_USER=root
 DB_PASSWORD=
 DB_NAME=mes_dashboard
 AUTH_SECRET=change-me-to-a-long-random-string
+# HTTP LAN: omit COOKIE_SECURE (or set false). HTTPS: COOKIE_SECURE=true
 ```
 
 ## Database migrations
@@ -55,7 +57,7 @@ Never set `ALLOW_DEV_PASSWORD_RESET=1` against shared, staging, or production da
 
 ## Auth
 
-Login uses **employee ID** + password against `users` / `system_users`, with an httpOnly session cookie.
+Login uses **employee ID** + password against `users` / `system_users`, with an httpOnly session cookie (`im_ops_session`). For HTTP LAN deploys leave `COOKIE_SECURE` unset; set `COOKIE_SECURE=true` only when serving over HTTPS.
 
 If the app sits behind a reverse proxy, set `TRUST_PROXY=1` so login rate limiting uses the real client IP from `X-Forwarded-For` / `X-Real-IP` (ensure the proxy strips client-supplied forwarded headers).
 
