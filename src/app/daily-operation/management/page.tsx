@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { apiGet, apiSend } from "@/lib/apiClient";
+import { apiGet, apiSend, getApiErrorMessage } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
@@ -12,8 +12,10 @@ import {
 } from "@/components/daily-operation/ManagementTable";
 import { ImportMesDataModal } from "@/components/daily-operation/ImportMesDataModal";
 import { MesDataForm } from "@/components/daily-operation/MesDataForm";
+import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 
 const week = getOperationalWeek();
 const defaultFilters: Filters = {
@@ -32,6 +34,14 @@ type ListResponse = { rows: MesDataRow[] };
 export default function ManagementPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
+  const {
+    canImportDailyRecord,
+    canExportDailyRecord,
+    canDownloadDailyTemplate,
+    canAddDailyRecord,
+    canUpdateDailyRecord,
+    canDeleteDailyRecord,
+  } = useRoleAccess();
   const [masters, setMasters] = useState<Masters | null>(null);
   const [rows, setRows] = useState<MesDataRow[]>([]);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -62,7 +72,7 @@ export default function ManagementPage() {
       const data = await apiGet<ListResponse>(`/mes-record?${params.toString()}`);
       setRows(data.rows);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load.");
+      setError(getApiErrorMessage(e) || "Failed to load.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +81,9 @@ export default function ManagementPage() {
   useEffect(() => {
     apiGet<Masters>("/masters")
       .then(setMasters)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load masters."));
+      .catch((e) =>
+        setError(getApiErrorMessage(e) || "Failed to load masters."),
+      );
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch data on mount
     loadRows(defaultFilters);
   }, [loadRows]);
@@ -238,41 +250,51 @@ export default function ManagementPage() {
           <p className="text-sm text-text-muted">{t.dailyOp.manageDesc}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleDownloadTemplate}
-            disabled={templateDownloading}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
-          >
-            {t.common.downloadTemplate}
-          </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={exporting || loading}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
-          >
-            {exporting ? t.common.exporting : t.common.export}
-          </button>
-          <button
-            type="button"
-            onClick={() => setImportOpen(true)}
-            disabled={!masters}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
-          >
-            {t.common.import}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditRow(null);
-              setFormOpen(true);
-            }}
-            disabled={!masters}
-            className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-          >
-            + {t.common.add}
-          </button>
+          {canDownloadDailyTemplate ? (
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              disabled={templateDownloading}
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+            >
+              {t.common.downloadTemplate}
+            </button>
+          ) : null}
+          {canExportDailyRecord ? (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || loading}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+            >
+              <ExportIcon className="size-3.5" />
+              {exporting ? t.common.exporting : t.common.export}
+            </button>
+          ) : null}
+          {canImportDailyRecord ? (
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              disabled={!masters}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+            >
+              <ImportIcon className="size-3.5" />
+              {t.common.import}
+            </button>
+          ) : null}
+          {canAddDailyRecord ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEditRow(null);
+                setFormOpen(true);
+              }}
+              disabled={!masters}
+              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+            >
+              + {t.common.add}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -296,11 +318,17 @@ export default function ManagementPage() {
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={handlePageSizeChange}
-          onEdit={(row) => {
-            setEditRow(row);
-            setFormOpen(true);
-          }}
-          onDelete={(row) => setDeleteRow(row)}
+          onEdit={
+            canUpdateDailyRecord
+              ? (row) => {
+                  setEditRow(row);
+                  setFormOpen(true);
+                }
+              : undefined
+          }
+          onDelete={
+            canDeleteDailyRecord ? (row) => setDeleteRow(row) : undefined
+          }
         />
       )}
 
@@ -316,7 +344,7 @@ export default function ManagementPage() {
         />
       ) : null}
 
-      {importOpen ? (
+      {importOpen && canImportDailyRecord ? (
         <ImportMesDataModal
           onClose={() => setImportOpen(false)}
           onImported={handleImported}

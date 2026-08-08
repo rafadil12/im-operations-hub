@@ -40,6 +40,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate lang from localStorage
     setLangState(readStoredLang());
     setReady(true);
   }, []);

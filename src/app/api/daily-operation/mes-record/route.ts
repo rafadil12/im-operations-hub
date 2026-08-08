@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
 import {
@@ -40,6 +41,9 @@ const VALIDATION_MESSAGES: Record<MesValidationErrorKey, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const { start, end } = resolveRange(sp.get("start"), sp.get("end"));
@@ -117,6 +121,9 @@ const RECORD_DETAIL_SQL = `
 `;
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordCreate);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as Partial<MesDataInput>;
     const parsed = parseAndValidateMesBody(body);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
 import { buildActivitiesExport } from "@/lib/mesRecordImport";
@@ -29,6 +30,9 @@ const LIST_SQL = `
 `;
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordExport);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const { start, end } = resolveRange(sp.get("start"), sp.get("end"));

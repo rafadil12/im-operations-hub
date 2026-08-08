@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getAccountPublic, readSession } from "@/lib/auth";
+import {
+  clearSessionCookie,
+  getAccountPublic,
+  readSession,
+} from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -8,6 +12,10 @@ export async function GET() {
       return NextResponse.json({ account: null });
     }
     const account = await getAccountPublic(session.systemUserId);
+    if (!account || session.sessionVersion !== account.sessionVersion) {
+      await clearSessionCookie();
+      return NextResponse.json({ account: null });
+    }
     return NextResponse.json({ account });
   } catch (error) {
     console.error("GET /api/auth/me failed", error);

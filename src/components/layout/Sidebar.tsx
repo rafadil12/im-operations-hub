@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { ImOneLogo } from "@/components/brand/ImOneLogo";
 import { NavIcon, type NavIconId } from "@/components/layout/NavIcons";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang, type Dict } from "@/lib/i18n";
 
 type NavLabelKey = keyof Dict["nav"];
@@ -40,9 +40,9 @@ const navItems: NavItem[] = [
     icon: "itsm",
     children: [
       { id: "overview", labelKey: "overview", href: "/itsm" },
-      { id: "management", labelKey: "moduleManagement", disabled: true },
-      { id: "analysis", labelKey: "moduleAnalysis", disabled: true },
-      { id: "master-data", labelKey: "masterData", disabled: true },
+      { id: "management", labelKey: "moduleManagement",  href: "/itsm/management" },
+      { id: "analysis", labelKey: "moduleAnalysis", href: "/itsm/analysis" },
+   
     ],
   },
   {
@@ -145,12 +145,22 @@ let cachedCollapsed = false;
 
 function isChildActive(pathname: string, child: NavChild) {
   if (!child.href) return false;
+
+  // ITSM Overview
+  if (child.href === "/itsm") {
+    return pathname === "/itsm";
+  }
+
+  // Daily Operation Master
   if (child.href === "/daily-operation/master/users") {
     return pathname.startsWith("/daily-operation/master");
   }
+
+  // Settings
   if (child.href.startsWith("/settings/")) {
     return pathname.startsWith(child.href);
   }
+
   return pathname.startsWith(child.href);
 }
 
@@ -166,7 +176,18 @@ function isParentActive(pathname: string, item: NavItem) {
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLang();
-  const { account } = useAuth();
+  const {
+    canViewOverview,
+    canViewDailyRecords,
+    canViewDailyAnalysis,
+    canManageConfiguration,
+    canViewItsmOverview,
+    canViewItsmRequests,
+    canViewItsmAnalysis,
+    canAccessSettings,
+    canManageRoles,
+    canManageAccounts,
+  } = useRoleAccess();
   const [collapsed, setCollapsed] = useState(cachedCollapsed);
   const [openMenus, setOpenMenus] = useState(cachedOpenMenus);
   const [flyoutKey, setFlyoutKey] = useState<string | null>(null);
@@ -175,9 +196,81 @@ export function Sidebar() {
   const flyoutRef = useRef<HTMLDivElement | null>(null);
 
   const visibleNavItems = useMemo(() => {
-    if (!settingsAdminOnly || account?.roleName === "admin") return navItems;
-    return navItems.filter((item) => item.id !== "settings");
-  }, [account?.roleName]);
+    return navItems
+      .filter((item) => {
+        if (item.id === "overview") return canViewOverview;
+        if (item.id === "settings") {
+          return !settingsAdminOnly || canAccessSettings;
+        }
+        if (item.id === "itsm") {
+          return (
+            canViewItsmOverview ||
+            canViewItsmRequests ||
+            canViewItsmAnalysis
+          );
+        }
+        if (item.id === "daily-operation") {
+          return (
+            canViewDailyRecords ||
+            canViewDailyAnalysis ||
+            canManageConfiguration
+          );
+        }
+        return true;
+      })
+      .map((item) => {
+        if (item.id === "settings" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "roles") return canManageRoles;
+              if (child.id === "accounts") return canManageAccounts;
+              return true;
+            }),
+          };
+        }
+        if (item.id === "itsm" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "overview") return canViewItsmOverview;
+              if (child.id === "management") return canViewItsmRequests;
+              if (child.id === "analysis") return canViewItsmAnalysis;
+              return true;
+            }),
+          };
+        }
+        if (item.id === "daily-operation" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "activities") return canViewDailyRecords;
+              if (child.id === "insights") return canViewDailyAnalysis;
+              if (child.id === "configuration") return canManageConfiguration;
+              return true;
+            }),
+          };
+        }
+        return item;
+      })
+      .filter((item) => {
+        if (item.children) {
+          return Boolean(item.children.length);
+        }
+        return true;
+      });
+  }, [
+    canAccessSettings,
+    canManageAccounts,
+    canManageConfiguration,
+    canManageRoles,
+    canViewDailyAnalysis,
+    canViewDailyRecords,
+    canViewItsmAnalysis,
+    canViewItsmOverview,
+    canViewItsmRequests,
+    canViewOverview,
+  ]);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {

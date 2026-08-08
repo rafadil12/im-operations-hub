@@ -107,8 +107,16 @@ export type TrendItem = {
   date: string;
   count: number;
 };
-
+export type TrendComparison = {
+  current: TrendItem[];
+  previous: TrendItem[];
+};
 export type TopPicItem = {
+  name: string;
+  count: number;
+};
+
+export type RequesterCount = {
   name: string;
   count: number;
 };
@@ -116,6 +124,11 @@ export type TopPicItem = {
 export type NamedCount = {
   name_en: string | null;
   name_cn: string | null;
+  count: number;
+};
+
+export type TechnicianCount = {
+  name: string;
   count: number;
 };
 
@@ -146,7 +159,43 @@ export type AnalysisResult = {
   durationPerDivision: DurationPoint[];
   avgDurationMinutes: number;
 };
+export type ItsmAnalysisResult = {
+  total: number;
 
+  openTickets: number;
+  closedTickets: number;
+  activeUsers: number;
+  avgTicketsPerDay: number;
+
+  byStatus: NamedCount[];
+  byGroup: NamedCount[];
+  technicianRanking: TechnicianCount[];
+  requesterRanking: RequesterCount[];
+  byPriority: NamedCount[];
+  byRequestType: NamedCount[];
+
+  trend: TrendComparison;
+};
+export type ItsmAnalysisResponse = {
+  result: ItsmAnalysisResult;
+};
+export type GroupCount = {
+  name: string;
+  count: number;
+};
+export type ItsmRequest = {
+  request_id: number;
+  subject: string;
+  requester: string;
+  technician: string;
+  due_by_date: string | null;
+  status: string;
+  created_date: string;
+  site: string | null;
+  priority: string | null;
+  group_name: string | null;
+  is_service_request: boolean;
+};
 /** Match status counts by English name keywords (stable across locale). */
 export function namedStatusCount(
   rows: NamedCount[],

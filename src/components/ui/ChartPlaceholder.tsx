@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { BarItem } from "@/data/overview-mock";
 
 type BarChartPlaceholderProps = {
@@ -6,12 +9,12 @@ type BarChartPlaceholderProps = {
 
 export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
   return (
-    <div className="space-y-2.5">
+    <div className="flex h-full flex-col justify-between gap-2.5">
       {items.map((item) => {
         const width = Math.max(8, Math.round((item.value / item.max) * 100));
         return (
           <div key={item.label}>
-            <div className="mb-1 flex items-center justify-between text-[11px] text-text-muted">
+            <div className="mb-0 flex items-center justify-between text-[11px] text-text-muted">
               <span className="truncate pr-2">{item.label}</span>
               <span className="text-text">{item.value}</span>
             </div>
@@ -21,6 +24,42 @@ export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
                 style={{ width: `${width}%`, backgroundColor: item.color }}
               />
             </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+type VerticalBarChartPlaceholderProps = {
+  items: BarItem[];
+};
+
+export function VerticalBarChartPlaceholder({
+  items,
+}: VerticalBarChartPlaceholderProps) {
+  const max = Math.max(...items.map((item) => item.max), 1);
+
+  return (
+    <div className="flex h-full min-h-28 items-end gap-1.5 pt-4">
+      {items.map((item) => {
+        const height = Math.max(8, Math.round((item.value / max) * 100));
+        return (
+          <div
+            key={item.label}
+            className="flex h-full min-w-0 flex-1 flex-col items-center gap-1"
+          >
+            <span className="text-[10px] font-semibold text-text">{item.value}</span>
+            <div className="flex min-h-0 w-full flex-1 items-end justify-center">
+              <div
+                className="w-full max-w-[18px] rounded-t-sm transition-all"
+                style={{
+                  height: `${height}%`,
+                  backgroundColor: item.color,
+                }}
+              />
+            </div>
+            <span className="truncate text-[9px] text-text-dim">{item.label}</span>
           </div>
         );
       })}
@@ -84,7 +123,23 @@ type DonutChartPlaceholderProps = {
   segments?: number[];
   centerValue?: string;
   centerLabel?: string;
+  /** Center pie + legend as a block (e.g. Daily Operation / Safety category). */
+  align?: "start" | "center";
 };
+
+const DONUT_ANIM_MS = 2000;
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function resolveSegments(
+  legend: { color: string }[],
+  segments?: number[],
+): number[] {
+  if (segments && segments.length === legend.length) return segments;
+  return legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
+}
 
 function buildConicGradient(
   legend: { color: string }[],
@@ -109,18 +164,57 @@ export function DonutChartPlaceholder({
   segments,
   centerValue = "78%",
   centerLabel = "Done",
+  align = "start",
 }: DonutChartPlaceholderProps) {
-  const resolvedSegments =
-    segments && segments.length === legend.length
-      ? segments
-      : legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
+  const targetSegments = resolveSegments(legend, segments);
+  const segmentsKey = targetSegments.join("|");
+  const [animatedSegments, setAnimatedSegments] = useState(() =>
+    targetSegments.map(() => 0),
+  );
+
+  useEffect(() => {
+    const targets = segmentsKey.split("|").map(Number);
+    let frame = 0;
+
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReduced) {
+      frame = requestAnimationFrame(() => {
+        setAnimatedSegments(targets);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / DONUT_ANIM_MS);
+      const eased = easeOutCubic(t);
+      setAnimatedSegments(targets.map((v) => v * eased));
+      if (t < 1) {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [segmentsKey]);
+
+  const centered = align === "center";
 
   return (
-    <div className="flex items-center gap-5">
+    <div
+      className={[
+        "flex items-center gap-5",
+        centered ? "justify-center" : "",
+      ].join(" ")}
+    >
       <div
         className="relative size-28 shrink-0 rounded-full"
         style={{
-          background: buildConicGradient(legend, resolvedSegments),
+          background: buildConicGradient(legend, animatedSegments),
         }}
         role="img"
         aria-label="Task status donut chart"
@@ -134,16 +228,21 @@ export function DonutChartPlaceholder({
         </div>
       </div>
       <ul className="space-y-2">
-        {legend.map((item) => (
+        {legend.map((item, index) => (
           <li
             key={item.label}
             className="flex items-center gap-2 text-xs text-text-muted"
           >
             <span
-              className="size-2.5 rounded-sm"
+              className="size-2.5 rounded-full"
               style={{ backgroundColor: item.color }}
             />
-            {item.label}
+            <span>
+              {item.label}
+              {targetSegments[index] != null
+                ? ` — ${targetSegments[index]}%`
+                : ""}
+            </span>
           </li>
         ))}
       </ul>

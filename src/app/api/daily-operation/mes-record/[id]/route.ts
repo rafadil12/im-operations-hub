@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 import {
   parseAndValidateMesBody,
@@ -18,6 +19,9 @@ const VALIDATION_MESSAGES: Record<MesValidationErrorKey, string> = {
 };
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await ctx.params;
     const rows = await query<MesData[]>(
@@ -35,6 +39,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 }
 
 export async function PUT(request: NextRequest, ctx: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordUpdate);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await ctx.params;
     const body = (await request.json()) as Partial<MesDataInput>;
@@ -87,6 +94,9 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordDelete);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await ctx.params;
     const result = await execute(

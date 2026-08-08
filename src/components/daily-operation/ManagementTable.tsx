@@ -15,8 +15,8 @@ type Props = {
   pageSize: PageSize;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: PageSize) => void;
-  onEdit: (row: MesDataRow) => void;
-  onDelete: (row: MesDataRow) => void;
+  onEdit?: (row: MesDataRow) => void;
+  onDelete?: (row: MesDataRow) => void;
 };
 
 const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
@@ -122,22 +122,30 @@ export function ManagementTable({
                   {formatDisplay(row.end_time)}
                 </td>
                 <td className={`${td} whitespace-nowrap`}>
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(row)}
-                      className="rounded border border-border px-2 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text"
-                    >
-                      {t.common.edit}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(row)}
-                      className="rounded border border-danger/40 px-2 py-1 text-[11px] text-danger hover:bg-danger/10"
-                    >
-                      {t.common.delete}
-                    </button>
-                  </div>
+                  {onEdit || onDelete ? (
+                    <div className="flex gap-1.5">
+                      {onEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(row)}
+                          className="rounded border border-border px-2 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text"
+                        >
+                          {t.common.edit}
+                        </button>
+                      ) : null}
+                      {onDelete ? (
+                        <button
+                          type="button"
+                          onClick={() => onDelete(row)}
+                          className="rounded border border-danger/40 px-2 py-1 text-[11px] text-danger hover:bg-danger/10"
+                        >
+                          {t.common.delete}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <span className="text-text-dim">—</span>
+                  )}
                 </td>
               </tr>
             ))}

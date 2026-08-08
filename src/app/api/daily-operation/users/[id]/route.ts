@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
 type CountRow = { c: number };
 
 export async function PUT(request: NextRequest, ctx: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.dailyMasterManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await ctx.params;
     const body = await request.json();
@@ -34,6 +38,9 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.dailyMasterManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await ctx.params;
     const used = await query<CountRow[]>(

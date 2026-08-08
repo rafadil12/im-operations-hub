@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { buildActivitiesTemplate } from "@/lib/mesRecordImport";
 import { loadMasters } from "@/lib/masters";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordTemplate);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const masters = await loadMasters();
     const buffer = await buildActivitiesTemplate(masters);

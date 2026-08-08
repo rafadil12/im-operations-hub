@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { requireAdmin } from "@/lib/auth";
-import { execute, query } from "@/lib/db";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
+import { query, withTransaction } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PUT(request: NextRequest, context: Ctx) {
-  const gate = await requireAdmin();
+  const gate = await requirePermission(PERMISSIONS.adminRolesManage);
   if (gate instanceof NextResponse) return gate;
 
   try {
@@ -48,18 +48,40 @@ export async function PUT(request: NextRequest, context: Ctx) {
       );
     }
 
-    await execute("UPDATE roles SET name = ?, description = ? WHERE id = ?", [
-      name,
-      description,
-      id,
-    ]);
-    await execute("DELETE FROM role_permissions WHERE role_id = ?", [id]);
-    for (const permissionId of permissionIds) {
-      await execute(
-        "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-        [id, permissionId],
+    if (existing[0].name === "admin") {
+      const critical = await query<RowDataPacket[]>(
+        `SELECT id, code FROM permissions
+         WHERE code IN (?, ?)`,
+        [PERMISSIONS.adminRolesManage, PERMISSIONS.adminAccountsManage],
       );
+      const missing = critical.filter(
+        (row) => !permissionIds.includes(Number(row.id)),
+      );
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot remove admin.roles.manage or admin.accounts.manage from the admin role.",
+          },
+          { status: 400 },
+        );
+      }
     }
+
+    await withTransaction(async (conn) => {
+      await conn.execute("UPDATE roles SET name = ?, description = ? WHERE id = ?", [
+        name,
+        description,
+        id,
+      ]);
+      await conn.execute("DELETE FROM role_permissions WHERE role_id = ?", [id]);
+      for (const permissionId of permissionIds) {
+        await conn.execute(
+          "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
+          [id, permissionId],
+        );
+      }
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -73,7 +95,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
 }
 
 export async function DELETE(_request: NextRequest, context: Ctx) {
-  const gate = await requireAdmin();
+  const gate = await requirePermission(PERMISSIONS.adminRolesManage);
   if (gate instanceof NextResponse) return gate;
 
   try {
@@ -108,8 +130,10 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       );
     }
 
-    await execute("DELETE FROM role_permissions WHERE role_id = ?", [id]);
-    await execute("DELETE FROM roles WHERE id = ?", [id]);
+    await withTransaction(async (conn) => {
+      await conn.execute("DELETE FROM role_permissions WHERE role_id = ?", [id]);
+      await conn.execute("DELETE FROM roles WHERE id = ?", [id]);
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /api/settings/roles/[id] failed", error);

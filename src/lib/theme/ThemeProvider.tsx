@@ -20,27 +20,32 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /**
- * The active theme lives on the <html> element, written by the bootstrap script
- * before first paint. Treating that as an external store keeps the React value
- * in sync without a post-hydration effect.
+ * Theme is driven by localStorage; the head bootstrap script applies it before
+ * paint. React must not own data-theme on <html> or hydrate will flash.
  */
 const listeners = new Set<() => void>();
 let cachedTheme: Theme | null = null;
 
-function readAppliedTheme(): Theme {
-  const applied = document.documentElement.dataset.theme;
-  if (applied === "light" || applied === "dark") return applied;
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return stored === "light" || stored === "dark" ? stored : DEFAULT_THEME;
+function readStoredTheme(): Theme {
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // Private browsing or blocked storage.
+  }
+  return DEFAULT_THEME;
 }
 
 function applyTheme(theme: Theme) {
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = theme;
+  const root = document.documentElement;
+  root.dataset.theme = theme;
+  root.style.colorScheme = theme;
+  // Match bootstrap script so first paint and later toggles stay consistent.
+  root.style.backgroundColor = theme === "light" ? "#f4f6fa" : "#0b1220";
 }
 
 function getSnapshot(): Theme {
-  cachedTheme ??= readAppliedTheme();
+  cachedTheme ??= readStoredTheme();
   return cachedTheme;
 }
 
@@ -49,6 +54,14 @@ function getServerSnapshot(): Theme {
 }
 
 function subscribe(onChange: () => void): () => void {
+  // Align with localStorage if something else drifted the DOM; skip no-op writes
+  // so we do not flash after the head bootstrap script already applied the theme.
+  const preferred = readStoredTheme();
+  cachedTheme = preferred;
+  if (document.documentElement.dataset.theme !== preferred) {
+    applyTheme(preferred);
+  }
+
   listeners.add(onChange);
   // Keep tabs of the same app in sync.
   const onStorage = (event: StorageEvent) => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
 import type {
@@ -18,6 +19,9 @@ type DurationRow = { division: string | null; duration_hours: number | null };
 type AvgRow = { avg_minutes: number | null };
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.dailyAnalysisView);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const division = sp.get("division");

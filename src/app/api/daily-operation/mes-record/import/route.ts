@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import type { PoolConnection, ResultSetHeader } from "mysql2/promise";
 import { query, withTransaction } from "@/lib/db";
 import {
@@ -67,6 +68,9 @@ async function insertRow(
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.dailyRecordImport);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const form = await request.formData();
     const file = form.get("file");

@@ -5,6 +5,7 @@ import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PermissionTreePicker } from "./PermissionTreePicker";
 import { SettingsTabs } from "./SettingsTabs";
 
 type Permission = {
@@ -97,15 +98,6 @@ export function RolesManager() {
     setFormOpen(true);
   };
 
-  const togglePermission = (id: number) => {
-    setForm((f) => ({
-      ...f,
-      permissionIds: f.permissionIds.includes(id)
-        ? f.permissionIds.filter((x) => x !== id)
-        : [...f.permissionIds, id],
-    }));
-  };
-
   const submit = async () => {
     setFormError(null);
     if (!form.name.trim()) {
@@ -149,7 +141,7 @@ export function RolesManager() {
 
   const permissionLabel = (id: number) => {
     const p = permissions.find((x) => x.id === id);
-    return p?.code ?? String(id);
+    return p?.description?.trim() || p?.code || String(id);
   };
 
   return (
@@ -252,6 +244,7 @@ export function RolesManager() {
         <Modal
           title={editRow ? t.common.edit : t.common.add}
           onClose={closeForm}
+          size="lg"
           footer={
             <>
               <button
@@ -302,29 +295,13 @@ export function RolesManager() {
             </div>
             <div>
               <label className={labelCls}>{t.settings.permissions}</label>
-              <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-md border border-border bg-bg/30 p-2">
-                {permissions.map((p) => (
-                  <label
-                    key={p.id}
-                    className="flex cursor-pointer items-start gap-2 rounded px-1.5 py-1 text-xs hover:bg-surface-hover"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={form.permissionIds.includes(p.id)}
-                      onChange={() => togglePermission(p.id)}
-                    />
-                    <span>
-                      <span className="font-medium text-text">{p.code}</span>
-                      {p.description ? (
-                        <span className="mt-0.5 block text-text-dim">
-                          {p.description}
-                        </span>
-                      ) : null}
-                    </span>
-                  </label>
-                ))}
-              </div>
+              <PermissionTreePicker
+                permissions={permissions}
+                selectedIds={form.permissionIds}
+                onChange={(permissionIds) =>
+                  setForm((f) => ({ ...f, permissionIds }))
+                }
+              />
             </div>
           </div>
         </Modal>

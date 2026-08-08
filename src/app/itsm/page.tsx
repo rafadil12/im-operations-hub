@@ -1,33 +1,57 @@
-import Link from "next/link";
-import { pageMetadata } from "@/lib/seo";
-import { AppShell } from "@/components/layout/AppShell";
+"use client";
 
-export const metadata = pageMetadata({
-  title: "ITSM",
-  description:
-    "IT Service Management module of IM One: ticket queues, SLA tracking and PIC workload for the factory IT team.",
-  path: "/itsm",
-});
+import { useEffect, useState } from "react";
+import { apiGet, getApiErrorMessage } from "@/lib/apiClient";
+import ItsmOverview from "@/components/itsm/overview/ItsmOverview";
+import type { ItsmOverviewData } from "@/components/itsm/overview";
 
 export default function ItsmPage() {
-  return (
-    <AppShell title="ITSM">
-      <div className="mx-auto max-w-2xl rounded-xl border border-border bg-surface p-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-          Module
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-text">ITSM Module</h1>
-        <p className="mt-3 text-sm leading-relaxed text-text-muted">
-          Detail page for IT Service Management. Ticket queues, SLA tracking, and
-          PIC workload will live here.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex rounded-md border border-border px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
-        >
-          ← Back to Overview
-        </Link>
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<ItsmOverviewData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    apiGet<ItsmOverviewData>("/overview", "itsm")
+      .then((next) => {
+        if (!cancelled) setData(next);
+      })
+      .catch((e) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7441/ingest/b0db2ec0-9a05-4761-88ea-3462e0be0a54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'72cffc'},body:JSON.stringify({sessionId:'72cffc',runId:'post-fix',hypothesisId:'B',location:'itsm/page.tsx:catch',message:'itsm overview fetch handled',data:{errorMessage:getApiErrorMessage(e)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (!cancelled) {
+          setData(null);
+          setError(getApiErrorMessage(e) || "Failed to load ITSM Overview.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-border-subtle bg-surface p-10 text-center">
+        Loading ITSM Overview...
       </div>
-    </AppShell>
-  );
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="rounded-xl border border-border-subtle bg-surface p-10 text-center text-red-500">
+        {error ?? "Failed to load ITSM Overview."}
+      </div>
+    );
+  }
+
+  return <ItsmOverview data={data} />;
 }

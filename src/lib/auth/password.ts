@@ -1,4 +1,6 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
+import { MIN_PASSWORD_LENGTH } from "./constants";
 
 const ROUNDS = 12;
 
@@ -11,4 +13,13 @@ export async function verifyPassword(
   passwordHash: string,
 ): Promise<boolean> {
   return bcrypt.compare(plain, passwordHash);
+}
+
+/** Cryptographically random temporary password for admin resets (shown once). */
+export function generateTemporaryPassword(byteLength = 14): string {
+  const password = randomBytes(byteLength).toString("base64url");
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return randomBytes(byteLength + 4).toString("base64url");
+  }
+  return password;
 }

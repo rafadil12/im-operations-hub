@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -29,6 +30,8 @@ type Props = {
 const inputCls =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent";
 const inputErrorCls = "border-danger focus:border-danger";
+const lockedSelectCls =
+  "appearance-none text-text-muted disabled:cursor-default disabled:opacity-100";
 const labelCls = "mb-1 block text-xs font-medium text-text-muted";
 
 function fieldErrorMessage(
@@ -53,11 +56,21 @@ function fieldErrorMessage(
 
 export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
   const { lang, t } = useLang();
+  const { account } = useAuth();
   const { error: toastError } = useToast();
   const savingRef = useRef(false);
 
+  const me =
+    !initial && account
+      ? masters.users.find((u) => u.id === account.id)
+      : undefined;
+  const defaultDivisionId = initial?.division_id ?? me?.division_id ?? null;
+  const defaultUserId = initial?.user_id ?? (me ? account!.id : null);
+  /** Add mode: Division/PIC come from auth and must not be changed. */
+  const lockIdentityFields = Boolean(me);
+
   const [divisionId, setDivisionId] = useState<number | null>(
-    initial?.division_id ?? null,
+    defaultDivisionId,
   );
   const [categoryId, setCategoryId] = useState<number | null>(
     initial?.category_id ?? null,
@@ -65,7 +78,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
   const [subcategoryId, setSubcategoryId] = useState<number | null>(
     initial?.subcategory_id ?? null,
   );
-  const [userId, setUserId] = useState<number | null>(initial?.user_id ?? null);
+  const [userId, setUserId] = useState<number | null>(defaultUserId);
   const [typeId, setTypeId] = useState<number | null>(
     initial?.type_id ?? masters.types[0]?.id ?? null,
   );
@@ -256,9 +269,9 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
           </label>
           <select
             data-mes-field="division_id"
-            className={`${inputCls} ${markInvalid("division_id") ? inputErrorCls : ""}`}
+            className={`${inputCls} ${markInvalid("division_id") ? inputErrorCls : ""} ${lockIdentityFields ? lockedSelectCls : ""}`}
             value={divisionId ?? ""}
-            disabled={saving}
+            disabled={saving || lockIdentityFields}
             aria-invalid={markInvalid("division_id")}
             onChange={(e) => {
               clearFieldError("division_id");
@@ -283,9 +296,9 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
           </label>
           <select
             data-mes-field="user_id"
-            className={`${inputCls} ${markInvalid("user_id") ? inputErrorCls : ""}`}
+            className={`${inputCls} ${markInvalid("user_id") ? inputErrorCls : ""} ${lockIdentityFields ? lockedSelectCls : ""}`}
             value={userId ?? ""}
-            disabled={saving}
+            disabled={saving || lockIdentityFields}
             aria-invalid={markInvalid("user_id")}
             onChange={(e) => {
               clearFieldError("user_id");
