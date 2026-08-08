@@ -122,9 +122,9 @@ export default function ManagementPage() {
               <button
                 type="button"
                 onClick={() => setImportOpen(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
               >
-                <ImportIcon />
+                <ImportIcon className="size-3.5" />
                 {t.common.import}
               </button>
             ) : null}
@@ -144,9 +144,9 @@ export default function ManagementPage() {
                     },
                   ).toString()}`;
                 }}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
               >
-                <ExportIcon />
+                <ExportIcon className="size-3.5" />
                 {t.common.export}
               </button>
             ) : null}
