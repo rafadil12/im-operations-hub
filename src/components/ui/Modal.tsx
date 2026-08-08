@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type ModalProps = {
   title: string;
@@ -29,6 +30,12 @@ export function Modal({
   size = "md",
   closeDisabled = false,
 }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !closeDisabled) onClose();
@@ -42,8 +49,10 @@ export function Modal({
     };
   }, [onClose, closeDisabled]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close overlay"
@@ -84,6 +93,7 @@ export function Modal({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
