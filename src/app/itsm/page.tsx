@@ -12,15 +12,14 @@ export default function ItsmPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
 
     apiGet<ItsmOverviewData>("/overview", "itsm")
       .then((next) => {
         if (!cancelled) setData(next);
       })
       .catch((e) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7441/ingest/b0db2ec0-9a05-4761-88ea-3462e0be0a54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'72cffc'},body:JSON.stringify({sessionId:'72cffc',runId:'post-fix',hypothesisId:'B',location:'itsm/page.tsx:catch',message:'itsm overview fetch handled',data:{errorMessage:getApiErrorMessage(e)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (!cancelled) {
           setData(null);
           setError(getApiErrorMessage(e) || "Failed to load ITSM Overview.");

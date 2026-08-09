@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAnyPermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import type { SparepartItem } from "@/lib/types";
 
@@ -17,6 +19,12 @@ function sanitizeLike(value: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.sparepartMaterialsRead,
+    PERMISSIONS.sparepartDocumentPost,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const exactCode = sp.get("exactCode")?.trim();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import {
   reverseMaterialDocument,
   SparepartPostingError,
@@ -8,7 +9,7 @@ import {
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, context: Ctx) {
-  const gate = await requirePermission("sparepart.document.reverse");
+  const gate = await requirePermission(PERMISSIONS.sparepartDocumentReverse);
   if (gate instanceof NextResponse) return gate;
   if (!gate.account) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

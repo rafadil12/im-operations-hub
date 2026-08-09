@@ -99,6 +99,11 @@ const navItems: NavItem[] = [
         labelKey: "sparepartMaterials",
         href: "/sparepart/materials",
       },
+      {
+        id: "locations",
+        labelKey: "sparepartLocations",
+        href: "/sparepart/locations",
+      },
     ],
   },
   {
@@ -184,6 +189,11 @@ export function Sidebar() {
     canViewItsmOverview,
     canViewItsmRequests,
     canViewItsmAnalysis,
+    canViewSparepartStock,
+    canViewSparepartDocuments,
+    canPostSparepartDocument,
+    canViewSparepartMaterials,
+    canManageSparepartLocations,
     canAccessSettings,
     canManageRoles,
     canManageAccounts,
@@ -214,6 +224,15 @@ export function Sidebar() {
             canViewDailyRecords ||
             canViewDailyAnalysis ||
             canManageConfiguration
+          );
+        }
+        if (item.id === "sparepart") {
+          return (
+            canViewSparepartStock ||
+            canPostSparepartDocument ||
+            canViewSparepartDocuments ||
+            canViewSparepartMaterials ||
+            canManageSparepartLocations
           );
         }
         return true;
@@ -251,6 +270,19 @@ export function Sidebar() {
             }),
           };
         }
+        if (item.id === "sparepart" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "stock") return canViewSparepartStock;
+              if (child.id === "post") return canPostSparepartDocument;
+              if (child.id === "documents") return canViewSparepartDocuments;
+              if (child.id === "materials") return canViewSparepartMaterials;
+              if (child.id === "locations") return canManageSparepartLocations;
+              return true;
+            }),
+          };
+        }
         return item;
       })
       .filter((item) => {
@@ -264,12 +296,17 @@ export function Sidebar() {
     canManageAccounts,
     canManageConfiguration,
     canManageRoles,
+    canManageSparepartLocations,
+    canPostSparepartDocument,
     canViewDailyAnalysis,
     canViewDailyRecords,
     canViewItsmAnalysis,
     canViewItsmOverview,
     canViewItsmRequests,
     canViewOverview,
+    canViewSparepartDocuments,
+    canViewSparepartMaterials,
+    canViewSparepartStock,
   ]);
 
   const toggleCollapsed = () => {

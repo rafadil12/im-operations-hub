@@ -6,6 +6,7 @@ import { useLang } from "@/lib/i18n";
 import type { SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Modal } from "@/components/ui/Modal";
+import { SparepartGate } from "@/components/sparepart/SparepartGate";
 
 type ListResponse = { rows: SparepartStorageLocation[] };
 type LocationSortKey = "code" | "name" | "is_active";
@@ -276,6 +277,7 @@ export default function StorageLocationsPage() {
   };
 
   return (
+    <SparepartGate allow={(a) => a.canManageSparepartLocations}>
     <div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -407,5 +409,6 @@ export default function StorageLocationsPage() {
         </Modal>
       ) : null}
     </div>
+    </SparepartGate>
   );
 }

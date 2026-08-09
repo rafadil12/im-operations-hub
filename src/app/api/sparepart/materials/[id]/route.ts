@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAnyPermission, requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
@@ -6,6 +8,12 @@ import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, context: Ctx) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.sparepartMaterialsRead,
+    PERMISSIONS.sparepartStockView,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await context.params;
     const itemId = Number(id);
@@ -46,6 +54,9 @@ export async function GET(_request: NextRequest, context: Ctx) {
 }
 
 export async function PUT(request: NextRequest, context: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.sparepartMaterialsUpdate);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await context.params;
     const itemId = Number(id);
@@ -100,6 +111,9 @@ export async function PUT(request: NextRequest, context: Ctx) {
 }
 
 export async function DELETE(_request: NextRequest, context: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.sparepartMaterialsDelete);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await context.params;
     const result = await execute(

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import ExcelJS from "exceljs";
 import { query } from "@/lib/db";
 import type { SparepartItem } from "@/lib/types";
@@ -16,6 +18,9 @@ type BalanceExportRow = {
 };
 
 export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.sparepartMaterialsExport);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const rows = await query<
       Pick<

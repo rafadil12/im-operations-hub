@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAnyPermission, requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { query, withTransaction } from "@/lib/db";
 import { slugLocationCode } from "@/lib/sparepartLocations";
 import type { SparepartStorageLocation } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.sparepartLocationsManage,
+    PERMISSIONS.sparepartDocumentPost,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const activeOnly = sp.get("active") !== "0";
@@ -29,6 +37,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartLocationsManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       code?: string;
@@ -77,6 +88,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartLocationsManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       id?: number;
@@ -167,6 +181,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartLocationsManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const id = Number(sp.get("id"));

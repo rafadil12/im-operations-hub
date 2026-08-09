@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import {
   parseGoodsMovementBody,
   postGoodsMovement,
@@ -8,7 +9,7 @@ import {
 import type { SparepartGoodsMovementInput } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
-  const gate = await requirePermission("sparepart.document.post");
+  const gate = await requirePermission(PERMISSIONS.sparepartDocumentPost);
   if (gate instanceof NextResponse) return gate;
   if (!gate.account) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

@@ -19,6 +19,18 @@ export const PERMISSIONS = {
   itsmRequestExport: "itsm.request.export",
   itsmRequestTemplate: "itsm.request.template",
   itsmAnalysisView: "itsm.analysis.view",
+  sparepartStockView: "sparepart.stock.view",
+  sparepartDocumentRead: "sparepart.document.read",
+  sparepartDocumentPost: "sparepart.document.post",
+  sparepartDocumentReverse: "sparepart.document.reverse",
+  sparepartMaterialsRead: "sparepart.materials.read",
+  sparepartMaterialsCreate: "sparepart.materials.create",
+  sparepartMaterialsUpdate: "sparepart.materials.update",
+  sparepartMaterialsDelete: "sparepart.materials.delete",
+  sparepartMaterialsImport: "sparepart.materials.import",
+  sparepartMaterialsExport: "sparepart.materials.export",
+  sparepartMaterialsTemplate: "sparepart.materials.template",
+  sparepartLocationsManage: "sparepart.locations.manage",
   adminRolesManage: "admin.roles.manage",
   adminAccountsManage: "admin.accounts.manage",
 } as const;
@@ -60,6 +72,18 @@ export type RoleAccess = {
   canExportItsmRequest: boolean;
   canDownloadItsmTemplate: boolean;
   canViewItsmAnalysis: boolean;
+  canViewSparepartStock: boolean;
+  canViewSparepartDocuments: boolean;
+  canPostSparepartDocument: boolean;
+  canReverseSparepartDocument: boolean;
+  canViewSparepartMaterials: boolean;
+  canCreateSparepartMaterial: boolean;
+  canUpdateSparepartMaterial: boolean;
+  canDeleteSparepartMaterial: boolean;
+  canImportSparepartMaterials: boolean;
+  canExportSparepartMaterials: boolean;
+  canDownloadSparepartTemplate: boolean;
+  canManageSparepartLocations: boolean;
   /** Enter Settings module (settings.access or roles/accounts manage). */
   canAccessSettings: boolean;
   canManageRoles: boolean;
@@ -175,6 +199,54 @@ export function getRoleAccess(
       PERMISSIONS.itsmRequestTemplate,
     ),
     canViewItsmAnalysis: hasPermission(account, PERMISSIONS.itsmAnalysisView),
+    canViewSparepartStock: hasPermission(
+      account,
+      PERMISSIONS.sparepartStockView,
+    ),
+    canViewSparepartDocuments: hasPermission(
+      account,
+      PERMISSIONS.sparepartDocumentRead,
+    ),
+    canPostSparepartDocument: hasPermission(
+      account,
+      PERMISSIONS.sparepartDocumentPost,
+    ),
+    canReverseSparepartDocument: hasPermission(
+      account,
+      PERMISSIONS.sparepartDocumentReverse,
+    ),
+    canViewSparepartMaterials: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsRead,
+    ),
+    canCreateSparepartMaterial: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsCreate,
+    ),
+    canUpdateSparepartMaterial: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsUpdate,
+    ),
+    canDeleteSparepartMaterial: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsDelete,
+    ),
+    canImportSparepartMaterials: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsImport,
+    ),
+    canExportSparepartMaterials: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsExport,
+    ),
+    canDownloadSparepartTemplate: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsTemplate,
+    ),
+    canManageSparepartLocations: hasPermission(
+      account,
+      PERMISSIONS.sparepartLocationsManage,
+    ),
     canAccessSettings:
       hasSettingsModule || canManageRoles || canManageAccounts,
     canManageRoles,

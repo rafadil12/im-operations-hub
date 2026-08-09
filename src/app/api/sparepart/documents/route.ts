@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import type { MovementType, SparepartMatDoc } from "@/lib/types";
 
@@ -12,6 +14,9 @@ const MOVEMENT_TYPES: MovementType[] = [
 ];
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartDocumentRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const conditions: string[] = [];

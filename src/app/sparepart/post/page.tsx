@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
+import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import {
   SparepartDropdown,
   sparepartDropdownMenuClass,
@@ -278,6 +279,7 @@ export default function PostGoodsMovementPage() {
   };
 
   return (
+    <SparepartGate allow={(a) => a.canPostSparepartDocument}>
     <div>
       <div className="mb-4">
         <h1 className="text-lg font-semibold text-text">{t.sparepart.postTitle}</h1>
@@ -542,5 +544,6 @@ export default function PostGoodsMovementPage() {
         </div>
       </div>
     </div>
+    </SparepartGate>
   );
 }

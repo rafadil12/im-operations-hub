@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import type {
   PoolConnection,
   ResultSetHeader,
@@ -49,6 +51,9 @@ async function nextDocNumber(
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartMaterialsImport);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const form = await request.formData();
     const file = form.get("file");

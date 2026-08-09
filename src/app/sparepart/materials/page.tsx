@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/ToastProvider";
 import { ImportItemsModal } from "@/components/sparepart/ImportItemsModal";
 import { ItemForm } from "@/components/sparepart/ItemForm";
+import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import {
   StockTable,
   type PageSize,
@@ -23,6 +25,14 @@ type ListResponse = { rows: SparepartItem[] };
 export default function MaterialMasterPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
+  const {
+    canCreateSparepartMaterial,
+    canUpdateSparepartMaterial,
+    canDeleteSparepartMaterial,
+    canImportSparepartMaterials,
+    canExportSparepartMaterials,
+    canDownloadSparepartTemplate,
+  } = useRoleAccess();
   const [rows, setRows] = useState<SparepartItem[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -131,6 +141,7 @@ export default function MaterialMasterPage() {
     "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
 
   return (
+    <SparepartGate allow={(a) => a.canViewSparepartMaterials}>
     <div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -140,6 +151,7 @@ export default function MaterialMasterPage() {
           <p className="text-sm text-text-muted">{t.sparepart.materialsDesc}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {canDownloadSparepartTemplate ? (
           <button
             type="button"
             onClick={async () => {
@@ -164,6 +176,8 @@ export default function MaterialMasterPage() {
           >
             {t.common.downloadTemplate}
           </button>
+          ) : null}
+          {canExportSparepartMaterials ? (
           <button
             type="button"
             onClick={async () => {
@@ -186,6 +200,8 @@ export default function MaterialMasterPage() {
           >
             {exporting ? t.common.exporting : t.common.export}
           </button>
+          ) : null}
+          {canImportSparepartMaterials ? (
           <button
             type="button"
             onClick={() => setImportOpen(true)}
@@ -193,6 +209,8 @@ export default function MaterialMasterPage() {
           >
             {t.common.import}
           </button>
+          ) : null}
+          {canCreateSparepartMaterial ? (
           <button
             type="button"
             onClick={() => {
@@ -203,6 +221,7 @@ export default function MaterialMasterPage() {
           >
             + {t.common.add}
           </button>
+          ) : null}
         </div>
       </div>
 
@@ -257,11 +276,15 @@ export default function MaterialMasterPage() {
             setPageSize(n);
             setPage(1);
           }}
-          onEdit={(row) => {
-            setEditRow(row);
-            setFormOpen(true);
-          }}
-          onDelete={setDeleteRow}
+          onEdit={
+            canUpdateSparepartMaterial
+              ? (row) => {
+                  setEditRow(row);
+                  setFormOpen(true);
+                }
+              : undefined
+          }
+          onDelete={canDeleteSparepartMaterial ? setDeleteRow : undefined}
           variant="master"
           sortKey={sortKey}
           sortDir={sortDir}
@@ -269,7 +292,8 @@ export default function MaterialMasterPage() {
         />
       )}
 
-      {formOpen ? (
+      {formOpen &&
+      (editRow ? canUpdateSparepartMaterial : canCreateSparepartMaterial) ? (
         <ItemForm
           initial={editRow}
           onClose={() => {
@@ -280,7 +304,7 @@ export default function MaterialMasterPage() {
         />
       ) : null}
 
-      {importOpen ? (
+      {importOpen && canImportSparepartMaterials ? (
         <ImportItemsModal
           onClose={() => setImportOpen(false)}
           onImported={async (count) => {
@@ -293,7 +317,7 @@ export default function MaterialMasterPage() {
         />
       ) : null}
 
-      {deleteRow ? (
+      {deleteRow && canDeleteSparepartMaterial ? (
         <ConfirmDialog
           title={t.confirmDelete.title}
           message={t.confirmDelete.message}
@@ -303,5 +327,6 @@ export default function MaterialMasterPage() {
         />
       ) : null}
     </div>
+    </SparepartGate>
   );
 }

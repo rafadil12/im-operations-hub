@@ -2,19 +2,49 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
 export function ModuleTabs() {
   const pathname = usePathname();
   const { t } = useLang();
+  const {
+    canViewSparepartStock,
+    canPostSparepartDocument,
+    canViewSparepartDocuments,
+    canViewSparepartMaterials,
+    canManageSparepartLocations,
+  } = useRoleAccess();
 
   const tabs = [
-    { label: t.nav.sparepartStock, href: "/sparepart/stock" },
-    { label: t.nav.sparepartPost, href: "/sparepart/post" },
-    { label: t.nav.sparepartDocuments, href: "/sparepart/documents" },
-    { label: t.nav.sparepartMaterials, href: "/sparepart/materials" },
-    { label: t.nav.sparepartLocations, href: "/sparepart/locations" },
-  ];
+    {
+      label: t.nav.sparepartStock,
+      href: "/sparepart/stock",
+      visible: canViewSparepartStock,
+    },
+    {
+      label: t.nav.sparepartPost,
+      href: "/sparepart/post",
+      visible: canPostSparepartDocument,
+    },
+    {
+      label: t.nav.sparepartDocuments,
+      href: "/sparepart/documents",
+      visible: canViewSparepartDocuments,
+    },
+    {
+      label: t.nav.sparepartMaterials,
+      href: "/sparepart/materials",
+      visible: canViewSparepartMaterials,
+    },
+    {
+      label: t.nav.sparepartLocations,
+      href: "/sparepart/locations",
+      visible: canManageSparepartLocations,
+    },
+  ].filter((tab) => tab.visible);
+
+  if (tabs.length === 0) return null;
 
   return (
     <div className="mb-5 flex flex-wrap gap-1 border-b border-border-subtle">

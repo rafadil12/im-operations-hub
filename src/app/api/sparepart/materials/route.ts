@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
@@ -12,6 +14,9 @@ const LIST_SQL = `
 `;
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartMaterialsRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const conditions: string[] = [];
@@ -43,6 +48,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartMaterialsCreate);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as Partial<SparepartItemInput>;
     const parsed = parseSparepartItemBody(body);

@@ -699,6 +699,21 @@ const catalogV2Sql = readFileSync(
 await conn.query(catalogV2Sql);
 console.log("Applied permissions catalog v2 (19 codes + legacy migration).");
 
+// --- 009: sparepart RBAC catalog ---
+const sparepartPermSql = readFileSync(
+  join(__dirname, "migrations", "009_sparepart_permissions.sql"),
+  "utf8",
+);
+await conn.query(sparepartPermSql);
+console.log("Applied sparepart permissions catalog.");
+
+// --- 010: remove seeded manager/operator roles ---
+const removeManagerOperatorSql = readFileSync(
+  join(__dirname, "migrations", "010_remove_manager_operator_roles.sql"),
+  "utf8",
+);
+await conn.query(removeManagerOperatorSql);
+console.log("Removed manager/operator roles (if present).");
 
 await conn.end();
 console.log("Migrations complete.");

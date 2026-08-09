@@ -7,7 +7,7 @@ import {
   type ModuleId,
 } from "@/data/overview-mock";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { apiGet, getApiErrorMessage } from "@/lib/apiClient";
+import { apiGet } from "@/lib/apiClient";
 import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { mapAnalysisToOverview } from "@/lib/mapAnalysisToOverview";
 import { getDict, useLang } from "@/lib/i18n";
@@ -73,10 +73,7 @@ export function OverviewGrid() {
             }
           }),
         );
-      } catch (err) {
-        // #region agent log
-        fetch('http://127.0.0.1:7441/ingest/b0db2ec0-9a05-4761-88ea-3462e0be0a54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'72cffc'},body:JSON.stringify({sessionId:'72cffc',runId:'post-fix',hypothesisId:'B',location:'OverviewGrid.tsx:useEffect',message:'overview fetch caught error',data:{errorMessage:getApiErrorMessage(err)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
+      } catch {
         // Keep mock fallback on failure.
       }
     })();

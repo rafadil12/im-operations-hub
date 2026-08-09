@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import {
   StockTable,
   type PageSize,
@@ -109,6 +110,7 @@ export default function StockOverviewPage() {
   ];
 
   return (
+    <SparepartGate allow={(a) => a.canViewSparepartStock}>
     <div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -238,5 +240,6 @@ export default function StockOverviewPage() {
         <MaterialDetailModal item={detail} onClose={() => setDetail(null)} />
       ) : null}
     </div>
+    </SparepartGate>
   );
 }

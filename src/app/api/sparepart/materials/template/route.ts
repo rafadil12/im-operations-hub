@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import ExcelJS from "exceljs";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.sparepartMaterialsTemplate);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("IT Stock");

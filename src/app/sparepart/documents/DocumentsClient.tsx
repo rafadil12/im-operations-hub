@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 import type { MovementType, SparepartMatDoc } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/ToastProvider";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import {
   PAGE_SIZE_OPTIONS,
   type PageSize,
@@ -100,6 +102,7 @@ function isReversalMovement(type: MovementType): boolean {
 export default function MaterialDocumentsPage() {
   const { t } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
+  const { canReverseSparepartDocument } = useRoleAccess();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<SparepartMatDoc[]>([]);
   const [q, setQ] = useState("");
@@ -195,6 +198,7 @@ export default function MaterialDocumentsPage() {
   }));
 
   return (
+    <SparepartGate allow={(a) => a.canViewSparepartDocuments}>
     <div>
       <div className="mb-4">
         <h1 className="text-lg font-semibold text-text">
@@ -422,7 +426,8 @@ export default function MaterialDocumentsPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {["101", "201", "311"].includes(detail.movement_type) &&
+                {canReverseSparepartDocument &&
+                ["101", "201", "311"].includes(detail.movement_type) &&
                 !detail.reversal_of_doc_id &&
                 !detail.already_reversed ? (
                   <button
@@ -590,5 +595,6 @@ export default function MaterialDocumentsPage() {
         </Modal>
       ) : null}
     </div>
+    </SparepartGate>
   );
 }

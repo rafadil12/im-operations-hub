@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import type { SparepartStockBalanceRow } from "@/lib/types";
 
@@ -11,6 +13,9 @@ type SummaryRow = {
 type LocRow = { code: string; name: string };
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.sparepartStockView);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const sp = request.nextUrl.searchParams;
     const conditions: string[] = ["i.deleted_at IS NULL"];

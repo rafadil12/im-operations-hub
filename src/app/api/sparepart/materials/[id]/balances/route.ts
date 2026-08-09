@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAnyPermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import type { SparepartStockBalance } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, context: Ctx) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.sparepartMaterialsRead,
+    PERMISSIONS.sparepartStockView,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { id } = await context.params;
     const itemId = Number(id);

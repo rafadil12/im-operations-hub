@@ -8,14 +8,6 @@ SELECT 'admin', 'Full system access including Settings'
 WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'admin');
 
 INSERT INTO `roles` (`name`, `description`)
-SELECT 'manager', 'Manage operations and view analytics'
-WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'manager');
-
-INSERT INTO `roles` (`name`, `description`)
-SELECT 'operator', 'Create and update daily operation records'
-WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'operator');
-
-INSERT INTO `roles` (`name`, `description`)
 SELECT 'viewer', 'Read-only access'
 WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'viewer');
 
@@ -110,52 +102,6 @@ SELECT r.id, p.id
 FROM `roles` r
 CROSS JOIN `permissions` p
 WHERE r.name = 'admin'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
--- manager
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'overview.view',
-  'daily_operation.record.read',
-  'daily_operation.record.create',
-  'daily_operation.record.update',
-  'daily_operation.record.delete',
-  'daily_operation.analysis.view',
-  'daily_operation.master.manage',
-  'itsm.overview.view',
-  'itsm.request.read',
-  'itsm.analysis.view',
-  'sparepart.document.post',
-  'sparepart.document.reverse'
-)
-WHERE r.name = 'manager'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
--- operator
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'overview.view',
-  'daily_operation.record.read',
-  'daily_operation.record.create',
-  'daily_operation.record.update',
-  'daily_operation.analysis.view',
-  'itsm.overview.view',
-  'itsm.request.read',
-  'itsm.analysis.view',
-  'sparepart.document.post',
-  'sparepart.document.reverse'
-)
-WHERE r.name = 'operator'
   AND NOT EXISTS (
     SELECT 1 FROM `role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id

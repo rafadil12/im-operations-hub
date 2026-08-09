@@ -18,8 +18,8 @@ function account(
     systemUserId: 10,
     employeeId: "E001",
     displayName: "Test User",
-    roleName: "operator",
-    roleLabel: "Operator",
+    roleName: "viewer",
+    roleLabel: "Viewer",
     sessionVersion: 1,
     ...overrides,
   };
@@ -76,6 +76,8 @@ describe("getRoleAccess", () => {
     expect(access.canManageRoles).toBe(false);
     expect(access.canManageAccounts).toBe(false);
     expect(access.canManageConfiguration).toBe(false);
+    expect(access.canViewSparepartStock).toBe(false);
+    expect(access.canPostSparepartDocument).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {
@@ -163,6 +165,22 @@ describe("getRoleAccess", () => {
     expect(access.canAccessSettings).toBe(false);
   });
 
+  it("gates sparepart modules independently", () => {
+    const access = getRoleAccess(
+      account({
+        permissions: [
+          PERMISSIONS.sparepartStockView,
+          PERMISSIONS.sparepartDocumentPost,
+        ],
+      }),
+    );
+    expect(access.canViewSparepartStock).toBe(true);
+    expect(access.canPostSparepartDocument).toBe(true);
+    expect(access.canViewSparepartDocuments).toBe(false);
+    expect(access.canViewSparepartMaterials).toBe(false);
+    expect(access.canManageSparepartLocations).toBe(false);
+  });
+
   it("exposes overview.view as canViewOverview", () => {
     const access = getRoleAccess(
       account({ permissions: [PERMISSIONS.overviewView] }),
@@ -207,7 +225,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 19 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(19);
+  it("has exactly 31 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(31);
   });
 });
