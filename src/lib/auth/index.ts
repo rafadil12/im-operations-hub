@@ -10,9 +10,13 @@ export {
   canAssignPrivilegedRoles,
   getRoleAccess,
   guestHasPermission,
+  isProtectedAccountEmployeeNo,
+  isProtectedRoleName,
   permissionsIncludeAdminManage,
   GUEST_PERMISSIONS,
   PERMISSIONS,
+  PROTECTED_ACCOUNT_EMPLOYEE_NO,
+  PROTECTED_ROLE_NAME,
   type RoleAccess,
 } from "./access";
 export {
@@ -120,12 +124,17 @@ export async function requireAdmin(): Promise<
 > {
   const result = await requireSession();
   if (result instanceof NextResponse) return result;
-  if (result.account.roleName !== "admin") {
+  if (
+    result.account.roleName !== "admin" &&
+    result.account.roleName !== "superadmin"
+  ) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
   return result;
 }
 
 export function isAdminAccount(account: AuthAccountPublic | null): boolean {
-  return account?.roleName === "admin";
+  return (
+    account?.roleName === "admin" || account?.roleName === "superadmin"
+  );
 }

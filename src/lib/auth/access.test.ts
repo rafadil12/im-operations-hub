@@ -207,6 +207,11 @@ describe("privileged role assignment helpers", () => {
     ).toBe(true);
     expect(
       canAssignPrivilegedRoles(
+        account({ roleName: "superadmin", permissions: [] }),
+      ),
+    ).toBe(true);
+    expect(
+      canAssignPrivilegedRoles(
         account({
           roleName: "custom",
           permissions: [PERMISSIONS.adminRolesManage],

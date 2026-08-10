@@ -225,7 +225,7 @@ export function RolesManager() {
                         <button
                           type="button"
                           onClick={() => setDeleteRow(row)}
-                          disabled={row.name === "admin"}
+                          disabled={row.name === "superadmin"}
                           className="rounded border border-danger/40 px-2 py-1 text-[11px] text-danger hover:bg-danger/10 disabled:opacity-40"
                         >
                           {t.common.delete}
@@ -276,7 +276,7 @@ export function RolesManager() {
               <input
                 className={inputCls}
                 value={form.name}
-                disabled={editRow?.name === "admin"}
+                disabled={editRow?.name === "superadmin"}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, name: e.target.value }))
                 }

@@ -35,6 +35,24 @@ export const PERMISSIONS = {
   adminAccountsManage: "admin.accounts.manage",
 } as const;
 
+/** System role that cannot be deleted/renamed (protections key off name, not id). */
+export const PROTECTED_ROLE_NAME = "superadmin";
+
+/** Bootstrap account employee_no that cannot be demoted/deactivated. */
+export const PROTECTED_ACCOUNT_EMPLOYEE_NO = "SUPERADMIN";
+
+export function isProtectedRoleName(name: string | null | undefined): boolean {
+  return String(name ?? "").toLowerCase() === PROTECTED_ROLE_NAME;
+}
+
+export function isProtectedAccountEmployeeNo(
+  employeeNo: string | null | undefined,
+): boolean {
+  return (
+    String(employeeNo ?? "").toUpperCase() === PROTECTED_ACCOUNT_EMPLOYEE_NO
+  );
+}
+
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 /**
@@ -112,11 +130,12 @@ export function permissionsIncludeAdminManage(permissions: string[]): boolean {
   );
 }
 
-/** True when the caller may assign privileged roles (admin / admin.* manage). */
+/** True when the caller may assign privileged roles (superadmin / admin / roles-manage). */
 export function canAssignPrivilegedRoles(
   account: AuthAccountPublic | null | undefined,
 ): boolean {
   if (!account) return false;
+  if (isProtectedRoleName(account.roleName)) return true;
   if (account.roleName === "admin") return true;
   return accountHasPermission(account, PERMISSIONS.adminRolesManage);
 }
@@ -133,7 +152,8 @@ export function getRoleAccess(
 ): RoleAccess {
   const roleName = account?.roleName ?? null;
   const isGuest = !account;
-  const isAdmin = roleName === "admin";
+  const isAdmin =
+    roleName === "admin" || isProtectedRoleName(roleName);
   const isTechnician = roleName === "technician";
 
   const hasSettingsModule = hasPermission(

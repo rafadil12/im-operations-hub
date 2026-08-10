@@ -3,6 +3,8 @@ import type { RowDataPacket } from "mysql2";
 import {
   canAssignPrivilegedRoles,
   generateTemporaryPassword,
+  isProtectedAccountEmployeeNo,
+  isProtectedRoleName,
   loadPermissionsForRole,
   MIN_PASSWORD_LENGTH,
   PERMISSIONS,
@@ -21,7 +23,7 @@ async function roleIsPrivileged(roleId: number): Promise<boolean> {
   );
   const name = roles[0]?.name;
   if (typeof name !== "string") return false;
-  if (name === "admin") return true;
+  if (isProtectedRoleName(name) || name === "admin") return true;
   const permissions = await loadPermissionsForRole(roleId);
   return permissionsIncludeAdminManage(permissions);
 }
@@ -96,11 +98,11 @@ export async function PUT(request: NextRequest, context: Ctx) {
       }
     }
 
-    // Prevent demoting/deactivating the last admin account
     const current = await query<RowDataPacket[]>(
-      `SELECT su.id, su.role_id, r.name AS role_name
+      `SELECT su.id, su.role_id, r.name AS role_name, u.employee_no
        FROM system_users su
        LEFT JOIN roles r ON r.id = su.role_id
+       LEFT JOIN users u ON u.id = su.user_id
        WHERE su.id = ?
        LIMIT 1`,
       [id],
@@ -108,6 +110,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
     if (!current[0]) {
       return NextResponse.json({ error: "Account not found." }, { status: 404 });
     }
+
+    const protectedAccount = isProtectedAccountEmployeeNo(
+      current[0].employee_no as string | null,
+    );
 
     const wasAdmin = current[0].role_name === "admin";
     let nextIsAdmin = wasAdmin;
@@ -129,8 +135,14 @@ export async function PUT(request: NextRequest, context: Ctx) {
           : Number(current[0].role_id);
       const roleChanged = currentRoleId !== roleId;
 
+      if (roleChanged && protectedAccount) {
+        return NextResponse.json(
+          { error: "The Super Admin account role cannot be changed." },
+          { status: 400 },
+        );
+      }
+
       if (roleChanged) {
-        // Delegated account managers cannot change their own role.
         if (
           id === gate.session.systemUserId &&
           !canAssignPrivilegedRoles(gate.account)
@@ -153,6 +165,13 @@ export async function PUT(request: NextRequest, context: Ctx) {
           );
         }
       }
+    }
+
+    if (protectedAccount && isActive === false) {
+      return NextResponse.json(
+        { error: "The Super Admin account cannot be deactivated." },
+        { status: 400 },
+      );
     }
 
     if (wasAdmin && !nextIsAdmin) {

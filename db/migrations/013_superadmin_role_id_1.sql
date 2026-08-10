@@ -1,0 +1,3 @@
+-- Make superadmin roles.id = 1 by swapping with admin (idempotent intent).
+-- Prefer running via: node --env-file=.env.local db/run-migrations.mjs
+-- Actual swap is applied in run-migrations.mjs (needs dynamic id lookup).
