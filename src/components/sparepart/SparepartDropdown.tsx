@@ -21,7 +21,7 @@ type Props = {
 };
 
 export const sparepartDropdownFieldClass =
-  "flex w-full items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-sm text-text outline-none focus:border-accent";
+  "flex w-full items-center gap-2 rounded-md border border-border bg-bg text-left text-text outline-none focus:border-accent";
 
 export const sparepartDropdownMenuClass =
   "absolute left-0 right-0 z-30 overflow-hidden rounded-md border border-border bg-bg-elevated py-1 shadow-lg";
@@ -92,7 +92,7 @@ export function SparepartDropdown({
         }}
         className={[
           sparepartDropdownFieldClass,
-          compact ? "min-h-8 px-2.5 py-1.5 text-xs" : "",
+          compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm",
           disabled ? "cursor-not-allowed opacity-60" : "",
         ].join(" ")}
       >

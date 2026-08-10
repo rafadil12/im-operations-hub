@@ -91,7 +91,7 @@ export function ImportItemsModal({ onClose, onImported }: Props) {
           type="file"
           accept=".xlsx"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-text"
+          className="block w-full text-sm text-text file:mr-3 file:rounded-md file:border-0 file:bg-accent/15 file:px-3 file:py-2 file:text-sm file:font-medium file:text-accent"
         />
         {error ? (
           <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">

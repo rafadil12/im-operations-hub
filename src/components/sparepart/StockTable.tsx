@@ -419,7 +419,7 @@ export function StockTable({
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            className="rounded border border-border px-2 py-1 text-xs disabled:opacity-40"
+            className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
           >
             {t.common.previous}
           </button>
@@ -430,7 +430,7 @@ export function StockTable({
             type="button"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="rounded border border-border px-2 py-1 text-xs disabled:opacity-40"
+            className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
           >
             {t.common.next}
           </button>

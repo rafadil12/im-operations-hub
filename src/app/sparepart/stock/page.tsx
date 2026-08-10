@@ -8,6 +8,7 @@ import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { NotesIcon } from "@/components/ui/ActionIcons";
 import {
   StockTable,
   type PageSize,
@@ -103,7 +104,7 @@ export default function StockOverviewPage() {
   };
 
   const field =
-    "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+    "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
   const locationOptions = [
     { value: "", label: t.common.all },
     ...locations.map((loc) => ({ value: loc, label: loc })),
@@ -121,8 +122,9 @@ export default function StockOverviewPage() {
         </div>
         <Link
           href="/sparepart/post"
-          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
+          <NotesIcon className="size-3.5" />
           {t.sparepart.goPost}
         </Link>
       </div>
@@ -178,6 +180,7 @@ export default function StockOverviewPage() {
           </label>
           <SparepartDropdown
             className="w-full"
+            compact
             value={location}
             onChange={setLocation}
             options={locationOptions}
@@ -198,7 +201,7 @@ export default function StockOverviewPage() {
             setPage(1);
             load({ q, location, lowStock });
           }}
-          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
           {t.common.apply}
         </button>

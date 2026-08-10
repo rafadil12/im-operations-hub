@@ -289,7 +289,7 @@ export default function StorageLocationsPage() {
         <button
           type="button"
           onClick={openCreate}
-          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
           {t.common.add}
         </button>

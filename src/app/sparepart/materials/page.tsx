@@ -6,6 +6,7 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { ImportItemsModal } from "@/components/sparepart/ImportItemsModal";
 import { ItemForm } from "@/components/sparepart/ItemForm";
@@ -138,7 +139,9 @@ export default function MaterialMasterPage() {
   };
 
   const field =
-    "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+    "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+  const toolbarBtn =
+    "inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60";
 
   return (
     <SparepartGate allow={(a) => a.canViewSparepartMaterials}>
@@ -172,7 +175,7 @@ export default function MaterialMasterPage() {
               }
             }}
             disabled={templateDownloading}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+            className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
           >
             {t.common.downloadTemplate}
           </button>
@@ -196,8 +199,9 @@ export default function MaterialMasterPage() {
               }
             }}
             disabled={exporting || loading}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+            className={toolbarBtn}
           >
+            <ExportIcon className="size-3.5" />
             {exporting ? t.common.exporting : t.common.export}
           </button>
           ) : null}
@@ -205,8 +209,9 @@ export default function MaterialMasterPage() {
           <button
             type="button"
             onClick={() => setImportOpen(true)}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover"
+            className={toolbarBtn}
           >
+            <ImportIcon className="size-3.5" />
             {t.common.import}
           </button>
           ) : null}
@@ -217,7 +222,7 @@ export default function MaterialMasterPage() {
               setEditRow(null);
               setFormOpen(true);
             }}
-            className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            className={toolbarBtn}
           >
             + {t.common.add}
           </button>
@@ -249,7 +254,7 @@ export default function MaterialMasterPage() {
             setPage(1);
             load(q);
           }}
-          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
           {t.common.apply}
         </button>

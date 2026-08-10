@@ -182,7 +182,7 @@ export default function MaterialDocumentsPage() {
   }, [rows, currentPage, pageSize]);
 
   const field =
-    "rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+    "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
   const movementTypeOptions = [
     { value: "", label: t.sparepart.allTypes },
     { value: "101", label: t.sparepart.movement101 },
@@ -230,6 +230,7 @@ export default function MaterialDocumentsPage() {
             {t.sparepart.movementType}
           </label>
           <SparepartDropdown
+            compact
             value={movementType}
             onChange={setMovementType}
             options={movementTypeOptions}
@@ -275,7 +276,7 @@ export default function MaterialDocumentsPage() {
             setPage(1);
             load({ q, movementType, location, start, end });
           }}
-          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
           {t.common.apply}
         </button>
@@ -376,7 +377,7 @@ export default function MaterialDocumentsPage() {
                 type="button"
                 disabled={currentPage <= 1}
                 onClick={() => setPage(currentPage - 1)}
-                className="rounded border border-border px-2 py-1 text-xs disabled:opacity-40"
+                className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t.common.previous}
               </button>
@@ -384,7 +385,7 @@ export default function MaterialDocumentsPage() {
                 type="button"
                 disabled={currentPage >= totalPages}
                 onClick={() => setPage(currentPage + 1)}
-                className="rounded border border-border px-2 py-1 text-xs disabled:opacity-40"
+                className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t.common.next}
               </button>
@@ -468,7 +469,7 @@ export default function MaterialDocumentsPage() {
                         setReversing(false);
                       }
                     }}
-                    className="rounded-md border border-danger/40 px-3 py-2 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+                    className="rounded-md border border-danger/40 px-3 py-1.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-60"
                   >
                     {reversing
                       ? t.sparepart.reversing
@@ -478,7 +479,7 @@ export default function MaterialDocumentsPage() {
                 <button
                   type="button"
                   onClick={() => setDetail(null)}
-                  className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text hover:bg-surface-hover"
+                  className="rounded-md border border-border px-3 py-1.5 text-xs text-text hover:bg-surface-hover"
                 >
                   {t.common.close}
                 </button>

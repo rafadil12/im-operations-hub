@@ -522,7 +522,7 @@ export default function PostGoodsMovementPage() {
                     onClick={() =>
                       setLines((prev) => prev.filter((l) => l.key !== line.key))
                     }
-                    className="w-full rounded-md border border-border px-2 py-2 text-xs text-danger disabled:opacity-40"
+                    className="w-full rounded-md border border-danger/40 px-2.5 py-1.5 text-xs text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {t.sparepart.removeLine}
                   </button>
@@ -537,7 +537,7 @@ export default function PostGoodsMovementPage() {
             type="button"
             disabled={busy}
             onClick={handlePost}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
           >
             {busy ? t.sparepart.posting : t.sparepart.post}
           </button>
