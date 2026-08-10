@@ -10,12 +10,7 @@ export type ImportRowError = {
   message: string;
 };
 
-export type ParsedImportItem = SparepartItemInput & {
-  /** Opening stock qty → posted as 101 when > 0 */
-  stock_current: number;
-  /** Excel "Lokasi" — used only as storage location for imported opening stock (101) */
-  location: string;
-};
+export type ParsedImportItem = SparepartItemInput;
 
 function cellText(value: unknown): string {
   if (value == null) return "";
@@ -29,12 +24,6 @@ function cellText(value: unknown): string {
     return String((value as { result: unknown }).result ?? "").trim();
   }
   return String(value).trim();
-}
-
-function toInt(value: unknown, fallback = 0): number {
-  const n = Number(cellText(value));
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(0, Math.trunc(n));
 }
 
 function normalizeHeader(value: unknown): string {
@@ -62,7 +51,7 @@ export async function parseSparepartItemsWorkbook(
 
   const sheet =
     workbook.worksheets.find((ws) =>
-      /stock|stok|备品|清单/i.test(ws.name),
+      /item|stock|stok|备品|清单/i.test(ws.name),
     ) ?? workbook.worksheets[0];
 
   if (!sheet) {
@@ -83,23 +72,12 @@ export async function parseSparepartItemsWorkbook(
   const nameCol = findCol(headers, ["nama", "name", "名称", "品名"]);
   const brandCol = findCol(headers, ["brand", "品牌"]);
   const modelCol = findCol(headers, ["model", "型号"]);
-  const locationCol = findCol(headers, ["lokasi", "location", "地点", "位置"]);
-  // Legacy columns still accepted to derive opening stock when "Stok Sekarang" missing
-  const stockInCol = findCol(headers, ["stok masuk", "stock in", "入库"]);
-  const stockOutCol = findCol(headers, ["stok keluar", "stock out", "出库"]);
-  const stockCurCol = findCol(headers, [
-    "stok sekarang",
-    "stock current",
-    "stock now",
-    "当前",
-    "现存",
-  ]);
   const notesCol = findCol(headers, ["notes", "keterangan", "备注"]);
 
   if (codeCol < 0 || nameCol < 0) {
     return {
       ok: false,
-      error: "Header must include Kode Barang (code) and Nama Barang (name).",
+      error: "Header must include Code and Name.",
       errors: [],
     };
   }
@@ -134,24 +112,12 @@ export async function parseSparepartItemsWorkbook(
     }
     seen.add(code.toUpperCase());
 
-    const legacyIn = stockInCol >= 0 ? toInt(row.getCell(stockInCol + 1).value) : 0;
-    const legacyOut =
-      stockOutCol >= 0 ? toInt(row.getCell(stockOutCol + 1).value) : 0;
-    let stock_current =
-      stockCurCol >= 0
-        ? toInt(row.getCell(stockCurCol + 1).value)
-        : Math.max(0, legacyIn - legacyOut);
-    if (stock_current < 0) stock_current = 0;
-
     items.push({
       code,
       name,
       brand: brandCol >= 0 ? cellText(row.getCell(brandCol + 1).value) : "",
       model: modelCol >= 0 ? cellText(row.getCell(modelCol + 1).value) : "",
-      location:
-        locationCol >= 0 ? cellText(row.getCell(locationCol + 1).value) : "",
       notes: notesCol >= 0 ? cellText(row.getCell(notesCol + 1).value) : "",
-      stock_current,
     });
   }
 

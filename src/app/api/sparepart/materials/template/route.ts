@@ -11,14 +11,12 @@ export async function GET() {
 
   try {
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("IT Stock");
+    const sheet = workbook.addWorksheet("Items");
     sheet.columns = [
-      { header: "Kode Barang", key: "code", width: 14 },
-      { header: "Nama Barang", key: "name", width: 32 },
+      { header: "Code", key: "code", width: 14 },
+      { header: "Name", key: "name", width: 32 },
       { header: "Brand", key: "brand", width: 16 },
       { header: "Model", key: "model", width: 28 },
-      { header: "Lokasi", key: "location", width: 20 },
-      { header: "Stok Sekarang", key: "stock_current", width: 14 },
       { header: "Notes", key: "notes", width: 24 },
     ];
     sheet.addRow({
@@ -26,8 +24,6 @@ export async function GET() {
       name: "Switch",
       brand: "TP-LINK",
       model: "TL-SF1016DS",
-      location: "Server Room",
-      stock_current: 1,
       notes: "",
     });
     sheet.getRow(1).font = { bold: true };

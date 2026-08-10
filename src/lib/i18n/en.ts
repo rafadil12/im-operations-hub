@@ -141,7 +141,7 @@ const en = {
     goPost: "New Stock Transaction",
     importTitle: "Import Items",
     importHint:
-      "Upload Excel (.xlsx) with Kode Barang and Nama Barang. When stock quantity is greater than 0, Lokasi is required (single storage location, no commas) and creates a Receive Stock document.",
+      "Upload Excel (.xlsx) with Code, Name, Brand, Model, and Notes — the same fields as Add. Existing codes are updated; stock is not changed.",
   },
   settings: {
     rolesTitle: "Roles",

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
-import { NotesIcon } from "@/components/ui/ActionIcons";
+import { ExportIcon, NotesIcon } from "@/components/ui/ActionIcons";
+import { useToast } from "@/components/ui/ToastProvider";
 import {
   StockTable,
   type PageSize,
@@ -28,6 +30,8 @@ type StockResponse = {
 
 export default function StockOverviewPage() {
   const { t } = useLang();
+  const { error: toastError } = useToast();
+  const { canExportSparepartMaterials } = useRoleAccess();
   const [rows, setRows] = useState<SparepartStockBalanceRow[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [summary, setSummary] = useState({
@@ -45,6 +49,7 @@ export default function StockOverviewPage() {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [detail, setDetail] = useState<SparepartItem | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(
     async (filters: { q: string; location: string; lowStock: boolean }) => {
@@ -103,8 +108,33 @@ export default function StockOverviewPage() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/sparepart/materials/export", {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(t.toast.exportFailed);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "sparepart-export.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : t.toast.exportFailed);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const field =
     "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+  const toolbarBtn =
+    "inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60";
   const locationOptions = [
     { value: "", label: t.common.all },
     ...locations.map((loc) => ({ value: loc, label: loc })),
@@ -120,13 +150,26 @@ export default function StockOverviewPage() {
           </h1>
           <p className="text-sm text-text-muted">{t.sparepart.stockDesc}</p>
         </div>
-        <Link
-          href="/sparepart/post"
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-        >
-          <NotesIcon className="size-3.5" />
-          {t.sparepart.goPost}
-        </Link>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {canExportSparepartMaterials ? (
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || loading}
+              className={toolbarBtn}
+            >
+              <ExportIcon className="size-3.5" />
+              {exporting ? t.common.exporting : t.common.export}
+            </button>
+          ) : null}
+          <Link
+            href="/sparepart/post"
+            className={toolbarBtn}
+          >
+            <NotesIcon className="size-3.5" />
+            {t.sparepart.goPost}
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">

@@ -140,7 +140,7 @@ const cn: Dict = {
     goPost: "新建库存事务",
     importTitle: "导入物料项",
     importHint:
-      "上传含 Kode Barang / 编码 与 Nama Barang / 名称 的 Excel。库存数量大于 0 时必须填写单一库存地点（不可逗号分隔），并将生成收货入库凭证。",
+      "上传含 Code、Name、Brand、Model、Notes 的 Excel（与新增表单字段相同）。已有编码将被更新，不会改动库存。",
   },
   settings: {
     rolesTitle: "角色",

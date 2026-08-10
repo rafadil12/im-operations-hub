@@ -6,7 +6,7 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
+import { ImportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { ImportItemsModal } from "@/components/sparepart/ImportItemsModal";
 import { ItemForm } from "@/components/sparepart/ItemForm";
@@ -31,7 +31,6 @@ export default function MaterialMasterPage() {
     canUpdateSparepartMaterial,
     canDeleteSparepartMaterial,
     canImportSparepartMaterials,
-    canExportSparepartMaterials,
     canDownloadSparepartTemplate,
   } = useRoleAccess();
   const [rows, setRows] = useState<SparepartItem[]>([]);
@@ -48,7 +47,6 @@ export default function MaterialMasterPage() {
   const [deleteRow, setDeleteRow] = useState<SparepartItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [templateDownloading, setTemplateDownloading] = useState(false);
-  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(
     async (search: string) => {
@@ -178,31 +176,6 @@ export default function MaterialMasterPage() {
             className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
           >
             {t.common.downloadTemplate}
-          </button>
-          ) : null}
-          {canExportSparepartMaterials ? (
-          <button
-            type="button"
-            onClick={async () => {
-              setExporting(true);
-              try {
-                await downloadBlob(
-                  "/api/sparepart/materials/export",
-                  "sparepart-export.xlsx",
-                );
-              } catch (e) {
-                toastError(
-                  e instanceof Error ? e.message : t.toast.exportFailed,
-                );
-              } finally {
-                setExporting(false);
-              }
-            }}
-            disabled={exporting || loading}
-            className={toolbarBtn}
-          >
-            <ExportIcon className="size-3.5" />
-            {exporting ? t.common.exporting : t.common.export}
           </button>
           ) : null}
           {canImportSparepartMaterials ? (
