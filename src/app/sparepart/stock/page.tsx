@@ -113,7 +113,7 @@ export default function StockOverviewPage() {
   return (
     <SparepartGate allow={(a) => a.canViewSparepartStock}>
     <div>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-text">
             {t.sparepart.stockTitle}

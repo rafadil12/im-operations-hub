@@ -8,8 +8,6 @@ CREATE TABLE IF NOT EXISTS `sparepart_items` (
   `brand` VARCHAR(128) NULL,
   `model` VARCHAR(255) NULL,
   `location` VARCHAR(255) NULL,
-  `stock_in` INT NOT NULL DEFAULT 0,
-  `stock_out` INT NOT NULL DEFAULT 0,
   `stock_current` INT NOT NULL DEFAULT 0,
   `image_url` VARCHAR(512) NULL,
   `notes` TEXT NULL,

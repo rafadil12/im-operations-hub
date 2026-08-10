@@ -6,7 +6,7 @@ import type { SparepartItem } from "@/lib/types";
 
 const SELECT_COLS = `
   i.id, i.code, i.name, i.brand, i.model,
-  i.stock_in, i.stock_out, i.stock_current,
+  i.stock_current,
   i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
 `;
 

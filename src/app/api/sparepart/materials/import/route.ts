@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
 
         await conn.query(
           `INSERT INTO sparepart_items
-            (code, name, brand, model, notes, stock_in, stock_out, stock_current)
-           VALUES (?, ?, ?, ?, ?, 0, 0, 0)
+            (code, name, brand, model, notes, stock_current)
+           VALUES (?, ?, ?, ?, ?, 0)
            ON DUPLICATE KEY UPDATE
              name = VALUES(name),
              brand = VALUES(brand),
@@ -170,11 +170,9 @@ export async function POST(request: NextRequest) {
         const itemId = Number(rows[0]?.id);
         if (!itemId) continue;
 
-        // Reset stock aggregates and balances for this item
+        // Reset stock and balances for this item (opening stock re-posted below)
         await conn.query(
-          `UPDATE sparepart_items
-           SET stock_in = 0, stock_out = 0, stock_current = 0
-           WHERE id = ?`,
+          `UPDATE sparepart_items SET stock_current = 0 WHERE id = ?`,
           [itemId],
         );
         await conn.query(
@@ -226,9 +224,9 @@ export async function POST(request: NextRequest) {
           );
           await conn.query(
             `UPDATE sparepart_items
-             SET stock_in = stock_in + ?, stock_current = stock_current + ?
+             SET stock_current = stock_current + ?
              WHERE id = ?`,
-            [line.qty, line.qty, line.itemId],
+            [line.qty, line.itemId],
           );
         }
       }

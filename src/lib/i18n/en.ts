@@ -98,8 +98,6 @@ const en = {
     noBalances: "No stock balances recorded.",
     notes: "Notes",
     note: "Line Note",
-    stockIn: "Total Receipt",
-    stockOut: "Total Issue",
     stockCurrent: "Available Stock",
     qty: "Qty",
     date: "Posting Date",

@@ -55,8 +55,6 @@ export async function GET(request: NextRequest) {
          i.brand,
          i.model,
          i.stock_current,
-         i.stock_in,
-         i.stock_out,
          i.notes
        FROM sparepart_items i
        WHERE ${where}

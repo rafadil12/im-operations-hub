@@ -362,20 +362,8 @@ async function postForwardLines(
 
     if (movementType === "101") {
       await adjustBalance(conn, line.item_id, fromLoc.id, line.qty, lineNo);
-      await conn.query(
-        `UPDATE sparepart_items
-         SET stock_in = stock_in + ?
-         WHERE id = ?`,
-        [line.qty, line.item_id],
-      );
     } else if (movementType === "201") {
       await adjustBalance(conn, line.item_id, fromLoc.id, -line.qty, lineNo);
-      await conn.query(
-        `UPDATE sparepart_items
-         SET stock_out = stock_out + ?
-         WHERE id = ?`,
-        [line.qty, line.item_id],
-      );
     } else if (movementType === "311" && toLoc) {
       await adjustBalance(conn, line.item_id, fromLoc.id, -line.qty, lineNo);
       await adjustBalance(conn, line.item_id, toLoc.id, line.qty, lineNo);
@@ -522,21 +510,9 @@ async function postReversalLines(
     if (forward === "101") {
       // reverse GR = issue from same location
       await adjustBalance(conn, line.item_id, fromLoc.id, -line.qty, lineNo);
-      await conn.query(
-        `UPDATE sparepart_items
-         SET stock_in = GREATEST(0, stock_in - ?)
-         WHERE id = ?`,
-        [line.qty, line.item_id],
-      );
     } else if (forward === "201") {
       // reverse GI = receipt to same location
       await adjustBalance(conn, line.item_id, fromLoc.id, line.qty, lineNo);
-      await conn.query(
-        `UPDATE sparepart_items
-         SET stock_out = GREATEST(0, stock_out - ?)
-         WHERE id = ?`,
-        [line.qty, line.item_id],
-      );
     } else if (forward === "311" && toLoc) {
       // reverse transfer: move qty from to → from
       await adjustBalance(conn, line.item_id, toLoc.id, -line.qty, lineNo);

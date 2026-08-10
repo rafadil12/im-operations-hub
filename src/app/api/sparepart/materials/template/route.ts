@@ -18,8 +18,6 @@ export async function GET() {
       { header: "Brand", key: "brand", width: 16 },
       { header: "Model", key: "model", width: 28 },
       { header: "Lokasi", key: "location", width: 20 },
-      { header: "Stok Masuk", key: "stock_in", width: 12 },
-      { header: "Stok Keluar", key: "stock_out", width: 12 },
       { header: "Stok Sekarang", key: "stock_current", width: 14 },
       { header: "Notes", key: "notes", width: 24 },
     ];
@@ -29,8 +27,6 @@ export async function GET() {
       brand: "TP-LINK",
       model: "TL-SF1016DS",
       location: "Server Room",
-      stock_in: 1,
-      stock_out: 0,
       stock_current: 1,
       notes: "",
     });

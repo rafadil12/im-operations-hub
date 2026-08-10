@@ -15,8 +15,6 @@ type Props = {
     | "brand"
     | "model"
     | "notes"
-    | "stock_in"
-    | "stock_out"
     | "stock_current"
   > & { balances?: SparepartStockBalance[] };
   onClose: () => void;
@@ -59,8 +57,6 @@ export function MaterialDetailModal({ item, onClose }: Props) {
     { label: t.sparepart.brand, value: item.brand || "-" },
     { label: t.sparepart.model, value: item.model || "-" },
     { label: t.sparepart.notes, value: item.notes || "-" },
-    { label: t.sparepart.stockIn, value: item.stock_in },
-    { label: t.sparepart.stockOut, value: item.stock_out },
     { label: t.sparepart.stockCurrent, value: item.stock_current },
   ];
 

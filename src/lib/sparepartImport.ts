@@ -11,8 +11,7 @@ export type ImportRowError = {
 };
 
 export type ParsedImportItem = SparepartItemInput & {
-  stock_in: number;
-  stock_out: number;
+  /** Opening stock qty → posted as 101 when > 0 */
   stock_current: number;
   /** Excel "Lokasi" — used only as storage location for imported opening stock (101) */
   location: string;
@@ -85,6 +84,7 @@ export async function parseSparepartItemsWorkbook(
   const brandCol = findCol(headers, ["brand", "品牌"]);
   const modelCol = findCol(headers, ["model", "型号"]);
   const locationCol = findCol(headers, ["lokasi", "location", "地点", "位置"]);
+  // Legacy columns still accepted to derive opening stock when "Stok Sekarang" missing
   const stockInCol = findCol(headers, ["stok masuk", "stock in", "入库"]);
   const stockOutCol = findCol(headers, ["stok keluar", "stock out", "出库"]);
   const stockCurCol = findCol(headers, [
@@ -134,11 +134,13 @@ export async function parseSparepartItemsWorkbook(
     }
     seen.add(code.toUpperCase());
 
-    const stock_in = stockInCol >= 0 ? toInt(row.getCell(stockInCol + 1).value) : 0;
-    const stock_out =
+    const legacyIn = stockInCol >= 0 ? toInt(row.getCell(stockInCol + 1).value) : 0;
+    const legacyOut =
       stockOutCol >= 0 ? toInt(row.getCell(stockOutCol + 1).value) : 0;
     let stock_current =
-      stockCurCol >= 0 ? toInt(row.getCell(stockCurCol + 1).value) : stock_in - stock_out;
+      stockCurCol >= 0
+        ? toInt(row.getCell(stockCurCol + 1).value)
+        : Math.max(0, legacyIn - legacyOut);
     if (stock_current < 0) stock_current = 0;
 
     items.push({
@@ -149,8 +151,6 @@ export async function parseSparepartItemsWorkbook(
       location:
         locationCol >= 0 ? cellText(row.getCell(locationCol + 1).value) : "",
       notes: notesCol >= 0 ? cellText(row.getCell(notesCol + 1).value) : "",
-      stock_in,
-      stock_out,
       stock_current,
     });
   }

@@ -97,8 +97,6 @@ const cn: Dict = {
     noBalances: "暂无库存余额。",
     notes: "备注",
     note: "行备注",
-    stockIn: "累计收货",
-    stockOut: "累计发货",
     stockCurrent: "可用库存",
     qty: "数量",
     date: "过账日期",

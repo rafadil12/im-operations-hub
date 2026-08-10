@@ -7,7 +7,7 @@ import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 const LIST_SQL = `
   SELECT i.id, i.code, i.name, i.brand, i.model,
-         i.stock_in, i.stock_out, i.stock_current,
+         i.stock_current,
          i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
   FROM sparepart_items i
   WHERE i.deleted_at IS NULL
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
-          (code, name, brand, model, notes, stock_in, stock_out, stock_current)
-         VALUES (?, ?, ?, ?, ?, 0, 0, 0)`,
+          (code, name, brand, model, notes, stock_current)
+         VALUES (?, ?, ?, ?, ?, 0)`,
         [
           data.code,
           data.name,

@@ -244,8 +244,6 @@ export type SparepartStockBalanceRow = {
   brand: string | null;
   model: string | null;
   stock_current: number;
-  stock_in: number;
-  stock_out: number;
   notes: string | null;
 };
 
@@ -255,8 +253,6 @@ export type SparepartItem = {
   name: string;
   brand: string | null;
   model: string | null;
-  stock_in: number;
-  stock_out: number;
   stock_current: number;
   image_url: string | null;
   notes: string | null;

@@ -22,7 +22,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
     }
     const rows = await query<SparepartItem[]>(
       `SELECT i.id, i.code, i.name, i.brand, i.model,
-              i.stock_in, i.stock_out, i.stock_current,
+              i.stock_current,
               i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
        FROM sparepart_items i
        WHERE i.id = ? AND i.deleted_at IS NULL

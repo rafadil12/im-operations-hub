@@ -25,11 +25,11 @@ export async function GET() {
     const rows = await query<
       Pick<
         SparepartItem,
-        "code" | "name" | "brand" | "model" | "stock_in" | "stock_out" | "stock_current" | "notes"
+        "code" | "name" | "brand" | "model" | "stock_current" | "notes"
       >[]
     >(
       `SELECT i.code, i.name, i.brand, i.model,
-              i.stock_in, i.stock_out, i.stock_current, i.notes
+              i.stock_current, i.notes
        FROM sparepart_items i
        WHERE i.deleted_at IS NULL
        ORDER BY i.code ASC`,
@@ -52,8 +52,7 @@ export async function GET() {
       { header: "Nama Barang", key: "name", width: 32 },
       { header: "Brand", key: "brand", width: 16 },
       { header: "Model", key: "model", width: 28 },
-      { header: "Stok Masuk", key: "stock_in", width: 12 },
-      { header: "Stok Keluar", key: "stock_out", width: 12 },
+      { header: "Lokasi", key: "location", width: 20 },
       { header: "Stok Sekarang", key: "stock_current", width: 14 },
       { header: "Notes", key: "notes", width: 24 },
     ];
@@ -64,8 +63,7 @@ export async function GET() {
         name: row.name,
         brand: row.brand ?? "",
         model: row.model ?? "",
-        stock_in: row.stock_in,
-        stock_out: row.stock_out,
+        location: "",
         stock_current: row.stock_current,
         notes: row.notes ?? "",
       });

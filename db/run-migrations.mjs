@@ -715,5 +715,27 @@ const removeManagerOperatorSql = readFileSync(
 await conn.query(removeManagerOperatorSql);
 console.log("Removed manager/operator roles (if present).");
 
+// --- 011: drop sparepart_items.stock_in / stock_out ---
+if (await columnExists("sparepart_items", "stock_in")) {
+  await conn.query("ALTER TABLE `sparepart_items` DROP COLUMN `stock_in`");
+  console.log("Dropped sparepart_items.stock_in.");
+} else {
+  console.log("sparepart_items.stock_in already dropped.");
+}
+if (await columnExists("sparepart_items", "stock_out")) {
+  await conn.query("ALTER TABLE `sparepart_items` DROP COLUMN `stock_out`");
+  console.log("Dropped sparepart_items.stock_out.");
+} else {
+  console.log("sparepart_items.stock_out already dropped.");
+}
+
+// --- 012: Super Admin role + account ---
+const superadminSql = readFileSync(
+  join(__dirname, "migrations", "012_superadmin_bootstrap.sql"),
+  "utf8",
+);
+await conn.query(superadminSql);
+console.log("Applied Super Admin bootstrap (role + user + system_users).");
+
 await conn.end();
 console.log("Migrations complete.");
