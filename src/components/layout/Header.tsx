@@ -128,8 +128,8 @@ export function Header({ title }: HeaderProps) {
         <div className="flex items-center gap-3">
           {/* Route label, not a heading: each page owns its own <h1>. */}
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-text">
-            {title === "Overview"
-              ? t.nav.overview
+            {title === "Dashboard"
+              ? t.nav.dashboard
               : title === "Daily Operation"
                 ? t.nav.dailyOperation
                 : title}

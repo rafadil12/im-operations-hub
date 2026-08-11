@@ -116,11 +116,11 @@ export type ModuleCardData = {
   recentRows?: TrainingRow[];
 };
 
-export const overviewModules: ModuleCardData[] = [
+export const dashboardModules: ModuleCardData[] = [
   {
     id: "itsm",
     number: 1,
-    title: "ITSM OVERVIEW",
+    title: "ITSM DASHBOARD",
     icon: "headset",
     accentColor: "#3b82f6",
     href: "/itsm",
@@ -165,7 +165,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "daily-operation",
     number: 2,
-    title: "DAILY OPERATION OVERVIEW",
+    title: "DAILY OPERATION DASHBOARD",
     icon: "calendar",
     accentColor: "#22c55e",
     href: "/daily-operation/analysis",
@@ -205,7 +205,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "safety",
     number: 3,
-    title: "SECURITY (SAFETY) OVERVIEW",
+    title: "SECURITY (SAFETY) DASHBOARD",
     icon: "shield",
     accentColor: "#ef4444",
     href: "/",
@@ -214,25 +214,25 @@ export const overviewModules: ModuleCardData[] = [
       {
         label: "Today's Finding",
         value: "15",
-        // trend: "↑ 25% vs yesterday",
+        // trend: "??25% vs yesterday",
         tone: "warning",
       },
       {
         label: "Open Finding",
         value: "37",
-        // trend: "↑ 12% vs yesterday",
+        // trend: "??12% vs yesterday",
         tone: "warning",
       },
       {
         label: "Closed Finding",
         value: "112",
-        // trend: "↑ 18% vs yesterday",
+        // trend: "??18% vs yesterday",
         tone: "success",
       },
       {
         label: "Avg. Finding",
         value: "5",
-        // trend: "↑ 2 vs yesterday",
+        // trend: "??2 vs yesterday",
         tone: "warning",
       },
     ],
@@ -273,7 +273,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "sparepart",
     number: 4,
-    title: "SPAREPART OVERVIEW",
+    title: "SPAREPART DASHBOARD",
     icon: "sparepart",
     accentColor: "#a855f7",
     href: "/",
@@ -318,7 +318,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "organization",
     number: 5,
-    title: "ORGANIZATION OVERVIEW",
+    title: "ORGANIZATION DASHBOARD",
     icon: "organization",
     accentColor: "#38bdf8",
     href: "/",
@@ -346,7 +346,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "report",
     number: 6,
-    title: "REPORT OVERVIEW",
+    title: "REPORT DASHBOARD",
     icon: "report",
     accentColor: "#eab308",
     href: "/",
@@ -391,7 +391,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "training",
     number: 7,
-    title: "TRAINING OVERVIEW",
+    title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",
     href: "/",

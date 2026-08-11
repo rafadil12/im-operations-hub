@@ -11,6 +11,7 @@ export type PermissionTreeLabel =
   | {
       source: "nav";
       key:
+        | "dashboard"
         | "overview"
         | "itsm"
         | "dailyOperation"
@@ -40,8 +41,8 @@ export type PermissionTreeDef = {
 /** Sidebar-aligned permission tree (module → submenu → codes). */
 export const PERMISSION_TREE: PermissionTreeDef[] = [
   {
-    id: "overview",
-    label: { source: "nav", key: "overview" },
+    id: "dashboard",
+    label: { source: "nav", key: "dashboard" },
     codes: [PERMISSIONS.overviewView],
   },
   {

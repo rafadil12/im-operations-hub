@@ -16,7 +16,7 @@ const en = {
     apply: "Apply",
     all: "All",
     none: "None",
-    backToOverview: "Back to Overview",
+    backToDashboard: "Back to Dashboard",
     noData: "No data found for the selected filters.",
     error: "Something went wrong.",
     required: "This field is required.",
@@ -37,6 +37,7 @@ const en = {
     confirmDelete: "This will be deactivated. Continue?",
   },
   nav: {
+    dashboard: "Dashboard",
     overview: "Overview",
     itsm: "ITSM",
     dailyOperation: "Daily Operation",
@@ -272,18 +273,18 @@ const en = {
     importSuccess:
       "Import complete: {imported} new, {updated} updated ({total} total).",
   },
-  overview: {
-    title: "Overview",
+  dashboard: {
+    title: "Dashboard",
     subtitle:
-      "Overview dashboard — click a card to expand, then open the module detail.",
+      "Dashboard — click a card to expand, then open the module detail.",
 
-    itsmOverview: "ITSM Overview",
-    dailyOperationOverview: "Daily Operation Overview",
-    safetyOverview: "Safety Overview",
-    sparepartOverview: "Sparepart Overview",
-    organizationOverview: "Organization Overview",
-    reportOverview: "Report Overview",
-    trainingOverview: "Training Overview",
+    itsmDashboard: "ITSM Dashboard",
+    dailyOperationDashboard: "Daily Operation Dashboard",
+    safetyDashboard: "Safety Dashboard",
+    sparepartDashboard: "Sparepart Dashboard",
+    organizationDashboard: "Organization Dashboard",
+    reportDashboard: "Report Dashboard",
+    trainingDashboard: "Training Dashboard",
 
     totalTicket: "Total Ticket",
     openTicket: "Open Ticket",

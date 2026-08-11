@@ -33,7 +33,7 @@ const comingSoonChildren: NavChild[] = [
 ];
 
 const navItems: NavItem[] = [
-  { id: "overview", labelKey: "overview", href: "/", icon: "overview" },
+  { id: "dashboard", labelKey: "dashboard", href: "/", icon: "dashboard" },
   {
     id: "itsm",
     labelKey: "itsm",
@@ -208,7 +208,7 @@ export function Sidebar() {
   const visibleNavItems = useMemo(() => {
     return navItems
       .filter((item) => {
-        if (item.id === "overview") return canViewOverview;
+        if (item.id === "dashboard") return canViewOverview;
         if (item.id === "settings") {
           return !settingsAdminOnly || canAccessSettings;
         }
@@ -375,7 +375,7 @@ export function Sidebar() {
     };
   }, [flyoutKey, syncFlyoutPos]);
 
-  // Single source for top-level nav row padding/size — leaf (Overview) & parent (ITSM) share this.
+  // Single source for top-level nav row padding/size — leaf (Dashboard) & parent (ITSM) share this.
   // min-h keeps leaf & parent rows equal (parent has an 18px chevron).
   const navItemRowBase = [
     "flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1 text-left text-sm transition-colors",

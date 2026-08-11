@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  overviewModules,
+  dashboardModules,
   type ModuleCardData,
   type ModuleId,
 } from "@/data/overview-mock";
@@ -24,7 +24,7 @@ export function OverviewGrid() {
   const t = getDict(lang);
   const { loading: authLoading } = useAuth();
   const { canViewDailyAnalysis, canViewItsmAnalysis } = useRoleAccess();
-  const [modules, setModules] = useState<ModuleCardData[]>(overviewModules);
+  const [modules, setModules] = useState<ModuleCardData[]>(dashboardModules);
   const [expandedId, setExpandedId] = useState<ModuleId | null>(null);
 
   useEffect(() => {
@@ -93,30 +93,30 @@ export function OverviewGrid() {
       if (module.id === "itsm") {
         return {
           ...module,
-          title: t.overview.itsmOverview,
+          title: t.dashboard.itsmDashboard,
           stats: module.stats.map((stat, index) => ({
             ...stat,
             label:
               [
-                t.overview.totalTicket,
-                t.overview.openTicket,
-                t.overview.closedTicket,
+                t.dashboard.totalTicket,
+                t.dashboard.openTicket,
+                t.dashboard.closedTicket,
                 t.itsmAnalysis.activeUsers,
               ][index] ?? stat.label,
           })),
           bars: module.bars
-            ? { ...module.bars, title: t.overview.ticketByGroup }
+            ? { ...module.bars, title: t.dashboard.ticketByGroup }
             : undefined,
           pics: module.pics
-            ? { ...module.pics, title: t.overview.topPicTicket }
+            ? { ...module.pics, title: t.dashboard.topPicTicket }
             : undefined,
           chart: {
             ...module.chart,
-            title: t.overview.ticketTrend,
+            title: t.dashboard.ticketTrend,
             legend: module.chart.legend.map((item, index) => ({
               ...item,
               label:
-                [t.overview.currentPeriod, t.overview.previousPeriod][index] ??
+                [t.dashboard.currentPeriod, t.dashboard.previousPeriod][index] ??
                 item.label,
             })),
           },
@@ -126,36 +126,36 @@ export function OverviewGrid() {
       if (module.id === "daily-operation") {
         return {
           ...module,
-          title: t.overview.dailyOperationOverview,
+          title: t.dashboard.dailyOperationDashboard,
           stats: module.stats.map((stat, index) => ({
             ...stat,
             label:
               [
-                t.overview.thisMonthTasks,
-                t.overview.completed,
-                t.overview.totalUsers,
-                t.overview.avgTasks,
+                t.dashboard.thisMonthTasks,
+                t.dashboard.completed,
+                t.dashboard.totalUsers,
+                t.dashboard.avgTasks,
               ][index] ?? stat.label,
           })),
           bars: module.bars
-            ? { ...module.bars, title: t.overview.taskByDepartment }
+            ? { ...module.bars, title: t.dashboard.taskByDepartment }
             : undefined,
           pics: module.pics
-            ? { ...module.pics, title: t.overview.topPicTask }
+            ? { ...module.pics, title: t.dashboard.topPicTask }
             : undefined,
           chart: {
             ...module.chart,
-            title: t.overview.taskStatus,
+            title: t.dashboard.taskStatus,
             legend: module.chart.legend.map((item, index) => ({
               ...item,
               label:
                 [
-                  t.overview.completed,
-                  t.overview.inProgress,
-                  t.overview.pending,
+                  t.dashboard.completed,
+                  t.dashboard.inProgress,
+                  t.dashboard.pending,
                 ][index] ?? item.label,
             })),
-            centerLabel: t.overview.done,
+            centerLabel: t.dashboard.done,
           },
         };
       }
@@ -163,37 +163,37 @@ export function OverviewGrid() {
       if (module.id === "safety") {
         return {
           ...module,
-          title: t.overview.safetyOverview,
+          title: t.dashboard.safetyDashboard,
           stats: module.stats.map((stat, index) => ({
             ...stat,
             label:
               [
-                t.overview.todaysFinding,
-                t.overview.openFinding,
-                t.overview.closedFinding,
-                t.overview.overdueFinding,
+                t.dashboard.todaysFinding,
+                t.dashboard.openFinding,
+                t.dashboard.closedFinding,
+                t.dashboard.overdueFinding,
               ][index] ?? stat.label,
           })),
           trendBars: module.trendBars
-            ? { ...module.trendBars, title: t.overview.findingTrend }
+            ? { ...module.trendBars, title: t.dashboard.findingTrend }
             : undefined,
           pics: module.pics
-            ? { ...module.pics, title: t.overview.topPicClosedFinding }
+            ? { ...module.pics, title: t.dashboard.topPicClosedFinding }
             : undefined,
           chart: {
             ...module.chart,
-            title: t.overview.findingByCategory,
+            title: t.dashboard.findingByCategory,
             legend: module.chart.legend.map((item, index) => ({
               ...item,
               label:
                 [
-                  t.overview.unsafeAction,
-                  t.overview.unsafeCondition,
-                  t.overview.nearMiss,
-                  t.overview.goodPractice,
+                  t.dashboard.unsafeAction,
+                  t.dashboard.unsafeCondition,
+                  t.dashboard.nearMiss,
+                  t.dashboard.goodPractice,
                 ][index] ?? item.label,
             })),
-            centerLabel: t.overview.findings,
+            centerLabel: t.dashboard.findings,
           },
         };
       }
@@ -201,36 +201,36 @@ export function OverviewGrid() {
       if (module.id === "sparepart") {
         return {
           ...module,
-          title: t.overview.sparepartOverview,
+          title: t.dashboard.sparepartDashboard,
           stats: module.stats.map((stat, index) => ({
             ...stat,
             label:
               [
-                t.overview.totalItems,
-                t.overview.lowStock,
-                t.overview.criticalStock,
-                t.overview.purchaseRequest,
+                t.dashboard.totalItems,
+                t.dashboard.lowStock,
+                t.dashboard.criticalStock,
+                t.dashboard.purchaseRequest,
               ][index] ?? stat.label,
           })),
           bars: module.bars
-            ? { ...module.bars, title: t.overview.topUsedItems }
+            ? { ...module.bars, title: t.dashboard.topUsedItems }
             : undefined,
           chart: {
             ...module.chart,
-            title: t.overview.inventoryTrend,
+            title: t.dashboard.inventoryTrend,
             legend: module.chart.legend.map((item, index) => ({
               ...item,
               label:
-                [t.overview.stockIn, t.overview.stockOut][index] ?? item.label,
+                [t.dashboard.stockIn, t.dashboard.stockOut][index] ?? item.label,
             })),
           },
           stockFlows: module.stockFlows?.map((flow, index) => ({
             ...flow,
             label:
               [
-                t.overview.incoming,
-                t.overview.outgoing,
-                t.overview.adjustment,
+                t.dashboard.incoming,
+                t.dashboard.outgoing,
+                t.dashboard.adjustment,
               ][index] ?? flow.label,
           })),
         };
@@ -239,24 +239,24 @@ export function OverviewGrid() {
       if (module.id === "organization") {
         return {
           ...module,
-          title: t.overview.organizationOverview,
+          title: t.dashboard.organizationDashboard,
           stats: module.stats.map((stat, index) => ({
             ...stat,
             label:
               [
-                t.overview.totalHeadcount,
-                t.overview.activeHeadcount,
-                t.overview.onLeave,
-                t.overview.newJoin,
+                t.dashboard.totalHeadcount,
+                t.dashboard.activeHeadcount,
+                t.dashboard.onLeave,
+                t.dashboard.newJoin,
               ][index] ?? stat.label,
           })),
           orgTree: module.orgTree
             ? {
-                root: t.overview.itDepartment,
+                root: t.dashboard.itDepartment,
                 children: [
-                  t.overview.mes,
-                  t.overview.itInfrastructure,
-                  t.overview.intelligentLogistics,
+                  t.dashboard.mes,
+                  t.dashboard.itInfrastructure,
+                  t.dashboard.intelligentLogistics,
                 ],
               }
             : undefined,
@@ -266,43 +266,43 @@ export function OverviewGrid() {
       if (module.id === "report") {
         return {
           ...module,
-          title: t.overview.reportOverview,
+          title: t.dashboard.reportDashboard,
           stats: module.stats.map((stat, index) => ({
             ...stat,
             label:
               [
-                t.overview.weeklyReports,
-                t.overview.monthlyReports,
-                t.overview.completed,
-                t.overview.pending,
+                t.dashboard.weeklyReports,
+                t.dashboard.monthlyReports,
+                t.dashboard.completed,
+                t.dashboard.pending,
               ][index] ?? stat.label,
           })),
           trendBars: module.trendBars
-            ? { ...module.trendBars, title: t.overview.reportTrend }
+            ? { ...module.trendBars, title: t.dashboard.reportTrend }
             : undefined,
           chart: {
             ...module.chart,
-            title: t.overview.reportByCategory,
+            title: t.dashboard.reportByCategory,
             legend: module.chart.legend.map((item, index) => ({
               ...item,
               label:
                 [
-                  t.overview.operational,
-                  t.overview.incident,
-                  t.overview.audit,
-                  t.overview.other,
+                  t.dashboard.operational,
+                  t.dashboard.incident,
+                  t.dashboard.audit,
+                  t.dashboard.other,
                 ][index] ?? item.label,
             })),
-            centerLabel: t.overview.reports,
+            centerLabel: t.dashboard.reports,
           },
           progressRings: module.progressRings?.map((ring, index) => ({
             ...ring,
             label:
               [
-                t.overview.onTime,
-                t.overview.late,
-                t.overview.inProgress,
-                t.overview.notStarted,
+                t.dashboard.onTime,
+                t.dashboard.late,
+                t.dashboard.inProgress,
+                t.dashboard.notStarted,
               ][index] ?? ring.label,
           })),
         };
@@ -311,42 +311,42 @@ export function OverviewGrid() {
       if (module.id === "training") {
         return {
           ...module,
-          title: t.overview.trainingOverview,
+          title: t.dashboard.trainingDashboard,
           stats: module.stats.map((stat, index) => ({
             ...stat,
             label:
               [
-                t.overview.totalTraining,
-                t.overview.participants,
-                t.overview.completionRate,
-                t.overview.averageScore,
+                t.dashboard.totalTraining,
+                t.dashboard.participants,
+                t.dashboard.completionRate,
+                t.dashboard.averageScore,
               ][index] ?? stat.label,
           })),
           chart: {
             ...module.chart,
-            title: t.overview.trainingTrend,
+            title: t.dashboard.trainingTrend,
             legend: module.chart.legend.map((item, index) => ({
               ...item,
               label:
-                [t.overview.sessions, t.overview.participants][index] ??
+                [t.dashboard.sessions, t.dashboard.participants][index] ??
                 item.label,
             })),
           },
           secondaryChart: module.secondaryChart
             ? {
                 ...module.secondaryChart,
-                title: t.overview.trainingByCategory,
+                title: t.dashboard.trainingByCategory,
                 legend: module.secondaryChart.legend.map((item, index) => ({
                   ...item,
                   label:
                     [
-                      t.overview.safetyCat,
-                      t.overview.technical,
-                      t.overview.softSkill,
-                      t.overview.compliance,
+                      t.dashboard.safetyCat,
+                      t.dashboard.technical,
+                      t.dashboard.softSkill,
+                      t.dashboard.compliance,
                     ][index] ?? item.label,
                 })),
-                centerLabel: t.overview.sessions,
+                centerLabel: t.dashboard.sessions,
               }
             : undefined,
         };
@@ -361,8 +361,8 @@ export function OverviewGrid() {
   return (
     <>
       <div className="mb-3">
-        <h1 className="text-lg font-semibold text-text">{t.overview.title}</h1>
-        <p className="text-sm text-text-muted">{t.overview.subtitle}</p>
+        <h1 className="text-lg font-semibold text-text">{t.dashboard.title}</h1>
+        <p className="text-sm text-text-muted">{t.dashboard.subtitle}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -385,7 +385,7 @@ export function OverviewGrid() {
         ))}
       </div>
 
-      <p className="mt-4 text-[11px] text-text-dim">* {t.overview.clickDetails}</p>
+      <p className="mt-4 text-[11px] text-text-dim">* {t.dashboard.clickDetails}</p>
 
       {expanded ? (
         <CardExpandModal data={expanded} onClose={() => setExpandedId(null)} />

@@ -271,7 +271,7 @@ function OrganizationBody({ data }: { data: ModuleCardData }) {
       {data.orgTree ? (
         <section className="mb-4 rounded-lg border border-border-subtle bg-bg/30 p-3">
           <h4 className="mb-3 text-xs font-medium text-text-muted">
-            {t.overview.orgTree}
+            {t.dashboard.orgTree}
           </h4>
           <div className="flex flex-col items-center gap-3">
             <span
@@ -298,12 +298,12 @@ function OrganizationBody({ data }: { data: ModuleCardData }) {
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
           <h4 className="mb-3 text-xs font-medium text-text-muted">
-            {t.overview.genderBreakdown}
+            {t.dashboard.genderBreakdown}
           </h4>
           <div className="flex items-end justify-around gap-4 pt-2">
             <div className="flex flex-col items-center gap-1">
               <span className="text-2xl font-semibold text-accent">{male}%</span>
-              <span className="text-[10px] text-text-muted">{t.overview.male}</span>
+              <span className="text-[10px] text-text-muted">{t.dashboard.male}</span>
               <div className="mt-1 h-16 w-8 overflow-hidden rounded-t-md bg-border-subtle">
                 <div
                   className="w-full bg-accent"
@@ -316,7 +316,7 @@ function OrganizationBody({ data }: { data: ModuleCardData }) {
                 {female}%
               </span>
               <span className="text-[10px] text-text-muted">
-                {t.overview.female}
+                {t.dashboard.female}
               </span>
               <div className="mt-1 h-16 w-8 overflow-hidden rounded-t-md bg-border-subtle">
                 <div
@@ -333,12 +333,12 @@ function OrganizationBody({ data }: { data: ModuleCardData }) {
 
         <section className="flex flex-col justify-center rounded-lg border border-border-subtle bg-bg/30 p-3">
           <p className="text-[10px] uppercase tracking-wide text-text-dim">
-            {t.overview.newJoin}
+            {t.dashboard.newJoin}
           </p>
           <p className="mt-1 text-3xl font-semibold text-success">
             {newJoinStat?.value ?? "—"}
           </p>
-          <p className="mt-1 text-xs text-text-muted">{t.overview.thisMonth}</p>
+          <p className="mt-1 text-xs text-text-muted">{t.dashboard.thisMonth}</p>
         </section>
       </div>
     </>
@@ -407,23 +407,23 @@ function TrainingBody({
 
       <section className="rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-2">
         <h4 className="mb-3 text-xs font-medium text-text-muted">
-          {t.overview.recentTraining}
+          {t.dashboard.recentTraining}
         </h4>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] text-left text-[11px]">
             <thead>
               <tr className="border-b border-border-subtle text-text-dim">
                 <th className="pb-2 pr-2 font-medium">
-                  {t.overview.trainingName}
+                  {t.dashboard.trainingName}
                 </th>
-                <th className="pb-2 pr-2 font-medium">{t.overview.date}</th>
+                <th className="pb-2 pr-2 font-medium">{t.dashboard.date}</th>
                 <th className="pb-2 pr-2 font-medium">
-                  {t.overview.participant}
+                  {t.dashboard.participant}
                 </th>
                 <th className="pb-2 pr-2 font-medium">
-                  {t.overview.completion}
+                  {t.dashboard.completion}
                 </th>
-                <th className="pb-2 font-medium">{t.overview.avgScore}</th>
+                <th className="pb-2 font-medium">{t.dashboard.avgScore}</th>
               </tr>
             </thead>
             <tbody>
