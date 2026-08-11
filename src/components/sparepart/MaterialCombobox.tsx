@@ -54,11 +54,10 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
   const [highlight, setHighlight] = useState(0);
   const [searching, setSearching] = useState(false);
 
-  // Clear local selection when parent clears the controlled value (render-time sync).
+  // Clear local state when parent clears a selected value (e.g. form reset).
+  // Do not clear query while searching (value is already empty).
   if (!value && selected !== null) {
     setSelected(null);
-  }
-  if (!value && query !== "") {
     setQuery("");
   }
 
