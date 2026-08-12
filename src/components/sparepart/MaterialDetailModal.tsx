@@ -30,13 +30,10 @@ export function MaterialDetailModal({ item, onClose }: Props) {
     SparepartStockBalance[] | null
   >(null);
   const [loadingBalances, setLoadingBalances] = useState(!item.balances);
-  const [imgFailed, setImgFailed] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-
-  useEffect(() => {
-    setImgFailed(false);
-    setLightboxOpen(false);
-  }, [item.image_url]);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const imgFailed =
+    failedImageUrl !== null && failedImageUrl === item.image_url;
 
   useEffect(() => {
     if (item.balances) return;
@@ -94,7 +91,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
             {showImage ? (
               <button
                 type="button"
-                onClick={() => setLightboxOpen(true)}
+                onClick={() => setLightboxSrc(item.image_url!)}
                 className="flex h-44 w-44 items-center justify-center overflow-hidden rounded-xl border-2 border-border-subtle bg-bg hover:ring-2 hover:ring-accent/30"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- API image URL */}
@@ -102,7 +99,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                   src={item.image_url!}
                   alt={`${item.code} ${displayName}`}
                   className="size-full object-contain"
-                  onError={() => setImgFailed(true)}
+                  onError={() => setFailedImageUrl(item.image_url ?? null)}
                 />
               </button>
             ) : (
@@ -163,11 +160,11 @@ export function MaterialDetailModal({ item, onClose }: Props) {
         </div>
       </Modal>
 
-      {lightboxOpen && item.image_url ? (
+      {lightboxSrc ? (
         <ImageLightbox
-          src={item.image_url}
+          src={lightboxSrc}
           alt={`${item.code} ${displayName}`}
-          onClose={() => setLightboxOpen(false)}
+          onClose={() => setLightboxSrc(null)}
         />
       ) : null}
     </>
