@@ -23,7 +23,6 @@ const DEFAULT_PAGE_SIZE: PageSize = 10;
 
 type StockResponse = {
   rows: SparepartStockBalanceRow[];
-  summary: { totalItems: number; zeroStock: number; totalCurrent: number };
   locations: string[];
   locationOptions?: { code: string; name: string }[];
 };
@@ -34,11 +33,6 @@ export default function StockOverviewPage() {
   const { canExportSparepartMaterials } = useRoleAccess();
   const [rows, setRows] = useState<SparepartStockBalanceRow[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
-  const [summary, setSummary] = useState({
-    totalItems: 0,
-    zeroStock: 0,
-    totalCurrent: 0,
-  });
   const [q, setQ] = useState("");
   const [location, setLocation] = useState("");
   const [lowStock, setLowStock] = useState(false);
@@ -64,7 +58,6 @@ export default function StockOverviewPage() {
           `/api/sparepart/stock?${params.toString()}`,
         );
         setRows(data.rows);
-        setSummary(data.summary);
         setLocations(data.locations);
       } catch (e) {
         setError(e instanceof Error ? e.message : t.common.error);
@@ -169,33 +162,6 @@ export default function StockOverviewPage() {
             <NotesIcon className="size-3.5" />
             {t.sparepart.goPost}
           </Link>
-        </div>
-      </div>
-
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-border-subtle bg-surface px-4 py-3">
-          <p className="text-[11px] uppercase tracking-wide text-text-dim">
-            {t.sparepart.totalItems}
-          </p>
-          <p className="mt-1 text-xl font-semibold text-text">
-            {summary.totalItems}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border-subtle bg-surface px-4 py-3">
-          <p className="text-[11px] uppercase tracking-wide text-text-dim">
-            {t.sparepart.zeroStock}
-          </p>
-          <p className="mt-1 text-xl font-semibold text-text">
-            {summary.zeroStock}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border-subtle bg-surface px-4 py-3">
-          <p className="text-[11px] uppercase tracking-wide text-text-dim">
-            {t.sparepart.totalUnits}
-          </p>
-          <p className="mt-1 text-xl font-semibold text-text">
-            {summary.totalCurrent}
-          </p>
         </div>
       </div>
 
