@@ -38,6 +38,35 @@ function findCol(headers: string[], aliases: string[]): number {
   return -1;
 }
 
+/** Prefer exact bilingual headers; avoid matching plain "name" when "name en" exists. */
+function findNameEnCol(headers: string[]): number {
+  const exact = findCol(headers, ["name en", "nama en"]);
+  if (exact >= 0) return exact;
+  const hasBilingual = headers.some(
+    (h) => h.includes("name en") || h.includes("name cn"),
+  );
+  if (hasBilingual) return -1;
+  return findCol(headers, ["nama", "name", "名称", "品名"]);
+}
+
+function findNameCnCol(headers: string[]): number {
+  return findCol(headers, ["name cn", "nama cn", "中文名称", "中文"]);
+}
+
+function findBrandEnCol(headers: string[]): number {
+  const exact = findCol(headers, ["brand en"]);
+  if (exact >= 0) return exact;
+  const hasBilingual = headers.some(
+    (h) => h.includes("brand en") || h.includes("brand cn"),
+  );
+  if (hasBilingual) return -1;
+  return findCol(headers, ["brand", "品牌"]);
+}
+
+function findBrandCnCol(headers: string[]): number {
+  return findCol(headers, ["brand cn"]);
+}
+
 export async function parseSparepartItemsWorkbook(
   buffer: ArrayBuffer,
 ): Promise<
@@ -69,15 +98,24 @@ export async function parseSparepartItemsWorkbook(
   });
 
   const codeCol = findCol(headers, ["kode", "code", "编码", "编号"]);
-  const nameCol = findCol(headers, ["nama", "name", "名称", "品名"]);
-  const brandCol = findCol(headers, ["brand", "品牌"]);
+  const nameEnCol = findNameEnCol(headers);
+  const nameCnCol = findNameCnCol(headers);
+  const brandEnCol = findBrandEnCol(headers);
+  const brandCnCol = findBrandCnCol(headers);
   const modelCol = findCol(headers, ["model", "型号"]);
   const notesCol = findCol(headers, ["notes", "keterangan", "备注"]);
 
-  if (codeCol < 0 || nameCol < 0) {
+  if (codeCol < 0) {
     return {
       ok: false,
-      error: "Header must include Code and Name.",
+      error: "Header must include Code.",
+      errors: [],
+    };
+  }
+  if (nameEnCol < 0 && nameCnCol < 0) {
+    return {
+      ok: false,
+      error: "Header must include Name EN and/or Name CN.",
       errors: [],
     };
   }
@@ -90,16 +128,23 @@ export async function parseSparepartItemsWorkbook(
   for (let r = 2; r <= lastRow; r++) {
     const row = sheet.getRow(r);
     const code = cellText(row.getCell(codeCol + 1).value);
-    const name = cellText(row.getCell(nameCol + 1).value);
+    const name_en =
+      nameEnCol >= 0 ? cellText(row.getCell(nameEnCol + 1).value) : "";
+    const name_cn =
+      nameCnCol >= 0 ? cellText(row.getCell(nameCnCol + 1).value) : "";
 
-    if (!code && !name) continue;
+    if (!code && !name_en && !name_cn) continue;
 
     if (!code) {
       errors.push({ row: r, field: "code", message: "Code is required." });
       continue;
     }
-    if (!name) {
-      errors.push({ row: r, field: "name", message: "Name is required." });
+    if (!name_en && !name_cn) {
+      errors.push({
+        row: r,
+        field: "name_en",
+        message: "At least one description (EN or CN) is required.",
+      });
       continue;
     }
     if (seen.has(code.toUpperCase())) {
@@ -114,8 +159,12 @@ export async function parseSparepartItemsWorkbook(
 
     items.push({
       code,
-      name,
-      brand: brandCol >= 0 ? cellText(row.getCell(brandCol + 1).value) : "",
+      name_en,
+      name_cn,
+      brand_en:
+        brandEnCol >= 0 ? cellText(row.getCell(brandEnCol + 1).value) : "",
+      brand_cn:
+        brandCnCol >= 0 ? cellText(row.getCell(brandCnCol + 1).value) : "",
       model: modelCol >= 0 ? cellText(row.getCell(modelCol + 1).value) : "",
       notes: notesCol >= 0 ? cellText(row.getCell(notesCol + 1).value) : "",
     });

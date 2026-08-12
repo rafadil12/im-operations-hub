@@ -25,8 +25,10 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState(initial?.code ?? "");
-  const [name, setName] = useState(initial?.name ?? "");
-  const [brand, setBrand] = useState(initial?.brand ?? "");
+  const [nameEn, setNameEn] = useState(initial?.name_en ?? "");
+  const [nameCn, setNameCn] = useState(initial?.name_cn ?? "");
+  const [brandEn, setBrandEn] = useState(initial?.brand_en ?? "");
+  const [brandCn, setBrandCn] = useState(initial?.brand_cn ?? "");
   const [model, setModel] = useState(initial?.model ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [file, setFile] = useState<File | null>(null);
@@ -51,14 +53,20 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!nameEn.trim() && !nameCn.trim()) {
+      setError(t.sparepart.nameRequired);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await onSubmit(
         {
           code: code.trim(),
-          name: name.trim(),
-          brand: brand.trim(),
+          name_en: nameEn.trim(),
+          name_cn: nameCn.trim(),
+          brand_en: brandEn.trim(),
+          brand_cn: brandCn.trim(),
           model: model.trim(),
           notes: notes.trim(),
         },
@@ -127,24 +135,40 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                 required
               />
             </div>
+            <div className="hidden sm:block" aria-hidden />
             <div>
-              <label className={label}>{t.sparepart.name} *</label>
+              <label className={label}>{t.sparepart.nameEn}</label>
               <input
                 className={field}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
+                value={nameEn}
+                onChange={(e) => setNameEn(e.target.value)}
               />
             </div>
             <div>
-              <label className={label}>{t.sparepart.brand}</label>
+              <label className={label}>{t.sparepart.nameCn}</label>
               <input
                 className={field}
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
+                value={nameCn}
+                onChange={(e) => setNameCn(e.target.value)}
               />
             </div>
             <div>
+              <label className={label}>{t.sparepart.brandEn}</label>
+              <input
+                className={field}
+                value={brandEn}
+                onChange={(e) => setBrandEn(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={label}>{t.sparepart.brandCn}</label>
+              <input
+                className={field}
+                value={brandCn}
+                onChange={(e) => setBrandCn(e.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2">
               <label className={label}>{t.sparepart.model}</label>
               <input
                 className={field}
@@ -229,7 +253,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
       {lightboxOpen && previewSrc ? (
         <ImageLightbox
           src={previewSrc}
-          alt={`${code} ${name}`.trim()}
+          alt={`${code} ${nameEn || nameCn}`.trim()}
           onClose={() => setLightboxOpen(false)}
         />
       ) : null}

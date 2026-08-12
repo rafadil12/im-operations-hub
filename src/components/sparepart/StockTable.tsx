@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useLang } from "@/lib/i18n";
+import { useLang, localizedName, localizedField } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import type { SortDir, SortKey } from "@/lib/sparepartSort";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
@@ -240,7 +240,7 @@ export function StockTable({
   sortDir = "asc",
   onSortChange,
 }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [openSortKey, setOpenSortKey] = useState<SortKey | null>(null);
   const pageSizeOptions = PAGE_SIZE_OPTIONS.map((n) => ({
     value: String(n),
@@ -344,12 +344,12 @@ export function StockTable({
                 </td>
                 <td className={td}>
                   <span className="line-clamp-2 break-words text-text">
-                    {row.name}
+                    {localizedName(row, lang)}
                   </span>
                 </td>
                 <td className={td}>
                   <span className="line-clamp-2 break-words">
-                    {row.brand || "-"}
+                    {localizedField(row.brand_en, row.brand_cn, lang)}
                   </span>
                 </td>
                 <td className={td}>

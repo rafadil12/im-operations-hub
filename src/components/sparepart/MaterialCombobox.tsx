@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
-import { useLang } from "@/lib/i18n";
+import { useLang, localizedName, localizedField } from "@/lib/i18n";
 import type { SparepartItem } from "@/lib/types";
 import {
   sparepartDropdownMenuClass,
@@ -28,8 +28,8 @@ type Props = {
   className?: string;
 };
 
-function labelFor(item: SparepartItem): string {
-  return `${item.code} — ${item.name}`;
+function labelFor(item: SparepartItem, lang: "en" | "cn"): string {
+  return `${item.code} — ${localizedName(item, lang)}`;
 }
 
 function isAbortError(err: unknown): boolean {
@@ -40,7 +40,7 @@ function isAbortError(err: unknown): boolean {
 }
 
 export function MaterialCombobox({ value, onChange, className }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,7 +75,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
     })
       .then((data) => {
         setSelected(data.row);
-        setQuery(labelFor(data.row));
+        setQuery(labelFor(data.row, lang));
       })
       .catch((err) => {
         if (isAbortError(err)) return;
@@ -151,7 +151,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
   const pick = (item: SparepartItem) => {
     setSelected(item);
     onChange(String(item.id), item);
-    setQuery(labelFor(item));
+    setQuery(labelFor(item, lang));
     setSuggestions([]);
     setOpen(false);
   };
@@ -163,7 +163,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       onChange("", null);
       return;
     }
-    if (selected && labelFor(selected).toLowerCase() === code.toLowerCase()) {
+    if (selected && labelFor(selected, lang).toLowerCase() === code.toLowerCase()) {
       return;
     }
 
@@ -185,7 +185,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       if (isAbortError(err)) return;
     }
 
-    if (!selected || labelFor(selected) !== query) {
+    if (!selected || labelFor(selected, lang) !== query) {
       setSelected(null);
       onChange("", null);
     }
@@ -269,14 +269,17 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
                 onMouseEnter={() => setHighlight(index)}
               >
                 <span className={`font-medium ${index === highlight ? "text-white" : "text-text"}`}>
-                  {item.code} — {item.name}
+                  {item.code} — {localizedName(item, lang)}
                 </span>
                 <span
                   className={`text-[11px] ${
                     index === highlight ? "text-white/80" : "text-text-dim"
                   }`}
                 >
-                  {(item.brand || "-") + " / " + (item.model || "-")} · stock:{" "}
+                  {localizedField(item.brand_en, item.brand_cn, lang) +
+                    " / " +
+                    (item.model || "-")}{" "}
+                  · stock:{" "}
                   {item.stock_current}
                 </span>
               </button>
@@ -286,8 +289,8 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       ) : null}
       {selected ? (
         <p className="mt-1 text-[11px] text-text-dim">
-          {selected.brand ?? "-"} / {selected.model ?? "-"} · stock:{" "}
-          {selected.stock_current}
+          {localizedField(selected.brand_en, selected.brand_cn, lang)} /{" "}
+          {selected.model ?? "-"} · stock: {selected.stock_current}
         </p>
       ) : null}
     </div>

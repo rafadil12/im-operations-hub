@@ -240,8 +240,10 @@ export type SparepartStockBalance = {
 export type SparepartStockBalanceRow = {
   item_id: number;
   code: string;
-  name: string;
-  brand: string | null;
+  name_en: string | null;
+  name_cn: string | null;
+  brand_en: string | null;
+  brand_cn: string | null;
   model: string | null;
   stock_current: number;
   notes: string | null;
@@ -250,8 +252,10 @@ export type SparepartStockBalanceRow = {
 export type SparepartItem = {
   id: number;
   code: string;
-  name: string;
-  brand: string | null;
+  name_en: string | null;
+  name_cn: string | null;
+  brand_en: string | null;
+  brand_cn: string | null;
   model: string | null;
   stock_current: number;
   image_url: string | null;
@@ -264,8 +268,10 @@ export type SparepartItem = {
 
 export type SparepartItemInput = {
   code: string;
-  name: string;
-  brand: string;
+  name_en: string;
+  name_cn: string;
+  brand_en: string;
+  brand_cn: string;
   model: string;
   notes: string;
 };

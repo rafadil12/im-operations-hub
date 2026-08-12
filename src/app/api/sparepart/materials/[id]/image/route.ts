@@ -13,7 +13,7 @@ type Ctx = { params: Promise<{ id: string }> };
 
 async function loadItem(itemId: number): Promise<SparepartItem | null> {
   const rows = await query<SparepartItem[]>(
-    `SELECT i.id, i.code, i.name, i.brand, i.model,
+    `SELECT i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
             i.stock_current, i.image_url, i.notes,
             i.deleted_at, i.created_at, i.updated_at
      FROM sparepart_items i

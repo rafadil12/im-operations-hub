@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Invalid material id." }, { status: 400 });
     }
     const rows = await query<SparepartItem[]>(
-      `SELECT i.id, i.code, i.name, i.brand, i.model,
+      `SELECT i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
               i.stock_current,
               i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
        FROM sparepart_items i
@@ -110,12 +110,15 @@ export async function PUT(request: NextRequest, context: Ctx) {
     try {
       const result = await execute(
         `UPDATE sparepart_items
-         SET code = ?, name = ?, brand = ?, model = ?, notes = ?, image_url = ?
+         SET code = ?, name_en = ?, name_cn = ?, brand_en = ?, brand_cn = ?,
+             model = ?, notes = ?, image_url = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
           data.code,
-          data.name,
-          data.brand || null,
+          data.name_en || null,
+          data.name_cn || null,
+          data.brand_en || null,
+          data.brand_cn || null,
           data.model || null,
           data.notes || null,
           nextImageUrl,

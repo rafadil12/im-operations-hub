@@ -6,11 +6,16 @@ import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 const LIST_SQL = `
-  SELECT i.id, i.code, i.name, i.brand, i.model,
+  SELECT i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
          i.stock_current,
          i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
   FROM sparepart_items i
   WHERE i.deleted_at IS NULL
+`;
+
+const SEARCH_SQL = `
+  (i.code LIKE ? OR i.name_en LIKE ? OR i.name_cn LIKE ?
+   OR i.brand_en LIKE ? OR i.brand_cn LIKE ? OR i.model LIKE ?)
 `;
 
 export async function GET(request: NextRequest) {
@@ -24,11 +29,9 @@ export async function GET(request: NextRequest) {
 
     const q = sp.get("q")?.trim();
     if (q) {
-      conditions.push(
-        "(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ?)",
-      );
+      conditions.push(SEARCH_SQL);
       const like = `%${q}%`;
-      params.push(like, like, like, like);
+      params.push(like, like, like, like, like, like);
     }
 
     const sql =
@@ -65,12 +68,14 @@ export async function POST(request: NextRequest) {
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
-          (code, name, brand, model, notes, stock_current)
-         VALUES (?, ?, ?, ?, ?, 0)`,
+          (code, name_en, name_cn, brand_en, brand_cn, model, notes, stock_current)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
         [
           data.code,
-          data.name,
-          data.brand || null,
+          data.name_en || null,
+          data.name_cn || null,
+          data.brand_en || null,
+          data.brand_cn || null,
           data.model || null,
           data.notes || null,
         ],

@@ -64,18 +64,22 @@ export async function POST(request: NextRequest) {
       for (const item of parsed.items) {
         await conn.query(
           `INSERT INTO sparepart_items
-            (code, name, brand, model, notes, stock_current)
-           VALUES (?, ?, ?, ?, ?, 0)
+            (code, name_en, name_cn, brand_en, brand_cn, model, notes, stock_current)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 0)
            ON DUPLICATE KEY UPDATE
-             name = VALUES(name),
-             brand = VALUES(brand),
+             name_en = VALUES(name_en),
+             name_cn = VALUES(name_cn),
+             brand_en = VALUES(brand_en),
+             brand_cn = VALUES(brand_cn),
              model = VALUES(model),
              notes = VALUES(notes),
              deleted_at = NULL`,
           [
             item.code,
-            item.name,
-            item.brand || null,
+            item.name_en || null,
+            item.name_cn || null,
+            item.brand_en || null,
+            item.brand_cn || null,
             item.model || null,
             item.notes || null,
           ],

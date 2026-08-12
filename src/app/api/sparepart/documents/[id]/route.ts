@@ -35,8 +35,10 @@ export async function GET(_request: NextRequest, context: Ctx) {
       `SELECT li.id, li.doc_id, li.item_id, li.line_no, li.qty,
               li.storage_location, li.storage_location_id, li.to_storage_location_id,
               li.note,
-              i.code AS item_code, i.name AS item_name,
-              i.brand AS item_brand, i.model AS item_model,
+              i.code AS item_code,
+              COALESCE(i.name_en, i.name_cn) AS item_name,
+              COALESCE(i.brand_en, i.brand_cn) AS item_brand,
+              i.model AS item_model,
               CASE
                 WHEN loc_from.id IS NOT NULL
                   THEN CONCAT(loc_from.code, ' — ', loc_from.name)

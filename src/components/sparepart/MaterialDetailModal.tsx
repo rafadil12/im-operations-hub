@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { Modal } from "@/components/ui/Modal";
 import { apiGetAbs } from "@/lib/apiClient";
-import { useLang } from "@/lib/i18n";
+import { useLang, localizedName } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalance } from "@/lib/types";
 
 type Props = {
@@ -12,8 +12,10 @@ type Props = {
     SparepartItem,
     | "id"
     | "code"
-    | "name"
-    | "brand"
+    | "name_en"
+    | "name_cn"
+    | "brand_en"
+    | "brand_cn"
     | "model"
     | "notes"
     | "stock_current"
@@ -23,7 +25,7 @@ type Props = {
 };
 
 export function MaterialDetailModal({ item, onClose }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [fetchedBalances, setFetchedBalances] = useState<
     SparepartStockBalance[] | null
   >(null);
@@ -60,11 +62,14 @@ export function MaterialDetailModal({ item, onClose }: Props) {
   const balances = item.balances ?? fetchedBalances ?? [];
   const showLoading = !item.balances && loadingBalances;
   const showImage = Boolean(item.image_url) && !imgFailed;
+  const displayName = localizedName(item, lang);
 
   const rows: { label: string; value: string | number }[] = [
     { label: t.sparepart.code, value: item.code },
-    { label: t.sparepart.name, value: item.name },
-    { label: t.sparepart.brand, value: item.brand || "-" },
+    { label: t.sparepart.nameEn, value: item.name_en || "-" },
+    { label: t.sparepart.nameCn, value: item.name_cn || "-" },
+    { label: t.sparepart.brandEn, value: item.brand_en || "-" },
+    { label: t.sparepart.brandCn, value: item.brand_cn || "-" },
     { label: t.sparepart.model, value: item.model || "-" },
     { label: t.sparepart.notes, value: item.notes || "-" },
     { label: t.sparepart.stockCurrent, value: item.stock_current },
@@ -76,53 +81,41 @@ export function MaterialDetailModal({ item, onClose }: Props) {
 
   return (
     <>
-      <Modal title={`${item.code} — ${item.name}`} onClose={onClose} size="lg">
+      <Modal title={`${item.code} — ${displayName}`} onClose={onClose} size="lg">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="mx-auto w-36 shrink-0 sm:mx-0">
+          <div className="flex shrink-0 flex-col items-center gap-2">
             {showImage ? (
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                className="block w-full cursor-zoom-in rounded-md border border-border-subtle bg-bg p-0 hover:ring-2 hover:ring-accent/40"
+                className="flex size-28 items-center justify-center overflow-hidden rounded-md border border-border-subtle bg-bg hover:ring-2 hover:ring-accent/40"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- dynamic API-served upload */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- API image URL */}
                 <img
                   src={item.image_url!}
-                  alt={`${item.code} ${item.name}`}
-                  className="aspect-square w-full object-contain"
+                  alt={`${item.code} ${displayName}`}
+                  className="size-full object-contain"
                   onError={() => setImgFailed(true)}
                 />
               </button>
             ) : (
-              <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-border-subtle bg-bg/60 px-2 text-center text-xs text-text-dim">
+              <div className="flex size-28 items-center justify-center rounded-md border border-dashed border-border bg-bg text-xs text-text-dim">
                 {t.sparepart.noImage}
               </div>
             )}
           </div>
-
-          <dl className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+          <dl className="min-w-0 flex-1 space-y-1.5">
             {rows.map((row) => (
-              <div key={row.label} className="min-w-0">
-                <dt className="text-[11px] font-semibold uppercase tracking-wide text-text-dim">
-                  {row.label}
-                </dt>
-                <dd
-                  className={`mt-1 text-sm ${
-                    row.label === t.sparepart.stockCurrent &&
-                    item.stock_current <= 0
-                      ? "font-medium text-danger"
-                      : "text-text"
-                  }`}
-                >
-                  {row.value}
-                </dd>
+              <div key={row.label} className="grid grid-cols-[8rem_1fr] gap-2">
+                <dt className="text-xs text-text-muted">{row.label}</dt>
+                <dd className="text-sm text-text">{row.value}</dd>
               </div>
             ))}
           </dl>
         </div>
 
-        <div className="mt-5">
-          <h3 className="mb-2 text-sm font-semibold text-text">
+        <div className="mt-4">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-dim">
             {t.sparepart.stockByLocation}
           </h3>
           {showLoading ? (
@@ -130,32 +123,24 @@ export function MaterialDetailModal({ item, onClose }: Props) {
           ) : balances.length === 0 ? (
             <p className="text-xs text-text-muted">{t.sparepart.noBalances}</p>
           ) : (
-            <div className="overflow-hidden rounded-md border border-border-subtle">
+            <div className="overflow-x-auto rounded-md border border-border-subtle">
               <table className="w-full border-collapse">
-                <thead className="bg-bg/40">
+                <thead className="border-b border-border-subtle bg-bg/40">
                   <tr>
                     <th className={th}>{t.sparepart.locationCode}</th>
                     <th className={th}>{t.sparepart.locationName}</th>
-                    <th className={`${th} text-right`}>
-                      {t.sparepart.stockCurrent}
-                    </th>
+                    <th className={`${th} text-right`}>{t.sparepart.qty}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {balances.map((b) => (
                     <tr
                       key={b.id}
-                      className="border-t border-border-subtle/60"
+                      className="border-b border-border-subtle/60 last:border-0"
                     >
-                      <td className={td}>{b.location_code}</td>
-                      <td className={td}>{b.location_name}</td>
-                      <td
-                        className={`${td} text-right font-medium tabular-nums ${
-                          b.qty <= 0 ? "text-danger" : ""
-                        }`}
-                      >
-                        {b.qty}
-                      </td>
+                      <td className={td}>{b.location_code ?? "-"}</td>
+                      <td className={td}>{b.location_name ?? "-"}</td>
+                      <td className={`${td} text-right tabular-nums`}>{b.qty}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -165,10 +150,10 @@ export function MaterialDetailModal({ item, onClose }: Props) {
         </div>
       </Modal>
 
-      {lightboxOpen && showImage && item.image_url ? (
+      {lightboxOpen && item.image_url ? (
         <ImageLightbox
           src={item.image_url}
-          alt={`${item.code} ${item.name}`}
+          alt={`${item.code} ${displayName}`}
           onClose={() => setLightboxOpen(false)}
         />
       ) : null}

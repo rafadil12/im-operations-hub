@@ -807,5 +807,59 @@ console.log("Applied Super Admin bootstrap (role + user + system_users).");
   );
 }
 
+// --- 014: sparepart_items bilingual name/brand ---
+if (!(await columnExists("sparepart_items", "name_en"))) {
+  await conn.query(
+    "ALTER TABLE `sparepart_items` ADD COLUMN `name_en` VARCHAR(255) NULL AFTER `code`",
+  );
+  console.log("Added sparepart_items.name_en.");
+} else {
+  console.log("sparepart_items.name_en already exists.");
+}
+if (!(await columnExists("sparepart_items", "name_cn"))) {
+  await conn.query(
+    "ALTER TABLE `sparepart_items` ADD COLUMN `name_cn` VARCHAR(255) NULL AFTER `name_en`",
+  );
+  console.log("Added sparepart_items.name_cn.");
+} else {
+  console.log("sparepart_items.name_cn already exists.");
+}
+if (!(await columnExists("sparepart_items", "brand_en"))) {
+  await conn.query(
+    "ALTER TABLE `sparepart_items` ADD COLUMN `brand_en` VARCHAR(128) NULL AFTER `name_cn`",
+  );
+  console.log("Added sparepart_items.brand_en.");
+} else {
+  console.log("sparepart_items.brand_en already exists.");
+}
+if (!(await columnExists("sparepart_items", "brand_cn"))) {
+  await conn.query(
+    "ALTER TABLE `sparepart_items` ADD COLUMN `brand_cn` VARCHAR(128) NULL AFTER `brand_en`",
+  );
+  console.log("Added sparepart_items.brand_cn.");
+} else {
+  console.log("sparepart_items.brand_cn already exists.");
+}
+if (await columnExists("sparepart_items", "name")) {
+  await conn.query(
+    `UPDATE sparepart_items SET
+       name_en = COALESCE(NULLIF(name_en, ''), name),
+       name_cn = COALESCE(NULLIF(name_cn, ''), name),
+       brand_en = COALESCE(brand_en, brand),
+       brand_cn = COALESCE(brand_cn, brand)`,
+  );
+  console.log("Backfilled sparepart_items bilingual columns from name/brand.");
+  await conn.query("ALTER TABLE `sparepart_items` DROP COLUMN `name`");
+  console.log("Dropped sparepart_items.name.");
+} else {
+  console.log("sparepart_items.name already dropped.");
+}
+if (await columnExists("sparepart_items", "brand")) {
+  await conn.query("ALTER TABLE `sparepart_items` DROP COLUMN `brand`");
+  console.log("Dropped sparepart_items.brand.");
+} else {
+  console.log("sparepart_items.brand already dropped.");
+}
+
 await conn.end();
 console.log("Migrations complete.");

@@ -14,15 +14,19 @@ export async function GET() {
     const sheet = workbook.addWorksheet("Items");
     sheet.columns = [
       { header: "Code", key: "code", width: 14 },
-      { header: "Name", key: "name", width: 32 },
-      { header: "Brand", key: "brand", width: 16 },
+      { header: "Name EN", key: "name_en", width: 32 },
+      { header: "Name CN", key: "name_cn", width: 32 },
+      { header: "Brand EN", key: "brand_en", width: 16 },
+      { header: "Brand CN", key: "brand_cn", width: 16 },
       { header: "Model", key: "model", width: 28 },
       { header: "Notes", key: "notes", width: 24 },
     ];
     sheet.addRow({
       code: "IT00001",
-      name: "Switch",
-      brand: "TP-LINK",
+      name_en: "Switch",
+      name_cn: "交换机",
+      brand_en: "TP-LINK",
+      brand_cn: "TP-LINK",
       model: "TL-SF1016DS",
       notes: "",
     });

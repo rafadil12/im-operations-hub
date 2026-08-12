@@ -24,10 +24,11 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q")?.trim();
     if (q) {
       conditions.push(
-        `(i.code LIKE ? OR i.name LIKE ? OR i.brand LIKE ? OR i.model LIKE ?)`,
+        `(i.code LIKE ? OR i.name_en LIKE ? OR i.name_cn LIKE ?
+          OR i.brand_en LIKE ? OR i.brand_cn LIKE ? OR i.model LIKE ?)`,
       );
       const like = `%${q}%`;
-      params.push(like, like, like, like);
+      params.push(like, like, like, like, like, like);
     }
 
     const location = sp.get("location")?.trim();
@@ -51,8 +52,10 @@ export async function GET(request: NextRequest) {
       `SELECT
          i.id AS item_id,
          i.code,
-         i.name,
-         i.brand,
+         i.name_en,
+         i.name_cn,
+         i.brand_en,
+         i.brand_cn,
          i.model,
          i.stock_current,
          i.notes

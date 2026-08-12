@@ -9,6 +9,8 @@ export type SortKey =
 
 export type SortDir = "asc" | "desc";
 
+type SortableRow = SparepartItem | SparepartStockBalanceRow;
+
 function compareStrings(a: string | null | undefined, b: string | null | undefined): number {
   const left = (a ?? "").trim();
   const right = (b ?? "").trim();
@@ -18,6 +20,20 @@ function compareStrings(a: string | null | undefined, b: string | null | undefin
   if (leftEmpty) return 1;
   if (rightEmpty) return -1;
   return left.localeCompare(right, undefined, { sensitivity: "base" });
+}
+
+function sortField(row: SortableRow, key: SortKey): string | null {
+  switch (key) {
+    case "name":
+      return row.name_en || row.name_cn;
+    case "brand":
+      return row.brand_en || row.brand_cn;
+    case "code":
+    case "model":
+      return row[key];
+    default:
+      return null;
+  }
 }
 
 /** When sortKey is null, default order is material code ascending. */
@@ -33,7 +49,7 @@ export function sortSparepartItems(
     if (key === "stock_current") {
       cmp = a.stock_current - b.stock_current;
     } else {
-      cmp = compareStrings(a[key], b[key]);
+      cmp = compareStrings(sortField(a, key), sortField(b, key));
     }
     if (cmp !== 0) return cmp * dir;
     return compareStrings(a.code, b.code);
@@ -52,7 +68,7 @@ export function sortStockBalanceRows(
     if (key === "stock_current") {
       cmp = a.stock_current - b.stock_current;
     } else {
-      cmp = compareStrings(a[key], b[key]);
+      cmp = compareStrings(sortField(a, key), sortField(b, key));
     }
     if (cmp !== 0) return cmp * dir;
     return compareStrings(a.code, b.code);

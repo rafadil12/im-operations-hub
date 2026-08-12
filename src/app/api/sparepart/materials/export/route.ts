@@ -9,8 +9,10 @@ export const runtime = "nodejs";
 
 type BalanceExportRow = {
   code: string;
-  name: string;
-  brand: string | null;
+  name_en: string | null;
+  name_cn: string | null;
+  brand_en: string | null;
+  brand_cn: string | null;
   model: string | null;
   location_code: string;
   location_name: string;
@@ -25,10 +27,17 @@ export async function GET() {
     const rows = await query<
       Pick<
         SparepartItem,
-        "code" | "name" | "brand" | "model" | "stock_current" | "notes"
+        | "code"
+        | "name_en"
+        | "name_cn"
+        | "brand_en"
+        | "brand_cn"
+        | "model"
+        | "stock_current"
+        | "notes"
       >[]
     >(
-      `SELECT i.code, i.name, i.brand, i.model,
+      `SELECT i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
               i.stock_current, i.notes
        FROM sparepart_items i
        WHERE i.deleted_at IS NULL
@@ -36,7 +45,7 @@ export async function GET() {
     );
 
     const balanceRows = await query<BalanceExportRow[]>(
-      `SELECT i.code, i.name, i.brand, i.model,
+      `SELECT i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
               loc.code AS location_code, loc.name AS location_name, b.qty
        FROM sparepart_stock_balances b
        JOIN sparepart_items i ON i.id = b.item_id
@@ -49,8 +58,10 @@ export async function GET() {
     const sheet = workbook.addWorksheet("Items");
     sheet.columns = [
       { header: "Code", key: "code", width: 14 },
-      { header: "Name", key: "name", width: 32 },
-      { header: "Brand", key: "brand", width: 16 },
+      { header: "Name EN", key: "name_en", width: 32 },
+      { header: "Name CN", key: "name_cn", width: 32 },
+      { header: "Brand EN", key: "brand_en", width: 16 },
+      { header: "Brand CN", key: "brand_cn", width: 16 },
       { header: "Model", key: "model", width: 28 },
       { header: "Current Stock", key: "stock_current", width: 14 },
       { header: "Notes", key: "notes", width: 24 },
@@ -59,8 +70,10 @@ export async function GET() {
     for (const row of rows) {
       sheet.addRow({
         code: row.code,
-        name: row.name,
-        brand: row.brand ?? "",
+        name_en: row.name_en ?? "",
+        name_cn: row.name_cn ?? "",
+        brand_en: row.brand_en ?? "",
+        brand_cn: row.brand_cn ?? "",
         model: row.model ?? "",
         stock_current: row.stock_current,
         notes: row.notes ?? "",
@@ -71,8 +84,10 @@ export async function GET() {
     const byLoc = workbook.addWorksheet("Stock by Location");
     byLoc.columns = [
       { header: "Code", key: "code", width: 14 },
-      { header: "Name", key: "name", width: 32 },
-      { header: "Brand", key: "brand", width: 16 },
+      { header: "Name EN", key: "name_en", width: 32 },
+      { header: "Name CN", key: "name_cn", width: 32 },
+      { header: "Brand EN", key: "brand_en", width: 16 },
+      { header: "Brand CN", key: "brand_cn", width: 16 },
       { header: "Model", key: "model", width: 28 },
       { header: "Location Code", key: "location_code", width: 16 },
       { header: "Location Name", key: "location_name", width: 20 },
@@ -81,8 +96,10 @@ export async function GET() {
     for (const row of balanceRows) {
       byLoc.addRow({
         code: row.code,
-        name: row.name,
-        brand: row.brand ?? "",
+        name_en: row.name_en ?? "",
+        name_cn: row.name_cn ?? "",
+        brand_en: row.brand_en ?? "",
+        brand_cn: row.brand_cn ?? "",
         model: row.model ?? "",
         location_code: row.location_code,
         location_name: row.location_name,
