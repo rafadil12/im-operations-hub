@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { Modal } from "@/components/ui/Modal";
 import { apiGetAbs } from "@/lib/apiClient";
-import { useLang, localizedName } from "@/lib/i18n";
+import { useLang, localizedField, localizedName } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalance } from "@/lib/types";
 
 type Props = {
@@ -64,15 +64,22 @@ export function MaterialDetailModal({ item, onClose }: Props) {
   const showImage = Boolean(item.image_url) && !imgFailed;
   const displayName = localizedName(item, lang);
 
-  const rows: { label: string; value: string | number }[] = [
-    { label: t.sparepart.code, value: item.code },
-    { label: t.sparepart.nameEn, value: item.name_en || "-" },
-    { label: t.sparepart.nameCn, value: item.name_cn || "-" },
-    { label: t.sparepart.brandEn, value: item.brand_en || "-" },
-    { label: t.sparepart.brandCn, value: item.brand_cn || "-" },
-    { label: t.sparepart.model, value: item.model || "-" },
-    { label: t.sparepart.notes, value: item.notes || "-" },
-    { label: t.sparepart.stockCurrent, value: item.stock_current },
+  const description = localizedName(item, lang) || "-";
+  const brand = localizedField(item.brand_en, item.brand_cn, lang) || "-";
+
+  const detailGroups: { label: string; value: string | number }[][] = [
+    [
+      { label: t.sparepart.code, value: item.code },
+      { label: t.sparepart.name, value: description },
+    ],
+    [
+      { label: t.sparepart.brand, value: brand },
+      { label: t.sparepart.model, value: item.model || "-" },
+    ],
+    [
+      { label: t.sparepart.notes, value: item.notes || "-" },
+      { label: t.sparepart.stockCurrent, value: item.stock_current },
+    ],
   ];
 
   const th =
@@ -82,13 +89,13 @@ export function MaterialDetailModal({ item, onClose }: Props) {
   return (
     <>
       <Modal title={`${item.code} — ${displayName}`} onClose={onClose} size="lg">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="flex shrink-0 flex-col items-center gap-2">
+        <div className="grid gap-4 sm:grid-cols-[11rem_minmax(0,1fr)] sm:items-start sm:gap-5">
+          <div className="flex shrink-0 flex-col items-start gap-2">
             {showImage ? (
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
-                className="flex size-28 items-center justify-center overflow-hidden rounded-md border border-border-subtle bg-bg hover:ring-2 hover:ring-accent/40"
+                className="flex h-44 w-44 items-center justify-center overflow-hidden rounded-xl border-2 border-border-subtle bg-bg hover:ring-2 hover:ring-accent/30"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- API image URL */}
                 <img
@@ -99,23 +106,27 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                 />
               </button>
             ) : (
-              <div className="flex size-28 items-center justify-center rounded-md border border-dashed border-border bg-bg text-xs text-text-dim">
+              <div className="flex h-44 w-44 items-center justify-center rounded-xl border border-dashed border-border bg-bg text-xs text-text-dim">
                 {t.sparepart.noImage}
               </div>
             )}
           </div>
-          <dl className="min-w-0 flex-1 space-y-1.5">
-            {rows.map((row) => (
-              <div key={row.label} className="grid grid-cols-[8rem_1fr] gap-2">
-                <dt className="text-xs text-text-muted">{row.label}</dt>
-                <dd className="text-sm text-text">{row.value}</dd>
-              </div>
-            ))}
+          <dl className="min-w-0 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+            {detailGroups.map((group) =>
+              group.map((row) => (
+                <div key={row.label} className="space-y-1">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-text-dim">
+                    {row.label}
+                  </dt>
+                  <dd className="text-sm font-medium text-text">{row.value}</dd>
+                </div>
+              )),
+            )}
           </dl>
         </div>
 
         <div className="mt-4">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-dim">
+          <h3 className="mb-3 text-sm font-semibold text-text">
             {t.sparepart.stockByLocation}
           </h3>
           {showLoading ? (
@@ -129,7 +140,9 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                   <tr>
                     <th className={th}>{t.sparepart.locationCode}</th>
                     <th className={th}>{t.sparepart.locationName}</th>
-                    <th className={`${th} text-right`}>{t.sparepart.qty}</th>
+                    <th className={`${th} text-right`}>
+                      {t.sparepart.stockCurrent}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
