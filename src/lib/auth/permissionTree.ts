@@ -17,11 +17,14 @@ export type PermissionTreeLabel =
         | "dailyOperation"
         | "sparepart"
         | "settings"
+        | "management"
+        | "analysis"
+        | "master"
         | "moduleManagement"
         | "moduleAnalysis"
-        | "master"
         | "settingsRoles"
         | "settingsAccounts"
+        | "sparepartManagement"
         | "sparepartStock"
         | "sparepartPost"
         | "sparepartDocuments"
@@ -77,7 +80,7 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     children: [
       {
         id: "daily-management",
-        label: { source: "nav", key: "moduleManagement" },
+        label: { source: "nav", key: "management" },
         codes: [
           PERMISSIONS.dailyRecordRead,
           PERMISSIONS.dailyRecordCreate,
@@ -90,7 +93,7 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
       },
       {
         id: "daily-analysis",
-        label: { source: "nav", key: "moduleAnalysis" },
+        label: { source: "nav", key: "analysis" },
         codes: [PERMISSIONS.dailyAnalysisView],
       },
       {
@@ -105,40 +108,46 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     label: { source: "nav", key: "sparepart" },
     children: [
       {
-        id: "sparepart-stock",
-        label: { source: "nav", key: "sparepartStock" },
-        codes: [PERMISSIONS.sparepartStockView],
-      },
-      {
-        id: "sparepart-post",
-        label: { source: "nav", key: "sparepartPost" },
-        codes: [PERMISSIONS.sparepartDocumentPost],
-      },
-      {
-        id: "sparepart-documents",
-        label: { source: "nav", key: "sparepartDocuments" },
-        codes: [
-          PERMISSIONS.sparepartDocumentRead,
-          PERMISSIONS.sparepartDocumentReverse,
+        id: "sparepart-management",
+        label: { source: "nav", key: "sparepartManagement" },
+        children: [
+          {
+            id: "sparepart-stock",
+            label: { source: "nav", key: "sparepartStock" },
+            codes: [PERMISSIONS.sparepartStockView],
+          },
+          {
+            id: "sparepart-post",
+            label: { source: "nav", key: "sparepartPost" },
+            codes: [PERMISSIONS.sparepartDocumentPost],
+          },
+          {
+            id: "sparepart-documents",
+            label: { source: "nav", key: "sparepartDocuments" },
+            codes: [
+              PERMISSIONS.sparepartDocumentRead,
+              PERMISSIONS.sparepartDocumentReverse,
+            ],
+          },
+          {
+            id: "sparepart-materials",
+            label: { source: "nav", key: "sparepartMaterials" },
+            codes: [
+              PERMISSIONS.sparepartMaterialsRead,
+              PERMISSIONS.sparepartMaterialsCreate,
+              PERMISSIONS.sparepartMaterialsUpdate,
+              PERMISSIONS.sparepartMaterialsDelete,
+              PERMISSIONS.sparepartMaterialsImport,
+              PERMISSIONS.sparepartMaterialsExport,
+              PERMISSIONS.sparepartMaterialsTemplate,
+            ],
+          },
+          {
+            id: "sparepart-locations",
+            label: { source: "nav", key: "sparepartLocations" },
+            codes: [PERMISSIONS.sparepartLocationsManage],
+          },
         ],
-      },
-      {
-        id: "sparepart-materials",
-        label: { source: "nav", key: "sparepartMaterials" },
-        codes: [
-          PERMISSIONS.sparepartMaterialsRead,
-          PERMISSIONS.sparepartMaterialsCreate,
-          PERMISSIONS.sparepartMaterialsUpdate,
-          PERMISSIONS.sparepartMaterialsDelete,
-          PERMISSIONS.sparepartMaterialsImport,
-          PERMISSIONS.sparepartMaterialsExport,
-          PERMISSIONS.sparepartMaterialsTemplate,
-        ],
-      },
-      {
-        id: "sparepart-locations",
-        label: { source: "nav", key: "sparepartLocations" },
-        codes: [PERMISSIONS.sparepartLocationsManage],
       },
     ],
   },
