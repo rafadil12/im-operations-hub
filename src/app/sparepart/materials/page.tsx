@@ -90,17 +90,54 @@ export default function MaterialMasterPage() {
     setPage(1);
   };
 
-  const handleCreate = async (input: SparepartItemInput) => {
-    await apiSendAbs("/api/sparepart/materials", "POST", input);
+  const uploadMaterialImage = async (itemId: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/sparepart/materials/${itemId}/image`, {
+      method: "POST",
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(
+        (data as { error?: string }).error || t.toast.saveFailed,
+      );
+    }
+  };
+
+  const removeMaterialImage = async (itemId: number) => {
+    await apiSendAbs(`/api/sparepart/materials/${itemId}/image`, "DELETE");
+  };
+
+  const handleCreate = async (
+    input: SparepartItemInput,
+    extras: { file: File | null; removeImage: boolean },
+  ) => {
+    const created = await apiSendAbs<{ id: number }>(
+      "/api/sparepart/materials",
+      "POST",
+      input,
+    );
+    if (extras.file) {
+      await uploadMaterialImage(created.id, extras.file);
+    }
     setFormOpen(false);
     setEditRow(null);
     toastSuccess(t.toast.createSuccess);
     await load(q);
   };
 
-  const handleUpdate = async (input: SparepartItemInput) => {
+  const handleUpdate = async (
+    input: SparepartItemInput,
+    extras: { file: File | null; removeImage: boolean },
+  ) => {
     if (!editRow) return;
     await apiSendAbs(`/api/sparepart/materials/${editRow.id}`, "PUT", input);
+    if (extras.removeImage && !extras.file) {
+      await removeMaterialImage(editRow.id);
+    } else if (extras.file) {
+      await uploadMaterialImage(editRow.id, extras.file);
+    }
     setFormOpen(false);
     setEditRow(null);
     toastSuccess(t.toast.updateSuccess);

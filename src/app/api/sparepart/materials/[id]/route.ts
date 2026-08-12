@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import {
+  SparepartImageError,
+  renameMaterialImage,
+} from "@/lib/sparepartImages";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
@@ -70,10 +74,43 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     const data = parsed.data;
+    const existing = await query<
+      Pick<SparepartItem, "id" | "code" | "image_url">[]
+    >(
+      `SELECT id, code, image_url FROM sparepart_items
+       WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
+      [itemId],
+    );
+    if (!existing[0]) {
+      return NextResponse.json(
+        { error: "Material not found." },
+        { status: 404 },
+      );
+    }
+
+    let nextImageUrl = existing[0].image_url;
+    if (existing[0].code !== data.code) {
+      try {
+        nextImageUrl = await renameMaterialImage(
+          existing[0].code,
+          data.code,
+          existing[0].image_url,
+        );
+      } catch (err) {
+        if (err instanceof SparepartImageError) {
+          return NextResponse.json(
+            { error: err.message },
+            { status: err.status },
+          );
+        }
+        throw err;
+      }
+    }
+
     try {
       const result = await execute(
         `UPDATE sparepart_items
-         SET code = ?, name = ?, brand = ?, model = ?, notes = ?
+         SET code = ?, name = ?, brand = ?, model = ?, notes = ?, image_url = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
           data.code,
@@ -81,6 +118,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
           data.brand || null,
           data.model || null,
           data.notes || null,
+          nextImageUrl,
           itemId,
         ],
       );
