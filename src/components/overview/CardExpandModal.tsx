@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { ModuleCardData } from "@/data/overview-mock";
+import { getDict, useLang } from "@/lib/i18n";
 import { ModuleCard } from "./ModuleCard";
 
 type CardExpandModalProps = {
@@ -12,6 +13,8 @@ type CardExpandModalProps = {
 
 export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
   const router = useRouter();
+  const { lang } = useLang();
+  const t = getDict(lang);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -32,7 +35,7 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
       <button
         type="button"
-        aria-label="Close overlay"
+        aria-label={t.dashboard.closeOverlay}
         className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
         onClick={onClose}
       />
@@ -61,12 +64,12 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
               onClick={() => router.push(data.href)}
               className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
             >
-              View Detail
+              {t.dashboard.viewDetail}
             </button>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t.dashboard.close}
               className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
             >
               ✕
@@ -79,7 +82,7 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
         </div>
 
         <p className="border-t border-border-subtle px-4 py-2 text-[11px] text-text-dim">
-          Click View Detail to open the full module page.
+          {t.dashboard.viewDetailHint}
         </p>
       </div>
     </div>

@@ -11,11 +11,16 @@ import { apiGet } from "@/lib/apiClient";
 import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { mapAnalysisToOverview } from "@/lib/mapAnalysisToOverview";
 import { getDict, useLang } from "@/lib/i18n";
-import type { AnalysisResult, ItsmAnalysisResponse } from "@/lib/types";
+import type {
+  AnalysisResult,
+  ItsmAnalysisResponse,
+  SparepartAnalysisResponse,
+} from "@/lib/types";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { ModuleCard } from "./ModuleCard";
 import { CardExpandModal } from "./CardExpandModal";
 import { mapItsmToOverview } from "@/lib/mapItsmToOverview";
+import { mapSparepartToOverview } from "@/lib/mapSparepartToOverview";
 
 type AnalysisResponse = { result: AnalysisResult };
 
@@ -23,13 +28,19 @@ export function OverviewGrid() {
   const { lang } = useLang();
   const t = getDict(lang);
   const { loading: authLoading } = useAuth();
-  const { canViewDailyAnalysis, canViewItsmAnalysis } = useRoleAccess();
+  const {
+    canViewDailyAnalysis,
+    canViewItsmAnalysis,
+    canViewSparepartStock,
+  } = useRoleAccess();
   const [modules, setModules] = useState<ModuleCardData[]>(dashboardModules);
   const [expandedId, setExpandedId] = useState<ModuleId | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!canViewDailyAnalysis && !canViewItsmAnalysis) return;
+    if (!canViewDailyAnalysis && !canViewItsmAnalysis && !canViewSparepartStock) {
+      return;
+    }
 
     let cancelled = false;
     const month = getCurrentMonth();
@@ -38,7 +49,7 @@ export function OverviewGrid() {
 
     (async () => {
       try {
-        const [dailyData, itsmData] = await Promise.all([
+        const [dailyData, itsmData, sparepartData] = await Promise.all([
           canViewDailyAnalysis
             ? apiGet<AnalysisResponse>(
                 `/analysis?start=${start}&end=${end}`,
@@ -49,6 +60,12 @@ export function OverviewGrid() {
             ? apiGet<ItsmAnalysisResponse>(
                 `/analysis?start=${start}&end=${end}`,
                 "itsm",
+              )
+            : Promise.resolve(null),
+          canViewSparepartStock
+            ? apiGet<SparepartAnalysisResponse>(
+                `/analysis?start=${start}&end=${end}`,
+                "sparepart",
               )
             : Promise.resolve(null),
         ]);
@@ -68,6 +85,11 @@ export function OverviewGrid() {
                   ? mapAnalysisToOverview(mod, dailyData.result, lang)
                   : mod;
 
+              case "sparepart":
+                return sparepartData
+                  ? mapSparepartToOverview(mod, sparepartData.result, lang)
+                  : mod;
+
               default:
                 return mod;
             }
@@ -85,6 +107,7 @@ export function OverviewGrid() {
     authLoading,
     canViewDailyAnalysis,
     canViewItsmAnalysis,
+    canViewSparepartStock,
     lang,
   ]);
 
@@ -207,32 +230,24 @@ export function OverviewGrid() {
             label:
               [
                 t.dashboard.totalItems,
-                t.dashboard.lowStock,
-                t.dashboard.criticalStock,
-                t.dashboard.purchaseRequest,
+                t.dashboard.zeroStock,
+                t.dashboard.usageThisMonth,
+                t.dashboard.usageThisYear,
               ][index] ?? stat.label,
           })),
           bars: module.bars
-            ? { ...module.bars, title: t.dashboard.topUsedItems }
+            ? { ...module.bars, title: t.dashboard.mostUsedItems }
             : undefined,
           chart: {
             ...module.chart,
-            title: t.dashboard.inventoryTrend,
+            title: t.dashboard.usedTrend,
             legend: module.chart.legend.map((item, index) => ({
               ...item,
               label:
-                [t.dashboard.stockIn, t.dashboard.stockOut][index] ?? item.label,
+                [t.dashboard.thisYear, t.dashboard.lastYear][index] ??
+                item.label,
             })),
           },
-          stockFlows: module.stockFlows?.map((flow, index) => ({
-            ...flow,
-            label:
-              [
-                t.dashboard.incoming,
-                t.dashboard.outgoing,
-                t.dashboard.adjustment,
-              ][index] ?? flow.label,
-          })),
         };
       }
 

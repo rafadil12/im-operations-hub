@@ -55,10 +55,12 @@ function ChartSection({
   data,
   expanded,
   align = "start",
+  trendHeight,
 }: {
   data: ModuleCardData;
   expanded: boolean;
   align?: "start" | "center";
+  trendHeight?: { compact: number; expanded: number };
 }) {
   return (
     <>
@@ -73,8 +75,13 @@ function ChartSection({
       {data.chart.type === "trend" ? (
         <TicketTrendChart
           data={data.chart.series ?? []}
-          height={expanded ? 260 : 140}
+          height={
+            expanded
+              ? (trendHeight?.expanded ?? 260)
+              : (trendHeight?.compact ?? 140)
+          }
           compact={!expanded}
+          legendLabels={data.chart.legend.map((item) => item.label)}
         />
       ) : (
         <DonutChartPlaceholder
@@ -231,30 +238,19 @@ function SparepartBody({
 }) {
   return (
     <>
-      <div className="mb-4 grid flex-1 gap-4 md:grid-cols-2">
-        <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <ChartSection data={data} expanded={expanded} />
+      {data.bars ? (
+        <section className="mb-4 flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+          <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
+            {data.bars.title}
+          </h4>
+          <div className="min-h-0">
+            <BarChartPlaceholder items={data.bars.items} />
+          </div>
         </section>
-        {data.bars ? (
-          <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
-            <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
-              {data.bars.title}
-            </h4>
-            <div className="min-h-0 flex-1">
-              <BarChartPlaceholder items={data.bars.items} />
-            </div>
-          </section>
-        ) : null}
-      </div>
-      {data.stockFlows ? (
-        <div className="grid grid-cols-3 gap-2">
-          {data.stockFlows.map((flow) => (
-            <div key={flow.label} className="min-w-0">
-              <StatPill stat={flow} />
-            </div>
-          ))}
-        </div>
       ) : null}
+      <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
+        <ChartSection data={data} expanded={expanded} />
+      </section>
     </>
   );
 }
@@ -499,7 +495,14 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         </h3>
       </header>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 xl:grid-cols-4">
+      <div
+        className={[
+          "mb-4 grid gap-2",
+          data.stats.length <= 2
+            ? "grid-cols-2"
+            : "grid-cols-2 xl:grid-cols-4",
+        ].join(" ")}
+      >
         {data.stats.map((stat) => (
           <div key={stat.label} className="min-w-0">
             <StatPill stat={stat} />

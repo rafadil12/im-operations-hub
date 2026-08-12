@@ -179,6 +179,33 @@ export type ItsmAnalysisResult = {
 export type ItsmAnalysisResponse = {
   result: ItsmAnalysisResult;
 };
+
+export type SparepartMostUsedItem = {
+  code: string;
+  name_en: string;
+  name_cn: string;
+  qty: number;
+};
+
+export type SparepartUsedTrendPoint = {
+  date: string;
+  current: number;
+  previous: number;
+};
+
+export type SparepartAnalysisResult = {
+  totalItems: number;
+  zeroStock: number;
+  usageThisMonth: number;
+  usageThisYear: number;
+  mostUsed: SparepartMostUsedItem[];
+  usedTrend: SparepartUsedTrendPoint[];
+};
+
+export type SparepartAnalysisResponse = {
+  result: SparepartAnalysisResult;
+  range: { start: string; end: string };
+};
 export type GroupCount = {
   name: string;
   count: number;

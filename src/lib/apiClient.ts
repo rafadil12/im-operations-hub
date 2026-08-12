@@ -1,6 +1,7 @@
 const BASES = {
   daily: "/api/daily-operation",
   itsm: "/api/itsm",
+  sparepart: "/api/sparepart",
 } as const;
 
 type ModuleType = keyof typeof BASES;
