@@ -54,6 +54,7 @@ const cn: Dict = {
     masterData: "主数据",
     safety: "安全",
     sparepart: "备件管理",
+    sparepartManagement: "业务管理",
     sparepartStock: "库存总览",
     sparepartPost: "库存事务",
     sparepartDocuments: "交易历史",
@@ -71,6 +72,8 @@ const cn: Dict = {
     collapseSidebar: "收起侧边栏",
   },
   sparepart: {
+    overviewTitle: "备件总览",
+    overviewDesc: "快速进入库存、事务、物料与库存地点",
     stockTitle: "库存总览",
     stockDesc: "按物料汇总当前库存（各地点合计）— 库存仅通过过账变更",
     stockSearchHint: "按物料编码、描述、品牌或型号搜索",

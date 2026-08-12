@@ -15,6 +15,7 @@ type NavChild = {
   labelKey: NavLabelKey;
   href?: string;
   disabled?: boolean;
+  children?: NavChild[];
 };
 
 type NavItem = {
@@ -79,30 +80,37 @@ const navItems: NavItem[] = [
     labelKey: "sparepart",
     icon: "sparepart",
     children: [
+      { id: "overview", labelKey: "overview", href: "/sparepart" },
       {
-        id: "stock",
-        labelKey: "sparepartStock",
-        href: "/sparepart/stock",
-      },
-      {
-        id: "post",
-        labelKey: "sparepartPost",
-        href: "/sparepart/post",
-      },
-      {
-        id: "documents",
-        labelKey: "sparepartDocuments",
-        href: "/sparepart/documents",
-      },
-      {
-        id: "materials",
-        labelKey: "sparepartMaterials",
-        href: "/sparepart/materials",
-      },
-      {
-        id: "locations",
-        labelKey: "sparepartLocations",
-        href: "/sparepart/locations",
+        id: "management",
+        labelKey: "sparepartManagement",
+        children: [
+          {
+            id: "stock",
+            labelKey: "sparepartStock",
+            href: "/sparepart/stock",
+          },
+          {
+            id: "post",
+            labelKey: "sparepartPost",
+            href: "/sparepart/post",
+          },
+          {
+            id: "documents",
+            labelKey: "sparepartDocuments",
+            href: "/sparepart/documents",
+          },
+          {
+            id: "materials",
+            labelKey: "sparepartMaterials",
+            href: "/sparepart/materials",
+          },
+          {
+            id: "locations",
+            labelKey: "sparepartLocations",
+            href: "/sparepart/locations",
+          },
+        ],
       },
     ],
   },
@@ -148,12 +156,15 @@ const settingsAdminOnly = true;
 let cachedOpenMenus: Record<string, boolean> = {};
 let cachedCollapsed = false;
 
-function isChildActive(pathname: string, child: NavChild) {
+function isChildActive(pathname: string, child: NavChild): boolean {
+  if (child.children?.length) {
+    return child.children.some((nested) => isChildActive(pathname, nested));
+  }
   if (!child.href) return false;
 
-  // ITSM Overview
-  if (child.href === "/itsm") {
-    return pathname === "/itsm";
+  // Module overview landings (exact match so /sparepart/stock ≠ Overview)
+  if (child.href === "/itsm" || child.href === "/sparepart") {
+    return pathname === child.href;
   }
 
   // Daily Operation Master
@@ -167,6 +178,36 @@ function isChildActive(pathname: string, child: NavChild) {
   }
 
   return pathname.startsWith(child.href);
+}
+
+function flattenNavLeaves(children: NavChild[]): NavChild[] {
+  const leaves: NavChild[] = [];
+  for (const child of children) {
+    if (child.children?.length) {
+      leaves.push(...flattenNavLeaves(child.children));
+    } else {
+      leaves.push(child);
+    }
+  }
+  return leaves;
+}
+
+function isSparepartLeafVisible(
+  childId: string,
+  access: {
+    canViewSparepartStock: boolean;
+    canPostSparepartDocument: boolean;
+    canViewSparepartDocuments: boolean;
+    canViewSparepartMaterials: boolean;
+    canManageSparepartLocations: boolean;
+  },
+) {
+  if (childId === "stock") return access.canViewSparepartStock;
+  if (childId === "post") return access.canPostSparepartDocument;
+  if (childId === "documents") return access.canViewSparepartDocuments;
+  if (childId === "materials") return access.canViewSparepartMaterials;
+  if (childId === "locations") return access.canManageSparepartLocations;
+  return true;
 }
 
 function isParentActive(pathname: string, item: NavItem) {
@@ -271,16 +312,37 @@ export function Sidebar() {
           };
         }
         if (item.id === "sparepart" && item.children) {
+          const sparepartAccess = {
+            canViewSparepartStock,
+            canPostSparepartDocument,
+            canViewSparepartDocuments,
+            canViewSparepartMaterials,
+            canManageSparepartLocations,
+          };
+          const hasAnySparepart =
+            canViewSparepartStock ||
+            canPostSparepartDocument ||
+            canViewSparepartDocuments ||
+            canViewSparepartMaterials ||
+            canManageSparepartLocations;
+
           return {
             ...item,
-            children: item.children.filter((child) => {
-              if (child.id === "stock") return canViewSparepartStock;
-              if (child.id === "post") return canPostSparepartDocument;
-              if (child.id === "documents") return canViewSparepartDocuments;
-              if (child.id === "materials") return canViewSparepartMaterials;
-              if (child.id === "locations") return canManageSparepartLocations;
-              return true;
-            }),
+            children: item.children
+              .map((child) => {
+                if (child.id === "overview") {
+                  return hasAnySparepart ? child : null;
+                }
+                if (child.id === "management" && child.children) {
+                  const nested = child.children.filter((leaf) =>
+                    isSparepartLeafVisible(leaf.id, sparepartAccess),
+                  );
+                  if (!nested.length) return null;
+                  return { ...child, children: nested };
+                }
+                return child;
+              })
+              .filter((child): child is NavChild => child !== null),
           };
         }
         return item;
@@ -332,8 +394,9 @@ export function Sidebar() {
   const syncFlyoutPos = useCallback((key: string) => {
     const rect = triggerRefs.current[key]?.getBoundingClientRect();
     if (!rect) return;
-    const childCount =
-      visibleNavItems.find((item) => item.id === key)?.children?.length ?? 0;
+    const children =
+      visibleNavItems.find((item) => item.id === key)?.children ?? [];
+    const childCount = flattenNavLeaves(children).length;
     const height = flyoutRef.current?.offsetHeight ?? childCount * 40 + 12;
     const top = Math.min(
       rect.top,
@@ -426,12 +489,62 @@ export function Sidebar() {
     collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100",
   ].join(" ");
 
-  const renderChild = (
-    child: NavChild,
-    active: boolean,
-    parentId: string,
-  ) => {
+  const renderChild = (child: NavChild, parentId: string) => {
     const label = t.nav[child.labelKey];
+    const active = isChildActive(pathname, child);
+
+    if (child.children?.length) {
+      const menuKey = `${parentId}-${child.id}`;
+      const menuOpen = openMenus[menuKey] ?? active;
+
+      return (
+        <div key={child.id}>
+          <button
+            type="button"
+            onClick={() => {
+              updateOpenMenus((prev) => ({
+                ...prev,
+                [parentId]: true,
+                [menuKey]: !(prev[menuKey] ?? active),
+              }));
+            }}
+            className={[
+              childClass(false),
+              "w-full text-left",
+              menuOpen || active
+                ? "font-medium text-sidebar-text"
+                : "",
+            ].join(" ")}
+            aria-expanded={menuOpen}
+          >
+            <span className="flex-1 truncate">{label}</span>
+            <span
+              className={[
+                "flex size-[18px] shrink-0 items-center justify-center text-[18px] leading-none text-sidebar-text-dim transition-transform duration-300 ease-in-out",
+                menuOpen ? "rotate-180" : "rotate-0",
+              ].join(" ")}
+              aria-hidden
+            >
+              ▾
+            </span>
+          </button>
+          <div
+            className={[
+              "grid transition-[grid-template-rows] duration-300 ease-in-out",
+              menuOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+            ].join(" ")}
+          >
+            <div className="overflow-hidden">
+              <div className="ml-3 mt-0.5 space-y-0.5 border-l-2 border-sidebar-border pl-3">
+                {child.children.map((nested) =>
+                  renderChild(nested, parentId),
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     if (child.disabled || !child.href) {
       return (
@@ -455,7 +568,13 @@ export function Sidebar() {
         onClick={() => {
           setFlyoutKey(null);
           // Keep this parent open; never close other expanded menus.
-          updateOpenMenus((prev) => ({ ...prev, [parentId]: true }));
+          updateOpenMenus((prev) => ({
+            ...prev,
+            [parentId]: true,
+            ...(parentId === "sparepart"
+              ? { "sparepart-management": true }
+              : {}),
+          }));
         }}
         className={childClass(active)}
       >
@@ -598,11 +717,7 @@ export function Sidebar() {
                     <div className="overflow-hidden">
                       <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-sidebar-border pl-3">
                         {item.children.map((child) =>
-                          renderChild(
-                            child,
-                            isChildActive(pathname, child),
-                            item.id,
-                          ),
+                          renderChild(child, item.id),
                         )}
                       </div>
                     </div>
@@ -615,12 +730,8 @@ export function Sidebar() {
                     className="sidebar-flyout fixed z-50 min-w-[190px] rounded-lg border border-sidebar-border bg-sidebar-bg p-1.5 shadow-xl shadow-[0_12px_32px_var(--sidebar-shadow)]"
                     style={{ top: flyoutPos.top, left: flyoutPos.left }}
                   >
-                    {item.children.map((child) =>
-                      renderChild(
-                        child,
-                        isChildActive(pathname, child),
-                        item.id,
-                      ),
+                    {flattenNavLeaves(item.children).map((child) =>
+                      renderChild(child, item.id),
                     )}
                   </div>
                 )}

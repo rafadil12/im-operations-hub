@@ -42,10 +42,22 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q")?.trim();
     if (q) {
       conditions.push(
-        "(d.doc_number LIKE ? OR d.header_text LIKE ? OR d.recipient LIKE ?)",
+        `(d.doc_number LIKE ?
+          OR d.header_text LIKE ?
+          OR d.recipient LIKE ?
+          OR EXISTS (
+            SELECT 1
+            FROM sparepart_mat_doc_items li2
+            JOIN sparepart_items i ON i.id = li2.item_id
+            WHERE li2.doc_id = d.id
+              AND (
+                i.code LIKE ?
+                OR li2.note LIKE ?
+              )
+          ))`,
       );
       const like = `%${q}%`;
-      params.push(like, like, like);
+      params.push(like, like, like, like, like);
     }
 
     const location = sp.get("location")?.trim();

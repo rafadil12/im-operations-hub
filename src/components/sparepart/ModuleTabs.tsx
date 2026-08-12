@@ -44,7 +44,7 @@ export function ModuleTabs() {
     },
   ].filter((tab) => tab.visible);
 
-  if (tabs.length === 0) return null;
+  if (pathname === "/sparepart" || tabs.length === 0) return null;
 
   return (
     <div className="mb-5 flex flex-wrap gap-1 border-b border-border-subtle">

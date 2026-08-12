@@ -52,6 +52,7 @@ const en = {
     masterData: "Master Data",
     safety: "Safety",
     sparepart: "Sparepart",
+    sparepartManagement: "Sparepart Management",
     sparepartStock: "Stock Overview",
     sparepartPost: "Stock Transactions",
     sparepartDocuments: "Transaction History",
@@ -69,6 +70,9 @@ const en = {
     collapseSidebar: "Collapse sidebar",
   },
   sparepart: {
+    overviewTitle: "Sparepart Overview",
+    overviewDesc:
+      "Quick access to stock, transactions, items, and storage locations",
     stockTitle: "Stock Overview",
     stockDesc: "Current stock by material — totals across all storage locations; stock changes only via goods movements",
     stockSearchHint: "Search by material code, description, brand, or model",
