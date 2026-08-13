@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLang, localizedName, localizedField } from "@/lib/i18n";
+import {
+  isCriticalStock,
+  isLowStock,
+} from "@/lib/sparepartCategories";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import type { SortDir, SortKey } from "@/lib/sparepartSort";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
@@ -26,6 +30,25 @@ function rowKey(row: TableRow): string {
 
 function rowStock(row: TableRow): number {
   return row.stock_current;
+}
+
+function rowMinStock(row: TableRow): number {
+  return row.min_stock;
+}
+
+function rowCategoryLabel(
+  row: TableRow,
+  lang: "en" | "cn",
+): string {
+  return (
+    localizedName(
+      {
+        name_en: row.category_name_en ?? null,
+        name_cn: row.category_name_cn ?? null,
+      },
+      lang,
+    ) || row.category_code || "-"
+  );
 }
 
 type Props = {
@@ -289,11 +312,14 @@ export function StockTable({
         <table className="w-full table-fixed border-collapse">
           {showCurrentStock ? (
             <colgroup>
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "28%" }} />
+              <col style={{ width: "11%" }} />
               <col style={{ width: "20%" }} />
-              <col style={{ width: "25%" }} />
-              <col style={{ width: "15%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "11%" }} />
               {showActions ? <col style={{ width: "6rem" }} /> : null}
             </colgroup>
           ) : null}
@@ -305,6 +331,8 @@ export function StockTable({
                   {renderSortHeader(t.sparepart.name, "name")}
                   {renderSortHeader(t.sparepart.brand, "brand")}
                   {renderSortHeader(t.sparepart.model, "model")}
+                  {renderSortHeader(t.sparepart.category, "category")}
+                  {renderSortHeader(t.sparepart.minStock, "min_stock", "text-center")}
                   {showCurrentStock
                     ? renderSortHeader(
                         t.sparepart.stockCurrent,
@@ -312,6 +340,11 @@ export function StockTable({
                         "text-center",
                       )
                     : null}
+                  {showCurrentStock ? (
+                    <th className={`${th} text-center`}>
+                      {t.sparepart.stockStatus}
+                    </th>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -319,9 +352,16 @@ export function StockTable({
                   <th className={th}>{t.sparepart.name}</th>
                   <th className={th}>{t.sparepart.brand}</th>
                   <th className={th}>{t.sparepart.model}</th>
+                  <th className={th}>{t.sparepart.category}</th>
+                  <th className={`${th} text-center`}>{t.sparepart.minStock}</th>
                   {showCurrentStock ? (
                     <th className={`${th} text-center`}>
                       {t.sparepart.stockCurrent}
+                    </th>
+                  ) : null}
+                  {showCurrentStock ? (
+                    <th className={`${th} text-center`}>
+                      {t.sparepart.stockStatus}
                     </th>
                   ) : null}
                 </>
@@ -357,6 +397,14 @@ export function StockTable({
                     {row.model || "-"}
                   </span>
                 </td>
+                <td className={td}>
+                  <span className="line-clamp-2 break-words text-text">
+                    {rowCategoryLabel(row, lang)}
+                  </span>
+                </td>
+                <td className={`${td} text-center whitespace-nowrap tabular-nums`}>
+                  {rowMinStock(row)}
+                </td>
                 {showCurrentStock ? (
                   <td
                     className={`${td} text-center whitespace-nowrap tabular-nums font-medium ${
@@ -364,6 +412,21 @@ export function StockTable({
                     }`}
                   >
                     {rowStock(row)}
+                  </td>
+                ) : null}
+                {showCurrentStock ? (
+                  <td className={`${td} text-center`}>
+                    {isCriticalStock(rowMinStock(row), rowStock(row)) ? (
+                      <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger">
+                        {t.sparepart.statusCritical}
+                      </span>
+                    ) : isLowStock(rowMinStock(row), rowStock(row)) ? (
+                      <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
+                        {t.sparepart.statusLow}
+                      </span>
+                    ) : (
+                      <span className="text-text-dim">—</span>
+                    )}
                   </td>
                 ) : null}
                 {showActions ? (

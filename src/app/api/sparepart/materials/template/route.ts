@@ -19,6 +19,8 @@ export async function GET() {
       { header: "Brand EN", key: "brand_en", width: 16 },
       { header: "Brand CN", key: "brand_cn", width: 16 },
       { header: "Model", key: "model", width: 28 },
+      { header: "Category", key: "category", width: 12 },
+      { header: "Min Stock", key: "min_stock", width: 12 },
       { header: "Notes", key: "notes", width: 24 },
     ];
     sheet.addRow({
@@ -28,6 +30,8 @@ export async function GET() {
       brand_en: "TP-LINK",
       brand_cn: "TP-LINK",
       model: "TL-SF1016DS",
+      category: "IT",
+      min_stock: 0,
       notes: "",
     });
     sheet.getRow(1).font = { bold: true };

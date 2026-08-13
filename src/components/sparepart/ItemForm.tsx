@@ -3,8 +3,14 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { Modal } from "@/components/ui/Modal";
-import { useLang } from "@/lib/i18n";
-import type { SparepartItem, SparepartItemInput } from "@/lib/types";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { apiGetAbs } from "@/lib/apiClient";
+import { localizedName, useLang } from "@/lib/i18n";
+import type {
+  SparepartCategory,
+  SparepartItem,
+  SparepartItemInput,
+} from "@/lib/types";
 
 export type SparepartItemFormExtras = {
   file: File | null;
@@ -21,7 +27,7 @@ type Props = {
 };
 
 export function ItemForm({ initial, onClose, onSubmit }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState(initial?.code ?? "");
@@ -31,6 +37,11 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const [brandCn, setBrandCn] = useState(initial?.brand_cn ?? "");
   const [model, setModel] = useState(initial?.model ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [categoryId, setCategoryId] = useState(
+    initial?.category_id ? String(initial.category_id) : "",
+  );
+  const [minStock, setMinStock] = useState(String(initial?.min_stock ?? 0));
+  const [categories, setCategories] = useState<SparepartCategory[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
@@ -42,7 +53,27 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const previewSrc = objectUrl ?? (hasExistingImage ? initial?.image_url : null);
 
   useEffect(() => {
+    let cancelled = false;
+    apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
+      .then((data) => {
+        if (cancelled) return;
+        setCategories(data.rows);
+        if (!initial?.category_id) {
+          const it = data.rows.find((row) => row.code === "IT") ?? data.rows[0];
+          if (it) setCategoryId(String(it.id));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(t.common.error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initial?.category_id, t.common.error]);
+
+  useEffect(() => {
     if (!file) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear preview when file is removed
       setObjectUrl(null);
       return;
     }
@@ -57,6 +88,16 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
       setError(t.sparepart.nameRequired);
       return;
     }
+    const parsedCategoryId = Number(categoryId);
+    if (!Number.isFinite(parsedCategoryId) || parsedCategoryId <= 0) {
+      setError(t.sparepart.category);
+      return;
+    }
+    const parsedMin = Number(minStock);
+    if (!Number.isFinite(parsedMin) || parsedMin < 0 || !Number.isInteger(parsedMin)) {
+      setError(t.sparepart.minStock);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -69,6 +110,8 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           brand_cn: brandCn.trim(),
           model: model.trim(),
           notes: notes.trim(),
+          category_id: parsedCategoryId,
+          min_stock: parsedMin,
         },
         { file, removeImage },
       );
@@ -174,6 +217,31 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                 className={field}
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={label}>{t.sparepart.category} *</label>
+              <SparepartDropdown
+                className="w-full"
+                value={categoryId}
+                onChange={setCategoryId}
+                options={categories.map((row) => ({
+                  value: String(row.id),
+                  label: localizedName(row, lang),
+                }))}
+                placeholder={t.sparepart.category}
+                disabled={busy}
+              />
+            </div>
+            <div>
+              <label className={label}>{t.sparepart.minStock}</label>
+              <input
+                className={field}
+                type="number"
+                min={0}
+                step={1}
+                value={minStock}
+                onChange={(e) => setMinStock(e.target.value)}
               />
             </div>
             <div className="sm:col-span-2">

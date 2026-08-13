@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
+import { LOW_STOCK_SQL } from "@/lib/sparepartCategories";
 import type { SparepartStockBalanceRow } from "@/lib/types";
 
 type SummaryRow = {
   total_items: number;
   zero_stock: number;
+  low_stock: number;
   total_current: number;
 };
 
@@ -43,8 +45,14 @@ export async function GET(request: NextRequest) {
       params.push(location, location);
     }
 
+    const category = sp.get("category")?.trim();
+    if (category) {
+      conditions.push("c.code = ?");
+      params.push(category.toUpperCase());
+    }
+
     if (sp.get("lowStock") === "1") {
-      conditions.push("i.stock_current <= 0");
+      conditions.push(LOW_STOCK_SQL);
     }
 
     const where = conditions.join(" AND ");
@@ -58,8 +66,14 @@ export async function GET(request: NextRequest) {
          i.brand_cn,
          i.model,
          i.stock_current,
+         i.min_stock,
+         i.category_id,
+         c.code AS category_code,
+         c.name_en AS category_name_en,
+         c.name_cn AS category_name_cn,
          i.notes
        FROM sparepart_items i
+       JOIN sparepart_categories c ON c.id = i.category_id
        WHERE ${where}
        ORDER BY i.code ASC`,
       params,
@@ -69,6 +83,7 @@ export async function GET(request: NextRequest) {
       `SELECT
          COUNT(DISTINCT i.id) AS total_items,
          SUM(CASE WHEN i.stock_current <= 0 THEN 1 ELSE 0 END) AS zero_stock,
+         SUM(CASE WHEN ${LOW_STOCK_SQL} THEN 1 ELSE 0 END) AS low_stock,
          COALESCE(SUM(i.stock_current), 0) AS total_current
        FROM sparepart_items i
        WHERE i.deleted_at IS NULL`,
@@ -86,6 +101,7 @@ export async function GET(request: NextRequest) {
       summary: {
         totalItems: Number(summary?.total_items ?? 0),
         zeroStock: Number(summary?.zero_stock ?? 0),
+        lowStock: Number(summary?.low_stock ?? 0),
         totalCurrent: Number(summary?.total_current ?? 0),
       },
       locations: locations.map((r) => r.code),

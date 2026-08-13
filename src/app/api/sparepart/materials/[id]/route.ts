@@ -6,6 +6,7 @@ import {
   SparepartImageError,
   renameMaterialImage,
 } from "@/lib/sparepartImages";
+import { ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
@@ -25,10 +26,9 @@ export async function GET(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Invalid material id." }, { status: 400 });
     }
     const rows = await query<SparepartItem[]>(
-      `SELECT i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
-              i.stock_current,
-              i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
+      `SELECT ${ITEM_CATEGORY_SELECT}
        FROM sparepart_items i
+       JOIN sparepart_categories c ON c.id = i.category_id
        WHERE i.id = ? AND i.deleted_at IS NULL
        LIMIT 1`,
       [itemId],
@@ -74,6 +74,17 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     const data = parsed.data;
+    const categoryRows = await query<{ id: number }[]>(
+      `SELECT id FROM sparepart_categories WHERE id = ? AND is_active = 1 LIMIT 1`,
+      [data.category_id],
+    );
+    if (!categoryRows[0]) {
+      return NextResponse.json(
+        { error: "Invalid category." },
+        { status: 400 },
+      );
+    }
+
     const existing = await query<
       Pick<SparepartItem, "id" | "code" | "image_url">[]
     >(
@@ -111,7 +122,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
       const result = await execute(
         `UPDATE sparepart_items
          SET code = ?, name_en = ?, name_cn = ?, brand_en = ?, brand_cn = ?,
-             model = ?, notes = ?, image_url = ?
+             model = ?, notes = ?, image_url = ?, min_stock = ?, category_id = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
           data.code,
@@ -122,6 +133,8 @@ export async function PUT(request: NextRequest, context: Ctx) {
           data.model || null,
           data.notes || null,
           nextImageUrl,
+          data.min_stock,
+          data.category_id,
           itemId,
         ],
       );

@@ -244,6 +244,19 @@ export type MovementType =
   | "202"
   | "312";
 
+export type SparepartCategoryCode = "IT" | "AGV" | "ASSEMBLY" | "MES";
+
+export type SparepartCategory = {
+  id: number;
+  code: string;
+  name_en: string;
+  name_cn: string;
+  sort_order: number;
+  is_active: number | boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 export type SparepartStorageLocation = {
   id: number;
   code: string;
@@ -273,6 +286,11 @@ export type SparepartStockBalanceRow = {
   brand_cn: string | null;
   model: string | null;
   stock_current: number;
+  min_stock: number;
+  category_id: number;
+  category_code: string | null;
+  category_name_en: string | null;
+  category_name_cn: string | null;
   notes: string | null;
 };
 
@@ -285,6 +303,11 @@ export type SparepartItem = {
   brand_cn: string | null;
   model: string | null;
   stock_current: number;
+  min_stock: number;
+  category_id: number;
+  category_code?: string | null;
+  category_name_en?: string | null;
+  category_name_cn?: string | null;
   image_url: string | null;
   notes: string | null;
   deleted_at: string | null;
@@ -301,6 +324,8 @@ export type SparepartItemInput = {
   brand_cn: string;
   model: string;
   notes: string;
+  category_id: number;
+  min_stock: number;
 };
 
 export type SparepartMatDocLine = {

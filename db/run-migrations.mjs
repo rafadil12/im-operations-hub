@@ -62,6 +62,24 @@ async function indexExists(table, indexName) {
   return rows.length > 0;
 }
 
+async function constraintExists(table, name) {
+  const [rows] = await conn.query(
+    `SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ?`,
+    [process.env.DB_NAME, table, name],
+  );
+  return rows.length > 0;
+}
+
+async function columnNullable(table, column) {
+  const [rows] = await conn.query(
+    `SELECT IS_NULLABLE FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [process.env.DB_NAME, table, column],
+  );
+  return rows[0]?.IS_NULLABLE === "YES";
+}
+
 // --- 001: mes_data.deleted_at ---
 if (await columnExists("mes_data", "deleted_at")) {
   console.log("mes_data.deleted_at already exists.");
@@ -859,6 +877,101 @@ if (await columnExists("sparepart_items", "brand")) {
   console.log("Dropped sparepart_items.brand.");
 } else {
   console.log("sparepart_items.brand already dropped.");
+}
+
+// --- 015: sparepart categories + min_stock ---
+if (!(await tableExists("sparepart_categories"))) {
+  const sql015 = readFileSync(
+    join(__dirname, "migrations", "015_sparepart_category_min_stock.sql"),
+    "utf8",
+  );
+  await conn.query(sql015);
+  console.log("Created sparepart_categories.");
+} else {
+  console.log("sparepart_categories already exists.");
+}
+
+await conn.query(
+  `INSERT INTO sparepart_categories (code, name_en, name_cn, sort_order, is_active)
+   VALUES
+     ('IT', 'IT', 'IT', 1, 1),
+     ('AGV', 'AGV', 'AGV', 2, 1),
+     ('ASSEMBLY', 'Assembly', '组装', 3, 1),
+     ('MES', 'MES', 'MES', 4, 1)
+   ON DUPLICATE KEY UPDATE
+     name_en = VALUES(name_en),
+     name_cn = VALUES(name_cn),
+     sort_order = VALUES(sort_order)`,
+);
+console.log("Seeded sparepart_categories (IT, AGV, ASSEMBLY, MES).");
+
+if (await tableExists("sparepart_items")) {
+  if (!(await columnExists("sparepart_items", "min_stock"))) {
+    await conn.query(
+      "ALTER TABLE `sparepart_items` ADD COLUMN `min_stock` INT NOT NULL DEFAULT 0 AFTER `stock_current`",
+    );
+    console.log("Added sparepart_items.min_stock.");
+  } else {
+    console.log("sparepart_items.min_stock already exists.");
+  }
+
+  if (!(await columnExists("sparepart_items", "category_id"))) {
+    await conn.query(
+      "ALTER TABLE `sparepart_items` ADD COLUMN `category_id` INT NULL DEFAULT NULL AFTER `min_stock`",
+    );
+    console.log("Added sparepart_items.category_id.");
+  } else {
+    console.log("sparepart_items.category_id already exists.");
+  }
+
+  const [itRows] = await conn.query(
+    `SELECT id FROM sparepart_categories WHERE code = 'IT' LIMIT 1`,
+  );
+  const itId = itRows[0]?.id;
+  if (itId) {
+    const [upd] = await conn.query(
+      `UPDATE sparepart_items SET category_id = ? WHERE category_id IS NULL`,
+      [itId],
+    );
+    const filled = /** @type {{ affectedRows?: number }} */ (upd).affectedRows ?? 0;
+    if (filled > 0) {
+      console.log(`Backfilled ${filled} sparepart_items.category_id → IT.`);
+    } else {
+      console.log("sparepart_items.category_id already backfilled.");
+    }
+
+    if (await columnNullable("sparepart_items", "category_id")) {
+      await conn.query(
+        "ALTER TABLE `sparepart_items` MODIFY COLUMN `category_id` INT NOT NULL",
+      );
+      console.log("sparepart_items.category_id set NOT NULL.");
+    } else {
+      console.log("sparepart_items.category_id already NOT NULL.");
+    }
+  } else {
+    console.log("Skip category_id backfill: IT category not found.");
+  }
+
+  if (!(await indexExists("sparepart_items", "idx_sparepart_items_category"))) {
+    await conn.query(
+      "ALTER TABLE `sparepart_items` ADD INDEX `idx_sparepart_items_category` (`category_id`)",
+    );
+    console.log("Added idx_sparepart_items_category.");
+  } else {
+    console.log("idx_sparepart_items_category already exists.");
+  }
+
+  if (!(await constraintExists("sparepart_items", "fk_sparepart_items_category"))) {
+    await conn.query(
+      `ALTER TABLE \`sparepart_items\`
+       ADD CONSTRAINT \`fk_sparepart_items_category\`
+       FOREIGN KEY (\`category_id\`) REFERENCES \`sparepart_categories\` (\`id\`)
+       ON DELETE RESTRICT ON UPDATE CASCADE`,
+    );
+    console.log("Added fk_sparepart_items_category.");
+  } else {
+    console.log("fk_sparepart_items_category already exists.");
+  }
 }
 
 await conn.end();

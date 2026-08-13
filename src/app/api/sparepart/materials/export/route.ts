@@ -25,7 +25,7 @@ export async function GET() {
 
   try {
     const rows = await query<
-      Pick<
+      (Pick<
         SparepartItem,
         | "code"
         | "name_en"
@@ -34,12 +34,14 @@ export async function GET() {
         | "brand_cn"
         | "model"
         | "stock_current"
+        | "min_stock"
         | "notes"
-      >[]
+      > & { category_code: string })[]
     >(
       `SELECT i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
-              i.stock_current, i.notes
+              i.stock_current, i.min_stock, i.notes, c.code AS category_code
        FROM sparepart_items i
+       JOIN sparepart_categories c ON c.id = i.category_id
        WHERE i.deleted_at IS NULL
        ORDER BY i.code ASC`,
     );
@@ -63,6 +65,8 @@ export async function GET() {
       { header: "Brand EN", key: "brand_en", width: 16 },
       { header: "Brand CN", key: "brand_cn", width: 16 },
       { header: "Model", key: "model", width: 28 },
+      { header: "Category", key: "category", width: 12 },
+      { header: "Min Stock", key: "min_stock", width: 12 },
       { header: "Current Stock", key: "stock_current", width: 14 },
       { header: "Notes", key: "notes", width: 24 },
     ];
@@ -75,6 +79,8 @@ export async function GET() {
         brand_en: row.brand_en ?? "",
         brand_cn: row.brand_cn ?? "",
         model: row.model ?? "",
+        category: row.category_code,
+        min_stock: row.min_stock,
         stock_current: row.stock_current,
         notes: row.notes ?? "",
       });

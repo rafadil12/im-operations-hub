@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
+import { ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
 import type { SparepartItem } from "@/lib/types";
 
-const SELECT_COLS = `
-  i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
-  i.stock_current,
-  i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
-`;
+const SELECT_COLS = ITEM_CATEGORY_SELECT;
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -39,6 +36,7 @@ export async function GET(request: NextRequest) {
       const rows = await query<SparepartItem[]>(
         `SELECT ${SELECT_COLS}
          FROM sparepart_items i
+         JOIN sparepart_categories c ON c.id = i.category_id
          WHERE i.deleted_at IS NULL AND i.code = ?
          LIMIT 5`,
         [exactCode],
@@ -57,6 +55,7 @@ export async function GET(request: NextRequest) {
     const rows = await query<SparepartItem[]>(
       `SELECT ${SELECT_COLS}
        FROM sparepart_items i
+       JOIN sparepart_categories c ON c.id = i.category_id
        WHERE i.deleted_at IS NULL
          AND (
            i.code LIKE ?

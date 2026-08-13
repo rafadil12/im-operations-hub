@@ -4,8 +4,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { useLang } from "@/lib/i18n";
-import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
+import { localizedName, useLang } from "@/lib/i18n";
+import type {
+  SparepartCategory,
+  SparepartItem,
+  SparepartStockBalanceRow,
+} from "@/lib/types";
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
@@ -28,13 +32,15 @@ type StockResponse = {
 };
 
 export default function StockOverviewPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { error: toastError } = useToast();
   const { canExportSparepartMaterials } = useRoleAccess();
   const [rows, setRows] = useState<SparepartStockBalanceRow[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [categories, setCategories] = useState<SparepartCategory[]>([]);
   const [q, setQ] = useState("");
   const [location, setLocation] = useState("");
+  const [category, setCategory] = useState("");
   const [lowStock, setLowStock] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,13 +52,19 @@ export default function StockOverviewPage() {
   const [exporting, setExporting] = useState(false);
 
   const load = useCallback(
-    async (filters: { q: string; location: string; lowStock: boolean }) => {
+    async (filters: {
+      q: string;
+      location: string;
+      category: string;
+      lowStock: boolean;
+    }) => {
       setLoading(true);
       setError(null);
       try {
         const params = new URLSearchParams();
         if (filters.q) params.set("q", filters.q);
         if (filters.location) params.set("location", filters.location);
+        if (filters.category) params.set("category", filters.category);
         if (filters.lowStock) params.set("lowStock", "1");
         const data = await apiGetAbs<StockResponse>(
           `/api/sparepart/stock?${params.toString()}`,
@@ -70,7 +82,10 @@ export default function StockOverviewPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
-    load({ q: "", location: "", lowStock: false });
+    load({ q: "", location: "", category: "", lowStock: false });
+    apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
+      .then((data) => setCategories(data.rows))
+      .catch(() => setCategories([]));
   }, [load]);
 
   const sortedRows = useMemo(
@@ -132,6 +147,13 @@ export default function StockOverviewPage() {
     { value: "", label: t.common.all },
     ...locations.map((loc) => ({ value: loc, label: loc })),
   ];
+  const categoryOptions = [
+    { value: "", label: t.sparepart.allCategories },
+    ...categories.map((row) => ({
+      value: row.code,
+      label: localizedName(row, lang),
+    })),
+  ];
 
   return (
     <SparepartGate allow={(a) => a.canViewSparepartStock}>
@@ -177,10 +199,23 @@ export default function StockOverviewPage() {
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 setPage(1);
-                load({ q, location, lowStock });
+                load({ q, location, category, lowStock });
               }
             }}
             placeholder={t.sparepart.stockSearchHint}
+          />
+        </div>
+        <div className="min-w-[140px]">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
+            {t.sparepart.category}
+          </label>
+          <SparepartDropdown
+            className="w-full"
+            compact
+            value={category}
+            onChange={setCategory}
+            options={categoryOptions}
+            placeholder={t.sparepart.allCategories}
           />
         </div>
         <div className="min-w-[140px]">
@@ -208,7 +243,7 @@ export default function StockOverviewPage() {
           type="button"
           onClick={() => {
             setPage(1);
-            load({ q, location, lowStock });
+            load({ q, location, category, lowStock });
           }}
           className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >

@@ -1,5 +1,9 @@
 import ExcelJS from "exceljs";
-import type { SparepartItemInput } from "@/lib/types";
+import {
+  DEFAULT_SPAREPART_CATEGORY_CODE,
+  normalizeCategoryCode,
+} from "@/lib/sparepartCategories";
+import type { SparepartCategoryCode } from "@/lib/types";
 
 export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 export const IMPORT_MAX_ROWS = 2000;
@@ -10,7 +14,17 @@ export type ImportRowError = {
   message: string;
 };
 
-export type ParsedImportItem = SparepartItemInput;
+export type ParsedImportItem = {
+  code: string;
+  name_en: string;
+  name_cn: string;
+  brand_en: string;
+  brand_cn: string;
+  model: string;
+  notes: string;
+  category_code: SparepartCategoryCode;
+  min_stock: number;
+};
 
 function cellText(value: unknown): string {
   if (value == null) return "";
@@ -104,6 +118,15 @@ export async function parseSparepartItemsWorkbook(
   const brandCnCol = findBrandCnCol(headers);
   const modelCol = findCol(headers, ["model", "型号"]);
   const notesCol = findCol(headers, ["notes", "keterangan", "备注"]);
+  const categoryCol = findCol(headers, ["category", "kategori", "类别", "分类"]);
+  const minStockCol = findCol(headers, [
+    "min stock",
+    "min_stock",
+    "minimum stock",
+    "safety stock",
+    "最低库存",
+    "安全库存",
+  ]);
 
   if (codeCol < 0) {
     return {
@@ -157,6 +180,38 @@ export async function parseSparepartItemsWorkbook(
     }
     seen.add(code.toUpperCase());
 
+    const rawCategory =
+      categoryCol >= 0 ? cellText(row.getCell(categoryCol + 1).value) : "";
+    let category_code = DEFAULT_SPAREPART_CATEGORY_CODE;
+    if (rawCategory) {
+      const parsedCategory = normalizeCategoryCode(rawCategory);
+      if (!parsedCategory) {
+        errors.push({
+          row: r,
+          field: "category",
+          message: `Unknown category "${rawCategory}". Use IT, AGV, ASSEMBLY, or MES.`,
+        });
+        continue;
+      }
+      category_code = parsedCategory;
+    }
+
+    const rawMin =
+      minStockCol >= 0 ? cellText(row.getCell(minStockCol + 1).value) : "";
+    let min_stock = 0;
+    if (rawMin) {
+      const n = Number(rawMin);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+        errors.push({
+          row: r,
+          field: "min_stock",
+          message: "Min stock must be an integer of 0 or more.",
+        });
+        continue;
+      }
+      min_stock = n;
+    }
+
     items.push({
       code,
       name_en,
@@ -167,6 +222,8 @@ export async function parseSparepartItemsWorkbook(
         brandCnCol >= 0 ? cellText(row.getCell(brandCnCol + 1).value) : "",
       model: modelCol >= 0 ? cellText(row.getCell(modelCol + 1).value) : "",
       notes: notesCol >= 0 ? cellText(row.getCell(notesCol + 1).value) : "",
+      category_code,
+      min_stock,
     });
   }
 

@@ -8,6 +8,8 @@ import {
   parseSparepartItemsWorkbook,
   type ImportRowError,
 } from "@/lib/sparepartImport";
+import { DEFAULT_SPAREPART_CATEGORY_CODE } from "@/lib/sparepartCategories";
+import type { SparepartCategory } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -59,13 +61,31 @@ export async function POST(request: NextRequest) {
     }
 
     const imported = await withTransaction(async (conn) => {
+      const [catRows] = await conn.query(
+        `SELECT id, code FROM sparepart_categories WHERE is_active = 1`,
+      );
+      const categoryIdByCode = new Map(
+        (catRows as SparepartCategory[]).map((row) => [
+          String(row.code).toUpperCase(),
+          Number(row.id),
+        ]),
+      );
+      const fallbackCategoryId =
+        categoryIdByCode.get(DEFAULT_SPAREPART_CATEGORY_CODE) ?? null;
+      if (fallbackCategoryId == null) {
+        throw new Error("IT category is missing. Run database migrations.");
+      }
+
       let count = 0;
 
       for (const item of parsed.items) {
+        const categoryId =
+          categoryIdByCode.get(item.category_code) ?? fallbackCategoryId;
         await conn.query(
           `INSERT INTO sparepart_items
-            (code, name_en, name_cn, brand_en, brand_cn, model, notes, stock_current)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+            (code, name_en, name_cn, brand_en, brand_cn, model, notes,
+             stock_current, min_stock, category_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
            ON DUPLICATE KEY UPDATE
              name_en = VALUES(name_en),
              name_cn = VALUES(name_cn),
@@ -73,6 +93,8 @@ export async function POST(request: NextRequest) {
              brand_cn = VALUES(brand_cn),
              model = VALUES(model),
              notes = VALUES(notes),
+             min_stock = VALUES(min_stock),
+             category_id = VALUES(category_id),
              deleted_at = NULL`,
           [
             item.code,
@@ -82,6 +104,8 @@ export async function POST(request: NextRequest) {
             item.brand_cn || null,
             item.model || null,
             item.notes || null,
+            item.min_stock,
+            categoryId,
           ],
         );
 

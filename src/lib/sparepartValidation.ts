@@ -9,6 +9,19 @@ function trim(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function parseMinStock(value: unknown): number | null {
+  if (value == null || value === "") return 0;
+  const n = typeof value === "number" ? value : Number(String(value).trim());
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) return null;
+  return n;
+}
+
+function parseCategoryId(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(String(value ?? "").trim());
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
 export function parseSparepartItemBody(
   body: Partial<SparepartItemInput>,
 ):
@@ -21,6 +34,8 @@ export function parseSparepartItemBody(
   const brand_cn = trim(body.brand_cn);
   const model = trim(body.model);
   const notes = trim(body.notes);
+  const category_id = parseCategoryId(body.category_id);
+  const min_stock = parseMinStock(body.min_stock);
 
   const errors: SparepartFieldError[] = [];
   if (!code) errors.push({ field: "code", message: "Code is required." });
@@ -32,6 +47,15 @@ export function parseSparepartItemBody(
   }
   if (code.length > 32) {
     errors.push({ field: "code", message: "Code must be at most 32 characters." });
+  }
+  if (category_id == null) {
+    errors.push({ field: "category_id", message: "Category is required." });
+  }
+  if (min_stock == null) {
+    errors.push({
+      field: "min_stock",
+      message: "Min stock must be an integer of 0 or more.",
+    });
   }
 
   if (errors.length) return { ok: false, errors };
@@ -45,6 +69,8 @@ export function parseSparepartItemBody(
       brand_cn,
       model,
       notes,
+      category_id: category_id as number,
+      min_stock: min_stock as number,
     },
   };
 }

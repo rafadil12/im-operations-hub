@@ -2,21 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import { ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
-
-const LIST_SQL = `
-  SELECT i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
-         i.stock_current,
-         i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
-  FROM sparepart_items i
-  WHERE i.deleted_at IS NULL
-`;
 
 const SEARCH_SQL = `
   (i.code LIKE ? OR i.name_en LIKE ? OR i.name_cn LIKE ?
    OR i.brand_en LIKE ? OR i.brand_cn LIKE ? OR i.model LIKE ?)
 `;
+
+async function categoryExists(id: number): Promise<boolean> {
+  const rows = await query<{ id: number }[]>(
+    `SELECT id FROM sparepart_categories WHERE id = ? AND is_active = 1 LIMIT 1`,
+    [id],
+  );
+  return Boolean(rows[0]);
+}
 
 export async function GET(request: NextRequest) {
   const gate = await requirePermission(PERMISSIONS.sparepartMaterialsRead);
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const sp = request.nextUrl.searchParams;
-    const conditions: string[] = [];
+    const conditions: string[] = ["i.deleted_at IS NULL"];
     const params: unknown[] = [];
 
     const q = sp.get("q")?.trim();
@@ -34,10 +35,19 @@ export async function GET(request: NextRequest) {
       params.push(like, like, like, like, like, like);
     }
 
-    const sql =
-      LIST_SQL +
-      (conditions.length ? ` AND ${conditions.join(" AND ")}` : "") +
-      " ORDER BY i.code ASC";
+    const category = sp.get("category")?.trim();
+    if (category) {
+      conditions.push("c.code = ?");
+      params.push(category.toUpperCase());
+    }
+
+    const sql = `
+      SELECT ${ITEM_CATEGORY_SELECT}
+      FROM sparepart_items i
+      JOIN sparepart_categories c ON c.id = i.category_id
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY i.code ASC
+    `;
 
     const rows = await query<SparepartItem[]>(sql, params);
     return NextResponse.json({ rows });
@@ -65,11 +75,19 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+    if (!(await categoryExists(data.category_id))) {
+      return NextResponse.json(
+        { error: "Invalid category." },
+        { status: 400 },
+      );
+    }
+
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
-          (code, name_en, name_cn, brand_en, brand_cn, model, notes, stock_current)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+          (code, name_en, name_cn, brand_en, brand_cn, model, notes,
+           stock_current, min_stock, category_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
         [
           data.code,
           data.name_en || null,
@@ -78,6 +96,8 @@ export async function POST(request: NextRequest) {
           data.brand_cn || null,
           data.model || null,
           data.notes || null,
+          data.min_stock,
+          data.category_id,
         ],
       );
       return NextResponse.json({ id: result.insertId }, { status: 201 });

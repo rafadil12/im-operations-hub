@@ -5,6 +5,8 @@ export type SortKey =
   | "name"
   | "brand"
   | "model"
+  | "category"
+  | "min_stock"
   | "stock_current";
 
 export type SortDir = "asc" | "desc";
@@ -31,6 +33,8 @@ function sortField(row: SortableRow, key: SortKey): string | null {
     case "code":
     case "model":
       return row[key];
+    case "category":
+      return row.category_name_en || row.category_code || null;
     default:
       return null;
   }
@@ -48,6 +52,8 @@ export function sortSparepartItems(
     let cmp = 0;
     if (key === "stock_current") {
       cmp = a.stock_current - b.stock_current;
+    } else if (key === "min_stock") {
+      cmp = a.min_stock - b.min_stock;
     } else {
       cmp = compareStrings(sortField(a, key), sortField(b, key));
     }
@@ -67,6 +73,8 @@ export function sortStockBalanceRows(
     let cmp = 0;
     if (key === "stock_current") {
       cmp = a.stock_current - b.stock_current;
+    } else if (key === "min_stock") {
+      cmp = a.min_stock - b.min_stock;
     } else {
       cmp = compareStrings(sortField(a, key), sortField(b, key));
     }

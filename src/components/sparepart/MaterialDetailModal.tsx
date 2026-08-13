@@ -19,6 +19,10 @@ type Props = {
     | "model"
     | "notes"
     | "stock_current"
+    | "min_stock"
+    | "category_code"
+    | "category_name_en"
+    | "category_name_cn"
     | "image_url"
   > & { balances?: SparepartStockBalance[] };
   onClose: () => void;
@@ -72,6 +76,20 @@ export function MaterialDetailModal({ item, onClose }: Props) {
     [
       { label: t.sparepart.brand, value: brand },
       { label: t.sparepart.model, value: item.model || "-" },
+    ],
+    [
+      {
+        label: t.sparepart.category,
+        value:
+          localizedName(
+            {
+              name_en: item.category_name_en ?? null,
+              name_cn: item.category_name_cn ?? null,
+            },
+            lang,
+          ) || item.category_code || "-",
+      },
+      { label: t.sparepart.minStock, value: item.min_stock ?? 0 },
     ],
     [
       { label: t.sparepart.notes, value: item.notes || "-" },
