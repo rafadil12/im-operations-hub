@@ -291,8 +291,20 @@ export function SparepartOverview({ data, category, onCategoryChange }: Props) {
           </ul>
         </section>
         <section className={panel}>
-          <h2 className={titleCls}>{t.sparepart.movementHeatmap}</h2>
-          <MovementCalendar cells={data.movementHeatmap} />
+          <MovementCalendar
+            cells={data.movementHeatmap}
+            categoryLabel={
+              category
+                ? localizedName(
+                    data.categories.find((tab) => tab.code === category) ?? {
+                      name_en: category,
+                      name_cn: category,
+                    },
+                    lang,
+                  )
+                : t.sparepart.allCategory
+            }
+          />
         </section>
       </div>
 
