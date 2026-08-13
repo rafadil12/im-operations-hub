@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { SparepartOverview } from "@/components/sparepart/overview";
@@ -9,7 +9,18 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import type { SparepartOverviewData } from "@/lib/sparepartOverview";
+import { normalizeCategoryCode } from "@/lib/sparepartCategories";
+import {
+  overviewMatchesFilters,
+  type SparepartOverviewData,
+} from "@/lib/sparepartOverview";
+
+function isAbortError(err: unknown): boolean {
+  return (
+    (err instanceof DOMException && err.name === "AbortError") ||
+    (err instanceof Error && err.name === "AbortError")
+  );
+}
 
 const month = getCurrentMonth();
 const defaultRange = {
@@ -31,6 +42,7 @@ export default function SparepartIndexPage() {
   const [data, setData] = useState<SparepartOverviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
+  const loadIdRef = useRef(0);
 
   const hasAnySparepart =
     access.canViewSparepartStock ||
@@ -39,28 +51,13 @@ export default function SparepartIndexPage() {
     access.canViewSparepartMaterials ||
     access.canManageSparepartLocations;
 
-  const load = useCallback(
-    async (code: string | null, applied: { start: string; end: string }) => {
-      setFetching(true);
-      setError(null);
-      try {
-        const qs = new URLSearchParams();
-        if (code) qs.set("category", code);
-        qs.set("start", applied.start);
-        qs.set("end", applied.end);
-        const next = await apiGetAbs<SparepartOverviewData>(
-          `/api/sparepart/overview?${qs.toString()}`,
-        );
-        setData(next);
-      } catch (e) {
-        setData(null);
-        setError(getApiErrorMessage(e) || t.common.error);
-      } finally {
-        setFetching(false);
-      }
-    },
-    [t.common.error],
-  );
+  const onCategoryChange = (code: string | null) => {
+    if (!code) {
+      setCategory(null);
+      return;
+    }
+    setCategory(normalizeCategoryCode(code) ?? code.trim().toUpperCase());
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -71,9 +68,46 @@ export default function SparepartIndexPage() {
 
   useEffect(() => {
     if (loading || !access.canViewSparepartStock) return;
+
+    const ac = new AbortController();
+    const requestId = ++loadIdRef.current;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch overview when filter changes
-    void load(category, range);
-  }, [access.canViewSparepartStock, category, load, loading, range]);
+    setFetching(true);
+    setError(null);
+
+    const qs = new URLSearchParams();
+    if (category) qs.set("category", category);
+    qs.set("start", range.start);
+    qs.set("end", range.end);
+
+    apiGetAbs<SparepartOverviewData>(
+      `/api/sparepart/overview?${qs.toString()}`,
+      { signal: ac.signal },
+    )
+      .then((next) => {
+        if (ac.signal.aborted || requestId !== loadIdRef.current) return;
+        if (!overviewMatchesFilters(next, category, range)) return;
+        setData(next);
+      })
+      .catch((e) => {
+        if (isAbortError(e) || ac.signal.aborted || requestId !== loadIdRef.current) {
+          return;
+        }
+        setData(null);
+        setError(getApiErrorMessage(e) || t.common.error);
+      })
+      .finally(() => {
+        if (requestId === loadIdRef.current) setFetching(false);
+      });
+
+    return () => ac.abort();
+  }, [
+    access.canViewSparepartStock,
+    category,
+    loading,
+    range,
+    t.common.error,
+  ]);
 
   if (loading || !hasAnySparepart) {
     return (
@@ -190,7 +224,8 @@ export default function SparepartIndexPage() {
         <SparepartOverview
           data={data}
           category={category}
-          onCategoryChange={setCategory}
+          range={range}
+          onCategoryChange={onCategoryChange}
         />
       ) : null}
     </div>

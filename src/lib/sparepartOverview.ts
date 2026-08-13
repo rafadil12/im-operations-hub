@@ -129,6 +129,18 @@ export type SparepartOverviewData = {
   sparseItems: SparepartOverviewSparseItem[];
 };
 
+export function overviewMatchesFilters(
+  data: SparepartOverviewData,
+  category: string | null,
+  range: { start: string; end: string },
+): boolean {
+  return (
+    data.category === category &&
+    data.range.start === range.start &&
+    data.range.end === range.end
+  );
+}
+
 export function momPct(current: number, previous: number): number | null {
   if (previous === 0) return current === 0 ? 0 : null;
   return ((current - previous) / previous) * 100;

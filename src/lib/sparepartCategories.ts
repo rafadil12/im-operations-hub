@@ -16,6 +16,8 @@ export const SPAREPART_CATEGORY_COLORS: Record<SparepartCategoryCode, string> = 
   MES: "#a855f7",
 };
 
+const FALLBACK_CATEGORY_COLOR = "#64748b";
+
 export const DEFAULT_SPAREPART_CATEGORY_CODE: SparepartCategoryCode = "IT";
 
 /** Low stock: reorder point is set and on-hand is at or below it. */
@@ -41,6 +43,29 @@ export function normalizeCategoryCode(
   if (code === "ASSEMBLY" || code === "ASM") return "ASSEMBLY";
   if (isSparepartCategoryCode(code)) return code;
   return null;
+}
+
+export function canonicalCategoryCode(value: string): string {
+  return normalizeCategoryCode(value) ?? value.trim().toUpperCase();
+}
+
+export function categoryColor(code: string | null | undefined): string {
+  const normalized = code ? normalizeCategoryCode(code) : null;
+  return normalized
+    ? SPAREPART_CATEGORY_COLORS[normalized]
+    : FALLBACK_CATEGORY_COLOR;
+}
+
+/** SQL predicate + params so ASSEMBLY also matches DB alias ASM. */
+export function categoryMatchSql(
+  column: string,
+  filter: SparepartCategoryCode,
+): { sql: string; params: string[] } {
+  const expr = `UPPER(TRIM(${column}))`;
+  if (filter === "ASSEMBLY") {
+    return { sql: `${expr} IN (?, ?)`, params: ["ASSEMBLY", "ASM"] };
+  }
+  return { sql: `${expr} = ?`, params: [filter] };
 }
 
 export function isLowStock(minStock: number, stockCurrent: number): boolean {

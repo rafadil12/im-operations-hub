@@ -13,8 +13,10 @@ import {
   type DateRange,
 } from "@/lib/dateRange";
 import {
-  isSparepartCategoryCode,
+  canonicalCategoryCode,
+  categoryMatchSql,
   LOW_STOCK_SQL,
+  normalizeCategoryCode,
 } from "@/lib/sparepartCategories";
 import {
   IN_QTY_SQL,
@@ -130,10 +132,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const rawCategory = request.nextUrl.searchParams.get("category")?.trim() ?? "";
-    const categoryFilter =
-      rawCategory && isSparepartCategoryCode(rawCategory.toUpperCase())
-        ? rawCategory.toUpperCase()
-        : null;
+    const categoryFilter = rawCategory
+      ? normalizeCategoryCode(rawCategory)
+      : null;
+    const catMatch = categoryFilter
+      ? categoryMatchSql("c.code", categoryFilter)
+      : null;
+    const catSql = catMatch ? `AND ${catMatch.sql}` : "";
+    const catParams = catMatch?.params ?? [];
 
     const period = resolveOverviewRange(
       request.nextUrl.searchParams.get("start"),
@@ -163,11 +169,11 @@ export async function GET(request: NextRequest) {
     `;
     const itemWhere = [
       "i.deleted_at IS NULL",
-      categoryFilter ? "c.code = ?" : null,
+      catMatch ? catMatch.sql : null,
     ]
       .filter(Boolean)
       .join(" AND ");
-    const itemParams = categoryFilter ? [categoryFilter] : [];
+    const itemParams = catParams;
 
     const moveJoin = `
       FROM sparepart_mat_docs d
@@ -179,13 +185,13 @@ export async function GET(request: NextRequest) {
       "i.deleted_at IS NULL",
       "d.posting_date >= ?",
       "d.posting_date <= ?",
-      categoryFilter ? "c.code = ?" : null,
+      catMatch ? catMatch.sql : null,
     ]
       .filter(Boolean)
       .join(" AND ");
 
     const moveParams = (start: string, end: string) =>
-      categoryFilter ? [start, end, categoryFilter] : [start, end];
+      catMatch ? [start, end, ...catParams] : [start, end];
 
     const [
       categories,
@@ -226,8 +232,10 @@ export async function GET(request: NextRequest) {
          LEFT JOIN sparepart_items i
            ON i.category_id = c.id AND i.deleted_at IS NULL
          WHERE c.is_active = 1
+           ${catSql}
          GROUP BY c.id, c.code, c.name_en, c.name_cn, c.sort_order
          ORDER BY c.sort_order ASC`,
+        catParams,
       ),
       query<CatMoveRow[]>(
         `SELECT
@@ -237,8 +245,11 @@ export async function GET(request: NextRequest) {
          ${moveJoin}
          WHERE i.deleted_at IS NULL
            AND d.posting_date >= ? AND d.posting_date <= ?
+           ${catSql}
          GROUP BY c.code`,
-        [period.start, period.end],
+        catMatch
+          ? [period.start, period.end, ...catParams]
+          : [period.start, period.end],
       ),
       query<{ total_items: number; total_stock: number; low_stock: number }[]>(
         `SELECT
@@ -311,11 +322,11 @@ export async function GET(request: NextRequest) {
          WHERE i.deleted_at IS NULL
            AND d.posting_date >= ?
            AND d.posting_date <= ?
-           ${categoryFilter ? "AND c.code = ?" : ""}
+           ${catSql}
          GROUP BY ${barGroupSql}
          ORDER BY period_key ASC`,
-        categoryFilter
-          ? [period.start, period.end, categoryFilter]
+        catMatch
+          ? [period.start, period.end, ...catParams]
           : [period.start, period.end],
       ),
       query<NamedQty[]>(
@@ -346,8 +357,11 @@ export async function GET(request: NextRequest) {
          ${moveJoin}
          WHERE i.deleted_at IS NULL
            AND d.posting_date >= ? AND d.posting_date <= ?
+           ${catSql}
          GROUP BY ${trendGroupSql}, c.code`,
-        [period.start, period.end],
+        catMatch
+          ? [period.start, period.end, ...catParams]
+          : [period.start, period.end],
       ),
       query<DayRow[]>(
         `SELECT
@@ -357,10 +371,10 @@ export async function GET(request: NextRequest) {
          WHERE i.deleted_at IS NULL
            AND d.posting_date >= ?
            AND d.posting_date <= ?
-           ${categoryFilter ? "AND c.code = ?" : ""}
+           ${catSql}
          GROUP BY DATE_FORMAT(d.posting_date, '%Y-%m-%d')`,
-        categoryFilter
-          ? [sparkFrom, period.end, categoryFilter]
+        catMatch
+          ? [sparkFrom, period.end, ...catParams]
           : [sparkFrom, period.end],
       ),
       query<LocRow[]>(
@@ -372,10 +386,10 @@ export async function GET(request: NextRequest) {
          LEFT JOIN sparepart_items i ON i.id = b.item_id AND i.deleted_at IS NULL
          LEFT JOIN sparepart_categories c ON c.id = i.category_id
          WHERE loc.is_active = 1
-           ${categoryFilter ? "AND (i.id IS NULL OR c.code = ?)" : ""}
+           ${catMatch ? `AND (i.id IS NULL OR ${catMatch.sql})` : ""}
          GROUP BY loc.id, loc.code, loc.name
          ORDER BY qty DESC, loc.name ASC`,
-        categoryFilter ? [categoryFilter] : [],
+        catParams,
       ),
       query<HeatRow[]>(
         `SELECT
@@ -390,10 +404,10 @@ export async function GET(request: NextRequest) {
          LEFT JOIN sparepart_stock_balances b
            ON b.item_id = i.id AND b.storage_location_id = loc.id
          WHERE c.is_active = 1 AND loc.is_active = 1
-           ${categoryFilter ? "AND c.code = ?" : ""}
+           ${catSql}
          GROUP BY c.code, loc.id, loc.name, c.sort_order
          ORDER BY c.sort_order ASC, loc.name ASC`,
-        categoryFilter ? [categoryFilter] : [],
+        catParams,
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
@@ -423,18 +437,18 @@ export async function GET(request: NextRequest) {
         moveParams(period.start, period.end),
       ),
       query<{ qty: number }[]>(
-        categoryFilter
+        catMatch
           ? `SELECT COUNT(DISTINCT loc.id) AS qty
              FROM sparepart_storage_locations loc
              JOIN sparepart_stock_balances b ON b.storage_location_id = loc.id
              JOIN sparepart_items i ON i.id = b.item_id
              JOIN sparepart_categories c ON c.id = i.category_id
              WHERE loc.is_active = 1 AND i.deleted_at IS NULL
-               AND b.qty > 0 AND c.code = ?`
+               AND b.qty > 0 AND ${catMatch.sql}`
           : `SELECT COUNT(*) AS qty
              FROM sparepart_storage_locations
              WHERE is_active = 1`,
-        categoryFilter ? [categoryFilter] : [],
+        catParams,
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
@@ -462,17 +476,21 @@ export async function GET(request: NextRequest) {
     const movementQty = n(monthMove?.qty);
     const prevMovementQty = n(prevMove?.qty);
 
-    const moveByCat = new Map(
-      catMoves.map((row) => [
-        row.code,
-        { movement: n(row.movement_qty), net: n(row.net_qty) },
-      ]),
-    );
+    const moveByCat = new Map<string, { movement: number; net: number }>();
+    for (const row of catMoves) {
+      const code = canonicalCategoryCode(row.code);
+      const prev = moveByCat.get(code);
+      moveByCat.set(code, {
+        movement: (prev?.movement ?? 0) + n(row.movement_qty),
+        net: (prev?.net ?? 0) + n(row.net_qty),
+      });
+    }
 
     const byCategory: SparepartOverviewByCategory[] = catStats.map((row) => {
-      const move = moveByCat.get(row.code);
+      const code = canonicalCategoryCode(row.code);
+      const move = moveByCat.get(code);
       return {
-        code: row.code,
+        code,
         name_en: row.name_en,
         name_cn: row.name_cn,
         totalItems: n(row.item_count),
@@ -504,7 +522,9 @@ export async function GET(request: NextRequest) {
 
     const dayCatMap = new Map<string, number>();
     for (const row of trendRows) {
-      dayCatMap.set(`${row.day_key}|${row.category_code}`, n(row.qty));
+      const code = canonicalCategoryCode(row.category_code);
+      const key = `${row.day_key}|${code}`;
+      dayCatMap.set(key, (dayCatMap.get(key) ?? 0) + n(row.qty));
     }
     const trendDaily: SparepartOverviewTrendPoint[] = trendKeys.map((date) => ({
       date,
@@ -522,7 +542,9 @@ export async function GET(request: NextRequest) {
     );
 
     const filteredByCategory = categoryFilter
-      ? byCategory.filter((row) => row.code === categoryFilter)
+      ? byCategory.filter(
+          (row) => canonicalCategoryCode(row.code) === categoryFilter,
+        )
       : byCategory;
 
     const sparseSource = categoryFilter ? sparseRows : [];
@@ -535,14 +557,20 @@ export async function GET(request: NextRequest) {
         end: toDateInput(period.end),
       },
       category: categoryFilter,
-      categories: catStats.map((row) => ({
-        id: categories.find((c) => c.code === row.code)?.id ?? 0,
-        code: row.code,
-        name_en: row.name_en,
-        name_cn: row.name_cn,
-        itemCount: n(row.item_count),
-        stockQty: n(row.stock_qty),
-      })),
+      categories: categories.map((row) => {
+        const code = canonicalCategoryCode(row.code);
+        const stat = catStats.find(
+          (s) => canonicalCategoryCode(s.code) === code,
+        );
+        return {
+          id: row.id,
+          code,
+          name_en: row.name_en,
+          name_cn: row.name_cn,
+          itemCount: n(stat?.item_count),
+          stockQty: n(stat?.stock_qty),
+        };
+      }),
       kpi: {
         totalItems,
         totalStock,
@@ -596,7 +624,7 @@ export async function GET(request: NextRequest) {
         .filter((row) => row.qty > 0)
         .sort((a, b) => b.qty - a.qty),
       categoryLocationHeatmap: heatRows.map((row) => ({
-        categoryCode: row.category_code,
+        categoryCode: canonicalCategoryCode(row.category_code),
         locationId: n(row.location_id),
         locationName: row.location_name,
         qty: n(row.qty),
@@ -605,14 +633,14 @@ export async function GET(request: NextRequest) {
         code: row.code,
         name_en: row.name_en,
         name_cn: row.name_cn,
-        category_code: row.category_code,
+        category_code: canonicalCategoryCode(row.category_code),
         stock_current: n(row.stock_current),
       })),
       lowStockItems: lowRows.map((row) => ({
         code: row.code,
         name_en: row.name_en,
         name_cn: row.name_cn,
-        category_code: row.category_code,
+        category_code: canonicalCategoryCode(row.category_code),
         stock_current: n(row.stock_current),
         min_stock: n(row.min_stock),
         status: n(row.stock_current) <= 0 ? "critical" : "low",
@@ -625,7 +653,7 @@ export async function GET(request: NextRequest) {
         code: row.code,
         name_en: row.name_en,
         name_cn: row.name_cn,
-        category_code: row.category_code,
+        category_code: canonicalCategoryCode(row.category_code),
         stock_current: n(row.stock_current),
         min_stock: n(row.min_stock),
       })),

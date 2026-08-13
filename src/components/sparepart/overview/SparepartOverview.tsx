@@ -2,11 +2,15 @@
 
 import { localizedName, useLang } from "@/lib/i18n";
 import {
+  categoryColor,
+  normalizeCategoryCode,
   SPAREPART_CATEGORY_CODES,
-  SPAREPART_CATEGORY_COLORS,
   type SparepartCategoryCode,
 } from "@/lib/sparepartCategories";
-import type { SparepartOverviewData } from "@/lib/sparepartOverview";
+import {
+  overviewMatchesFilters,
+  type SparepartOverviewData,
+} from "@/lib/sparepartOverview";
 import {
   CategoryDonut,
   CategoryLocationHeatmap,
@@ -21,6 +25,7 @@ import {
 type Props = {
   data: SparepartOverviewData;
   category: string | null;
+  range: { start: string; end: string };
   onCategoryChange: (code: string | null) => void;
 };
 
@@ -40,11 +45,17 @@ function pctTone(value: number | null, invert = false): string {
   return good ? "text-emerald-500" : "text-danger";
 }
 
-export function SparepartOverview({ data, category, onCategoryChange }: Props) {
+export function SparepartOverview({
+  data,
+  category,
+  range,
+  onCategoryChange,
+}: Props) {
   const { t, lang } = useLang();
+  const ready = overviewMatchesFilters(data, category, range);
   const visibleCodes = (
     category
-      ? [category]
+      ? [normalizeCategoryCode(category) ?? category]
       : SPAREPART_CATEGORY_CODES
   ) as SparepartCategoryCode[];
 
@@ -64,20 +75,18 @@ export function SparepartOverview({ data, category, onCategoryChange }: Props) {
           {t.common.all}
         </button>
         {data.categories.map((tab) => {
-          const active = category === tab.code;
-          const color =
-            SPAREPART_CATEGORY_COLORS[tab.code as SparepartCategoryCode] ??
-            "#64748b";
+          const tabCode = normalizeCategoryCode(tab.code) ?? tab.code;
+          const active = category === tabCode;
           return (
             <button
-              key={tab.code}
+              key={tabCode}
               type="button"
-              onClick={() => onCategoryChange(tab.code)}
+              onClick={() => onCategoryChange(tabCode)}
               className={[
                 "rounded-full px-3 py-1 text-xs font-semibold",
                 active ? "text-white" : "bg-surface-hover text-text-muted hover:text-text",
               ].join(" ")}
-              style={active ? { background: color } : undefined}
+              style={active ? { background: categoryColor(tabCode) } : undefined}
             >
               {localizedName(tab, lang)}
             </button>
@@ -85,6 +94,12 @@ export function SparepartOverview({ data, category, onCategoryChange }: Props) {
         })}
       </div>
 
+      {!ready ? (
+        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
+          {t.common.loading}
+        </div>
+      ) : (
+        <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           label={t.sparepart.totalItems}
@@ -139,12 +154,7 @@ export function SparepartOverview({ data, category, onCategoryChange }: Props) {
                     <td className="py-2 font-medium text-text">
                       <span
                         className="mr-2 inline-block size-2 rounded-full"
-                        style={{
-                          background:
-                            SPAREPART_CATEGORY_COLORS[
-                              row.code as SparepartCategoryCode
-                            ],
-                        }}
+                        style={{ background: categoryColor(row.code) }}
                       />
                       {localizedName(
                         { name_en: row.name_en, name_cn: row.name_cn },
@@ -327,6 +337,8 @@ export function SparepartOverview({ data, category, onCategoryChange }: Props) {
           </ul>
         </section>
       ) : null}
+        </>
+      )}
     </div>
   );
 }

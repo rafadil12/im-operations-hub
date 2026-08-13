@@ -20,7 +20,7 @@ import {
 } from "recharts";
 import { localizedName, useLang } from "@/lib/i18n";
 import {
-  SPAREPART_CATEGORY_COLORS,
+  categoryColor,
   type SparepartCategoryCode,
 } from "@/lib/sparepartCategories";
 import type {
@@ -84,8 +84,7 @@ export function CategoryDonut({
       lang,
     ),
     value: row.currentStock,
-    color:
-      SPAREPART_CATEGORY_COLORS[row.code as SparepartCategoryCode] ?? "#64748b",
+    color: categoryColor(row.code),
   }));
   const total = slices.reduce((sum, s) => sum + s.value, 0);
 
@@ -248,7 +247,7 @@ export function TrendLines({
             type="monotone"
             dataKey={code}
             name={code}
-            stroke={SPAREPART_CATEGORY_COLORS[code]}
+            stroke={categoryColor(code)}
             strokeWidth={2}
             dot={false}
           />
