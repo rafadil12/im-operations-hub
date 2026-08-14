@@ -27,7 +27,13 @@ type Props = {
   category: string | null;
   range: { start: string; end: string };
   onCategoryChange: (code: string | null) => void;
+  draftRange: { start: string; end: string };
+  onDraftRangeChange: (range: { start: string; end: string }) => void;
+  onApplyRange: () => void;
 };
+
+const dateCtrl =
+  "cursor-pointer rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
 const panel = "rounded-lg border border-border-subtle bg-surface p-4";
 const titleCls = "mb-3 text-sm font-semibold text-text";
@@ -50,6 +56,9 @@ export function SparepartOverview({
   category,
   range,
   onCategoryChange,
+  draftRange,
+  onDraftRangeChange,
+  onApplyRange,
 }: Props) {
   const { t, lang } = useLang();
   const ready = overviewMatchesFilters(data, category, range);
@@ -61,37 +70,65 @@ export function SparepartOverview({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => onCategoryChange(null)}
-          className={[
-            "rounded-full px-3 py-1 text-xs font-semibold",
-            !category
-              ? "bg-accent text-white"
-              : "bg-surface-hover text-text-muted hover:text-text",
-          ].join(" ")}
-        >
-          {t.common.all}
-        </button>
-        {data.categories.map((tab) => {
-          const tabCode = normalizeCategoryCode(tab.code) ?? tab.code;
-          const active = category === tabCode;
-          return (
-            <button
-              key={tabCode}
-              type="button"
-              onClick={() => onCategoryChange(tabCode)}
-              className={[
-                "rounded-full px-3 py-1 text-xs font-semibold",
-                active ? "text-white" : "bg-surface-hover text-text-muted hover:text-text",
-              ].join(" ")}
-              style={active ? { background: categoryColor(tabCode) } : undefined}
-            >
-              {localizedName(tab, lang)}
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => onCategoryChange(null)}
+            className={[
+              "rounded-full px-3 py-1 text-xs font-semibold",
+              !category
+                ? "bg-accent text-white"
+                : "bg-surface-hover text-text-muted hover:text-text",
+            ].join(" ")}
+          >
+            {t.common.all}
+          </button>
+          {data.categories.map((tab) => {
+            const tabCode = normalizeCategoryCode(tab.code) ?? tab.code;
+            const active = category === tabCode;
+            return (
+              <button
+                key={tabCode}
+                type="button"
+                onClick={() => onCategoryChange(tabCode)}
+                className={[
+                  "rounded-full px-3 py-1 text-xs font-semibold",
+                  active ? "text-white" : "bg-surface-hover text-text-muted hover:text-text",
+                ].join(" ")}
+                style={active ? { background: categoryColor(tabCode) } : undefined}
+              >
+                {localizedName(tab, lang)}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="date"
+            className={dateCtrl}
+            value={draftRange.start}
+            onChange={(e) =>
+              onDraftRangeChange({ ...draftRange, start: e.target.value })
+            }
+          />
+          <span className="text-xs text-text-dim">–</span>
+          <input
+            type="date"
+            className={dateCtrl}
+            value={draftRange.end}
+            onChange={(e) =>
+              onDraftRangeChange({ ...draftRange, end: e.target.value })
+            }
+          />
+          <button
+            type="button"
+            onClick={onApplyRange}
+            className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          >
+            {t.common.apply}
+          </button>
+        </div>
       </div>
 
       {!ready ? (

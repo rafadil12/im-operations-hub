@@ -28,9 +28,6 @@ const defaultRange = {
   end: toDateInput(month.end),
 };
 
-const ctrl =
-  "cursor-pointer rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
-
 export default function SparepartIndexPage() {
   const router = useRouter();
   const { loading } = useAuth();
@@ -177,35 +174,11 @@ export default function SparepartIndexPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold text-text">
-            {t.sparepart.overviewTitle}
-          </h1>
-          <p className="text-sm text-text-muted">{t.sparepart.overviewDesc}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
-            className={ctrl}
-            value={draft.start}
-            onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
-          />
-          <span className="text-xs text-text-dim">–</span>
-          <input
-            type="date"
-            className={ctrl}
-            value={draft.end}
-            onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
-          />
-          <button
-            type="button"
-            onClick={() => setRange(draft)}
-            className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-          >
-            {t.common.apply}
-          </button>
-        </div>
+      <div>
+        <h1 className="text-lg font-semibold text-text">
+          {t.sparepart.overviewTitle}
+        </h1>
+        <p className="text-sm text-text-muted">{t.sparepart.overviewDesc}</p>
       </div>
 
       {fetching && !data ? (
@@ -226,6 +199,9 @@ export default function SparepartIndexPage() {
           category={category}
           range={range}
           onCategoryChange={onCategoryChange}
+          draftRange={draft}
+          onDraftRangeChange={setDraft}
+          onApplyRange={() => setRange(draft)}
         />
       ) : null}
     </div>
