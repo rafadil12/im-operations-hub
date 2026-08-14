@@ -1,8 +1,5 @@
 import ExcelJS from "exceljs";
-import {
-  DEFAULT_SPAREPART_CATEGORY_CODE,
-  normalizeCategoryCode,
-} from "@/lib/sparepartCategories";
+import { normalizeCategoryCode } from "@/lib/sparepartCategories";
 import type { SparepartCategoryCode } from "@/lib/types";
 
 export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
@@ -15,6 +12,7 @@ export type ImportRowError = {
 };
 
 export type ParsedImportItem = {
+  row: number;
   code: string;
   name_en: string;
   name_cn: string;
@@ -135,10 +133,31 @@ export async function parseSparepartItemsWorkbook(
       errors: [],
     };
   }
-  if (nameEnCol < 0 && nameCnCol < 0) {
+  if (nameEnCol < 0) {
     return {
       ok: false,
-      error: "Header must include Name EN and/or Name CN.",
+      error: "Header must include Name EN.",
+      errors: [],
+    };
+  }
+  if (nameCnCol < 0) {
+    return {
+      ok: false,
+      error: "Header must include Name CN.",
+      errors: [],
+    };
+  }
+  if (categoryCol < 0) {
+    return {
+      ok: false,
+      error: "Header must include Category.",
+      errors: [],
+    };
+  }
+  if (minStockCol < 0) {
+    return {
+      ok: false,
+      error: "Header must include Min Stock.",
       errors: [],
     };
   }
@@ -151,10 +170,8 @@ export async function parseSparepartItemsWorkbook(
   for (let r = 2; r <= lastRow; r++) {
     const row = sheet.getRow(r);
     const code = cellText(row.getCell(codeCol + 1).value);
-    const name_en =
-      nameEnCol >= 0 ? cellText(row.getCell(nameEnCol + 1).value) : "";
-    const name_cn =
-      nameCnCol >= 0 ? cellText(row.getCell(nameCnCol + 1).value) : "";
+    const name_en = cellText(row.getCell(nameEnCol + 1).value);
+    const name_cn = cellText(row.getCell(nameCnCol + 1).value);
 
     if (!code && !name_en && !name_cn) continue;
 
@@ -162,11 +179,19 @@ export async function parseSparepartItemsWorkbook(
       errors.push({ row: r, field: "code", message: "Code is required." });
       continue;
     }
-    if (!name_en && !name_cn) {
+    if (!name_en) {
       errors.push({
         row: r,
         field: "name_en",
-        message: "At least one description (EN or CN) is required.",
+        message: "Name EN is required.",
+      });
+      continue;
+    }
+    if (!name_cn) {
+      errors.push({
+        row: r,
+        field: "name_cn",
+        message: "Name CN is required.",
       });
       continue;
     }
@@ -180,39 +205,48 @@ export async function parseSparepartItemsWorkbook(
     }
     seen.add(code.toUpperCase());
 
-    const rawCategory =
-      categoryCol >= 0 ? cellText(row.getCell(categoryCol + 1).value) : "";
-    let category_code = DEFAULT_SPAREPART_CATEGORY_CODE;
-    if (rawCategory) {
-      const parsedCategory = normalizeCategoryCode(rawCategory);
-      if (!parsedCategory) {
-        errors.push({
-          row: r,
-          field: "category",
-          message: `Unknown category "${rawCategory}". Use IT, AGV, ASSEMBLY, or MES.`,
-        });
-        continue;
-      }
-      category_code = parsedCategory;
+    const rawCategory = cellText(row.getCell(categoryCol + 1).value);
+    if (!rawCategory) {
+      errors.push({
+        row: r,
+        field: "category",
+        message: "Category is required.",
+      });
+      continue;
     }
+    const parsedCategory = normalizeCategoryCode(rawCategory);
+    if (!parsedCategory) {
+      errors.push({
+        row: r,
+        field: "category",
+        message: `Unknown category "${rawCategory}". Use IT, AGV, ASSEMBLY, or MES.`,
+      });
+      continue;
+    }
+    const category_code = parsedCategory;
 
-    const rawMin =
-      minStockCol >= 0 ? cellText(row.getCell(minStockCol + 1).value) : "";
-    let min_stock = 0;
-    if (rawMin) {
-      const n = Number(rawMin);
-      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
-        errors.push({
-          row: r,
-          field: "min_stock",
-          message: "Min stock must be an integer of 0 or more.",
-        });
-        continue;
-      }
-      min_stock = n;
+    const rawMin = cellText(row.getCell(minStockCol + 1).value);
+    if (!rawMin) {
+      errors.push({
+        row: r,
+        field: "min_stock",
+        message: "Min stock is required.",
+      });
+      continue;
     }
+    const n = Number(rawMin);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+      errors.push({
+        row: r,
+        field: "min_stock",
+        message: "Min stock must be an integer of 0 or more.",
+      });
+      continue;
+    }
+    const min_stock = n;
 
     items.push({
+      row: r,
       code,
       name_en,
       name_cn,

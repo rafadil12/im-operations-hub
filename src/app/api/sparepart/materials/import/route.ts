@@ -7,11 +7,90 @@ import {
   IMPORT_MAX_BYTES,
   parseSparepartItemsWorkbook,
   type ImportRowError,
+  type ParsedImportItem,
 } from "@/lib/sparepartImport";
-import { DEFAULT_SPAREPART_CATEGORY_CODE } from "@/lib/sparepartCategories";
+import { DEFAULT_SPAREPART_CATEGORY_CODE, normalizeCategoryCode } from "@/lib/sparepartCategories";
 import type { SparepartCategory } from "@/lib/types";
+import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
+
+function buildCategoryIdByCode(
+  categories: SparepartCategory[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const row of categories) {
+    const id = Number(row.id);
+    const raw = String(row.code).toUpperCase();
+    map.set(raw, id);
+    const canonical = normalizeCategoryCode(raw);
+    if (canonical) map.set(canonical, id);
+  }
+  return map;
+}
+
+async function loadActiveCategoryIdByCode(): Promise<Map<string, number>> {
+  const rows = await query<SparepartCategory[]>(
+    `SELECT id, code FROM sparepart_categories WHERE is_active = 1`,
+  );
+  return buildCategoryIdByCode(rows);
+}
+
+async function findActiveDuplicateImportCodes(
+  items: ParsedImportItem[],
+): Promise<ImportRowError[]> {
+  if (items.length === 0) return [];
+
+  const codesUpper = items.map((item) => item.code.toUpperCase());
+  const placeholders = codesUpper.map(() => "?").join(", ");
+  const rows = await query<RowDataPacket[]>(
+    `SELECT code FROM sparepart_items
+     WHERE deleted_at IS NULL AND UPPER(code) IN (${placeholders})`,
+    codesUpper,
+  );
+
+  const existing = new Set(
+    rows.map((row: RowDataPacket) => String(row.code).toUpperCase()),
+  );
+  const errors: ImportRowError[] = [];
+  for (const item of items) {
+    if (existing.has(item.code.toUpperCase())) {
+      errors.push({
+        row: item.row,
+        field: "code",
+        message: "Material code already exists.",
+      });
+    }
+  }
+  return errors;
+}
+
+function findInvalidImportCategories(
+  items: ParsedImportItem[],
+  categoryIdByCode: Map<string, number>,
+): ImportRowError[] {
+  const errors: ImportRowError[] = [];
+  for (const item of items) {
+    if (categoryIdByCode.has(item.category_code)) continue;
+    errors.push({
+      row: item.row,
+      field: "category",
+      message: `Category "${item.category_code}" is not available. Use an active category from the system.`,
+    });
+  }
+  return errors;
+}
+
+function resolveImportCategoryId(
+  categoryCode: ParsedImportItem["category_code"],
+  categoryIdByCode: Map<string, number>,
+): number {
+  const categoryId = categoryIdByCode.get(categoryCode);
+  if (categoryId == null) {
+    throw new Error(`Category "${categoryCode}" is not available.`);
+  }
+  return categoryId;
+}
 
 export async function POST(request: NextRequest) {
   const gate = await requirePermission(PERMISSIONS.sparepartMaterialsImport);
@@ -60,27 +139,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const imported = await withTransaction(async (conn) => {
-      const [catRows] = await conn.query(
-        `SELECT id, code FROM sparepart_categories WHERE is_active = 1`,
+    const categoryIdByCode = await loadActiveCategoryIdByCode();
+    if (!categoryIdByCode.has(DEFAULT_SPAREPART_CATEGORY_CODE)) {
+      return NextResponse.json(
+        {
+          error: "IT category is missing. Run database migrations.",
+          errors: [] as ImportRowError[],
+        },
+        { status: 500 },
       );
-      const categoryIdByCode = new Map(
-        (catRows as SparepartCategory[]).map((row) => [
-          String(row.code).toUpperCase(),
-          Number(row.id),
-        ]),
-      );
-      const fallbackCategoryId =
-        categoryIdByCode.get(DEFAULT_SPAREPART_CATEGORY_CODE) ?? null;
-      if (fallbackCategoryId == null) {
-        throw new Error("IT category is missing. Run database migrations.");
-      }
+    }
 
+    const duplicateErrors = await findActiveDuplicateImportCodes(parsed.items);
+    const categoryErrors = findInvalidImportCategories(
+      parsed.items,
+      categoryIdByCode,
+    );
+    const validationErrors = [...duplicateErrors, ...categoryErrors];
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Import validation failed. No records were saved.",
+          errors: validationErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    const imported = await withTransaction(async (conn) => {
       let count = 0;
 
       for (const item of parsed.items) {
-        const categoryId =
-          categoryIdByCode.get(item.category_code) ?? fallbackCategoryId;
+        const categoryId = resolveImportCategoryId(
+          item.category_code,
+          categoryIdByCode,
+        );
         await conn.query(
           `INSERT INTO sparepart_items
             (code, name_en, name_cn, brand_en, brand_cn, model, notes,

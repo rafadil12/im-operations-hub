@@ -190,7 +190,7 @@ const cn: Dict = {
     goPost: "新建库存事务",
     importTitle: "导入物料项",
     importHint:
-      "上传含 Code、Name、Brand、Model、Notes 的 Excel（与新增表单字段相同）。已有编码将被更新，不会改动库存。",
+      "上传 Excel（.xlsx）。必填：Code、Name EN、Name CN、Category、Min Stock。可选：Brand、Model、Notes。已存在的有效编码将被拒绝；不会改动库存。",
   },
   settings: {
     rolesTitle: "角色",
