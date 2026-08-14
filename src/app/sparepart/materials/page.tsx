@@ -3,13 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { useLang } from "@/lib/i18n";
-import type { SparepartItem, SparepartItemInput } from "@/lib/types";
+import { localizedName, useLang } from "@/lib/i18n";
+import type {
+  SparepartCategory,
+  SparepartItem,
+  SparepartItemInput,
+} from "@/lib/types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ImportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { ImportItemsModal } from "@/components/sparepart/ImportItemsModal";
 import { ItemForm } from "@/components/sparepart/ItemForm";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import {
   StockTable,
@@ -24,7 +29,7 @@ const DEFAULT_PAGE_SIZE: PageSize = 10;
 type ListResponse = { rows: SparepartItem[] };
 
 export default function MaterialMasterPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
   const {
     canCreateSparepartMaterial,
@@ -34,7 +39,9 @@ export default function MaterialMasterPage() {
     canDownloadSparepartTemplate,
   } = useRoleAccess();
   const [rows, setRows] = useState<SparepartItem[]>([]);
+  const [categories, setCategories] = useState<SparepartCategory[]>([]);
   const [q, setQ] = useState("");
+  const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -49,12 +56,13 @@ export default function MaterialMasterPage() {
   const [templateDownloading, setTemplateDownloading] = useState(false);
 
   const load = useCallback(
-    async (search: string) => {
+    async (filters: { q: string; category: string }) => {
       setLoading(true);
       setError(null);
       try {
         const params = new URLSearchParams();
-        if (search) params.set("q", search);
+        if (filters.q) params.set("q", filters.q);
+        if (filters.category) params.set("category", filters.category);
         const data = await apiGetAbs<ListResponse>(
           `/api/sparepart/materials?${params.toString()}`,
         );
@@ -70,7 +78,10 @@ export default function MaterialMasterPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
-    load("");
+    load({ q: "", category: "" });
+    apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
+      .then((data) => setCategories(data.rows))
+      .catch(() => setCategories([]));
   }, [load]);
 
   const sortedRows = useMemo(
@@ -124,7 +135,7 @@ export default function MaterialMasterPage() {
     setFormOpen(false);
     setEditRow(null);
     toastSuccess(t.toast.createSuccess);
-    await load(q);
+    await load({ q, category });
   };
 
   const handleUpdate = async (
@@ -141,7 +152,7 @@ export default function MaterialMasterPage() {
     setFormOpen(false);
     setEditRow(null);
     toastSuccess(t.toast.updateSuccess);
-    await load(q);
+    await load({ q, category });
   };
 
   const confirmDelete = async () => {
@@ -151,7 +162,7 @@ export default function MaterialMasterPage() {
       await apiSendAbs(`/api/sparepart/materials/${deleteRow.id}`, "DELETE");
       setDeleteRow(null);
       toastSuccess(t.toast.updateSuccess);
-      await load(q);
+      await load({ q, category });
     } catch (e) {
       toastError(e instanceof Error ? e.message : t.common.error);
     } finally {
@@ -172,6 +183,14 @@ export default function MaterialMasterPage() {
     a.remove();
     URL.revokeObjectURL(objectUrl);
   };
+
+  const categoryOptions = [
+    { value: "", label: t.sparepart.allCategories },
+    ...categories.map((row) => ({
+      value: row.code,
+      label: localizedName(row, lang),
+    })),
+  ];
 
   const field =
     "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
@@ -252,17 +271,30 @@ export default function MaterialMasterPage() {
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 setPage(1);
-                load(q);
+                load({ q, category });
               }
             }}
             placeholder={t.sparepart.materialsSearchHint}
+          />
+        </div>
+        <div className="min-w-[140px]">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
+            {t.sparepart.category}
+          </label>
+          <SparepartDropdown
+            className="w-full"
+            compact
+            value={category}
+            onChange={setCategory}
+            options={categoryOptions}
+            placeholder={t.sparepart.allCategories}
           />
         </div>
         <button
           type="button"
           onClick={() => {
             setPage(1);
-            load(q);
+            load({ q, category });
           }}
           className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
@@ -327,7 +359,7 @@ export default function MaterialMasterPage() {
             toastSuccess(
               t.toast.importSuccess.replace("{count}", String(count)),
             );
-            await load(q);
+            await load({ q, category });
           }}
         />
       ) : null}
