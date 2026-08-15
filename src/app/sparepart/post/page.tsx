@@ -1,18 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
+import { LocationCombobox } from "@/components/sparepart/LocationCombobox";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
-import {
-  SparepartDropdown,
-  sparepartDropdownMenuClass,
-  sparepartDropdownOptionClass,
-} from "@/components/sparepart/SparepartDropdown";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { TransactionTypeSelect } from "@/components/sparepart/TransactionTypeSelect";
 
 type LineDraft = {
@@ -21,7 +18,6 @@ type LineDraft = {
   qty: string;
   note: string;
   storage_location_id: string;
-  storage_location_text: string;
   to_storage_location_id: string;
   item?: SparepartItem | null;
 };
@@ -51,7 +47,6 @@ function newLine(defaultLocId = ""): LineDraft {
     qty: "1",
     note: "",
     storage_location_id: defaultLocId,
-    storage_location_text: "",
     to_storage_location_id: "",
     item: null,
   };
@@ -71,53 +66,17 @@ export default function PostGoodsMovementPage() {
   const [postingDate, setPostingDate] = useState(todayLocalDateInputValue);
   const [headerText, setHeaderText] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [locations, setLocations] = useState<SparepartStorageLocation[]>([]);
   const [lines, setLines] = useState<LineDraft[]>([newLine()]);
   const [busy, setBusy] = useState(false);
   const [lastDoc, setLastDoc] = useState<{ id: number; doc_number: string } | null>(
     null,
   );
-  const [openLocationSuggestKey, setOpenLocationSuggestKey] = useState<string | null>(
-    null,
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await apiGetAbs<{ rows: SparepartStorageLocation[] }>(
-          "/api/sparepart/storage-locations",
-        );
-        if (!cancelled) setLocations(data.rows);
-      } catch {
-        if (!cancelled) setLocations([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const field =
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
   const label = "mb-1 block text-xs font-medium text-text-muted";
 
   const locationLabel = (loc: SparepartStorageLocation) => `${loc.code} — ${loc.name}`;
-
-  const filterLocationList = (
-    options: SparepartStorageLocation[],
-    needle: string,
-  ) => {
-    const q = needle.trim().toLowerCase();
-    const sorted = [...options].sort((a, b) => a.name.localeCompare(b.name));
-    if (!q) return sorted;
-    return sorted.filter(
-      (loc) =>
-        loc.code.toLowerCase().includes(q) ||
-        loc.name.toLowerCase().includes(q) ||
-        locationLabel(loc).toLowerCase().includes(q),
-    );
-  };
 
   const locationOptionsForItem = (item?: SparepartItem | null) => {
     if (!item) return [] as SparepartStorageLocation[];
@@ -138,119 +97,18 @@ export default function PostGoodsMovementPage() {
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  const resolveExistingLocation = (value: string) => {
-    const needle = value.trim().toLowerCase();
-    if (!needle) return null;
-    return (
-      locations.find(
-        (loc) =>
-          loc.code.trim().toLowerCase() === needle ||
-          loc.name.trim().toLowerCase() === needle ||
-          locationLabel(loc).trim().toLowerCase() === needle,
-      ) ?? null
-    );
-  };
-
-  /** 101 only: type + verify existing location */
-  const renderTypedLocationField = (line: LineDraft) => {
-    const suggestKey = `${line.key}-from`;
-    const suggestions = filterLocationList(locations, line.storage_location_text);
-    const open = openLocationSuggestKey === suggestKey;
-
-    return (
-      <div className="relative">
-        <input
-          className={field}
-          value={line.storage_location_text}
-          onChange={(e) => {
-            setOpenLocationSuggestKey(suggestKey);
-            setLines((prev) =>
-              prev.map((l) =>
-                l.key === line.key
-                  ? { ...l, storage_location_text: e.target.value }
-                  : l,
-              ),
-            );
-          }}
-          onFocus={() => setOpenLocationSuggestKey(suggestKey)}
-          onBlur={() => {
-            window.setTimeout(() => {
-              setOpenLocationSuggestKey((key) =>
-                key === suggestKey ? null : key,
-              );
-            }, 120);
-          }}
-          placeholder={t.sparepart.locationName}
-          autoComplete="off"
-        />
-        {open ? (
-          <ul className={`${sparepartDropdownMenuClass} z-20 max-h-48 overflow-auto`}>
-            {suggestions.map((loc) => (
-              <li key={loc.id}>
-                <button
-                  type="button"
-                  className={`${sparepartDropdownOptionClass(false)} text-xs`}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setLines((prev) =>
-                      prev.map((l) =>
-                        l.key === line.key
-                          ? {
-                              ...l,
-                              storage_location_text: locationLabel(loc),
-                              storage_location_id: String(loc.id),
-                            }
-                          : l,
-                      ),
-                    );
-                    setOpenLocationSuggestKey(null);
-                  }}
-                >
-                  {locationLabel(loc)}
-                </button>
-              </li>
-            ))}
-            {suggestions.length === 0 ? (
-              <li className="px-3 py-2 text-xs text-text-dim">
-                {t.common.noData}
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
-      </div>
-    );
-  };
-
   const handlePost = async () => {
     setBusy(true);
     setLastDoc(null);
     try {
-      const payloadLines = lines.map((l, index) => {
-        if (movementType === "101") {
-          const resolved = resolveExistingLocation(l.storage_location_text);
-          if (!resolved) {
-            throw new Error(
-              `Line ${index + 1}: storage location must match an existing location.`,
-            );
-          }
-          return {
-            item_id: Number(l.item_id),
-            qty: Number(l.qty),
-            note: l.note,
-            storage_location_id: resolved.id,
-            to_storage_location_id: undefined,
-          };
-        }
-
-        return {
-          item_id: Number(l.item_id),
-          qty: Number(l.qty),
-          note: l.note,
-          storage_location_id: Number(l.storage_location_id),
-          to_storage_location_id:
-            movementType === "311" ? Number(l.to_storage_location_id) : undefined,
-        };
-      });
+      const payloadLines = lines.map((l) => ({
+        item_id: Number(l.item_id),
+        qty: Number(l.qty),
+        note: l.note,
+        storage_location_id: Number(l.storage_location_id),
+        to_storage_location_id:
+          movementType === "311" ? Number(l.to_storage_location_id) : undefined,
+      }));
 
       const result = await apiSendAbs<{ id: number; doc_number: string }>(
         "/api/sparepart/goods-movements",
@@ -390,7 +248,7 @@ export default function PostGoodsMovementPage() {
                                   item_id: "",
                                   item: null,
                                   storage_location_id: "",
-                                  storage_location_text: "",
+                                  to_storage_location_id: "",
                                 }
                               : l,
                           ),
@@ -414,7 +272,6 @@ export default function PostGoodsMovementPage() {
                                   item: fullItem,
                                   // Clear location so user must choose explicitly
                                   storage_location_id: "",
-                                  storage_location_text: "",
                                   to_storage_location_id: "",
                                 }
                               : l,
@@ -432,38 +289,54 @@ export default function PostGoodsMovementPage() {
                       : t.sparepart.location}{" "}
                     *
                   </label>
-                  {movementType === "101"
-                    ? renderTypedLocationField(line)
-                    : (
-                        <SparepartDropdown
-                          value={line.storage_location_id}
-                          options={locationOptionsForItem(line.item).map((loc) => ({
-                            value: String(loc.id),
-                            label: locationLabel(loc),
-                          }))}
-                          onChange={(locId) =>
-                            setLines((prev) =>
-                              prev.map((l) =>
-                                l.key === line.key
-                                  ? { ...l, storage_location_id: locId }
-                                  : l,
-                              ),
-                            )
-                          }
-                          placeholder={t.sparepart.locationName}
-                          disabled={!line.item_id}
-                        />
-                      )}
+                  {movementType === "101" ? (
+                    <LocationCombobox
+                      value={line.storage_location_id}
+                      onChange={(locId) =>
+                        setLines((prev) =>
+                          prev.map((l) =>
+                            l.key === line.key
+                              ? { ...l, storage_location_id: locId }
+                              : l,
+                          ),
+                        )
+                      }
+                      className={field}
+                    />
+                  ) : (
+                    <SparepartDropdown
+                      value={line.storage_location_id}
+                      options={locationOptionsForItem(line.item).map((loc) => ({
+                        value: String(loc.id),
+                        label: locationLabel(loc),
+                      }))}
+                      onChange={(locId) =>
+                        setLines((prev) =>
+                          prev.map((l) =>
+                            l.key === line.key
+                              ? {
+                                  ...l,
+                                  storage_location_id: locId,
+                                  to_storage_location_id:
+                                    l.to_storage_location_id === locId
+                                      ? ""
+                                      : l.to_storage_location_id,
+                                }
+                              : l,
+                          ),
+                        )
+                      }
+                      placeholder={t.sparepart.locationName}
+                      disabled={!line.item_id}
+                    />
+                  )}
                 </div>
                 {movementType === "311" ? (
                   <div className="md:col-span-2">
                     <label className={label}>{t.sparepart.toLocation} *</label>
-                    <SparepartDropdown
+                    <LocationCombobox
                       value={line.to_storage_location_id}
-                      options={locations.map((loc) => ({
-                        value: String(loc.id),
-                        label: locationLabel(loc),
-                      }))}
+                      excludeId={line.storage_location_id}
                       onChange={(locId) =>
                         setLines((prev) =>
                           prev.map((l) =>
@@ -473,7 +346,7 @@ export default function PostGoodsMovementPage() {
                           ),
                         )
                       }
-                      placeholder={t.sparepart.locationName}
+                      className={field}
                     />
                   </div>
                 ) : null}
