@@ -22,6 +22,13 @@ function parseCategoryId(value: unknown): number | null {
   return n;
 }
 
+function parseIsActive(value: unknown): boolean {
+  if (value === false || value === 0 || value === "0" || value === "false") {
+    return false;
+  }
+  return true;
+}
+
 export function parseSparepartItemBody(
   body: Partial<SparepartItemInput>,
 ):
@@ -37,6 +44,7 @@ export function parseSparepartItemBody(
   const category_id = parseCategoryId(body.category_id);
   const uom_id = parseCategoryId(body.uom_id);
   const min_stock = parseMinStock(body.min_stock);
+  const is_active = parseIsActive(body.is_active);
 
   const errors: SparepartFieldError[] = [];
   if (!code) errors.push({ field: "code", message: "Code is required." });
@@ -76,6 +84,7 @@ export function parseSparepartItemBody(
       category_id: category_id as number,
       uom_id: uom_id as number,
       min_stock: min_stock as number,
+      is_active,
     },
   };
 }

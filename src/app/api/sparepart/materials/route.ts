@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
       const result = await execute(
         `INSERT INTO sparepart_items
           (code, name_en, name_cn, brand_en, brand_cn, model, notes,
-           stock_current, min_stock, category_id, uom_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+           stock_current, min_stock, is_active, category_id, uom_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
         [
           data.code,
           data.name_en || null,
@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
           data.model || null,
           data.notes || null,
           data.min_stock,
+          data.is_active ? 1 : 0,
           data.category_id,
           data.uom_id,
         ],

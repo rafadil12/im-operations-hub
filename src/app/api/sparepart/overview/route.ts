@@ -16,6 +16,7 @@ import {
   canonicalCategoryCode,
   categoryMatchSql,
   groupByCanonicalCategory,
+  isItemActive,
   LOW_STOCK_SQL,
   normalizeCategoryCode,
   preferredCanonicalCategoryRow,
@@ -61,6 +62,7 @@ type ItemRow = {
 type ReconstructRow = {
   stock_current: number;
   min_stock: number;
+  is_active: number | boolean;
   month_delta: number;
 };
 type CatStatRow = {
@@ -268,6 +270,7 @@ export async function GET(request: NextRequest) {
         `SELECT
            i.stock_current,
            i.min_stock,
+           i.is_active,
            COALESCE(SUM(${STOCK_DELTA_SQL}), 0) AS month_delta
          ${itemCatJoin}
          LEFT JOIN sparepart_mat_doc_items li ON li.item_id = i.id
@@ -276,7 +279,7 @@ export async function GET(request: NextRequest) {
           AND d.posting_date >= ?
           AND d.posting_date <= ?
          WHERE ${itemWhere}
-         GROUP BY i.id, i.stock_current, i.min_stock`,
+         GROUP BY i.id, i.stock_current, i.min_stock, i.is_active`,
         [period.start, period.end, ...itemParams],
       ),
       query<CountRow[]>(
@@ -474,7 +477,13 @@ export async function GET(request: NextRequest) {
     for (const row of reconstructRows) {
       const prevStock = n(row.stock_current) - n(row.month_delta);
       prevStockSum += prevStock;
-      if (n(row.min_stock) > 0 && prevStock <= n(row.min_stock)) prevLow += 1;
+      if (
+        isItemActive(row.is_active) &&
+        n(row.min_stock) > 0 &&
+        prevStock <= n(row.min_stock)
+      ) {
+        prevLow += 1;
+      }
     }
 
     const movementQty = n(monthMove?.qty);

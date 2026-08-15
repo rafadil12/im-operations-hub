@@ -20,12 +20,12 @@ const FALLBACK_CATEGORY_COLOR = "#64748b";
 
 export const DEFAULT_SPAREPART_CATEGORY_CODE: SparepartCategoryCode = "IT";
 
-/** Low stock: reorder point is set and on-hand is at or below it. */
-export const LOW_STOCK_SQL = `i.min_stock > 0 AND i.stock_current <= i.min_stock`;
+/** Low stock: active item, reorder point set, and on-hand at or below it. */
+export const LOW_STOCK_SQL = `i.is_active = 1 AND i.min_stock > 0 AND i.stock_current <= i.min_stock`;
 
 export const ITEM_CATEGORY_SELECT = `
   i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
-  i.stock_current, i.min_stock, i.category_id, i.uom_id,
+  i.stock_current, i.min_stock, i.is_active, i.category_id, i.uom_id,
   c.code AS category_code, c.name_en AS category_name_en, c.name_cn AS category_name_cn,
   u.code AS uom_code, u.name_en AS uom_name_en, u.name_cn AS uom_name_cn,
   i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
@@ -100,10 +100,22 @@ export function categoryMatchSql(
   return { sql: `${expr} = ?`, params: [filter] };
 }
 
-export function isLowStock(minStock: number, stockCurrent: number): boolean {
-  return minStock > 0 && stockCurrent <= minStock;
+export function isItemActive(isActive: number | boolean | null | undefined): boolean {
+  return isActive === true || isActive === 1;
 }
 
-export function isCriticalStock(minStock: number, stockCurrent: number): boolean {
-  return minStock > 0 && stockCurrent <= 0;
+export function isLowStock(
+  minStock: number,
+  stockCurrent: number,
+  isActive: number | boolean | null | undefined = true,
+): boolean {
+  return isItemActive(isActive) && minStock > 0 && stockCurrent <= minStock;
+}
+
+export function isCriticalStock(
+  minStock: number,
+  stockCurrent: number,
+  isActive: number | boolean | null | undefined = true,
+): boolean {
+  return isItemActive(isActive) && minStock > 0 && stockCurrent <= 0;
 }

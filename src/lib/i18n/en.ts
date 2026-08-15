@@ -97,6 +97,8 @@ const en = {
     model: "Model",
     category: "Category",
     minStock: "Min Stock",
+    active: "Active",
+    nonActive: "Non-active",
     stockStatus: "Status",
     statusCritical: "Critical",
     statusLow: "Low",

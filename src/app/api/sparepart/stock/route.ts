@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
          i.model,
          i.stock_current,
          i.min_stock,
+         i.is_active,
          i.category_id,
          c.code AS category_code,
          c.name_en AS category_name_en,

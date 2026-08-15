@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLang, localizedName, localizedField } from "@/lib/i18n";
 import {
   isCriticalStock,
+  isItemActive,
   isLowStock,
 } from "@/lib/sparepartCategories";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
@@ -34,6 +35,10 @@ function rowStock(row: TableRow): number {
 
 function rowMinStock(row: TableRow): number {
   return row.min_stock;
+}
+
+function rowIsActive(row: TableRow): boolean {
+  return isItemActive(row.is_active);
 }
 
 function rowUom(row: TableRow): string {
@@ -291,6 +296,7 @@ export function StockTable({
   const to = Math.min(page * pageSize, totalCount);
   const showActions = !readOnly && (onEdit || onDelete);
   const showCurrentStock = variant === "stock";
+  const showItemStatus = variant === "master";
   const clickable = Boolean(onRowClick);
   const sortable = Boolean(onSortChange);
 
@@ -330,6 +336,17 @@ export function StockTable({
               <col style={{ width: "11%" }} />
               {showActions ? <col style={{ width: "6rem" }} /> : null}
             </colgroup>
+          ) : showItemStatus ? (
+            <colgroup>
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              {showActions ? <col style={{ width: "6rem" }} /> : null}
+            </colgroup>
           ) : null}
           <thead className="border-b border-border-subtle bg-bg/40">
             <tr>
@@ -353,6 +370,11 @@ export function StockTable({
                       {t.sparepart.stockStatus}
                     </th>
                   ) : null}
+                  {showItemStatus ? (
+                    <th className={`${th} text-center`}>
+                      {t.sparepart.stockStatus}
+                    </th>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -368,6 +390,11 @@ export function StockTable({
                     </th>
                   ) : null}
                   {showCurrentStock ? (
+                    <th className={`${th} text-center`}>
+                      {t.sparepart.stockStatus}
+                    </th>
+                  ) : null}
+                  {showItemStatus ? (
                     <th className={`${th} text-center`}>
                       {t.sparepart.stockStatus}
                     </th>
@@ -424,16 +451,37 @@ export function StockTable({
                 ) : null}
                 {showCurrentStock ? (
                   <td className={`${td} text-center`}>
-                    {isCriticalStock(rowMinStock(row), rowStock(row)) ? (
+                    {isCriticalStock(
+                      rowMinStock(row),
+                      rowStock(row),
+                      rowIsActive(row),
+                    ) ? (
                       <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger">
                         {t.sparepart.statusCritical}
                       </span>
-                    ) : isLowStock(rowMinStock(row), rowStock(row)) ? (
+                    ) : isLowStock(
+                        rowMinStock(row),
+                        rowStock(row),
+                        rowIsActive(row),
+                      ) ? (
                       <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
                         {t.sparepart.statusLow}
                       </span>
                     ) : (
                       <span className="text-text-dim">—</span>
+                    )}
+                  </td>
+                ) : null}
+                {showItemStatus ? (
+                  <td className={`${td} text-center`}>
+                    {rowIsActive(row) ? (
+                      <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+                        {t.sparepart.active}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-text-dim/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-dim">
+                        {t.sparepart.nonActive}
+                      </span>
                     )}
                   </td>
                 ) : null}

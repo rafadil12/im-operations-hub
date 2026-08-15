@@ -128,8 +128,8 @@ export async function PUT(request: NextRequest, context: Ctx) {
       const result = await execute(
         `UPDATE sparepart_items
          SET code = ?, name_en = ?, name_cn = ?, brand_en = ?, brand_cn = ?,
-             model = ?, notes = ?, image_url = ?, min_stock = ?, category_id = ?,
-             uom_id = ?
+             model = ?, notes = ?, image_url = ?, min_stock = ?, is_active = ?,
+             category_id = ?, uom_id = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
           data.code,
@@ -141,6 +141,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
           data.notes || null,
           nextImageUrl,
           data.min_stock,
+          data.is_active ? 1 : 0,
           data.category_id,
           data.uom_id,
           itemId,

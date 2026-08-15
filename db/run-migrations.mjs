@@ -1123,5 +1123,17 @@ if (await tableExists("sparepart_storage_locations")) {
   }
 }
 
+// --- 017: sparepart_items.is_active ---
+if (await columnExists("sparepart_items", "is_active")) {
+  console.log("sparepart_items.is_active already exists.");
+} else {
+  await conn.query(
+    `ALTER TABLE \`sparepart_items\`
+     ADD COLUMN \`is_active\` TINYINT(1) NOT NULL DEFAULT 1
+     AFTER \`min_stock\``,
+  );
+  console.log("Added sparepart_items.is_active.");
+}
+
 await conn.end();
 console.log("Migrations complete.");

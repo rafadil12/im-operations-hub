@@ -298,6 +298,7 @@ export type SparepartStockBalanceRow = {
   model: string | null;
   stock_current: number;
   min_stock: number;
+  is_active: number | boolean;
   category_id: number;
   category_code: string | null;
   category_name_en: string | null;
@@ -317,6 +318,7 @@ export type SparepartItem = {
   model: string | null;
   stock_current: number;
   min_stock: number;
+  is_active: number | boolean;
   category_id: number;
   category_code?: string | null;
   category_name_en?: string | null;
@@ -344,6 +346,7 @@ export type SparepartItemInput = {
   category_id: number;
   uom_id: number;
   min_stock: number;
+  is_active: boolean;
 };
 
 export type SparepartMatDocLine = {

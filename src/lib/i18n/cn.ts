@@ -98,6 +98,8 @@ const cn: Dict = {
     model: "型号",
     category: "类别",
     minStock: "最低库存",
+    active: "启用",
+    nonActive: "停用",
     stockStatus: "状态",
     statusCritical: "紧急",
     statusLow: "偏低",

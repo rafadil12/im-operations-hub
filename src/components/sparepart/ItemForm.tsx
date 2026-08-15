@@ -45,6 +45,9 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
     initial?.uom_id ? String(initial.uom_id) : "",
   );
   const [minStock, setMinStock] = useState(String(initial?.min_stock ?? 0));
+  const [isActive, setIsActive] = useState(
+    initial ? Boolean(initial.is_active) : true,
+  );
   const [categories, setCategories] = useState<SparepartCategory[]>([]);
   const [uoms, setUoms] = useState<SparepartUom[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -132,6 +135,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           category_id: parsedCategoryId,
           uom_id: parsedUomId,
           min_stock: parsedMin,
+          is_active: isActive,
         },
         { file, removeImage },
       );
@@ -276,6 +280,20 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                 step={1}
                 value={minStock}
                 onChange={(e) => setMinStock(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={label}>{t.sparepart.stockStatus} *</label>
+              <SparepartDropdown
+                className="w-full"
+                value={isActive ? "1" : "0"}
+                onChange={(value) => setIsActive(value !== "0")}
+                options={[
+                  { value: "1", label: t.sparepart.active },
+                  { value: "0", label: t.sparepart.nonActive },
+                ]}
+                placeholder={t.sparepart.stockStatus}
+                disabled={busy}
               />
             </div>
             <div className="sm:col-span-2">
