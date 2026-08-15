@@ -156,6 +156,7 @@ const en = {
     heatmapHigh: "High",
     specialItems: "Few Items in Category",
     pcs: "pcs",
+    uom: "UoM",
     movementType: "Transaction Type",
     movement101: "Receive Stock",
     movement201: "Issue Stock",
@@ -191,7 +192,7 @@ const en = {
     goPost: "New Stock Transaction",
     importTitle: "Import Items",
     importHint:
-      "Upload Excel (.xlsx). Required: Code, Name EN, Name CN, Category, Min Stock. Optional: Brand, Model, Notes. Existing active codes are rejected; stock is not changed.",
+      "Upload Excel (.xlsx). Required: Code, Name EN, Name CN, Category, Min Stock. Optional: Brand, Model, Notes, UoM (default PCS). Existing active codes are rejected; stock is not changed.",
   },
   settings: {
     rolesTitle: "Roles",

@@ -6,7 +6,7 @@ import {
   SparepartImageError,
   renameMaterialImage,
 } from "@/lib/sparepartImages";
-import { ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
+import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
@@ -27,8 +27,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
     }
     const rows = await query<SparepartItem[]>(
       `SELECT ${ITEM_CATEGORY_SELECT}
-       FROM sparepart_items i
-       JOIN sparepart_categories c ON c.id = i.category_id
+       FROM ${ITEM_CATEGORY_FROM}
        WHERE i.id = ? AND i.deleted_at IS NULL
        LIMIT 1`,
       [itemId],
@@ -84,6 +83,13 @@ export async function PUT(request: NextRequest, context: Ctx) {
         { status: 400 },
       );
     }
+    const uomRows = await query<{ id: number }[]>(
+      `SELECT id FROM uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
+      [data.uom_id],
+    );
+    if (!uomRows[0]) {
+      return NextResponse.json({ error: "Invalid UoM." }, { status: 400 });
+    }
 
     const existing = await query<
       Pick<SparepartItem, "id" | "code" | "image_url">[]
@@ -122,7 +128,8 @@ export async function PUT(request: NextRequest, context: Ctx) {
       const result = await execute(
         `UPDATE sparepart_items
          SET code = ?, name_en = ?, name_cn = ?, brand_en = ?, brand_cn = ?,
-             model = ?, notes = ?, image_url = ?, min_stock = ?, category_id = ?
+             model = ?, notes = ?, image_url = ?, min_stock = ?, category_id = ?,
+             uom_id = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
           data.code,
@@ -135,6 +142,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
           nextImageUrl,
           data.min_stock,
           data.category_id,
+          data.uom_id,
           itemId,
         ],
       );

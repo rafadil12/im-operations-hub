@@ -35,6 +35,7 @@ export function parseSparepartItemBody(
   const model = trim(body.model);
   const notes = trim(body.notes);
   const category_id = parseCategoryId(body.category_id);
+  const uom_id = parseCategoryId(body.uom_id);
   const min_stock = parseMinStock(body.min_stock);
 
   const errors: SparepartFieldError[] = [];
@@ -50,6 +51,9 @@ export function parseSparepartItemBody(
   }
   if (category_id == null) {
     errors.push({ field: "category_id", message: "Category is required." });
+  }
+  if (uom_id == null) {
+    errors.push({ field: "uom_id", message: "UoM is required." });
   }
   if (min_stock == null) {
     errors.push({
@@ -70,6 +74,7 @@ export function parseSparepartItemBody(
       model,
       notes,
       category_id: category_id as number,
+      uom_id: uom_id as number,
       min_stock: min_stock as number,
     },
   };

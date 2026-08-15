@@ -77,7 +77,7 @@ export function CategoryDonut({
 }: {
   rows: SparepartOverviewByCategory[];
 }) {
-  const { lang } = useLang();
+  const { t, lang } = useLang();
   const slices = rows.map((row) => ({
     name: localizedName(
       { name_en: row.name_en, name_cn: row.name_cn },
@@ -92,7 +92,7 @@ export function CategoryDonut({
     <Donut
       slices={slices}
       centerValue={total.toLocaleString()}
-      centerLabel={lang === "cn" ? "件" : "pcs"}
+      centerLabel={t.sparepart.qty}
     />
   );
 }
@@ -177,7 +177,7 @@ export function TypeDonut({
     <Donut
       slices={mapped}
       centerValue={total.toLocaleString()}
-      centerLabel={t.sparepart.pcs}
+      centerLabel={t.sparepart.qty}
     />
   );
 }

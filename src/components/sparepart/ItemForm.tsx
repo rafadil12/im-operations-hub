@@ -10,6 +10,7 @@ import type {
   SparepartCategory,
   SparepartItem,
   SparepartItemInput,
+  SparepartUom,
 } from "@/lib/types";
 
 export type SparepartItemFormExtras = {
@@ -40,8 +41,12 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const [categoryId, setCategoryId] = useState(
     initial?.category_id ? String(initial.category_id) : "",
   );
+  const [uomId, setUomId] = useState(
+    initial?.uom_id ? String(initial.uom_id) : "",
+  );
   const [minStock, setMinStock] = useState(String(initial?.min_stock ?? 0));
   const [categories, setCategories] = useState<SparepartCategory[]>([]);
+  const [uoms, setUoms] = useState<SparepartUom[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
@@ -54,13 +59,22 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
-      .then((data) => {
+    Promise.all([
+      apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories"),
+      apiGetAbs<{ rows: SparepartUom[] }>("/api/sparepart/uoms"),
+    ])
+      .then(([catData, uomData]) => {
         if (cancelled) return;
-        setCategories(data.rows);
+        setCategories(catData.rows);
+        setUoms(uomData.rows);
         if (!initial?.category_id) {
-          const it = data.rows.find((row) => row.code === "IT") ?? data.rows[0];
+          const it = catData.rows.find((row) => row.code === "IT") ?? catData.rows[0];
           if (it) setCategoryId(String(it.id));
+        }
+        if (!initial?.uom_id) {
+          const pcs =
+            uomData.rows.find((row) => row.code === "PCS") ?? uomData.rows[0];
+          if (pcs) setUomId(String(pcs.id));
         }
       })
       .catch(() => {
@@ -69,7 +83,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [initial?.category_id, t.common.error]);
+  }, [initial?.category_id, initial?.uom_id, t.common.error]);
 
   useEffect(() => {
     if (!file) {
@@ -93,6 +107,11 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
       setError(t.sparepart.category);
       return;
     }
+    const parsedUomId = Number(uomId);
+    if (!Number.isFinite(parsedUomId) || parsedUomId <= 0) {
+      setError(t.sparepart.uom);
+      return;
+    }
     const parsedMin = Number(minStock);
     if (!Number.isFinite(parsedMin) || parsedMin < 0 || !Number.isInteger(parsedMin)) {
       setError(t.sparepart.minStock);
@@ -111,6 +130,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           model: model.trim(),
           notes: notes.trim(),
           category_id: parsedCategoryId,
+          uom_id: parsedUomId,
           min_stock: parsedMin,
         },
         { file, removeImage },
@@ -230,6 +250,20 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                   label: localizedName(row, lang),
                 }))}
                 placeholder={t.sparepart.category}
+                disabled={busy}
+              />
+            </div>
+            <div>
+              <label className={label}>{t.sparepart.uom} *</label>
+              <SparepartDropdown
+                className="w-full"
+                value={uomId}
+                onChange={setUomId}
+                options={uoms.map((row) => ({
+                  value: String(row.id),
+                  label: `${row.code} — ${localizedName(row, lang)}`,
+                }))}
+                placeholder={t.sparepart.uom}
                 disabled={busy}
               />
             </div>

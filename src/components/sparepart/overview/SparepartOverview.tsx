@@ -144,7 +144,7 @@ export function SparepartOverview({
         />
         <KpiCard
           label={t.sparepart.kpiTotalStock}
-          value={`${data.kpi.totalStock.toLocaleString()} ${t.sparepart.pcs}`}
+          value={`${data.kpi.totalStock.toLocaleString()} ${t.sparepart.qty}`}
           change={data.kpi.totalStockMomPct}
           spark={data.kpi.sparkline}
         />
@@ -156,7 +156,7 @@ export function SparepartOverview({
         />
         <KpiCard
           label={t.sparepart.kpiMovement}
-          value={`${data.kpi.movementQty.toLocaleString()} ${t.sparepart.pcs}`}
+          value={`${data.kpi.movementQty.toLocaleString()} ${t.sparepart.qty}`}
           change={data.kpi.movementMomPct}
           spark={data.kpi.sparkline}
         />
@@ -297,6 +297,7 @@ export function SparepartOverview({
                   </div>
                   <span className="shrink-0 tabular-nums font-semibold text-text">
                     {item.stock_current.toLocaleString()}
+                    {item.uom_code ? ` ${item.uom_code}` : ""}
                   </span>
                 </li>
               ))
@@ -319,6 +320,7 @@ export function SparepartOverview({
                     <p className="truncate text-text-muted">
                       {localizedName(item, lang)} · {item.stock_current}/
                       {item.min_stock}
+                      {item.uom_code ? ` ${item.uom_code}` : ""}
                     </p>
                   </div>
                   <span
@@ -367,7 +369,8 @@ export function SparepartOverview({
                 <p className="font-semibold text-text">{item.code}</p>
                 <p className="text-text-muted">{localizedName(item, lang)}</p>
                 <p className="mt-1 tabular-nums text-text">
-                  {item.stock_current} / {item.min_stock} {t.sparepart.pcs}
+                  {item.stock_current} / {item.min_stock}
+                  {item.uom_code ? ` ${item.uom_code}` : ""}
                 </p>
               </li>
             ))}

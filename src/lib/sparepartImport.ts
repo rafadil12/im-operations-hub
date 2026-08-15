@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { normalizeCategoryCode } from "@/lib/sparepartCategories";
+import { DEFAULT_UOM_CODE, normalizeUomCode } from "@/lib/sparepartUoms";
 import type { SparepartCategoryCode } from "@/lib/types";
 
 export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
@@ -21,6 +22,7 @@ export type ParsedImportItem = {
   model: string;
   notes: string;
   category_code: SparepartCategoryCode;
+  uom_code: string;
   min_stock: number;
 };
 
@@ -125,6 +127,7 @@ export async function parseSparepartItemsWorkbook(
     "最低库存",
     "安全库存",
   ]);
+  const uomCol = findCol(headers, ["uom", "satuan"]);
 
   if (codeCol < 0) {
     return {
@@ -245,6 +248,12 @@ export async function parseSparepartItemsWorkbook(
     }
     const min_stock = n;
 
+    const rawUom =
+      uomCol >= 0 ? cellText(row.getCell(uomCol + 1).value) : "";
+    const uom_code = rawUom
+      ? (normalizeUomCode(rawUom) ?? rawUom.toUpperCase())
+      : DEFAULT_UOM_CODE;
+
     items.push({
       row: r,
       code,
@@ -257,6 +266,7 @@ export async function parseSparepartItemsWorkbook(
       model: modelCol >= 0 ? cellText(row.getCell(modelCol + 1).value) : "",
       notes: notesCol >= 0 ? cellText(row.getCell(notesCol + 1).value) : "",
       category_code,
+      uom_code,
       min_stock,
     });
   }

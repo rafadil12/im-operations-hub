@@ -71,9 +71,12 @@ export async function GET(request: NextRequest) {
          c.code AS category_code,
          c.name_en AS category_name_en,
          c.name_cn AS category_name_cn,
+         i.uom_id,
+         u.code AS uom_code,
          i.notes
        FROM sparepart_items i
        JOIN sparepart_categories c ON c.id = i.category_id
+       JOIN uoms u ON u.id = i.uom_id
        WHERE ${where}
        ORDER BY i.code ASC`,
       params,

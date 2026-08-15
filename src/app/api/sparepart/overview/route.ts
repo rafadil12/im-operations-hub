@@ -15,8 +15,10 @@ import {
 import {
   canonicalCategoryCode,
   categoryMatchSql,
+  groupByCanonicalCategory,
   LOW_STOCK_SQL,
   normalizeCategoryCode,
+  preferredCanonicalCategoryRow,
 } from "@/lib/sparepartCategories";
 import {
   IN_QTY_SQL,
@@ -52,6 +54,7 @@ type ItemRow = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  uom_code: string | null;
   stock_current: number;
   min_stock: number;
 };
@@ -166,6 +169,7 @@ export async function GET(request: NextRequest) {
     const itemCatJoin = `
       FROM sparepart_items i
       JOIN sparepart_categories c ON c.id = i.category_id
+      JOIN uoms u ON u.id = i.uom_id
     `;
     const itemWhere = [
       "i.deleted_at IS NULL",
@@ -411,7 +415,7 @@ export async function GET(request: NextRequest) {
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
-                i.stock_current, i.min_stock
+                u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere}
          ORDER BY i.stock_current DESC, i.code ASC
@@ -420,7 +424,7 @@ export async function GET(request: NextRequest) {
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
-                i.stock_current, i.min_stock
+                u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere} AND ${LOW_STOCK_SQL}
          ORDER BY i.stock_current ASC, i.code ASC
@@ -452,7 +456,7 @@ export async function GET(request: NextRequest) {
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
-                i.stock_current, i.min_stock
+                u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere}
          ORDER BY i.code ASC
@@ -486,16 +490,18 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const byCategory: SparepartOverviewByCategory[] = catStats.map((row) => {
-      const code = canonicalCategoryCode(row.code);
+    const byCategory: SparepartOverviewByCategory[] = [
+      ...groupByCanonicalCategory(catStats).entries(),
+    ].map(([code, group]) => {
+      const preferred = preferredCanonicalCategoryRow(code, group);
       const move = moveByCat.get(code);
       return {
         code,
-        name_en: row.name_en,
-        name_cn: row.name_cn,
-        totalItems: n(row.item_count),
-        currentStock: n(row.stock_qty),
-        lowStock: n(row.low_count),
+        name_en: preferred.name_en,
+        name_cn: preferred.name_cn,
+        totalItems: group.reduce((sum, row) => sum + n(row.item_count), 0),
+        currentStock: group.reduce((sum, row) => sum + n(row.stock_qty), 0),
+        lowStock: group.reduce((sum, row) => sum + n(row.low_count), 0),
         movementQty: move?.movement ?? 0,
         netMovement: move?.net ?? 0,
       };
@@ -557,20 +563,22 @@ export async function GET(request: NextRequest) {
         end: toDateInput(period.end),
       },
       category: categoryFilter,
-      categories: categories.map((row) => {
-        const code = canonicalCategoryCode(row.code);
-        const stat = catStats.find(
-          (s) => canonicalCategoryCode(s.code) === code,
-        );
-        return {
-          id: row.id,
-          code,
-          name_en: row.name_en,
-          name_cn: row.name_cn,
-          itemCount: n(stat?.item_count),
-          stockQty: n(stat?.stock_qty),
-        };
-      }),
+      categories: [...groupByCanonicalCategory(categories).entries()].map(
+        ([code, group]) => {
+          const preferred = preferredCanonicalCategoryRow(code, group);
+          const stats = catStats.filter(
+            (s) => canonicalCategoryCode(s.code) === code,
+          );
+          return {
+            id: preferred.id,
+            code,
+            name_en: preferred.name_en,
+            name_cn: preferred.name_cn,
+            itemCount: stats.reduce((sum, row) => sum + n(row.item_count), 0),
+            stockQty: stats.reduce((sum, row) => sum + n(row.stock_qty), 0),
+          };
+        },
+      ),
       kpi: {
         totalItems,
         totalStock,
@@ -623,17 +631,29 @@ export async function GET(request: NextRequest) {
         }))
         .filter((row) => row.qty > 0)
         .sort((a, b) => b.qty - a.qty),
-      categoryLocationHeatmap: heatRows.map((row) => ({
-        categoryCode: canonicalCategoryCode(row.category_code),
-        locationId: n(row.location_id),
-        locationName: row.location_name,
-        qty: n(row.qty),
-      })),
+      categoryLocationHeatmap: [
+        ...heatRows
+          .reduce((map, row) => {
+            const categoryCode = canonicalCategoryCode(row.category_code);
+            const locationId = n(row.location_id);
+            const key = `${categoryCode}|${locationId}`;
+            const prev = map.get(key);
+            map.set(key, {
+              categoryCode,
+              locationId,
+              locationName: row.location_name,
+              qty: (prev?.qty ?? 0) + n(row.qty),
+            });
+            return map;
+          }, new Map<string, SparepartOverviewData["categoryLocationHeatmap"][number]>())
+          .values(),
+      ],
       topStock: topRows.map((row) => ({
         code: row.code,
         name_en: row.name_en,
         name_cn: row.name_cn,
         category_code: canonicalCategoryCode(row.category_code),
+        uom_code: row.uom_code,
         stock_current: n(row.stock_current),
       })),
       lowStockItems: lowRows.map((row) => ({
@@ -641,6 +661,7 @@ export async function GET(request: NextRequest) {
         name_en: row.name_en,
         name_cn: row.name_cn,
         category_code: canonicalCategoryCode(row.category_code),
+        uom_code: row.uom_code,
         stock_current: n(row.stock_current),
         min_stock: n(row.min_stock),
         status: n(row.stock_current) <= 0 ? "critical" : "low",
@@ -654,6 +675,7 @@ export async function GET(request: NextRequest) {
         name_en: row.name_en,
         name_cn: row.name_cn,
         category_code: canonicalCategoryCode(row.category_code),
+        uom_code: row.uom_code,
         stock_current: n(row.stock_current),
         min_stock: n(row.min_stock),
       })),

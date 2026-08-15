@@ -85,6 +85,7 @@ export type SparepartOverviewTopItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  uom_code?: string | null;
   stock_current: number;
 };
 
@@ -93,6 +94,7 @@ export type SparepartOverviewLowItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  uom_code?: string | null;
   stock_current: number;
   min_stock: number;
   status: "critical" | "low";
@@ -108,6 +110,7 @@ export type SparepartOverviewSparseItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  uom_code?: string | null;
   stock_current: number;
   min_stock: number;
 };

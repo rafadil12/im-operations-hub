@@ -21,6 +21,7 @@ export async function GET() {
       { header: "Model", key: "model", width: 28 },
       { header: "Category", key: "category", width: 12 },
       { header: "Min Stock", key: "min_stock", width: 12 },
+      { header: "UoM", key: "uom", width: 10 },
       { header: "Notes", key: "notes", width: 24 },
     ];
     sheet.addRow({
@@ -32,6 +33,7 @@ export async function GET() {
       model: "TL-SF1016DS",
       category: "IT",
       min_stock: 0,
+      uom: "PCS",
       notes: "",
     });
     sheet.getRow(1).font = { bold: true };

@@ -25,9 +25,16 @@ export const LOW_STOCK_SQL = `i.min_stock > 0 AND i.stock_current <= i.min_stock
 
 export const ITEM_CATEGORY_SELECT = `
   i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
-  i.stock_current, i.min_stock, i.category_id,
+  i.stock_current, i.min_stock, i.category_id, i.uom_id,
   c.code AS category_code, c.name_en AS category_name_en, c.name_cn AS category_name_cn,
+  u.code AS uom_code, u.name_en AS uom_name_en, u.name_cn AS uom_name_cn,
   i.image_url, i.notes, i.deleted_at, i.created_at, i.updated_at
+`;
+
+export const ITEM_CATEGORY_FROM = `
+  sparepart_items i
+  JOIN sparepart_categories c ON c.id = i.category_id
+  JOIN uoms u ON u.id = i.uom_id
 `;
 
 export function isSparepartCategoryCode(
@@ -47,6 +54,31 @@ export function normalizeCategoryCode(
 
 export function canonicalCategoryCode(value: string): string {
   return normalizeCategoryCode(value) ?? value.trim().toUpperCase();
+}
+
+/** Group rows that share a canonical code (e.g. ASM + ASSEMBLY). */
+export function groupByCanonicalCategory<T extends { code: string }>(
+  rows: T[],
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = canonicalCategoryCode(row.code);
+    const list = groups.get(key);
+    if (list) list.push(row);
+    else groups.set(key, [row]);
+  }
+  return groups;
+}
+
+export function preferredCanonicalCategoryRow<T extends { code: string }>(
+  canonicalCode: string,
+  group: T[],
+): T {
+  return (
+    group.find(
+      (row) => row.code.trim().toUpperCase() === canonicalCode,
+    ) ?? group[0]
+  );
 }
 
 export function categoryColor(code: string | null | undefined): string {

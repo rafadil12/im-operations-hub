@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
-import { ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
+import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
 import type { SparepartItem } from "@/lib/types";
 
 const SELECT_COLS = ITEM_CATEGORY_SELECT;
@@ -35,8 +35,7 @@ export async function GET(request: NextRequest) {
     if (exactCode) {
       const rows = await query<SparepartItem[]>(
         `SELECT ${SELECT_COLS}
-         FROM sparepart_items i
-         JOIN sparepart_categories c ON c.id = i.category_id
+         FROM ${ITEM_CATEGORY_FROM}
          WHERE i.deleted_at IS NULL AND i.code = ?
          LIMIT 5`,
         [exactCode],
@@ -54,8 +53,7 @@ export async function GET(request: NextRequest) {
 
     const rows = await query<SparepartItem[]>(
       `SELECT ${SELECT_COLS}
-       FROM sparepart_items i
-       JOIN sparepart_categories c ON c.id = i.category_id
+       FROM ${ITEM_CATEGORY_FROM}
        WHERE i.deleted_at IS NULL
          AND (
            i.code LIKE ?

@@ -117,7 +117,17 @@ Stock is tracked per material × storage location. Changes go through SAP-style 
 - Posting (101/201/311) requires `storage_location_id`; transfer 311 also needs `to_storage_location_id`. There is no default location on the material master — pick a location on each post.
 - Reversals: POST `/api/sparepart/documents/[id]/reverse`. Do not edit or delete mat docs.
 - Optional `client_request_id` on goods movements for idempotency.
-- Materials import/template is master data only (Code, Name EN/CN, Brand EN/CN, Model, Category, Min Stock, Notes) — no opening stock or location.
+- Materials import/template is master data only (Code, Name EN/CN, Brand EN/CN, Model, Category, Min Stock, UoM, Notes) — no opening stock or location.
+
+### Opening stock (AGV / ASSEMBLY)
+
+Idempotent import from `AGV & ASSEMBLY STOCK DATA.xlsx` (does not wipe IT ledger):
+
+```bash
+node --env-file=.env.local db/import-agv-assembly-stock.mjs
+```
+
+Posts 101 per material/location with `client_request_id` `OPENING-{code}`.
 
 ### Historical ledger import
 

@@ -10,7 +10,8 @@ import {
   type ParsedImportItem,
 } from "@/lib/sparepartImport";
 import { DEFAULT_SPAREPART_CATEGORY_CODE, normalizeCategoryCode } from "@/lib/sparepartCategories";
-import type { SparepartCategory } from "@/lib/types";
+import { DEFAULT_UOM_CODE, normalizeUomCode } from "@/lib/sparepartUoms";
+import type { SparepartCategory, SparepartUom } from "@/lib/types";
 import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -34,6 +35,25 @@ async function loadActiveCategoryIdByCode(): Promise<Map<string, number>> {
     `SELECT id, code FROM sparepart_categories WHERE is_active = 1`,
   );
   return buildCategoryIdByCode(rows);
+}
+
+function buildUomIdByCode(uoms: SparepartUom[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const row of uoms) {
+    const id = Number(row.id);
+    const raw = String(row.code).toUpperCase();
+    map.set(raw, id);
+    const canonical = normalizeUomCode(raw);
+    if (canonical) map.set(canonical, id);
+  }
+  return map;
+}
+
+async function loadActiveUomIdByCode(): Promise<Map<string, number>> {
+  const rows = await query<SparepartUom[]>(
+    `SELECT id, code FROM uoms WHERE is_active = 1`,
+  );
+  return buildUomIdByCode(rows);
 }
 
 async function findActiveDuplicateImportCodes(
@@ -81,6 +101,22 @@ function findInvalidImportCategories(
   return errors;
 }
 
+function findInvalidImportUoms(
+  items: ParsedImportItem[],
+  uomIdByCode: Map<string, number>,
+): ImportRowError[] {
+  const errors: ImportRowError[] = [];
+  for (const item of items) {
+    if (uomIdByCode.has(item.uom_code)) continue;
+    errors.push({
+      row: item.row,
+      field: "uom",
+      message: `UoM "${item.uom_code}" is not available.`,
+    });
+  }
+  return errors;
+}
+
 function resolveImportCategoryId(
   categoryCode: ParsedImportItem["category_code"],
   categoryIdByCode: Map<string, number>,
@@ -90,6 +126,17 @@ function resolveImportCategoryId(
     throw new Error(`Category "${categoryCode}" is not available.`);
   }
   return categoryId;
+}
+
+function resolveImportUomId(
+  uomCode: string,
+  uomIdByCode: Map<string, number>,
+): number {
+  const uomId = uomIdByCode.get(uomCode);
+  if (uomId == null) {
+    throw new Error(`UoM "${uomCode}" is not available.`);
+  }
+  return uomId;
 }
 
 export async function POST(request: NextRequest) {
@@ -150,12 +197,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const uomIdByCode = await loadActiveUomIdByCode();
+    if (!uomIdByCode.has(DEFAULT_UOM_CODE)) {
+      return NextResponse.json(
+        {
+          error: "PCS UoM is missing. Run database migrations.",
+          errors: [] as ImportRowError[],
+        },
+        { status: 500 },
+      );
+    }
+
     const duplicateErrors = await findActiveDuplicateImportCodes(parsed.items);
     const categoryErrors = findInvalidImportCategories(
       parsed.items,
       categoryIdByCode,
     );
-    const validationErrors = [...duplicateErrors, ...categoryErrors];
+    const uomErrors = findInvalidImportUoms(parsed.items, uomIdByCode);
+    const validationErrors = [
+      ...duplicateErrors,
+      ...categoryErrors,
+      ...uomErrors,
+    ];
     if (validationErrors.length > 0) {
       return NextResponse.json(
         {
@@ -174,11 +237,12 @@ export async function POST(request: NextRequest) {
           item.category_code,
           categoryIdByCode,
         );
+        const uomId = resolveImportUomId(item.uom_code, uomIdByCode);
         await conn.query(
           `INSERT INTO sparepart_items
             (code, name_en, name_cn, brand_en, brand_cn, model, notes,
-             stock_current, min_stock, category_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+             stock_current, min_stock, category_id, uom_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
            ON DUPLICATE KEY UPDATE
              name_en = VALUES(name_en),
              name_cn = VALUES(name_cn),
@@ -188,6 +252,7 @@ export async function POST(request: NextRequest) {
              notes = VALUES(notes),
              min_stock = VALUES(min_stock),
              category_id = VALUES(category_id),
+             uom_id = VALUES(uom_id),
              deleted_at = NULL`,
           [
             item.code,
@@ -199,6 +264,7 @@ export async function POST(request: NextRequest) {
             item.notes || null,
             item.min_stock,
             categoryId,
+            uomId,
           ],
         );
 

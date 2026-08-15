@@ -891,19 +891,60 @@ if (!(await tableExists("sparepart_categories"))) {
   console.log("sparepart_categories already exists.");
 }
 
+if (await tableExists("sparepart_categories")) {
+  const [asmRows] = await conn.query(
+    `SELECT id FROM sparepart_categories WHERE UPPER(code) = 'ASM' LIMIT 1`,
+  );
+  const [assemblyRows] = await conn.query(
+    `SELECT id FROM sparepart_categories WHERE UPPER(code) = 'ASSEMBLY' LIMIT 1`,
+  );
+  const keepId = asmRows[0]?.id ?? assemblyRows[0]?.id;
+  if (keepId) {
+    const [dupRows] = await conn.query(
+      `SELECT id, code FROM sparepart_categories
+       WHERE id <> ? AND UPPER(code) IN ('ASM', 'ASSEMBLY')`,
+      [keepId],
+    );
+    for (const dup of dupRows) {
+      if (await tableExists("sparepart_items")) {
+        const [moved] = await conn.query(
+          `UPDATE sparepart_items SET category_id = ? WHERE category_id = ?`,
+          [keepId, dup.id],
+        );
+        const count = /** @type {{ affectedRows?: number }} */ (moved).affectedRows ?? 0;
+        if (count > 0) {
+          console.log(
+            `Moved ${count} sparepart_items from category ${dup.code} → id ${keepId}.`,
+          );
+        }
+      }
+      await conn.query(`DELETE FROM sparepart_categories WHERE id = ?`, [dup.id]);
+      console.log(`Deleted duplicate sparepart category ${dup.code} (id ${dup.id}).`);
+    }
+    await conn.query(
+      `UPDATE sparepart_categories
+       SET code = 'ASM', name_en = 'ASSEMBLY', name_cn = '组装',
+           sort_order = 3, is_active = 1
+       WHERE id = ?`,
+      [keepId],
+    );
+    console.log(`Normalized assembly category to code ASM / name ASSEMBLY on id ${keepId}.`);
+  }
+}
+
 await conn.query(
   `INSERT INTO sparepart_categories (code, name_en, name_cn, sort_order, is_active)
    VALUES
      ('IT', 'IT', 'IT', 1, 1),
      ('AGV', 'AGV', 'AGV', 2, 1),
-     ('ASSEMBLY', 'Assembly', '组装', 3, 1),
+     ('ASM', 'ASSEMBLY', '组装', 3, 1),
      ('MES', 'MES', 'MES', 4, 1)
    ON DUPLICATE KEY UPDATE
      name_en = VALUES(name_en),
      name_cn = VALUES(name_cn),
      sort_order = VALUES(sort_order)`,
 );
-console.log("Seeded sparepart_categories (IT, AGV, ASSEMBLY, MES).");
+console.log("Seeded sparepart_categories (IT, AGV, ASM, MES).");
 
 if (await tableExists("sparepart_items")) {
   if (!(await columnExists("sparepart_items", "min_stock"))) {
@@ -971,6 +1012,114 @@ if (await tableExists("sparepart_items")) {
     console.log("Added fk_sparepart_items_category.");
   } else {
     console.log("fk_sparepart_items_category already exists.");
+  }
+}
+
+// --- 016: uoms + sparepart_items.uom_id + AGV/ASSEMBLY racks ---
+if (!(await tableExists("uoms"))) {
+  const sql016 = readFileSync(join(__dirname, "migrations", "016_uoms.sql"), "utf8");
+  await conn.query(sql016);
+  console.log("Created uoms.");
+} else {
+  console.log("uoms already exists.");
+}
+
+await conn.query(
+  `INSERT INTO uoms (code, name_en, name_cn, sort_order, is_active)
+   VALUES
+     ('PCS', 'Pieces', '件', 1, 1),
+     ('PACK', 'Pack', '包', 2, 1),
+     ('ROLL', 'Roll', '卷', 3, 1),
+     ('MTR', 'Meter', '米', 4, 1)
+   ON DUPLICATE KEY UPDATE
+     name_en = VALUES(name_en),
+     name_cn = VALUES(name_cn),
+     sort_order = VALUES(sort_order)`,
+);
+console.log("Seeded uoms (PCS, PACK, ROLL, MTR).");
+
+if (await tableExists("sparepart_items")) {
+  if (!(await columnExists("sparepart_items", "uom_id"))) {
+    await conn.query(
+      "ALTER TABLE `sparepart_items` ADD COLUMN `uom_id` INT NULL DEFAULT NULL AFTER `category_id`",
+    );
+    console.log("Added sparepart_items.uom_id.");
+  } else {
+    console.log("sparepart_items.uom_id already exists.");
+  }
+
+  const [pcsRows] = await conn.query(
+    `SELECT id FROM uoms WHERE code = 'PCS' LIMIT 1`,
+  );
+  const pcsId = pcsRows[0]?.id;
+  if (pcsId) {
+    const [upd] = await conn.query(
+      `UPDATE sparepart_items SET uom_id = ? WHERE uom_id IS NULL`,
+      [pcsId],
+    );
+    const filled = /** @type {{ affectedRows?: number }} */ (upd).affectedRows ?? 0;
+    if (filled > 0) {
+      console.log(`Backfilled ${filled} sparepart_items.uom_id → PCS.`);
+    } else {
+      console.log("sparepart_items.uom_id already backfilled.");
+    }
+
+    if (await columnNullable("sparepart_items", "uom_id")) {
+      await conn.query(
+        "ALTER TABLE `sparepart_items` MODIFY COLUMN `uom_id` INT NOT NULL",
+      );
+      console.log("sparepart_items.uom_id set NOT NULL.");
+    }
+  } else {
+    console.log("Skip uom_id backfill: PCS UoM not found.");
+  }
+
+  if (!(await indexExists("sparepart_items", "idx_sparepart_items_uom"))) {
+    await conn.query(
+      "ALTER TABLE `sparepart_items` ADD INDEX `idx_sparepart_items_uom` (`uom_id`)",
+    );
+    console.log("Added idx_sparepart_items_uom.");
+  } else {
+    console.log("idx_sparepart_items_uom already exists.");
+  }
+
+  if (!(await constraintExists("sparepart_items", "fk_sparepart_items_uom"))) {
+    await conn.query(
+      `ALTER TABLE \`sparepart_items\`
+       ADD CONSTRAINT \`fk_sparepart_items_uom\`
+       FOREIGN KEY (\`uom_id\`) REFERENCES \`uoms\` (\`id\`)
+       ON DELETE RESTRICT ON UPDATE CASCADE`,
+    );
+    console.log("Added fk_sparepart_items_uom.");
+  } else {
+    console.log("fk_sparepart_items_uom already exists.");
+  }
+}
+
+if (await tableExists("sparepart_storage_locations")) {
+  const rackLocations = [
+    ["AGV-RACK", "AGV RACK"],
+    ["ASM-RACK-A", "ASSEMBLY RACK A"],
+    ["ASM-RACK-B", "ASSEMBLY RACK B"],
+    ["ASM-RACK-C", "ASSEMBLY RACK C"],
+    ["ASM-RACK-D", "ASSEMBLY RACK D"],
+    ["ASM-RACK-E", "ASSEMBLY RACK E"],
+    ["ASM-RACK-F", "ASSEMBLY RACK F"],
+  ];
+  for (const [code, name] of rackLocations) {
+    const [existing] = await conn.query(
+      `SELECT id FROM sparepart_storage_locations
+       WHERE code = ? OR LOWER(name) = LOWER(?)
+       LIMIT 1`,
+      [code, name],
+    );
+    if (existing[0]) continue;
+    await conn.query(
+      `INSERT INTO sparepart_storage_locations (code, name, is_active)
+       VALUES (?, ?, 1)`,
+      [code, name],
+    );
+    console.log(`Seeded storage location ${code} (${name}).`);
   }
 }
 

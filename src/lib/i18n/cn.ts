@@ -155,6 +155,7 @@ const cn: Dict = {
     heatmapHigh: "高",
     specialItems: "该类别物料很少",
     pcs: "件",
+    uom: "单位",
     movementType: "事务类型",
     movement101: "收货入库",
     movement201: "发货出库",
@@ -190,7 +191,7 @@ const cn: Dict = {
     goPost: "新建库存事务",
     importTitle: "导入物料项",
     importHint:
-      "上传 Excel（.xlsx）。必填：Code、Name EN、Name CN、Category、Min Stock。可选：Brand、Model、Notes。已存在的有效编码将被拒绝；不会改动库存。",
+      "上传 Excel（.xlsx）。必填：Code、Name EN、Name CN、Category、Min Stock。可选：Brand、Model、Notes、UoM（默认 PCS）。已存在的有效编码将被拒绝；不会改动库存。",
   },
   settings: {
     rolesTitle: "角色",

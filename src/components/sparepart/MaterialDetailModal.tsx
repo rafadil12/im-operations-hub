@@ -23,6 +23,7 @@ type Props = {
     | "category_code"
     | "category_name_en"
     | "category_name_cn"
+    | "uom_code"
     | "image_url"
   > & { balances?: SparepartStockBalance[] };
   onClose: () => void;
@@ -89,12 +90,18 @@ export function MaterialDetailModal({ item, onClose }: Props) {
             lang,
           ) || item.category_code || "-",
       },
-      { label: t.sparepart.minStock, value: item.min_stock ?? 0 },
+      { label: t.sparepart.uom, value: item.uom_code || "-" },
     ],
     [
-      { label: t.sparepart.notes, value: item.notes || "-" },
-      { label: t.sparepart.stockCurrent, value: item.stock_current },
+      { label: t.sparepart.minStock, value: item.min_stock ?? 0 },
+      {
+        label: t.sparepart.stockCurrent,
+        value: item.uom_code
+          ? `${item.stock_current} ${item.uom_code}`
+          : item.stock_current,
+      },
     ],
+    [{ label: t.sparepart.notes, value: item.notes || "-" }],
   ];
 
   const th =
@@ -168,7 +175,9 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                     >
                       <td className={td}>{b.location_code ?? "-"}</td>
                       <td className={td}>{b.location_name ?? "-"}</td>
-                      <td className={`${td} text-right tabular-nums`}>{b.qty}</td>
+                      <td className={`${td} text-right tabular-nums`}>
+                        {item.uom_code ? `${b.qty} ${item.uom_code}` : b.qty}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

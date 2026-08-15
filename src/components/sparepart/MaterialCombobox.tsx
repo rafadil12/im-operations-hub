@@ -280,7 +280,9 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
                     " / " +
                     (item.model || "-")}{" "}
                   · stock:{" "}
-                  {item.stock_current}
+                  {item.uom_code
+                    ? `${item.stock_current} ${item.uom_code}`
+                    : item.stock_current}
                 </span>
               </button>
             </li>
@@ -290,7 +292,10 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       {selected ? (
         <p className="mt-1 text-[11px] text-text-dim">
           {localizedField(selected.brand_en, selected.brand_cn, lang)} /{" "}
-          {selected.model ?? "-"} · stock: {selected.stock_current}
+          {selected.model ?? "-"} · stock:{" "}
+          {selected.uom_code
+            ? `${selected.stock_current} ${selected.uom_code}`
+            : selected.stock_current}
         </p>
       ) : null}
     </div>

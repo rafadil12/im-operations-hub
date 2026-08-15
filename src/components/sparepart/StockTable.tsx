@@ -36,6 +36,14 @@ function rowMinStock(row: TableRow): number {
   return row.min_stock;
 }
 
+function rowUom(row: TableRow): string {
+  return row.uom_code?.trim() || "";
+}
+
+function formatQty(qty: number, uom: string): string {
+  return uom ? `${qty} ${uom}` : String(qty);
+}
+
 function rowCategoryLabel(
   row: TableRow,
   lang: "en" | "cn",
@@ -403,7 +411,7 @@ export function StockTable({
                   </span>
                 </td>
                 <td className={`${td} text-center whitespace-nowrap tabular-nums`}>
-                  {rowMinStock(row)}
+                  {formatQty(rowMinStock(row), rowUom(row))}
                 </td>
                 {showCurrentStock ? (
                   <td
@@ -411,7 +419,7 @@ export function StockTable({
                       rowStock(row) <= 0 ? "text-danger" : "text-text"
                     }`}
                   >
-                    {rowStock(row)}
+                    {formatQty(rowStock(row), rowUom(row))}
                   </td>
                 ) : null}
                 {showCurrentStock ? (

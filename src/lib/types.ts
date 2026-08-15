@@ -257,6 +257,17 @@ export type SparepartCategory = {
   updated_at?: string | null;
 };
 
+export type SparepartUom = {
+  id: number;
+  code: string;
+  name_en: string;
+  name_cn: string;
+  sort_order: number;
+  is_active: number | boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 export type SparepartStorageLocation = {
   id: number;
   code: string;
@@ -291,6 +302,8 @@ export type SparepartStockBalanceRow = {
   category_code: string | null;
   category_name_en: string | null;
   category_name_cn: string | null;
+  uom_id?: number;
+  uom_code?: string | null;
   notes: string | null;
 };
 
@@ -308,6 +321,10 @@ export type SparepartItem = {
   category_code?: string | null;
   category_name_en?: string | null;
   category_name_cn?: string | null;
+  uom_id: number;
+  uom_code?: string | null;
+  uom_name_en?: string | null;
+  uom_name_cn?: string | null;
   image_url: string | null;
   notes: string | null;
   deleted_at: string | null;
@@ -325,6 +342,7 @@ export type SparepartItemInput = {
   model: string;
   notes: string;
   category_id: number;
+  uom_id: number;
   min_stock: number;
 };
 

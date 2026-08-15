@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
-import { ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
+import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
 import { parseSparepartItemBody } from "@/lib/sparepartValidation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
@@ -14,6 +14,14 @@ const SEARCH_SQL = `
 async function categoryExists(id: number): Promise<boolean> {
   const rows = await query<{ id: number }[]>(
     `SELECT id FROM sparepart_categories WHERE id = ? AND is_active = 1 LIMIT 1`,
+    [id],
+  );
+  return Boolean(rows[0]);
+}
+
+async function uomExists(id: number): Promise<boolean> {
+  const rows = await query<{ id: number }[]>(
+    `SELECT id FROM uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
     [id],
   );
   return Boolean(rows[0]);
@@ -43,8 +51,7 @@ export async function GET(request: NextRequest) {
 
     const sql = `
       SELECT ${ITEM_CATEGORY_SELECT}
-      FROM sparepart_items i
-      JOIN sparepart_categories c ON c.id = i.category_id
+      FROM ${ITEM_CATEGORY_FROM}
       WHERE ${conditions.join(" AND ")}
       ORDER BY i.code ASC
     `;
@@ -81,13 +88,16 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (!(await uomExists(data.uom_id))) {
+      return NextResponse.json({ error: "Invalid UoM." }, { status: 400 });
+    }
 
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
           (code, name_en, name_cn, brand_en, brand_cn, model, notes,
-           stock_current, min_stock, category_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+           stock_current, min_stock, category_id, uom_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
         [
           data.code,
           data.name_en || null,
@@ -98,6 +108,7 @@ export async function POST(request: NextRequest) {
           data.notes || null,
           data.min_stock,
           data.category_id,
+          data.uom_id,
         ],
       );
       return NextResponse.json({ id: result.insertId }, { status: 201 });
