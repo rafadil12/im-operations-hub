@@ -325,6 +325,44 @@ const en = {
     importSuccess:
       "Import complete: {imported} new, {updated} updated ({total} total).",
   },
+
+  safety: {
+    management: "Safety Management",
+
+    overviewTitle: "Monthly Safety Overview",
+    overviewSubtitle:
+      "Monitor the completion of weekly safety requirements.",
+
+    monthlyProgress: "Monthly Progress",
+    weeklyPeriods: "weekly periods",
+
+    completed: "Completed",
+    underReview: "Under Review",
+    pending: "Pending",
+
+    completedSubmissions: "completed submissions",
+    monthlyCompletion: "Monthly Completion",
+
+    requiredSubmissions: "required submissions",
+    weeklyRequirements: "weekly requirements",
+
+    activitiesPerWeek: "3 activities × 4 weeks",
+
+    upToDate: "Up to date",
+    awaitingVerification: "Awaiting verification",
+    needsAttention: "Needs attention",
+
+    weeklyTraining: "Safety Training",
+    hazardFinding: "Hazard Finding",
+    cleaningFinding: "Cleaning Finding",
+
+    submissionStatus: "Submission Status",
+    viewDetails: "View Details",
+    upload: "Upload",
+
+    week: "Week {week}",
+    total: "Total",
+  },
   dashboard: {
     title: "Dashboard",
     subtitle:

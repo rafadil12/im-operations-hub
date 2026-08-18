@@ -72,8 +72,18 @@ const navItems: NavItem[] = [
     id: "safety",
     labelKey: "safety",
     icon: "safety",
-    disabled: true,
-    children: comingSoonChildren,
+    children: [
+      {
+        id: "overview",
+        labelKey: "overview",
+        href: "/safety",
+      },
+      {
+        id: "management",
+        labelKey: "moduleManagement",
+        href: "/safety/management",
+      },
+    ],
   },
   {
     id: "sparepart",
@@ -158,12 +168,22 @@ let cachedCollapsed = false;
 
 function isChildActive(pathname: string, child: NavChild): boolean {
   if (child.children?.length) {
-    return child.children.some((nested) => isChildActive(pathname, nested));
+    return child.children.some((nested) =>
+      isChildActive(pathname, nested)
+    );
   }
+
   if (!child.href) return false;
 
-  // Module overview landings (exact match so /sparepart/stock ≠ Overview)
-  if (child.href === "/itsm" || child.href === "/sparepart") {
+  // Halaman utama module harus exact match.
+  // Contoh:
+  // /safety         -> aktif hanya di /safety
+  // /safety/management -> tidak membuat /safety ikut aktif
+  if (
+    child.href === "/itsm" ||
+    child.href === "/sparepart" ||
+    child.href === "/safety"
+  ) {
     return pathname === child.href;
   }
 
@@ -174,10 +194,18 @@ function isChildActive(pathname: string, child: NavChild): boolean {
 
   // Settings
   if (child.href.startsWith("/settings/")) {
-    return pathname.startsWith(child.href);
+    return (
+      pathname === child.href ||
+      pathname.startsWith(`${child.href}/`)
+    );
   }
 
-  return pathname.startsWith(child.href);
+  // Menu lain:
+  // aktif jika URL sama persis atau berada di bawah URL tersebut.
+  return (
+    pathname === child.href ||
+    pathname.startsWith(`${child.href}/`)
+  );
 }
 
 function flattenNavLeaves(children: NavChild[]): NavChild[] {
