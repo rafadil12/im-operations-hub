@@ -17,7 +17,13 @@ type ModuleCardProps = {
   onOpen?: () => void;
 };
 
-function CardIcon({ type, color }: { type: ModuleCardData["icon"]; color: string }) {
+function CardIcon({
+  type,
+  color,
+}: {
+  type: ModuleCardData["icon"];
+  color: string;
+}) {
   const wrap = (child: ReactNode) => (
     <span
       className="inline-flex size-7 items-center justify-center rounded-md text-sm"
@@ -72,6 +78,7 @@ function ChartSection({
       >
         {data.chart.title}
       </h4>
+
       {data.chart.type === "trend" ? (
         <TicketTrendChart
           data={data.chart.series ?? []}
@@ -104,6 +111,7 @@ function PicsList({ data }: { data: ModuleCardData }) {
       <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
         {data.pics.title}
       </h4>
+
       <ul className="flex min-h-0 flex-1 flex-col justify-between gap-2">
         {data.pics.items.map((pic) => (
           <li key={pic.name} className="flex items-center gap-2.5">
@@ -113,11 +121,19 @@ function PicsList({ data }: { data: ModuleCardData }) {
             >
               {pic.initials}
             </span>
+
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-text">{pic.name}</p>
-              <p className="truncate text-[10px] text-text-dim">{pic.role}</p>
+              <p className="truncate text-xs font-medium text-text">
+                {pic.name}
+              </p>
+              <p className="truncate text-[10px] text-text-dim">
+                {pic.role}
+              </p>
             </div>
-            <span className="text-xs font-semibold text-text-muted">{pic.count}</span>
+
+            <span className="text-xs font-semibold text-text-muted">
+              {pic.count}
+            </span>
           </li>
         ))}
       </ul>
@@ -134,6 +150,7 @@ function BarsAndPics({ data }: { data: ModuleCardData }) {
         <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
           {data.bars.title}
         </h4>
+
         <div className="min-h-0 flex-1">
           <BarChartPlaceholder items={data.bars.items} />
         </div>
@@ -160,6 +177,7 @@ function ProgressRingItem({ ring }: { ring: ProgressRing }) {
           stroke="var(--border)"
           strokeWidth="4"
         />
+
         <circle
           cx="24"
           cy="24"
@@ -172,6 +190,7 @@ function ProgressRingItem({ ring }: { ring: ProgressRing }) {
           strokeDashoffset={offset}
           transform="rotate(-90 24 24)"
         />
+
         <text
           x="24"
           y="27"
@@ -181,12 +200,21 @@ function ProgressRingItem({ ring }: { ring: ProgressRing }) {
           {ring.value}%
         </text>
       </svg>
-      <span className="text-[10px] text-text-muted">{ring.label}</span>
+
+      <span className="text-[10px] text-text-muted">
+        {ring.label}
+      </span>
     </div>
   );
 }
 
-function DefaultBody({ data, expanded }: { data: ModuleCardData; expanded: boolean }) {
+function DefaultBody({
+  data,
+  expanded,
+}: {
+  data: ModuleCardData;
+  expanded: boolean;
+}) {
   const isDonut = data.chart.type === "donut";
 
   return (
@@ -194,38 +222,126 @@ function DefaultBody({ data, expanded }: { data: ModuleCardData; expanded: boole
       <div className="mb-4 grid flex-1 gap-4 md:grid-cols-2">
         <BarsAndPics data={data} />
       </div>
+
       <section
         className={[
           "rounded-lg border border-border-subtle bg-bg/30 p-3",
-          isDonut ? "flex min-h-[188px] flex-col justify-center" : "",
+          isDonut
+            ? "flex min-h-[188px] flex-col justify-center"
+            : "",
         ].join(" ")}
       >
-        <ChartSection data={data} expanded={expanded} align="start" />
+        <ChartSection
+          data={data}
+          expanded={expanded}
+          align="start"
+        />
       </section>
     </>
   );
 }
 
-function SafetyBody({ data, expanded }: { data: ModuleCardData; expanded: boolean }) {
-  if (!data.trendBars) return <DefaultBody data={data} expanded={expanded} />;
+function SafetyBody({
+  data,
+  expanded,
+}: {
+  data: ModuleCardData;
+  expanded: boolean;
+}) {
+  if (!data.trendBars && !data.bars) {
+    return (
+      <DefaultBody
+        data={data}
+        expanded={expanded}
+      />
+    );
+  }
 
   return (
-    <>
-      <div className="mb-4 grid flex-1 gap-4 md:grid-cols-2">
-        <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
-            {data.trendBars.title}
-          </h4>
-          <div className="min-h-0 flex-1">
-            <VerticalBarChartPlaceholder items={data.trendBars.items} />
-          </div>
-        </section>
-        <PicsList data={data} />
+    <div className="flex flex-col gap-3">
+      {/* Weekly + Monthly */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {/* Weekly Safety Requirements */}
+        {data.trendBars ? (
+          <section className="min-w-0 rounded-lg border border-border-subtle bg-bg/30 p-3">
+            <h4 className="mb-2 text-xs font-medium text-text-muted">
+              {data.trendBars.title}
+            </h4>
+
+            <div className={expanded ? "h-[170px]" : "h-[120px]"}>
+              <VerticalBarChartPlaceholder
+                items={data.trendBars.items}
+              />
+            </div>
+          </section>
+        ) : null}
+
+        {/* Monthly Activities - 2 columns */}
+        {data.bars ? (
+          <section className="min-w-0 rounded-lg border border-border-subtle bg-bg/30 p-3">
+            <h4 className="mb-2 text-xs font-medium text-text-muted">
+              {data.bars.title}
+            </h4>
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+              {data.bars.items.map((item) => {
+                const max =
+                  Number(item.max) > 0
+                    ? Number(item.max)
+                    : 1;
+
+                const value = Number(item.value) || 0;
+
+                const percentage = Math.min(
+                  100,
+                  Math.max(0, (value / max) * 100),
+                );
+
+                return (
+                  <div
+                    key={item.label}
+                    className="min-w-0"
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-1">
+                      <span className="truncate text-[10px] font-medium text-text">
+                        {item.label}
+                      </span>
+
+                      <span className="shrink-0 text-[10px] font-semibold text-text-muted">
+                        {value}/{item.max}
+                      </span>
+                    </div>
+
+                    <div className="h-1.5 overflow-hidden rounded-full bg-surface-hover">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${percentage}%`,
+                          backgroundColor: item.color,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
       </div>
-      <section className="flex min-h-[188px] flex-col justify-center rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <ChartSection data={data} expanded={expanded} align="start" />
+
+      {/* Safety Performance Score - centered donut */}
+      <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
+        <ChartSection
+          data={data}
+          expanded={expanded}
+          align="center"
+          trendHeight={{
+            compact: 120,
+            expanded: 190,
+          }}
+        />
       </section>
-    </>
+    </div>
   );
 }
 
@@ -243,21 +359,33 @@ function SparepartBody({
           <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
             {data.bars.title}
           </h4>
+
           <div className="min-h-0">
-            <BarChartPlaceholder items={data.bars.items} />
+            <BarChartPlaceholder
+              items={data.bars.items}
+            />
           </div>
         </section>
       ) : null}
+
       <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <ChartSection data={data} expanded={expanded} />
+        <ChartSection
+          data={data}
+          expanded={expanded}
+        />
       </section>
     </>
   );
 }
 
-function OrganizationBody({ data }: { data: ModuleCardData }) {
+function OrganizationBody({
+  data,
+}: {
+  data: ModuleCardData;
+}) {
   const { lang } = useLang();
   const t = getDict(lang);
+
   const male = data.genderStats?.male ?? 0;
   const female = data.genderStats?.female ?? 0;
   const newJoinStat = data.stats[3];
@@ -269,14 +397,19 @@ function OrganizationBody({ data }: { data: ModuleCardData }) {
           <h4 className="mb-3 text-xs font-medium text-text-muted">
             {t.dashboard.orgTree}
           </h4>
+
           <div className="flex flex-col items-center gap-3">
             <span
               className="rounded-md px-3 py-1.5 text-xs font-semibold text-white"
-              style={{ backgroundColor: data.accentColor }}
+              style={{
+                backgroundColor: data.accentColor,
+              }}
             >
               {data.orgTree.root}
             </span>
+
             <div className="h-4 w-px bg-border" />
+
             <div className="grid w-full grid-cols-3 gap-2">
               {data.orgTree.children.map((child) => (
                 <span
@@ -296,24 +429,37 @@ function OrganizationBody({ data }: { data: ModuleCardData }) {
           <h4 className="mb-3 text-xs font-medium text-text-muted">
             {t.dashboard.genderBreakdown}
           </h4>
+
           <div className="flex items-end justify-around gap-4 pt-2">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-semibold text-accent">{male}%</span>
-              <span className="text-[10px] text-text-muted">{t.dashboard.male}</span>
+              <span className="text-2xl font-semibold text-accent">
+                {male}%
+              </span>
+
+              <span className="text-[10px] text-text-muted">
+                {t.dashboard.male}
+              </span>
+
               <div className="mt-1 h-16 w-8 overflow-hidden rounded-t-md bg-border-subtle">
                 <div
                   className="w-full bg-accent"
-                  style={{ height: `${male}%`, marginTop: `${100 - male}%` }}
+                  style={{
+                    height: `${male}%`,
+                    marginTop: `${100 - male}%`,
+                  }}
                 />
               </div>
             </div>
+
             <div className="flex flex-col items-center gap-1">
               <span className="text-2xl font-semibold text-[#f472b6]">
                 {female}%
               </span>
+
               <span className="text-[10px] text-text-muted">
                 {t.dashboard.female}
               </span>
+
               <div className="mt-1 h-16 w-8 overflow-hidden rounded-t-md bg-border-subtle">
                 <div
                   className="w-full bg-[#f472b6]"
@@ -331,17 +477,27 @@ function OrganizationBody({ data }: { data: ModuleCardData }) {
           <p className="text-[10px] uppercase tracking-wide text-text-dim">
             {t.dashboard.newJoin}
           </p>
+
           <p className="mt-1 text-3xl font-semibold text-success">
             {newJoinStat?.value ?? "—"}
           </p>
-          <p className="mt-1 text-xs text-text-muted">{t.dashboard.thisMonth}</p>
+
+          <p className="mt-1 text-xs text-text-muted">
+            {t.dashboard.thisMonth}
+          </p>
         </section>
       </div>
     </>
   );
 }
 
-function ReportBody({ data, expanded }: { data: ModuleCardData; expanded: boolean }) {
+function ReportBody({
+  data,
+  expanded,
+}: {
+  data: ModuleCardData;
+  expanded: boolean;
+}) {
   return (
     <>
       <div className="mb-4 grid flex-1 gap-4 md:grid-cols-2">
@@ -350,18 +506,29 @@ function ReportBody({ data, expanded }: { data: ModuleCardData; expanded: boolea
             <h4 className="mb-3 text-xs font-medium text-text-muted">
               {data.trendBars.title}
             </h4>
-            <VerticalBarChartPlaceholder items={data.trendBars.items} />
+
+            <VerticalBarChartPlaceholder
+              items={data.trendBars.items}
+            />
           </section>
         ) : null}
+
         <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <ChartSection data={data} expanded={expanded} />
+          <ChartSection
+            data={data}
+            expanded={expanded}
+          />
         </section>
       </div>
+
       {data.progressRings ? (
         <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
           <div className="flex flex-wrap items-center justify-around gap-3">
             {data.progressRings.map((ring) => (
-              <ProgressRingItem key={ring.label} ring={ring} />
+              <ProgressRingItem
+                key={ring.label}
+                ring={ring}
+              />
             ))}
           </div>
         </section>
@@ -384,13 +551,18 @@ function TrainingBody({
     <div className="grid flex-1 gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-1">
         <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <ChartSection data={data} expanded={expanded} />
+          <ChartSection
+            data={data}
+            expanded={expanded}
+          />
         </section>
+
         {data.secondaryChart ? (
           <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
             <h4 className="mb-3 text-xs font-medium text-text-muted">
               {data.secondaryChart.title}
             </h4>
+
             <DonutChartPlaceholder
               legend={data.secondaryChart.legend}
               segments={data.secondaryChart.segments}
@@ -405,6 +577,7 @@ function TrainingBody({
         <h4 className="mb-3 text-xs font-medium text-text-muted">
           {t.dashboard.recentTraining}
         </h4>
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] text-left text-[11px]">
             <thead>
@@ -412,27 +585,42 @@ function TrainingBody({
                 <th className="pb-2 pr-2 font-medium">
                   {t.dashboard.trainingName}
                 </th>
-                <th className="pb-2 pr-2 font-medium">{t.dashboard.date}</th>
+                <th className="pb-2 pr-2 font-medium">
+                  {t.dashboard.date}
+                </th>
                 <th className="pb-2 pr-2 font-medium">
                   {t.dashboard.participant}
                 </th>
                 <th className="pb-2 pr-2 font-medium">
                   {t.dashboard.completion}
                 </th>
-                <th className="pb-2 font-medium">{t.dashboard.avgScore}</th>
+                <th className="pb-2 font-medium">
+                  {t.dashboard.avgScore}
+                </th>
               </tr>
             </thead>
+
             <tbody>
               {(data.recentRows ?? []).map((row) => (
                 <tr
                   key={`${row.name}-${row.date}`}
                   className="border-b border-border-subtle/60 text-text"
                 >
-                  <td className="py-2 pr-2 font-medium">{row.name}</td>
-                  <td className="py-2 pr-2 text-text-muted">{row.date}</td>
-                  <td className="py-2 pr-2">{row.participants}</td>
-                  <td className="py-2 pr-2 text-success">{row.completion}</td>
-                  <td className="py-2">{row.avgScore}</td>
+                  <td className="py-2 pr-2 font-medium">
+                    {row.name}
+                  </td>
+                  <td className="py-2 pr-2 text-text-muted">
+                    {row.date}
+                  </td>
+                  <td className="py-2 pr-2">
+                    {row.participants}
+                  </td>
+                  <td className="py-2 pr-2 text-success">
+                    {row.completion}
+                  </td>
+                  <td className="py-2">
+                    {row.avgScore}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -443,24 +631,64 @@ function TrainingBody({
   );
 }
 
-function CardBody({ data, expanded }: { data: ModuleCardData; expanded: boolean }) {
+function CardBody({
+  data,
+  expanded,
+}: {
+  data: ModuleCardData;
+  expanded: boolean;
+}) {
   switch (data.layout) {
     case "safety":
-      return <SafetyBody data={data} expanded={expanded} />;
+      return (
+        <SafetyBody
+          data={data}
+          expanded={expanded}
+        />
+      );
+
     case "sparepart":
-      return <SparepartBody data={data} expanded={expanded} />;
+      return (
+        <SparepartBody
+          data={data}
+          expanded={expanded}
+        />
+      );
+
     case "organization":
       return <OrganizationBody data={data} />;
+
     case "report":
-      return <ReportBody data={data} expanded={expanded} />;
+      return (
+        <ReportBody
+          data={data}
+          expanded={expanded}
+        />
+      );
+
     case "training":
-      return <TrainingBody data={data} expanded={expanded} />;
+      return (
+        <TrainingBody
+          data={data}
+          expanded={expanded}
+        />
+      );
+
     default:
-      return <DefaultBody data={data} expanded={expanded} />;
+      return (
+        <DefaultBody
+          data={data}
+          expanded={expanded}
+        />
+      );
   }
 }
 
-export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) {
+export function ModuleCard({
+  data,
+  expanded = false,
+  onOpen,
+}: ModuleCardProps) {
   return (
     <article
       role={onOpen ? "button" : undefined}
@@ -469,7 +697,10 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
       onKeyDown={
         onOpen
           ? (event) => {
-              if (event.key === "Enter" || event.key === " ") {
+              if (
+                event.key === "Enter" ||
+                event.key === " "
+              ) {
                 event.preventDefault();
                 onOpen();
               }
@@ -481,7 +712,9 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         onOpen
           ? "cursor-pointer hover:border-accent/50 hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           : "",
-        expanded ? "shadow-[0_20px_48px_var(--shadow-color-soft)]" : "",
+        expanded
+          ? "shadow-[0_20px_48px_var(--shadow-color-soft)]"
+          : "",
       ].join(" ")}
       style={{
         borderTopWidth: 3,
@@ -489,7 +722,11 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
       }}
     >
       <header className="mb-4 flex items-center gap-2.5">
-        <CardIcon type={data.icon} color={data.accentColor} />
+        <CardIcon
+          type={data.icon}
+          color={data.accentColor}
+        />
+
         <h3 className="text-sm font-semibold tracking-wide text-text">
           {data.number}. {data.title}
         </h3>
@@ -504,13 +741,19 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         ].join(" ")}
       >
         {data.stats.map((stat) => (
-          <div key={stat.label} className="min-w-0">
+          <div
+            key={stat.label}
+            className="min-w-0"
+          >
             <StatPill stat={stat} />
           </div>
         ))}
       </div>
 
-      <CardBody data={data} expanded={expanded} />
+      <CardBody
+        data={data}
+        expanded={expanded}
+      />
     </article>
   );
 }

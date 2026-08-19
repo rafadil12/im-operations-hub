@@ -32,8 +32,12 @@ type WeeklyDatabaseRow = {
     | "case_found";
   submission_date: string | null;
   pic: string | null;
+  pic_en: string | null;
+  pic_cn: string | null;
   location: string | null;
   description: string | null;
+  description_en: string | null;
+  description_cn: string | null;
   file_name: string | null;
   file_url: string | null;
 };
@@ -123,8 +127,12 @@ export async function GET(request: Request) {
             status,
             submission_date,
             pic,
+            pic_en,
+            pic_cn,
             location,
             description,
+            description_en,
+            description_cn,
             file_name,
             file_url
           FROM safety_submissions
@@ -357,17 +365,38 @@ export async function POST(request: Request) {
         formData.get("pic") ?? "",
       ).trim() || null;
 
+    const picEn =
+      String(
+        formData.get("pic_en") ?? "",
+      ).trim() || null;
+
+    const picCn =
+      String(
+        formData.get("pic_cn") ?? "",
+      ).trim() || null;
+
     const location =
       String(
         formData.get("location") ?? "",
       ).trim() || null;
 
-    const description =
+    const descriptionEn =
       String(
         formData.get(
-          "description",
+          "description_en",
         ) ?? "",
       ).trim() || null;
+
+    const descriptionCn =
+      String(
+        formData.get(
+          "description_cn",
+        ) ?? "",
+      ).trim() || null;
+
+    // Legacy fallback: keep description populated with English.
+    const description =
+      descriptionEn;
 
     const files = formData
       .getAll("files")
@@ -629,8 +658,12 @@ export async function POST(request: Request) {
             status = ?,
             submission_date = ?,
             pic = ?,
+            pic_en = ?,
+            pic_cn = ?,
             location = ?,
             description = ?,
+            description_en = ?,
+            description_cn = ?,
             file_name = ?,
             file_url = ?
           WHERE id = ?
@@ -639,8 +672,12 @@ export async function POST(request: Request) {
           status,
           submissionDate,
           pic,
+          picEn,
+          picCn,
           location,
           description,
+          descriptionEn,
+          descriptionCn,
           finalFileName,
           finalFileUrl,
           submissionId,
@@ -683,8 +720,12 @@ export async function POST(request: Request) {
               status,
               submission_date,
               pic,
+              pic_en,
+              pic_cn,
               location,
               description,
+              description_en,
+              description_cn,
               file_name,
               file_url
             )
@@ -701,9 +742,12 @@ export async function POST(request: Request) {
               ?,
               ?,
               ?,
+              ?,
+              ?,
+              ?,
+              ?,
               ?
-            )
-          `,
+            )          `,
           [
             year,
             month,
@@ -712,8 +756,12 @@ export async function POST(request: Request) {
             status,
             submissionDate,
             pic,
+            picEn,
+            picCn,
             location,
             description,
+            descriptionEn,
+            descriptionCn,
             firstFile?.originalName ??
               null,
             firstFile?.url ??

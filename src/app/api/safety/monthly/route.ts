@@ -25,6 +25,20 @@ const MONTHLY_ACTIVITIES = [
 type MonthlyActivity =
   (typeof MONTHLY_ACTIVITIES)[number];
 
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+type MonthlyStatus =
+  | "completed"
+  | "not_applicable"
+  | "case_found"
+  | "not_submitted";
+
+/* =========================================================
+   ROW TYPE
+   ========================================================= */
+
 type MonthlyRow = RowDataPacket & {
   id: number;
   year: number;
@@ -35,8 +49,12 @@ type MonthlyRow = RowDataPacket & {
   status: string;
   submission_date: string | null;
   pic: string | null;
+  pic_en: string | null;
+  pic_cn: string | null;
   location: string | null;
   description: string | null;
+  description_en: string | null;
+  description_cn: string | null;
   file_name: string | null;
   file_url: string | null;
   verified_by: string | null;
@@ -173,6 +191,86 @@ function parseStoredFiles(
 }
 
 /* =========================================================
+   NORMALIZE STATUS
+   ========================================================= */
+
+function normalizeStatus(
+  activityType: MonthlyActivity,
+  rawStatus: unknown,
+): MonthlyStatus {
+  /*
+   * Safety Case:
+   *
+   * case_found      = ada case
+   * not_applicable  = tidak ada case
+   *
+   * Kalau status tidak dikirim:
+   * default ke completed untuk activity biasa.
+   */
+
+  if (
+    activityType ===
+    "safety_case"
+  ) {
+    const value =
+      String(
+        rawStatus ?? "",
+      )
+        .trim()
+        .toLowerCase();
+
+    if (
+      value ===
+      "case_found"
+    ) {
+      return "case_found";
+    }
+
+    if (
+      value ===
+      "not_applicable"
+    ) {
+      return "not_applicable";
+    }
+
+    /*
+     * Support beberapa kemungkinan
+     * value dari frontend.
+     */
+
+    if (
+      value === "case" ||
+      value === "found" ||
+      value === "yes" ||
+      value === "true" ||
+      value === "1"
+    ) {
+      return "case_found";
+    }
+
+    if (
+      value === "no_case" ||
+      value === "no-case" ||
+      value === "none" ||
+      value === "no" ||
+      value === "false" ||
+      value === "0"
+    ) {
+      return "not_applicable";
+    }
+
+    /*
+     * Default Safety Case:
+     * kalau tidak ada status,
+     * anggap No Case.
+     */
+    return "not_applicable";
+  }
+
+  return "completed";
+}
+
+/* =========================================================
    GET
    /api/safety/monthly?year=2026&month=8
    ========================================================= */
@@ -199,8 +297,12 @@ export async function GET(
             status,
             submission_date,
             pic,
+            pic_en,
+            pic_cn,
             location,
             description,
+            description_en,
+            description_cn,
             file_name,
             file_url,
             verified_by,
@@ -299,6 +401,10 @@ export async function GET(
    pic
    location
    description
+   description_en
+   description_cn
+   status
+   submissionId
 
    Files:
    files
@@ -340,6 +446,54 @@ export async function POST(
         ) ?? "",
       ) as MonthlyActivity;
 
+    /*
+     * Status dari frontend.
+     *
+     * Untuk Safety Case:
+     * case_found
+     * not_applicable
+     */
+    const rawStatus =
+      formData.get("status");
+
+    const status =
+      normalizeStatus(
+        activityType,
+        rawStatus,
+      );
+
+    /* =====================================================
+       SUBMISSION ID
+       ===================================================== */
+
+    const submissionIdValue =
+      formData.get(
+        "submissionId",
+      );
+
+    const submissionId =
+      submissionIdValue !== null &&
+      String(
+        submissionIdValue,
+      ).trim() !== ""
+        ? Number(
+            submissionIdValue,
+          )
+        : null;
+
+    const validSubmissionId =
+      submissionId !== null &&
+      Number.isInteger(
+        submissionId,
+      ) &&
+      submissionId > 0
+        ? submissionId
+        : null;
+
+    /* =====================================================
+       SUBMISSION DATE
+       ===================================================== */
+
     const submissionDateValue =
       formData.get(
         "submissionDate",
@@ -352,13 +506,37 @@ export async function POST(
           )
         : null;
 
+    /* =====================================================
+       PIC
+       ===================================================== */
+
     const picValue =
       formData.get("pic");
 
     const pic =
       picValue !== null
-        ? String(picValue)
+        ? String(picValue).trim() || null
         : null;
+
+    const picEnValue =
+      formData.get("pic_en");
+
+    const picEn =
+      picEnValue !== null
+        ? String(picEnValue).trim() || null
+        : null;
+
+    const picCnValue =
+      formData.get("pic_cn");
+
+    const picCn =
+      picCnValue !== null
+        ? String(picCnValue).trim() || null
+        : null;
+
+    /* =====================================================
+       LOCATION
+       ===================================================== */
 
     const locationValue =
       formData.get("location");
@@ -368,13 +546,51 @@ export async function POST(
         ? String(locationValue)
         : null;
 
-    const descriptionValue =
-      formData.get("description");
+    /* =====================================================
+       DESCRIPTION
+       ===================================================== */
 
-    const description =
-      descriptionValue !== null
-        ? String(descriptionValue)
+    const descriptionEnValue =
+      formData.get(
+        "description_en",
+      );
+
+    const descriptionCnValue =
+      formData.get(
+        "description_cn",
+      );
+
+    const legacyDescriptionValue =
+      formData.get(
+        "description",
+      );
+
+    const descriptionEn =
+      descriptionEnValue !== null
+        ? String(
+            descriptionEnValue,
+          )
+        : legacyDescriptionValue !==
+              null
+          ? String(
+              legacyDescriptionValue,
+            )
+          : null;
+
+    const descriptionCn =
+      descriptionCnValue !== null
+        ? String(
+            descriptionCnValue,
+          )
         : null;
+
+    /*
+     * Keep old description column
+     * populated for compatibility.
+     */
+    const description =
+      descriptionEn ||
+      descriptionCn;
 
     /* =====================================================
        VALIDATE YEAR
@@ -405,14 +621,7 @@ export async function POST(
     }
 
     /* =====================================================
-       VALIDATE ACTIVITY TYPE
-
-       DATABASE:
-       monthly_meeting
-       fire_drill
-       safety_case
-       monthly_ppt
-       reward_finding
+       VALIDATE ACTIVITY
        ===================================================== */
 
     if (
@@ -454,20 +663,89 @@ export async function POST(
 
     /* =====================================================
        CHECK EXISTING RECORD
-
-       Aktivitas Monthly normal:
-       1 record per bulan.
-
-       reward_finding:
-       boleh lebih dari satu sampai 2.
        ===================================================== */
 
     let existingId:
       number | null = null;
 
+    /*
+     * Kalau frontend mengirim
+     * submissionId, update record tersebut.
+     */
+    if (
+      validSubmissionId !== null
+    ) {
+      const selectedQuery =
+        await connection.execute(
+          `
+            SELECT
+              id,
+              activity_type
+            FROM safety_submissions
+            WHERE id = ?
+              AND year = ?
+              AND month = ?
+              AND period_type = 'monthly'
+            LIMIT 1
+            FOR UPDATE
+          `,
+          [
+            validSubmissionId,
+            year,
+            month,
+          ],
+        ) as [
+          Array<
+            Pick<
+              MonthlyRow,
+              | "id"
+              | "activity_type"
+            >
+          >,
+          FieldPacket[],
+        ];
+
+      const selectedRows =
+        selectedQuery[0];
+
+      if (
+        selectedRows.length ===
+        0
+      ) {
+        await connection.rollback();
+
+        return jsonError(
+          "Submission Monthly yang akan di-update tidak ditemukan.",
+          404,
+        );
+      }
+
+      if (
+        selectedRows[0]
+          .activity_type !==
+        activityType
+      ) {
+        await connection.rollback();
+
+        return jsonError(
+          "Submission ID tidak sesuai dengan activity type.",
+          400,
+        );
+      }
+
+      existingId =
+        selectedRows[0].id;
+    }
+
+    /* =====================================================
+       MONTHLY NORMAL
+       1 RECORD PER BULAN
+       ===================================================== */
+
     if (
       activityType !==
-      "reward_finding"
+        "reward_finding" &&
+      existingId === null
     ) {
       const existingQuery =
         await connection.execute(
@@ -511,7 +789,8 @@ export async function POST(
 
     if (
       activityType ===
-      "reward_finding"
+        "reward_finding" &&
+      existingId === null
     ) {
       const rewardQuery =
         await connection.execute(
@@ -539,17 +818,13 @@ export async function POST(
       const rewardRows =
         rewardQuery[0];
 
-      /*
-       * Kalau sudah 2 record,
-       * jangan buat record ketiga.
-       */
       if (
         rewardRows.length >= 2
       ) {
         await connection.rollback();
 
         return jsonError(
-          "Penemuan Berhadiah bulan ini sudah mencapai maksimal 2 submission.",
+          "Penemuan Berhadiah bulan ini sudah mencapai maksimal 2 submission. Gunakan Update pada submission yang sudah ada untuk mengganti foto.",
           400,
         );
       }
@@ -557,27 +832,55 @@ export async function POST(
 
     /* =====================================================
        FILE VALIDATION
-
-       CREATE BARU:
-       file wajib ada.
-
-       UPDATE:
-       file baru tidak wajib.
-       File lama akan dipertahankan.
        ===================================================== */
 
+    /*
+     * Untuk Safety Case:
+     *
+     * - Case Found -> wajib upload evidence
+     * - No Case -> boleh tanpa file
+     *
+     * Untuk aktivitas lain:
+     * - CREATE -> wajib file
+     * - UPDATE -> file baru tidak wajib
+     */
+
+    const isSafetyCase =
+      activityType ===
+      "safety_case";
+
+    const isCaseFound =
+      isSafetyCase &&
+      status === "case_found";
+
     if (
-      uploadedFiles.length === 0 &&
-      existingId === null
+      uploadedFiles.length ===
+        0 &&
+      existingId === null &&
+      !isSafetyCase
     ) {
-      /*
-       * Monthly baru harus punya
-       * minimal satu file.
-       */
       await connection.rollback();
 
       return jsonError(
         "At least one photo/file is required for this monthly activity.",
+        400,
+      );
+    }
+
+    /*
+     * Safety Case yang Case Found
+     * wajib punya evidence.
+     */
+    if (
+      isCaseFound &&
+      uploadedFiles.length ===
+        0 &&
+      existingId === null
+    ) {
+      await connection.rollback();
+
+      return jsonError(
+        "Evidence photo/file is required when a Safety Case is found.",
         400,
       );
     }
@@ -677,22 +980,19 @@ export async function POST(
     if (
       existingId !== null
     ) {
-      /*
-       * Default:
-       * gunakan file baru.
-       *
-       * Kalau tidak ada file baru:
-       * ambil file lama.
-       */
-
       let finalFileNames =
         fileNames;
 
       let finalFileUrls =
         fileUrls;
 
+      /*
+       * Kalau tidak upload file baru,
+       * gunakan file lama.
+       */
       if (
-        uploadedFiles.length === 0
+        uploadedFiles.length ===
+        0
       ) {
         const oldQuery =
           await connection.execute(
@@ -744,63 +1044,49 @@ export async function POST(
         }
       }
 
-      /*
-       * UPDATE:
-       * PIC, date, location,
-       * description tetap diperbarui.
-       *
-       * File:
-       * - tidak upload baru -> file lama
-       * - upload baru -> file baru
-       */
+      /* ===================================================
+         UPDATE
+         =================================================== */
 
-      const updateQuery =
-        await connection.execute(
-          `
-            UPDATE safety_submissions
-            SET
-              status = 'completed',
-              submission_date = ?,
-              pic = ?,
-              location = ?,
-              description = ?,
-              file_name = ?,
-              file_url = ?,
-              verified_by = NULL,
-              verified_at = NULL
-            WHERE id = ?
-              AND period_type = 'monthly'
-          `,
-          [
-            submissionDate,
-            pic,
-            location,
-            description,
-            JSON.stringify(
-              finalFileNames,
-            ),
-            JSON.stringify(
-              finalFileUrls,
-            ),
-            existingId,
-          ],
-        ) as [
-          ResultSetHeader,
-          FieldPacket[],
-        ];
-
-      const updateResult =
-        updateQuery[0];
-
-      /*
-       * Jangan hapus file fisik lama
-       * secara paksa di sini.
-       *
-       * Database akan menggunakan:
-       * - file lama jika tidak ada
-       *   file baru
-       * - file baru jika ada upload.
-       */
+      await connection.execute(
+        `
+          UPDATE safety_submissions
+          SET
+            status = ?,
+            submission_date = ?,
+            pic = ?,
+            pic_en = ?,
+            pic_cn = ?,
+            location = ?,
+            description = ?,
+            description_en = ?,
+            description_cn = ?,
+            file_name = ?,
+            file_url = ?,
+            verified_by = NULL,
+            verified_at = NULL
+          WHERE id = ?
+            AND period_type = 'monthly'
+        `,
+        [
+          status,
+          submissionDate,
+          pic,
+          picEn,
+          picCn,
+          location,
+          description,
+          descriptionEn,
+          descriptionCn,
+          JSON.stringify(
+            finalFileNames,
+          ),
+          JSON.stringify(
+            finalFileUrls,
+          ),
+          existingId,
+        ],
+      );
 
       await connection.commit();
 
@@ -812,10 +1098,13 @@ export async function POST(
         month,
         periodType: "monthly",
         activityType,
-        status: "completed",
+        status,
         files:
           finalFileNames.map(
-            (name, index) => ({
+            (
+              name,
+              index,
+            ) => ({
               name,
               url:
                 finalFileUrls[
@@ -823,8 +1112,6 @@ export async function POST(
                 ] ?? "",
             }),
           ),
-        affectedRows:
-          updateResult.affectedRows,
         message:
           "Monthly berhasil di-update.",
       });
@@ -834,11 +1121,35 @@ export async function POST(
        INSERT NEW MONTHLY
        ===================================================== */
 
-    const insertQuery =
+    /*
+     * Kolom:
+     *
+     * 1  year
+     * 2  month
+     * 3  period_type
+     * 4  week
+     * 5  activity_type
+     * 6  status
+     * 7  submission_date
+     * 8  pic
+     * 9  location
+     * 10 description
+     * 11 description_en
+     * 12 description_cn
+     * 13 file_name
+     * 14 file_url
+     * 15 verified_by
+     * 16 verified_at
+     *
+     * TOTAL = 16
+     */
+
+    const [
+      insertResult,
+    ] =
       await connection.execute(
         `
-          INSERT INTO
-            safety_submissions
+          INSERT INTO safety_submissions
           (
             year,
             month,
@@ -848,8 +1159,12 @@ export async function POST(
             status,
             submission_date,
             pic,
+            pic_en,
+            pic_cn,
             location,
             description,
+            description_en,
+            description_cn,
             file_name,
             file_url,
             verified_by,
@@ -862,7 +1177,11 @@ export async function POST(
             'monthly',
             NULL,
             ?,
-            'completed',
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
             ?,
             ?,
             ?,
@@ -877,10 +1196,15 @@ export async function POST(
           year,
           month,
           activityType,
+          status,
           submissionDate,
           pic,
+          picEn,
+          picCn,
           location,
           description,
+          descriptionEn,
+          descriptionCn,
           JSON.stringify(
             fileNames,
           ),
@@ -893,9 +1217,6 @@ export async function POST(
         FieldPacket[],
       ];
 
-    const insertResult =
-      insertQuery[0];
-
     await connection.commit();
 
     return NextResponse.json({
@@ -907,10 +1228,13 @@ export async function POST(
       month,
       periodType: "monthly",
       activityType,
-      status: "completed",
+      status,
       files:
         fileNames.map(
-          (name, index) => ({
+          (
+            name,
+            index,
+          ) => ({
             name,
             url:
               fileUrls[index] ??
@@ -931,15 +1255,17 @@ export async function POST(
 
     /*
      * Kalau database gagal setelah
-     * file tersimpan, hapus file tersebut
-     * agar tidak menjadi file sampah.
+     * file tersimpan, hapus file
+     * supaya tidak menjadi file sampah.
      */
 
     for (
       const filePath of savedFilePaths
     ) {
       try {
-        await unlink(filePath);
+        await unlink(
+          filePath,
+        );
       } catch {}
     }
 
@@ -1019,7 +1345,9 @@ export async function DELETE(
         rows[0].file_url,
       );
 
-    const [deleteResult] =
+    const [
+      deleteResult,
+    ] =
       await pool.execute(
         `
           DELETE FROM safety_submissions
@@ -1055,7 +1383,9 @@ export async function DELETE(
         );
 
       try {
-        await unlink(filePath);
+        await unlink(
+          filePath,
+        );
       } catch {}
     }
 

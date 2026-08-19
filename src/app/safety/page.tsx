@@ -65,6 +65,7 @@ const SAFETY_TEXT = {
   date: ["Date", "日期"],
   pic: ["PIC", "负责人"],
   location: ["Location", "地点"],
+  description: ["Description", "描述"],
   status: ["Status", "状态"],
   trainingAttendance: ["Training Attendance", "培训出席情况"],
   actionRequired: ["Action Required", "需要处理"],
@@ -75,7 +76,7 @@ const SAFETY_TEXT = {
   activityNotSubmitted: ["Safety activity has not been submitted.", "安全活动尚未提交。"],
   total: ["Total", "总计"],
   safetyActivity: ["Safety Activity", "安全活动"],
-  itSafetyManagementSystem: ["IT Safety Management System", "IT安全管理系统"],
+  itSafetyManagementSystem: ["IM Safety Management System", "IM安全管理系统"],
   fireDrill: ["Fire Drill", "消防演练"],
   monthlyMeeting: ["Monthly Meeting", "月度会议"],
   safetyCase: ["Safety Case", "安全案件"],
@@ -94,6 +95,18 @@ function safetyText(
   return SAFETY_TEXT[key][language === "cn" ? 1 : 0];
 }
 
+function getLocalizedValue(
+  en?: string | null,
+  cn?: string | null,
+  language: SafetyLanguage = "en",
+): string {
+  if (language === "cn") {
+    return cn?.trim() || en?.trim() || "—";
+  }
+
+  return en?.trim() || cn?.trim() || "—";
+}
+
 type SafetyStatus =
   | "completed"
   | "not_submitted"
@@ -109,8 +122,12 @@ type SafetyRow = {
   status?: SafetyStatus | string;
   submission_date?: string | null;
   pic?: string | null;
+  pic_en?: string | null;
+  pic_cn?: string | null;
   location?: string | null;
   description?: string | null;
+  description_en?: string | null;
+  description_cn?: string | null;
   file_name?: string | null;
   file_url?: string | null;
   files?: unknown[];
@@ -452,9 +469,15 @@ export default function SafetyOverviewPage() {
       new Set(
         allRows
           .map((row) =>
-            row.pic?.trim(),
+            getLocalizedValue(
+              row.pic_en ?? row.pic,
+              row.pic_cn,
+              safetyLanguage,
+            ),
           )
-          .filter(Boolean),
+          .filter((value) =>
+            value && value !== "—",
+          ),
       ),
     );
 
@@ -619,56 +642,70 @@ export default function SafetyOverviewPage() {
    */
 
   const monthlyActivityData =
-    MONTHLY_ACTIVITY_NAMES.map(
-      (activity) => {
-        const rows =
-          monthlyRows.filter(
-            (row) =>
-              activityMatches(
-                row,
-                activity.names,
-              ),
-          );
+  MONTHLY_ACTIVITY_NAMES.map(
+    (activity) => {
+      const rows =
+        monthlyRows.filter(
+          (row) =>
+            activityMatches(
+              row,
+              activity.names,
+            ),
+        );
 
-        const target =
-          activity.id ===
-          "reward-finding"
-            ? 2
-            : 1;
+      const target =
+        activity.id ===
+        "reward-finding"
+          ? 2
+          : 1;
 
-        const completed =
-          activity.id ===
-          "reward-finding"
-            ? Math.min(
-                rows.filter(
-                  (row) =>
-                    row.status ===
-                    "completed",
-                ).length,
-                2,
+      const completed =
+        activity.id ===
+        "reward-finding"
+          ? Math.min(
+              rows.filter(
+                (row) =>
+                  row.status ===
+                  "completed",
+              ).length,
+              2,
+            )
+          : activity.id ===
+              "hazard-case"
+            ? rows.some(
+                (row) =>
+                  row.status ===
+                  "case_found",
               )
+              ? -1
+              : 1
             : rows.some(
                 (row) =>
                   isCompleted(row),
               )
-            ? 1
-            : 0;
+              ? 1
+              : 0;
 
-        const rate =
-          Math.round(
-            (completed /
-              target) *
-              100,
-          );
+      const rate =
+        activity.id ===
+        "hazard-case"
+          ? completed === -1
+            ? -100
+            : 100
+          : Math.round(
+              (completed /
+                target) *
+                100,
+            );
 
-        return {
-          ...activity,
-          completed,
-          target,
-          rate,
-        };
-      },
-    );
+      return {
+        ...activity,
+        completed,
+        target,
+        rate,
+      };
+    },
+  );
 
   const monthlyCompleted =
     monthlyActivityData.reduce(
@@ -866,23 +903,221 @@ export default function SafetyOverviewPage() {
    * =====================================================
    * ACTION REQUIRED
    * =====================================================
+   *
+   * Mulai tanggal 20, Action Required tidak hanya membaca
+   * row yang sudah ada di database. Jika sebuah requirement
+   * belum mempunyai row completed sama sekali, requirement
+   * tersebut juga dibuat sebagai item Action Required.
+   *
+   * Jadi:
+   * - sebelum tanggal 20: tetap memakai status database yang ada
+   * - tanggal 20 ke atas: semua weekly + monthly yang belum selesai
+   *   akan muncul
+   * - setelah disubmit/completed: item otomatis hilang dari list
+   * - semua item Action Required berwarna merah
    */
 
-  const actionRows =
-    allRows
+  const today = new Date();
+  const isActionRequiredCutoffReached =
+    today.getDate() >= 20;
+
+  const actionRequiredRows: SafetyRow[] = [];
+
+  // Ambil row TERAKHIR milik activity yang sama.
+  // Ini penting supaya PIC/Description yang tampil di Action Required
+  // benar-benar berasal dari activity tersebut, bukan dari row activity lain.
+  const getLatestActivityRow = (
+    rows: SafetyRow[],
+    names: string[],
+  ): SafetyRow | undefined => {
+    return rows
+      .filter((row) => activityMatches(row, names))
+      .sort((a, b) => Number(b.id) - Number(a.id))[0];
+  };
+
+  const getActionSourceRow = (
+    rows: SafetyRow[],
+    names: string[],
+  ): SafetyRow | undefined => {
+    const activityRows = rows.filter((row) =>
+      activityMatches(row, names),
+    );
+
+    // Prioritaskan row yang memang sedang membutuhkan tindakan.
+    const pendingRow = activityRows
       .filter(
         (row) =>
-          row.status ===
-            "not_submitted" ||
-          row.status ===
-            "case_found",
+          row.status === "not_submitted" ||
+          row.status === "case_found",
       )
-      .sort(
-        (a, b) =>
-          Number(b.id) -
-          Number(a.id),
-      )
-      .slice(0, 5);
+      .sort((a, b) => Number(b.id) - Number(a.id))[0];
+
+    return pendingRow ?? getLatestActivityRow(rows, names);
+  };
+
+  if (isActionRequiredCutoffReached) {
+    // -----------------------------------------------------
+    // WEEKLY REQUIREMENTS
+    // -----------------------------------------------------
+    // Setiap minggu memiliki 1 target untuk setiap activity.
+    // Jika belum ada row completed/not_applicable, buat item
+    // virtual agar tetap muncul walaupun belum pernah submit.
+    weeklyWeeks.forEach((week) => {
+      const weekRows = weeklyRows.filter(
+        (row) => Number(row.week) === week,
+      );
+
+      WEEKLY_ACTIVITY_NAMES.forEach((activity) => {
+        const completed = weekRows.some(
+          (row) =>
+            activityMatches(row, activity.names) &&
+            isCompleted(row),
+        );
+
+        const caseFound = weekRows.some(
+          (row) =>
+            activityMatches(row, activity.names) &&
+            isCaseFound(row),
+        );
+
+        if (!completed) {
+          const existingRow = getActionSourceRow(
+            weekRows,
+            activity.names,
+          );
+
+          if (existingRow) {
+            actionRequiredRows.push({
+              ...existingRow,
+              week,
+              status: caseFound
+                ? "case_found"
+                : existingRow.status === "case_found"
+                  ? "case_found"
+                  : "not_submitted",
+            });
+          } else {
+            actionRequiredRows.push({
+              id: -(week * 100 + actionRequiredRows.length + 1),
+              year: selectedYear,
+              month: selectedMonth,
+              week,
+              activity_type: activity.names[0],
+              status: caseFound
+                ? "case_found"
+                : "not_submitted",
+              pic: pic ?? "IT Team",
+              location: location ?? "IT Department",
+              description: undefined,
+              pic_en: undefined,
+              pic_cn: undefined,
+              description_en: undefined,
+              description_cn: undefined,
+            });
+          }
+        }
+      });
+    });
+
+    // -----------------------------------------------------
+    // MONTHLY REQUIREMENTS
+    // -----------------------------------------------------
+    MONTHLY_ACTIVITY_NAMES.forEach((activity) => {
+      const rows = monthlyRows.filter((row) =>
+        activityMatches(row, activity.names),
+      );
+
+      const target =
+        activity.id === "reward-finding" ? 2 : 1;
+
+      const completedCount =
+        activity.id === "reward-finding"
+          ? Math.min(
+              rows.filter(
+                (row) => row.status === "completed",
+              ).length,
+              target,
+            )
+          : rows.filter((row) => isCompleted(row)).length;
+
+      const caseFound = rows.some(
+        (row) => row.status === "case_found",
+      );
+
+      // Safety Case: case_found harus tetap masuk Action Required.
+      if (caseFound) {
+        const caseRow = rows.find(
+          (row) => row.status === "case_found",
+        );
+
+        actionRequiredRows.push({
+          ...(caseRow ?? {
+            id: -(5000 + actionRequiredRows.length + 1),
+            year: selectedYear,
+            month: selectedMonth,
+            activity_type: activity.names[0],
+          }),
+          status: "case_found",
+        });
+      }
+
+      // Reward Finding memiliki target 2.
+      // Jika baru 1 completed, hanya 1 item yang dibuat.
+      if (!caseFound && completedCount < target) {
+        const missingCount = target - completedCount;
+        const existingNotSubmitted = rows
+          .filter((row) => row.status === "not_submitted")
+          .sort((a, b) => Number(b.id) - Number(a.id));
+
+        const latestActivityRow = getLatestActivityRow(
+          rows,
+          activity.names,
+        );
+
+        for (let i = 0; i < missingCount; i += 1) {
+          const existingRow =
+            existingNotSubmitted[i] ??
+            latestActivityRow;
+
+          actionRequiredRows.push({
+            ...(existingRow ?? {
+              id: -(6000 + actionRequiredRows.length + 1),
+              year: selectedYear,
+              month: selectedMonth,
+              activity_type: activity.names[0],
+              pic: pic ?? "IT Team",
+              location: location ?? "IT Department",
+            }),
+            status: "not_submitted",
+          });
+        }
+      }
+    });
+  } else {
+    // Sebelum tanggal 20, pertahankan perilaku Action Required
+    // sebelumnya agar tidak mengubah dashboard yang sedang berjalan.
+    actionRequiredRows.push(
+      ...allRows.filter(
+        (row) =>
+          row.status === "not_submitted" ||
+          row.status === "case_found",
+      ),
+    );
+  }
+
+  const actionRows = actionRequiredRows
+    .sort((a, b) => {
+      // Weekly/monthly virtual rows ditampilkan berdasarkan
+      // week terlebih dahulu, lalu id sebagai fallback.
+      const weekA = Number(a.week ?? 99);
+      const weekB = Number(b.week ?? 99);
+
+      if (weekA !== weekB) {
+        return weekA - weekB;
+      }
+
+      return Number(b.id) - Number(a.id);
+    });
 
   /*
    * =====================================================
@@ -1042,6 +1277,61 @@ export default function SafetyOverviewPage() {
           }
         }
       `}</style>
+      <style>{`
+        .safety-overview-page {
+          --safety-cyan: 34 211 238;
+          --safety-emerald: 52 211 153;
+          --safety-amber: 251 191 36;
+          --safety-rose: 251 113 133;
+        }
+
+        .safety-overview-page .safety-animate-card,
+        .safety-overview-page section,
+        .safety-overview-page > div > .rounded-xl {
+          transition: border-color .25s ease, box-shadow .25s ease, background-color .25s ease;
+        }
+
+        .safety-overview-page .safety-animate-card:hover,
+        .safety-overview-page section:hover {
+          border-color: rgb(var(--safety-cyan) / .20);
+          box-shadow: 0 12px 34px rgb(8 47 73 / .12);
+        }
+
+        .safety-overview-page .rounded-xl.bg-surface {
+          background-image: linear-gradient(145deg, rgb(255 255 255 / .025), transparent 45%, rgb(var(--safety-cyan) / .025));
+        }
+
+        .safety-overview-page .bg-emerald-500 {
+          background-image: linear-gradient(90deg, rgb(16 185 129), rgb(52 211 153));
+        }
+        .safety-overview-page .bg-amber-500 {
+          background-image: linear-gradient(90deg, rgb(245 158 11), rgb(251 191 36));
+        }
+        .safety-overview-page .bg-rose-500 {
+          background-image: linear-gradient(90deg, rgb(244 63 94), rgb(251 113 133));
+        }
+        .safety-overview-page .bg-cyan-500 {
+          background-image: linear-gradient(90deg, rgb(6 182 212), rgb(34 211 238));
+        }
+
+        .safety-overview-page .safety-line-draw {
+          filter: drop-shadow(0 0 5px rgb(var(--safety-cyan) / .35));
+        }
+
+        .safety-overview-page .safety-line-point {
+          filter: drop-shadow(0 0 5px rgb(var(--safety-cyan) / .35));
+        }
+
+        .safety-overview-page .safety-donut-segment {
+          filter: drop-shadow(0 0 3px rgb(255 255 255 / .08));
+        }
+
+        .safety-overview-page .safety-horizontal-grow,
+        .safety-overview-page .safety-bar-grow {
+          box-shadow: inset 0 1px rgb(255 255 255 / .18), 0 3px 10px rgb(0 0 0 / .10);
+        }
+      `}</style>
+
 
       <div className="safety-overview-page space-y-5">
 
@@ -1053,7 +1343,7 @@ export default function SafetyOverviewPage() {
 
         <div>
           <div className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-success" />
+            <span className="size-2 rounded-full bg-emerald-500" />
 
             <span className="text-[10px] uppercase tracking-[0.16em] text-text-dim">
               {safetyText("management", safetyLanguage)}
@@ -1119,7 +1409,7 @@ export default function SafetyOverviewPage() {
 
           <Link
             href="/safety/management"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs font-medium text-text transition hover:border-accent/50 hover:bg-surface-hover"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs font-medium text-text transition hover:border-cyan-400/50 hover:bg-surface-hover"
           >
             🛡️ {safetyText("management", safetyLanguage)} →
           </Link>
@@ -1129,11 +1419,11 @@ export default function SafetyOverviewPage() {
               "flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium",
               overallCompletion >=
                 90
-                ? "border border-success/30 bg-success/10 text-success"
+                ? "border border-emerald-400/30 bg-emerald-500/12 text-emerald-300"
                 : overallCompletion >=
                   70
-                ? "border border-warning/30 bg-warning/10 text-warning"
-                : "border border-danger/30 bg-danger/10 text-danger",
+                ? "border border-amber-400/30 bg-amber-500/12 text-amber-300"
+                : "border border-rose-400/30 bg-rose-500/12 text-rose-300",
             ].join(" ")}
           >
             <span
@@ -1141,11 +1431,11 @@ export default function SafetyOverviewPage() {
                 "size-2 rounded-full",
                 overallCompletion >=
                   90
-                  ? "bg-success"
+                  ? "bg-emerald-500"
                   : overallCompletion >=
                     70
-                  ? "bg-warning"
-                  : "bg-danger",
+                  ? "bg-amber-500"
+                  : "bg-rose-500",
               ].join(" ")}
             />
 
@@ -1185,7 +1475,7 @@ export default function SafetyOverviewPage() {
               }
             </p>
 
-            <span className="text-sm text-text-dim group-hover:text-accent">
+            <span className="text-sm text-text-dim group-hover:text-cyan-300">
             </span>
           </div>
 
@@ -1294,7 +1584,7 @@ export default function SafetyOverviewPage() {
                   value:
                     closed,
                   className:
-                    "stroke-success",
+                    "stroke-emerald-500",
                 },
                 {
                   label:
@@ -1302,7 +1592,7 @@ export default function SafetyOverviewPage() {
                   value:
                     inProgress,
                   className:
-                    "stroke-warning",
+                    "stroke-amber-500",
                 },
                 {
                   label:
@@ -1310,7 +1600,7 @@ export default function SafetyOverviewPage() {
                   value:
                     open,
                   className:
-                    "stroke-danger",
+                    "stroke-rose-500",
                 },
               ]}
             />
@@ -1505,11 +1795,11 @@ export default function SafetyOverviewPage() {
                         "h-full rounded-full transition-all",
                         item.rate >=
                           100
-                          ? "bg-success"
+                          ? "bg-emerald-500"
                           : item.rate >=
                             50
-                          ? "bg-warning"
-                          : "bg-danger",
+                          ? "bg-amber-500"
+                          : "bg-rose-500",
                       ].join(" ")}
                       style={{
                         width: `${Math.min(
@@ -1664,8 +1954,8 @@ export default function SafetyOverviewPage() {
                       className={
                         completed >
                         0
-                          ? "h-full rounded-full bg-success"
-                          : "h-full rounded-full bg-danger"
+                          ? "h-full rounded-full bg-emerald-500"
+                          : "h-full rounded-full bg-rose-500"
                       }
                       style={{
                         width: `${percentage}%`,
@@ -1711,7 +2001,7 @@ export default function SafetyOverviewPage() {
 
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-bg">
             <div
-              className="h-full rounded-full bg-accent"
+              className="h-full rounded-full bg-cyan-500"
               style={{
                 width: `${weeklyCompletion}%`,
               }}
@@ -1750,7 +2040,7 @@ export default function SafetyOverviewPage() {
                 </th>
 
                 <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wide text-text-dim">
-                  {safetyText("location", safetyLanguage)}
+                  {safetyText("description", safetyLanguage)}
                 </th>
 
                 <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wide text-text-dim">
@@ -1786,17 +2076,24 @@ export default function SafetyOverviewPage() {
                       <td className="px-3 py-3 text-xs text-text-muted">
                         {formatDate(
                           row.submission_date,
+                          safetyLanguage,
                         )}
                       </td>
 
                       <td className="px-3 py-3 text-xs text-text">
-                        {row.pic ??
-                          pic}
+                        {getLocalizedValue(
+                          row.pic_en ?? row.pic,
+                          row.pic_cn,
+                          safetyLanguage,
+                        ) || pic}
                       </td>
 
                       <td className="px-3 py-3 text-xs text-text-muted">
-                        {row.location ??
-                          location}
+                        {getLocalizedValue(
+                          row.description_en ?? row.description,
+                          row.description_cn,
+                          safetyLanguage,
+                        )}
                       </td>
 
                       <td className="px-3 py-3">
@@ -1828,7 +2125,7 @@ export default function SafetyOverviewPage() {
 
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg">
             <div
-              className="h-full rounded-full bg-accent"
+              className="h-full rounded-full bg-cyan-500"
               style={{
                 width: `${trainingRate}%`,
               }}
@@ -1852,7 +2149,7 @@ export default function SafetyOverviewPage() {
 
           {actionRows.length ===
           0 ? (
-            <div className="rounded-lg border border-success/20 bg-success/5 p-4 text-center">
+            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/5 p-4 text-center">
               <p className="text-sm font-medium text-success">
                 {safetyText("noActionRequired", safetyLanguage)}
               </p>
@@ -1864,22 +2161,15 @@ export default function SafetyOverviewPage() {
           ) : (
             actionRows.map(
               (row) => {
-                const danger =
-                  row.status ===
-                  "case_found";
+                const danger = true;
 
                 return (
                   <div
-                    key={row.id}
-                    className="grid gap-3 rounded-lg border border-border-subtle bg-bg/20 p-3 md:grid-cols-[4px_1fr_auto]"
+                    key={`${row.id}-${row.week ?? "monthly"}`}
+                    className="grid gap-3 rounded-lg border border-rose-400/30 bg-rose-500/5 p-3 md:grid-cols-[4px_1fr_auto]"
                   >
                     <div
-                      className={[
-                        "hidden rounded-full md:block",
-                        danger
-                          ? "bg-danger"
-                          : "bg-warning",
-                      ].join(" ")}
+                      className="hidden rounded-full bg-rose-500 md:block"
                     />
 
                     <div>
@@ -1892,23 +2182,36 @@ export default function SafetyOverviewPage() {
                         }
                       </p>
 
-                      <p className="mt-1 text-xs text-text-muted">
-                        {row.description ??
-                          (danger
-                            ? safetyText("safetyCaseNeedsAttention", safetyLanguage)
-                            : safetyText("activityNotSubmitted", safetyLanguage))}
-                      </p>
-
                       <p className="mt-1 text-[11px] text-text-dim">
                         {safetyText("pic", safetyLanguage)}:{" "}
-                        {row.pic ??
-                          pic}
+                        {getLocalizedValue(
+                          row.pic_en ?? row.pic,
+                          row.pic_cn,
+                          safetyLanguage,
+                        ) !== "—"
+                          ? getLocalizedValue(
+                              row.pic_en ?? row.pic,
+                              row.pic_cn,
+                              safetyLanguage,
+                            )
+                          : pic}
                       </p>
 
                       <p className="text-[11px] text-text-dim">
-                        {safetyText("location", safetyLanguage)}:{" "}
-                        {row.location ??
-                          location}
+                        {safetyText("description", safetyLanguage)}:{" "}
+                        {getLocalizedValue(
+                          row.description_en ?? row.description,
+                          row.description_cn,
+                          safetyLanguage,
+                        ) !== "—"
+                          ? getLocalizedValue(
+                              row.description_en ?? row.description,
+                              row.description_cn,
+                              safetyLanguage,
+                            )
+                          : danger
+                            ? safetyText("safetyCaseNeedsAttention", safetyLanguage)
+                            : safetyText("activityNotSubmitted", safetyLanguage)}
                       </p>
                     </div>
 
@@ -1917,12 +2220,13 @@ export default function SafetyOverviewPage() {
                         {safetyText("status", safetyLanguage)}
                       </p>
 
-                      <StatusBadge
-                        status={
-                          row.status
-                        }
-                        language={safetyLanguage}
-                      />
+                      <span className="mt-1 inline-flex rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-medium text-danger">
+                        {row.status === "case_found"
+                          ? safetyText("safetyCaseNeedsAttention", safetyLanguage)
+                          : safetyLanguage === "cn"
+                            ? "未提交"
+                            : "Not Submitted"}
+                      </span>
                     </div>
                   </div>
                 );
@@ -1963,11 +2267,11 @@ function KpiTop({
 }) {
   const classes = {
     accent:
-      "bg-accent/10",
+      "bg-cyan-500/10",
     success:
-      "bg-success/10",
+      "bg-emerald-500/10",
     warning:
-      "bg-warning/10",
+      "bg-amber-500/10",
   };
 
   return (
@@ -2004,13 +2308,13 @@ function KpiCard({
 }) {
   const iconClass = {
     accent:
-      "bg-accent/10",
+      "bg-cyan-500/10",
     success:
-      "bg-success/10",
+      "bg-emerald-500/10",
     warning:
-      "bg-warning/10",
+      "bg-amber-500/10",
     danger:
-      "bg-danger/10",
+      "bg-rose-500/10",
   };
 
   return (
@@ -2168,7 +2472,7 @@ function LineChart({
             d={path}
             fill="none"
             pathLength="1"
-            className="stroke-accent safety-line-draw"
+            className="stroke-cyan-400 safety-line-draw"
             style={{ animationDuration: `${durationSeconds}s` }}
             strokeWidth="3"
             strokeLinecap="round"
@@ -2189,7 +2493,7 @@ function LineChart({
                 cx={point.x}
                 cy={point.y}
                 r="5"
-                className="fill-surface stroke-accent safety-line-point"
+                className="fill-surface stroke-cyan-400 safety-line-point"
                 strokeWidth="3"
                 style={{ animationDelay: delay }}
               />
@@ -2263,7 +2567,7 @@ function GroupedBarChart({
             >
               <div className="relative flex h-full items-end">
                 <div
-                  className="w-7 rounded-t bg-warning safety-bar-grow"
+                  className="w-7 rounded-t bg-amber-500 safety-bar-grow"
                   style={{
                     animationDelay: `${index * 0.14}s`,
                     height: `${
@@ -2292,7 +2596,7 @@ function GroupedBarChart({
 
               <div className="relative flex h-full items-end">
                 <div
-                  className="w-7 rounded-t bg-success safety-bar-grow"
+                  className="w-7 rounded-t bg-emerald-500 safety-bar-grow"
                   style={{
                     animationDelay: `${index * 0.14 + 0.06}s`,
                     height: `${
@@ -2329,12 +2633,12 @@ function GroupedBarChart({
 
       <div className="mt-6 flex items-center gap-5">
         <Legend
-          color="bg-warning"
+          color="bg-amber-500"
           label={firstLabel}
         />
 
         <Legend
-          color="bg-success"
+          color="bg-emerald-500"
           label={secondLabel}
         />
       </div>
@@ -2382,11 +2686,11 @@ function HorizontalBarChart({
                   "h-full rounded-full safety-horizontal-grow",
                   item.value >=
                     90
-                    ? "bg-success"
+                    ? "bg-emerald-500"
                     : item.value >=
                       70
-                    ? "bg-warning"
-                    : "bg-danger",
+                    ? "bg-amber-500"
+                    : "bg-rose-500",
                 ].join(" ")}
                 style={{
                   animationDelay: `${index * 0.12}s`,
@@ -2533,7 +2837,7 @@ function ScoreCard({
       className={[
         "rounded-xl border p-4",
         highlight
-          ? "border-accent/30 bg-accent/5"
+          ? "border-cyan-400/30 bg-cyan-500/5"
           : "border-border-subtle bg-bg/30",
       ].join(" ")}
     >
@@ -2566,10 +2870,10 @@ function ScoreCard({
           className={[
             "h-full rounded-full",
             value >= 90
-              ? "bg-success"
+              ? "bg-emerald-500"
               : value >= 70
-              ? "bg-warning"
-              : "bg-danger",
+              ? "bg-amber-500"
+              : "bg-rose-500",
           ].join(" ")}
           style={{
             width: `${Math.min(
@@ -2625,11 +2929,11 @@ function LegendStat({
 }) {
   const classes = {
     success:
-      "bg-success/10 text-success",
+      "bg-emerald-500/12 text-emerald-400",
     warning:
-      "bg-warning/10 text-warning",
+      "bg-amber-500/12 text-amber-400",
     danger:
-      "bg-danger/10 text-danger",
+      "bg-rose-500/12 text-rose-400",
   };
 
   return (
@@ -2669,7 +2973,7 @@ function StatusBadge({
           label:
             safetyText("closed", language),
           className:
-            "bg-success/10 text-success",
+            "bg-emerald-500/12 text-emerald-400",
         }
       : normalized ===
         "case_found"
@@ -2677,7 +2981,7 @@ function StatusBadge({
           label:
             language === "cn" ? "发现案件" : "Case Found",
           className:
-            "bg-danger/10 text-danger",
+            "bg-rose-500/12 text-rose-400",
         }
       : normalized ===
         "not_applicable"
@@ -2685,13 +2989,13 @@ function StatusBadge({
           label:
             language === "cn" ? "无案件" : "No Case",
           className:
-            "bg-accent/10 text-accent",
+            "bg-cyan-500/12 text-cyan-300",
         }
       : {
           label:
             language === "cn" ? "未提交" : "Not Submitted",
           className:
-            "bg-warning/10 text-warning",
+            "bg-amber-500/12 text-amber-400",
         };
 
   return (
@@ -2758,6 +3062,7 @@ function getActivityTitle(
 
 function formatDate(
   value?: string | null,
+  language: SafetyLanguage = "en",
 ) {
   if (!value) {
     return "—";
@@ -2779,7 +3084,7 @@ function formatDate(
   }
 
   return date.toLocaleDateString(
-    "en-GB",
+    language === "cn" ? "zh-CN" : "en-GB",
     {
       day: "2-digit",
       month: "short",
