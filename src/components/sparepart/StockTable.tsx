@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useLang, localizedName, localizedField } from "@/lib/i18n";
 import {
-  isCriticalStock,
   isItemActive,
-  isLowStock,
+  stockLevelStatus,
+  type StockLevelStatus,
 } from "@/lib/sparepartCategories";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import type { SortDir, SortKey } from "@/lib/sparepartSort";
@@ -62,6 +62,24 @@ function rowCategoryLabel(
       lang,
     ) || row.category_code || "-"
   );
+}
+
+const STATUS_BADGE_CLASS: Record<StockLevelStatus, string> = {
+  critical:
+    "rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger",
+  low: "rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning",
+  normal:
+    "rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success",
+};
+
+function StockLevelBadge({
+  status,
+  labels,
+}: {
+  status: StockLevelStatus;
+  labels: Record<StockLevelStatus, string>;
+}) {
+  return <span className={STATUS_BADGE_CLASS[status]}>{labels[status]}</span>;
 }
 
 type Props = {
@@ -133,6 +151,7 @@ function SortHeader({
   sortAscLabel,
   sortDescLabel,
   className = "",
+  menuAlign = "left",
 }: {
   label: string;
   columnKey: SortKey;
@@ -144,6 +163,7 @@ function SortHeader({
   sortAscLabel: string;
   sortDescLabel: string;
   className?: string;
+  menuAlign?: "left" | "right";
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const active = sortKey === columnKey;
@@ -220,7 +240,10 @@ function SortHeader({
         {open ? (
           <div
             role="menu"
-            className="absolute left-0 z-30 mt-1 min-w-[10.5rem] rounded-md border border-border bg-bg-elevated py-1 shadow-lg"
+            className={[
+              "absolute z-30 mt-1 min-w-[10.5rem] rounded-md border border-border bg-bg-elevated py-1 shadow-lg",
+              menuAlign === "right" ? "right-0" : "left-0",
+            ].join(" ")}
           >
             <button
               type="button"
@@ -304,6 +327,7 @@ export function StockTable({
     label: string,
     columnKey: SortKey,
     className = "",
+    menuAlign: "left" | "right" = "left",
   ) => (
     <SortHeader
       key={columnKey}
@@ -317,6 +341,7 @@ export function StockTable({
       sortAscLabel={t.common.sortAsc}
       sortDescLabel={t.common.sortDesc}
       className={className}
+      menuAlign={menuAlign}
     />
   );
 
@@ -332,8 +357,8 @@ export function StockTable({
               <col style={{ width: "16%" }} />
               <col style={{ width: "10%" }} />
               <col style={{ width: "10%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "11%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "9%" }} />
               {showActions ? <col style={{ width: "6rem" }} /> : null}
             </colgroup>
           ) : showItemStatus ? (
@@ -365,11 +390,14 @@ export function StockTable({
                         "text-center",
                       )
                     : null}
-                  {showCurrentStock ? (
-                    <th className={`${th} text-center`}>
-                      {t.sparepart.stockStatus}
-                    </th>
-                  ) : null}
+                  {showCurrentStock
+                    ? renderSortHeader(
+                        t.sparepart.stockStatus,
+                        "status",
+                        "text-center",
+                        "right",
+                      )
+                    : null}
                   {showItemStatus ? (
                     <th className={`${th} text-center`}>
                       {t.sparepart.stockStatus}
@@ -451,25 +479,18 @@ export function StockTable({
                 ) : null}
                 {showCurrentStock ? (
                   <td className={`${td} text-center`}>
-                    {isCriticalStock(
-                      rowMinStock(row),
-                      rowStock(row),
-                      rowIsActive(row),
-                    ) ? (
-                      <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger">
-                        {t.sparepart.statusCritical}
-                      </span>
-                    ) : isLowStock(
+                    <StockLevelBadge
+                      status={stockLevelStatus(
                         rowMinStock(row),
                         rowStock(row),
                         rowIsActive(row),
-                      ) ? (
-                      <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
-                        {t.sparepart.statusLow}
-                      </span>
-                    ) : (
-                      <span className="text-text-dim">—</span>
-                    )}
+                      )}
+                      labels={{
+                        critical: t.sparepart.statusCritical,
+                        low: t.sparepart.statusLow,
+                        normal: t.sparepart.statusNormal,
+                      }}
+                    />
                   </td>
                 ) : null}
                 {showItemStatus ? (

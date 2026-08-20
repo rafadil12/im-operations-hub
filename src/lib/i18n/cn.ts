@@ -103,6 +103,7 @@ const cn: Dict = {
     stockStatus: "状态",
     statusCritical: "紧急",
     statusLow: "偏低",
+    statusNormal: "正常",
     allCategories: "全部类别",
     location: "库存地点",
     locationCode: "地点代码",

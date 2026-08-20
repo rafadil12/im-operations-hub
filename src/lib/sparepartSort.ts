@@ -1,3 +1,4 @@
+import { stockLevelStatus } from "@/lib/sparepartCategories";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 
 export type SortKey =
@@ -7,11 +8,14 @@ export type SortKey =
   | "model"
   | "category"
   | "min_stock"
-  | "stock_current";
+  | "stock_current"
+  | "status";
 
 export type SortDir = "asc" | "desc";
 
 type SortableRow = SparepartItem | SparepartStockBalanceRow;
+
+const STATUS_RANK = { critical: 0, low: 1, normal: 2 } as const;
 
 function compareStrings(a: string | null | undefined, b: string | null | undefined): number {
   const left = (a ?? "").trim();
@@ -40,6 +44,13 @@ function sortField(row: SortableRow, key: SortKey): string | null {
   }
 }
 
+function compareStatus(a: SortableRow, b: SortableRow): number {
+  return (
+    STATUS_RANK[stockLevelStatus(a.min_stock, a.stock_current, a.is_active)] -
+    STATUS_RANK[stockLevelStatus(b.min_stock, b.stock_current, b.is_active)]
+  );
+}
+
 /** When sortKey is null, default order is material code ascending. */
 export function sortSparepartItems(
   rows: SparepartItem[],
@@ -54,6 +65,8 @@ export function sortSparepartItems(
       cmp = a.stock_current - b.stock_current;
     } else if (key === "min_stock") {
       cmp = a.min_stock - b.min_stock;
+    } else if (key === "status") {
+      cmp = compareStatus(a, b);
     } else {
       cmp = compareStrings(sortField(a, key), sortField(b, key));
     }
@@ -75,6 +88,8 @@ export function sortStockBalanceRows(
       cmp = a.stock_current - b.stock_current;
     } else if (key === "min_stock") {
       cmp = a.min_stock - b.min_stock;
+    } else if (key === "status") {
+      cmp = compareStatus(a, b);
     } else {
       cmp = compareStrings(sortField(a, key), sortField(b, key));
     }

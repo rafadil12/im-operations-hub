@@ -102,6 +102,7 @@ const en = {
     stockStatus: "Status",
     statusCritical: "Critical",
     statusLow: "Low",
+    statusNormal: "Normal",
     allCategories: "All categories",
     location: "Storage Location",
     locationCode: "Location Code",

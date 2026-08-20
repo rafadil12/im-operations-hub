@@ -119,3 +119,16 @@ export function isCriticalStock(
 ): boolean {
   return isItemActive(isActive) && minStock > 0 && stockCurrent <= 0;
 }
+
+export type StockLevelStatus = "critical" | "low" | "normal";
+
+/** Critical (≤0) → Low (≤min) → Normal for everything else. */
+export function stockLevelStatus(
+  minStock: number,
+  stockCurrent: number,
+  isActive: number | boolean | null | undefined = true,
+): StockLevelStatus {
+  if (isCriticalStock(minStock, stockCurrent, isActive)) return "critical";
+  if (isLowStock(minStock, stockCurrent, isActive)) return "low";
+  return "normal";
+}
