@@ -21,8 +21,8 @@ import {
   LocationBars,
   MovementCalendar,
   Sparkline,
+  TopUsedList,
   TrendLines,
-  TypeDonut,
 } from "./OverviewCharts";
 
 type Props = {
@@ -64,6 +64,7 @@ export function SparepartOverview({
   onApplyRange,
 }: Props) {
   const { t, lang } = useLang();
+  const router = useRouter();
   const ready = overviewMatchesFilters(data, category, range);
   const visibleCodes = (
     category
@@ -179,111 +180,135 @@ export function SparepartOverview({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section className={panel}>
-          <h2 className={titleCls}>{t.sparepart.stockByCategory}</h2>
-          <CategoryDonut rows={data.byCategory} />
-        </section>
-        <section className={`${panel} xl:col-span-2`}>
-          <h2 className={titleCls}>{t.sparepart.keyFiguresByCategory}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-text-dim">
-                  <th className="pb-2 font-semibold">{t.sparepart.category}</th>
-                  <th className="pb-2 text-right font-semibold">{t.sparepart.totalItems}</th>
-                  <th className="pb-2 text-right font-semibold">{t.sparepart.stockCurrent}</th>
-                  <th className="pb-2 text-right font-semibold">{t.sparepart.kpiLowStock}</th>
-                  <th className="pb-2 text-right font-semibold">{t.sparepart.kpiMovement}</th>
-                  <th className="pb-2 text-right font-semibold">{t.sparepart.netMovement}</th>
+      <section className={panel}>
+        <h2 className={titleCls}>{t.sparepart.keyFiguresByCategory}</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-text-dim">
+                <th className="pb-2 font-semibold">{t.sparepart.category}</th>
+                <th className="pb-2 text-right font-semibold">{t.sparepart.totalItems}</th>
+                <th className="pb-2 text-right font-semibold">{t.sparepart.stockCurrent}</th>
+                <th className="pb-2 text-right font-semibold">{t.sparepart.kpiLowStock}</th>
+                <th className="pb-2 text-right font-semibold">{t.sparepart.kpiMovement}</th>
+                <th className="pb-2 text-right font-semibold">{t.sparepart.netMovement}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.byCategory.map((row) => (
+                <tr key={row.code} className="border-t border-border-subtle/60">
+                  <td className="py-2 font-medium text-text">
+                    <span
+                      className="mr-2 inline-block size-2 rounded-full"
+                      style={{ background: categoryColor(row.code) }}
+                    />
+                    {localizedName(
+                      { name_en: row.name_en, name_cn: row.name_cn },
+                      lang,
+                    )}
+                  </td>
+                  <td className="py-2 text-right tabular-nums">{row.totalItems}</td>
+                  <td className="py-2 text-right tabular-nums">
+                    {row.currentStock.toLocaleString()}
+                  </td>
+                  <td className="py-2 text-right tabular-nums">{row.lowStock}</td>
+                  <td className="py-2 text-right tabular-nums">
+                    {row.movementQty.toLocaleString()}
+                  </td>
+                  <td
+                    className={`py-2 text-right tabular-nums ${
+                      row.netMovement > 0
+                        ? "text-emerald-500"
+                        : row.netMovement < 0
+                          ? "text-danger"
+                          : "text-text-muted"
+                    }`}
+                  >
+                    {row.netMovement > 0 ? "+" : ""}
+                    {row.netMovement.toLocaleString()}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {data.byCategory.map((row) => (
-                  <tr key={row.code} className="border-t border-border-subtle/60">
-                    <td className="py-2 font-medium text-text">
-                      <span
-                        className="mr-2 inline-block size-2 rounded-full"
-                        style={{ background: categoryColor(row.code) }}
-                      />
-                      {localizedName(
-                        { name_en: row.name_en, name_cn: row.name_cn },
-                        lang,
-                      )}
-                    </td>
-                    <td className="py-2 text-right tabular-nums">{row.totalItems}</td>
-                    <td className="py-2 text-right tabular-nums">
-                      {row.currentStock.toLocaleString()}
-                    </td>
-                    <td className="py-2 text-right tabular-nums">{row.lowStock}</td>
-                    <td className="py-2 text-right tabular-nums">
-                      {row.movementQty.toLocaleString()}
-                    </td>
-                    <td
-                      className={`py-2 text-right tabular-nums ${
-                        row.netMovement > 0
-                          ? "text-emerald-500"
-                          : row.netMovement < 0
-                            ? "text-danger"
-                            : "text-text-muted"
-                      }`}
-                    >
-                      {row.netMovement > 0 ? "+" : ""}
-                      {row.netMovement.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section className={`${panel} xl:col-span-2`}>
-          <h2 className={titleCls}>{t.sparepart.movementSummary}</h2>
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <MiniStat
-              label={t.sparepart.incoming}
-              value={data.movementSummary.inQty}
-              hint={`${data.movementSummary.inDocs} ${t.sparepart.documentsCount}`}
+        <div className="space-y-4 xl:col-span-2">
+          <section className={panel}>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <h2 className="text-sm font-semibold text-text">
+                {t.sparepart.movementSummary}{" "}
+                <span className="text-xs font-normal text-text-muted">
+                  {data.movementSummary.barGrain === "week"
+                    ? t.sparepart.groupedByWeek
+                    : data.movementSummary.barGrain === "month"
+                      ? t.sparepart.groupedByMonth
+                      : t.sparepart.groupedByDay}
+                </span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => router.push("/sparepart/documents")}
+                className="shrink-0 cursor-pointer text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                {t.dashboard.viewDetail}
+              </button>
+            </div>
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <MiniStat
+                label={t.sparepart.incoming}
+                value={data.movementSummary.inQty}
+                hint={`${data.movementSummary.inDocs} ${t.sparepart.documentsCount}`}
+              />
+              <MiniStat
+                label={t.sparepart.outgoing}
+                value={data.movementSummary.outQty}
+                hint={`${data.movementSummary.outDocs} ${t.sparepart.documentsCount}`}
+              />
+              <MiniStat
+                label={t.sparepart.netMovement}
+                value={data.movementSummary.netQty}
+              />
+              <MiniStat
+                label={t.sparepart.transactionCount}
+                value={data.movementSummary.transactionCount}
+              />
+            </div>
+            <InOutBars
+              rows={data.movementSummary.monthly}
+              grain={data.movementSummary.barGrain}
             />
-            <MiniStat
-              label={t.sparepart.outgoing}
-              value={data.movementSummary.outQty}
-              hint={`${data.movementSummary.outDocs} ${t.sparepart.documentsCount}`}
-            />
-            <MiniStat
-              label={t.sparepart.netMovement}
-              value={data.movementSummary.netQty}
-            />
-            <MiniStat
-              label={t.sparepart.transactionCount}
-              value={data.movementSummary.transactionCount}
-            />
-          </div>
-          <InOutBars rows={data.movementSummary.monthly} />
-        </section>
-        <section className={panel}>
-          <h2 className={titleCls}>{t.sparepart.movementTypeDistribution}</h2>
-          <TypeDonut slices={data.movementByType} />
-        </section>
+          </section>
+
+          <section className={panel}>
+            <h2 className={titleCls}>{t.sparepart.stockByLocation}</h2>
+            {data.stockByLocation.length ? (
+              <LocationBars rows={data.stockByLocation} />
+            ) : (
+              <p className="text-sm text-text-muted">{t.common.noData}</p>
+            )}
+          </section>
+        </div>
+
+        <div className="space-y-4">
+          <section className={panel}>
+            <h2 className={titleCls}>{t.sparepart.topUsedItems}</h2>
+            <TopUsedList items={data.topUsedItems} />
+          </section>
+
+          <section className={panel}>
+            <h2 className={titleCls}>{t.sparepart.stockByCategory}</h2>
+            <CategoryDonut rows={data.byCategory} />
+          </section>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section className={panel}>
-          <h2 className={titleCls}>{t.sparepart.movementTrend}</h2>
-          <TrendLines rows={data.trendDaily} visible={visibleCodes} />
-        </section>
-        <section className={panel}>
-          <h2 className={titleCls}>{t.sparepart.stockByLocation}</h2>
-          {data.stockByLocation.length ? (
-            <LocationBars rows={data.stockByLocation} />
-          ) : (
-            <p className="text-sm text-text-muted">{t.common.noData}</p>
-          )}
-        </section>
-      </div>
+      <section className={panel}>
+        <h2 className={titleCls}>{t.sparepart.movementTrend}</h2>
+        <TrendLines rows={data.trendDaily} visible={visibleCodes} />
+      </section>
 
       <section className={panel}>
         <h2 className={titleCls}>{t.sparepart.categoryLocationHeatmap}</h2>
@@ -305,11 +330,15 @@ export function SparepartOverview({
           title={t.sparepart.lowStockPriority}
           subtitle={t.sparepart.lowStockSubtitle}
           items={data.lowStockItems.filter((item) => item.status === "low")}
-          renderMeta={(item) =>
-            `${localizedName(item, lang)} · ${item.stock_current}/${item.min_stock}${
-              item.uom_code ? ` ${item.uom_code}` : ""
-            }`
-          }
+          renderMeta={(item) => {
+            const uom =
+              item.uom_code && item.uom_code.toUpperCase() === "PCS"
+                ? t.sparepart.pcs
+                : item.uom_code;
+            return `${localizedName(item, lang)} · ${item.stock_current}/${item.min_stock}${
+              uom ? ` ${uom}` : ""
+            }`;
+          }}
           badgeClass="bg-warning/15 text-warning"
           badgeLabel={t.sparepart.statusLow}
         />
@@ -487,7 +516,7 @@ function AlertItemsCard({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`${t.common.search} code / name`}
+              placeholder={t.sparepart.alertSearchPlaceholder}
               className="w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent"
             />
 
@@ -498,17 +527,16 @@ function AlertItemsCard({
             ) : (
               <div className="overflow-hidden rounded-lg border border-border-subtle">
                 <div className="grid grid-cols-[120px_minmax(0,1fr)_90px_84px] gap-3 border-b border-border-subtle bg-bg/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-dim">
-                  <span>Code</span>
-                  <span>{t.common.search}</span>
-                  <span className="text-right">Stock</span>
-                  <span className="text-right">Status</span>
+                  <span>{t.sparepart.alertColCode}</span>
+                  <span>{t.sparepart.alertColName}</span>
+                  <span className="text-right">{t.sparepart.alertColStock}</span>
+                  <span className="text-right">{t.sparepart.alertColStatus}</span>
                 </div>
                 <div className="max-h-[58vh] overflow-y-auto">
                   {filteredItems.map((item: AlertItem) => (
                     <AlertItemCompactRow
                       key={item.code}
                       item={item}
-                      meta={renderMeta(item)}
                       badgeClass={badgeClass}
                       badgeLabel={badgeLabel}
                     />
@@ -541,7 +569,7 @@ function AlertItemRow({
         <p className="truncate text-text-muted">{meta}</p>
       </div>
       <span
-        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeClass}`}
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeClass}`}
       >
         {badgeLabel}
       </span>
@@ -551,15 +579,19 @@ function AlertItemRow({
 
 function AlertItemCompactRow({
   item,
-  meta,
   badgeClass,
   badgeLabel,
 }: {
   item: AlertItem;
-  meta: string;
   badgeClass: string;
   badgeLabel: string;
 }) {
+  const { t, lang } = useLang();
+  const uom =
+    item.uom_code && item.uom_code.toUpperCase() === "PCS"
+      ? t.sparepart.pcs
+      : item.uom_code;
+
   return (
     <div className="grid grid-cols-[120px_minmax(0,1fr)_90px_84px] gap-3 border-t border-border-subtle/70 px-4 py-3 text-sm first:border-t-0">
       <div className="min-w-0">
@@ -567,16 +599,16 @@ function AlertItemCompactRow({
         <p className="mt-0.5 text-[11px] text-text-dim">{item.category_code}</p>
       </div>
       <div className="min-w-0">
-        <p className="truncate text-text-muted">{meta}</p>
+        <p className="truncate text-text-muted">{localizedName(item, lang)}</p>
       </div>
       <div className="text-right tabular-nums text-text">
         {item.stock_current}
         {typeof item.min_stock === "number" ? ` / ${item.min_stock}` : ""}
-        {item.uom_code ? ` ${item.uom_code}` : ""}
+        {uom ? ` ${uom}` : ""}
       </div>
       <div className="text-right">
         <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeClass}`}
+          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeClass}`}
         >
           {badgeLabel}
         </span>

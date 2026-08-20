@@ -59,6 +59,14 @@ type ItemRow = {
   stock_current: number;
   min_stock: number;
 };
+type UsedItemRow = {
+  code: string;
+  name_en: string | null;
+  name_cn: string | null;
+  category_code: string;
+  uom_code: string | null;
+  qty: number;
+};
 type ReconstructRow = {
   stock_current: number;
   min_stock: number;
@@ -218,6 +226,7 @@ export async function GET(request: NextRequest) {
       heatRows,
       topRows,
       lowRows,
+      usedRows,
       heatDayRows,
       [activeLocs],
       sparseRows,
@@ -434,6 +443,20 @@ export async function GET(request: NextRequest) {
          LIMIT 200`,
         itemParams,
       ),
+      query<UsedItemRow[]>(
+        `SELECT
+           i.code, i.name_en, i.name_cn, c.code AS category_code,
+           u.code AS uom_code,
+           COALESCE(SUM(${OUT_QTY_SQL}), 0) AS qty
+         ${moveJoin}
+         JOIN uoms u ON u.id = i.uom_id
+         WHERE ${moveWhere}
+         GROUP BY i.id, i.code, i.name_en, i.name_cn, c.code, u.code
+         HAVING qty > 0
+         ORDER BY qty DESC, i.code ASC
+         LIMIT 5`,
+        moveParams(period.start, period.end),
+      ),
       query<DayRow[]>(
         `SELECT
            DATE_FORMAT(d.posting_date, '%Y-%m-%d') AS day_key,
@@ -610,6 +633,7 @@ export async function GET(request: NextRequest) {
         outDocs: n(outMonth?.docs),
         netQty: n(inMonth?.qty) - n(outMonth?.qty),
         transactionCount: n(txMonth?.docs),
+        barGrain,
         monthly: barKeys.map((monthKey) => ({
           month: monthKey,
           inQty: monthlyMap.get(monthKey)?.inQty ?? 0,
@@ -621,6 +645,14 @@ export async function GET(request: NextRequest) {
       ).map((type) => ({
         type,
         qty: typeMap.get(type) ?? 0,
+      })),
+      topUsedItems: usedRows.map((row) => ({
+        code: row.code,
+        name_en: row.name_en,
+        name_cn: row.name_cn,
+        category_code: canonicalCategoryCode(row.category_code),
+        uom_code: row.uom_code,
+        qty: n(row.qty),
       })),
       trendDaily: categoryFilter
         ? trendDaily.map((point) => ({

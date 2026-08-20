@@ -43,6 +43,8 @@ export type SparepartOverviewMonthlyBar = {
   outQty: number;
 };
 
+export type SparepartOverviewBarGrain = "day" | "week" | "month";
+
 export type SparepartOverviewMovementSummary = {
   inQty: number;
   inDocs: number;
@@ -50,11 +52,22 @@ export type SparepartOverviewMovementSummary = {
   outDocs: number;
   netQty: number;
   transactionCount: number;
+  /** How `monthly` buckets are aggregated for Movement Summary bars. */
+  barGrain: SparepartOverviewBarGrain;
   monthly: SparepartOverviewMonthlyBar[];
 };
 
 export type SparepartOverviewTypeSlice = {
   type: "in" | "out" | "transfer" | "reversal";
+  qty: number;
+};
+
+export type SparepartOverviewTopUsedItem = {
+  code: string;
+  name_en: string | null;
+  name_cn: string | null;
+  category_code: string;
+  uom_code?: string | null;
   qty: number;
 };
 
@@ -123,6 +136,7 @@ export type SparepartOverviewData = {
   byCategory: SparepartOverviewByCategory[];
   movementSummary: SparepartOverviewMovementSummary;
   movementByType: SparepartOverviewTypeSlice[];
+  topUsedItems: SparepartOverviewTopUsedItem[];
   trendDaily: SparepartOverviewTrendPoint[];
   stockByLocation: SparepartOverviewLocationStock[];
   categoryLocationHeatmap: SparepartOverviewHeatmapCell[];
