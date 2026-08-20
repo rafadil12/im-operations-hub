@@ -3,6 +3,18 @@ import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import { pool } from "@/lib/db";
+
+function getSafetyUploadDir(): string {
+  const dir = process.env.SAFETY_UPLOAD_DIR;
+
+  if (!dir) {
+    throw new Error(
+      "SAFETY_UPLOAD_DIR environment variable is not configured.",
+    );
+  }
+
+  return dir;
+}
 import type {
   FieldPacket,
   ResultSetHeader,
@@ -898,16 +910,12 @@ export async function POST(
     if (
       uploadedFiles.length > 0
     ) {
-      const uploadDir =
-        path.join(
-          process.cwd(),
-          "public",
-          "uploads",
-          "safety",
-          String(year),
-          String(month),
-          "monthly",
-        );
+      const uploadDir = path.join(
+        getSafetyUploadDir(),
+        String(year),
+        String(month),
+        "monthly",
+      );
 
       await mkdir(
         uploadDir,
@@ -1375,12 +1383,34 @@ export async function DELETE(
           "",
         );
 
-      const filePath =
-        path.join(
-          process.cwd(),
-          "public",
-          relative,
+      const relativeParts = relative
+        .split(/[\\/]+/)
+        .filter(Boolean);
+
+      /*
+       * URL:
+       * /uploads/safety/{year}/{month}/monthly/{filename}
+       *
+       * Physical:
+       * SAFETY_UPLOAD_DIR/{year}/{month}/monthly/{filename}
+       */
+      const uploadsIndex =
+        relativeParts.findIndex(
+          (part) => part === "safety",
         );
+
+      const filePath =
+        uploadsIndex >= 0
+          ? path.join(
+              getSafetyUploadDir(),
+              ...relativeParts.slice(
+                uploadsIndex + 1,
+              ),
+            )
+          : path.join(
+              getSafetyUploadDir(),
+              relative,
+            );
 
       try {
         await unlink(

@@ -4,6 +4,18 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { execute, query } from "@/lib/db";
 
+function getSafetyUploadDir(): string {
+  const dir = process.env.SAFETY_UPLOAD_DIR;
+
+  if (!dir) {
+    throw new Error(
+      "SAFETY_UPLOAD_DIR environment variable is not configured.",
+    );
+  }
+
+  return dir;
+}
+
 export const runtime = "nodejs";
 
 const WEEKLY_ACTIVITY_TYPES = [
@@ -532,19 +544,12 @@ export async function POST(request: Request) {
      * Hanya membuat folder dan menyimpan
      * file kalau memang ada file baru.
      */
-    const uploadDirectory =
-      path.join(
-        process.cwd(),
-        "public",
-        "uploads",
-        "safety",
-        String(year),
-        String(month).padStart(
-          2,
-          "0",
-        ),
-        `week-${week}`,
-      );
+    const uploadDirectory = path.join(
+      getSafetyUploadDir(),
+      String(year),
+      String(month).padStart(2, "0"),
+      `week-${week}`,
+    );
 
     const savedFiles: Array<{
       originalName: string;
