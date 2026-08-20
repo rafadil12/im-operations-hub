@@ -597,8 +597,15 @@ export async function POST(request: Request) {
 
           storedName,
 
+          /*
+           * File fisik disimpan di:
+           * SAFETY_UPLOAD_DIR
+           *
+           * Browser mengaksesnya melalui:
+           * /api/safety/files/...
+           */
           url:
-            `/uploads/safety/${year}/${String(
+            `/api/safety/files/${year}/${String(
               month,
             ).padStart(
               2,
@@ -752,7 +759,8 @@ export async function POST(request: Request) {
               ?,
               ?,
               ?
-            )          `,
+            )
+          `,
           [
             year,
             month,
