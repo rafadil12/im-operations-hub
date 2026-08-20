@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/ToastProvider";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { ExportIcon } from "@/components/ui/ActionIcons";
 import {
   PAGE_SIZE_OPTIONS,
   type PageSize,
@@ -116,6 +117,7 @@ export default function MaterialDocumentsPage() {
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
   const [detail, setDetail] = useState<SparepartMatDoc | null>(null);
   const [reversing, setReversing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(
     async (filters: {
@@ -174,6 +176,36 @@ export default function MaterialDocumentsPage() {
     }
   }, [searchParams, openDetail]);
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (movementType) params.set("movementType", movementType);
+      if (location) params.set("location", location);
+      if (start) params.set("start", start);
+      if (end) params.set("end", end);
+      const res = await fetch(
+        `/api/sparepart/documents/export?${params.toString()}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) throw new Error(t.toast.exportFailed);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "sparepart-transaction-history.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : t.toast.exportFailed);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pagedRows = useMemo(() => {
@@ -183,6 +215,8 @@ export default function MaterialDocumentsPage() {
 
   const field =
     "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+  const toolbarBtn =
+    "inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60";
   const movementTypeOptions = [
     { value: "", label: t.sparepart.allTypes },
     { value: "101", label: t.sparepart.movement101 },
@@ -200,11 +234,22 @@ export default function MaterialDocumentsPage() {
   return (
     <SparepartGate allow={(a) => a.canViewSparepartDocuments}>
     <div>
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-text">
-          {t.sparepart.documentsTitle}
-        </h1>
-        <p className="text-sm text-text-muted">{t.sparepart.documentsDesc}</p>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-text">
+            {t.sparepart.documentsTitle}
+          </h1>
+          <p className="text-sm text-text-muted">{t.sparepart.documentsDesc}</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting || loading}
+          className={toolbarBtn}
+        >
+          <ExportIcon className="size-3.5" />
+          {exporting ? t.common.exporting : t.common.export}
+        </button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
