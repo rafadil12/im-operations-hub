@@ -161,6 +161,7 @@ const en = {
     lowStockPriority: "Low Stock Items",
     lowStockSubtitle: "(Priority)",
     viewAll: "View all",
+    totalNItems: "Total {n} Items",
     movementHeatmap: "Movement Heatmap",
     allCategory: "All Category",
     heatmapLow: "Low",

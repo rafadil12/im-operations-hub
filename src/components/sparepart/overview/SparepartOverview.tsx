@@ -1,6 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, type ReactNode } from "react";
+import { Modal } from "@/components/ui/Modal";
 import { localizedName, useLang } from "@/lib/i18n";
 import {
   categoryColor,
@@ -288,93 +290,29 @@ export function SparepartOverview({
         <CategoryLocationHeatmap cells={data.categoryLocationHeatmap} />
       </section>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section className={panel}>
-          <h2 className={titleCls}>
-            {t.sparepart.topStockItems}{" "}
-            <span className="text-xs font-normal text-text-muted">
-              {t.sparepart.topStockSubtitle}
-            </span>
-          </h2>
-          <ul className="max-h-[280px] space-y-2 overflow-y-auto">
-            {data.topStock.length === 0 ? (
-              <li className="text-sm text-text-muted">{t.common.noData}</li>
-            ) : (
-              data.topStock.map((item) => (
-                <li
-                  key={item.code}
-                  className="flex items-start justify-between gap-2 text-xs"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-text">{item.code}</p>
-                    <p className="truncate text-text-muted">
-                      {localizedName(item, lang)} · {item.category_code}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase bg-danger/15 text-danger">
-                    {t.sparepart.statusCritical}
-                  </span>
-                </li>
-              ))
-            )}
-          </ul>
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
-            <span className="text-text-muted">
-              Total {data.topStock.length} Items
-            </span>
-            <a
-              href="/sparepart/stock"
-              className="font-medium text-primary hover:underline"
-            >
-              {t.sparepart.viewAll}
-            </a>
-          </div>
-        </section>
-        <section className={panel}>
-          <h2 className={titleCls}>
-            {t.sparepart.lowStockPriority}{" "}
-            <span className="text-xs font-normal text-text-muted">
-              {t.sparepart.lowStockSubtitle}
-            </span>
-          </h2>
-          <ul className="max-h-[280px] space-y-2 overflow-y-auto">
-            {data.lowStockItems.filter((item) => item.status === "low").length === 0 ? (
-              <li className="text-sm text-text-muted">{t.common.noData}</li>
-            ) : (
-              data.lowStockItems
-                .filter((item) => item.status === "low")
-                .map((item) => (
-                  <li
-                    key={item.code}
-                    className="flex items-start justify-between gap-2 text-xs"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-text">{item.code}</p>
-                      <p className="truncate text-text-muted">
-                        {localizedName(item, lang)} · {item.stock_current}/
-                        {item.min_stock}
-                        {item.uom_code ? ` ${item.uom_code}` : ""}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase bg-warning/15 text-warning">
-                      {t.sparepart.statusLow}
-                    </span>
-                  </li>
-                ))
-            )}
-          </ul>
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
-            <span className="text-text-muted">
-              Total {data.lowStockItems.filter((item) => item.status === "low").length} Items
-            </span>
-            <a
-              href="/sparepart/stock"
-              className="font-medium text-primary hover:underline"
-            >
-              {t.sparepart.viewAll}
-            </a>
-          </div>
-        </section>
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-3">
+        <AlertItemsCard
+          title={t.sparepart.topStockItems}
+          subtitle={t.sparepart.topStockSubtitle}
+          items={data.topStock}
+          renderMeta={(item) =>
+            `${localizedName(item, lang)} · ${item.category_code}`
+          }
+          badgeClass="bg-danger/15 text-danger"
+          badgeLabel={t.sparepart.statusCritical}
+        />
+        <AlertItemsCard
+          title={t.sparepart.lowStockPriority}
+          subtitle={t.sparepart.lowStockSubtitle}
+          items={data.lowStockItems.filter((item) => item.status === "low")}
+          renderMeta={(item) =>
+            `${localizedName(item, lang)} · ${item.stock_current}/${item.min_stock}${
+              item.uom_code ? ` ${item.uom_code}` : ""
+            }`
+          }
+          badgeClass="bg-warning/15 text-warning"
+          badgeLabel={t.sparepart.statusLow}
+        />
         <section className={panel}>
           <MovementCalendar
             cells={data.movementHeatmap}
@@ -415,6 +353,234 @@ export function SparepartOverview({
       ) : null}
         </>
       )}
+    </div>
+  );
+}
+
+const PREVIEW_ROWS = 7;
+const LIST_HEIGHT = "h-[280px]";
+
+type AlertItem = {
+  code: string;
+  name_en: string | null;
+  name_cn: string | null;
+  category_code: string;
+  uom_code?: string | null;
+  stock_current: number;
+  min_stock?: number;
+};
+
+function AlertItemsCard({
+  title,
+  subtitle,
+  items,
+  renderMeta,
+  badgeClass,
+  badgeLabel,
+}: {
+  title: string;
+  subtitle: string;
+  items: AlertItem[];
+  renderMeta: (item: AlertItem) => string;
+  badgeClass: string;
+  badgeLabel: string;
+}) {
+  const { t } = useLang();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const preview = items.slice(0, PREVIEW_ROWS);
+  const filteredItems = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return items;
+    return items.filter((item) => {
+      const haystacks = [
+        item.code,
+        item.name_en ?? "",
+        item.name_cn ?? "",
+        item.category_code,
+        renderMeta(item),
+      ];
+      return haystacks.some((value) => value.toLowerCase().includes(needle));
+    });
+  }, [items, query, renderMeta]);
+
+  return (
+    <>
+      <section className={`${panel} flex flex-col`}>
+        <h2 className={titleCls}>
+          {title}{" "}
+          <span className="text-xs font-normal text-text-muted">{subtitle}</span>
+        </h2>
+        <ul className={`${LIST_HEIGHT} space-y-2 overflow-y-auto`}>
+          {preview.length === 0 ? (
+            <li className="text-sm text-text-muted">{t.common.noData}</li>
+          ) : (
+            preview.map((item) => (
+              <AlertItemRow
+                key={item.code}
+                item={item}
+                meta={renderMeta(item)}
+                badgeClass={badgeClass}
+                badgeLabel={badgeLabel}
+              />
+            ))
+          )}
+        </ul>
+        <div className="mt-auto flex items-center justify-between border-t border-border pt-3 text-xs">
+          <span className="text-text-muted">
+            {t.sparepart.totalNItems.replace("{n}", String(items.length))}
+          </span>
+          {items.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="cursor-pointer font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              {t.sparepart.viewAll}
+            </button>
+          ) : null}
+        </div>
+      </section>
+
+      {open ? (
+        <Modal
+          title={
+            <span>
+              {title}{" "}
+              <span className="font-normal text-text-muted">{subtitle}</span>
+            </span>
+          }
+          size="md"
+          onClose={() => setOpen(false)}
+          subtitle={
+            <div className="mt-1 flex items-center gap-2 text-xs text-text-dim">
+              <span>{t.sparepart.totalNItems.replace("{n}", String(filteredItems.length))}</span>
+              {query.trim() ? (
+                <span>
+                  {t.common.search}: <span className="text-text">{query}</span>
+                </span>
+              ) : null}
+            </div>
+          }
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => router.push("/sparepart/stock")}
+                className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
+              >
+                {t.dashboard.viewDetail}
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+              >
+                {t.common.close}
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`${t.common.search} code / name`}
+              className="w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent"
+            />
+
+            {filteredItems.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border-subtle bg-bg/20 px-4 py-8 text-center text-sm text-text-muted">
+                {t.common.noData}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-border-subtle">
+                <div className="grid grid-cols-[120px_minmax(0,1fr)_90px_84px] gap-3 border-b border-border-subtle bg-bg/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-dim">
+                  <span>Code</span>
+                  <span>{t.common.search}</span>
+                  <span className="text-right">Stock</span>
+                  <span className="text-right">Status</span>
+                </div>
+                <div className="max-h-[58vh] overflow-y-auto">
+                  {filteredItems.map((item: AlertItem) => (
+                    <AlertItemCompactRow
+                      key={item.code}
+                      item={item}
+                      meta={renderMeta(item)}
+                      badgeClass={badgeClass}
+                      badgeLabel={badgeLabel}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
+      ) : null}
+    </>
+  );
+}
+
+function AlertItemRow({
+  item,
+  meta,
+  badgeClass,
+  badgeLabel,
+}: {
+  item: AlertItem;
+  meta: string;
+  badgeClass: string;
+  badgeLabel: string;
+}) {
+  return (
+    <li className="flex items-start justify-between gap-2 text-xs">
+      <div className="min-w-0">
+        <p className="font-medium text-text">{item.code}</p>
+        <p className="truncate text-text-muted">{meta}</p>
+      </div>
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeClass}`}
+      >
+        {badgeLabel}
+      </span>
+    </li>
+  );
+}
+
+function AlertItemCompactRow({
+  item,
+  meta,
+  badgeClass,
+  badgeLabel,
+}: {
+  item: AlertItem;
+  meta: string;
+  badgeClass: string;
+  badgeLabel: string;
+}) {
+  return (
+    <div className="grid grid-cols-[120px_minmax(0,1fr)_90px_84px] gap-3 border-t border-border-subtle/70 px-4 py-3 text-sm first:border-t-0">
+      <div className="min-w-0">
+        <p className="font-semibold text-text">{item.code}</p>
+        <p className="mt-0.5 text-[11px] text-text-dim">{item.category_code}</p>
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-text-muted">{meta}</p>
+      </div>
+      <div className="text-right tabular-nums text-text">
+        {item.stock_current}
+        {typeof item.min_stock === "number" ? ` / ${item.min_stock}` : ""}
+        {item.uom_code ? ` ${item.uom_code}` : ""}
+      </div>
+      <div className="text-right">
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeClass}`}
+        >
+          {badgeLabel}
+        </span>
+      </div>
     </div>
   );
 }

@@ -420,18 +420,18 @@ export async function GET(request: NextRequest) {
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
                 u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
-         WHERE ${itemWhere} AND i.is_active = 1 AND i.stock_current <= 0
+         WHERE ${itemWhere} AND ${LOW_STOCK_SQL} AND i.stock_current <= 0
          ORDER BY i.code ASC
-         LIMIT 20`,
+         LIMIT 200`,
         itemParams,
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
                 u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
-         WHERE ${itemWhere} AND ${LOW_STOCK_SQL}
+         WHERE ${itemWhere} AND ${LOW_STOCK_SQL} AND i.stock_current > 0
          ORDER BY i.stock_current ASC, i.code ASC
-         LIMIT 20`,
+         LIMIT 200`,
         itemParams,
       ),
       query<DayRow[]>(

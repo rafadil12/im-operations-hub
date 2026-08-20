@@ -160,6 +160,7 @@ const cn: Dict = {
     lowStockPriority: "低库存物料",
     lowStockSubtitle: "(优先)",
     viewAll: "查看全部",
+    totalNItems: "共 {n} 项",
     movementHeatmap: "流转热力图",
     allCategory: "全部分类",
     heatmapLow: "低",
