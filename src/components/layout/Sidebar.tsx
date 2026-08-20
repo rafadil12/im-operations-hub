@@ -258,6 +258,11 @@ export function Sidebar() {
     canViewItsmOverview,
     canViewItsmRequests,
     canViewItsmAnalysis,
+    canViewSafetyOverview,
+    canViewSafetySubmissions,
+    canCreateSafetySubmission,
+    canUpdateSafetySubmission,
+    canViewSparepartOverview,
     canViewSparepartStock,
     canViewSparepartDocuments,
     canPostSparepartDocument,
@@ -295,8 +300,12 @@ export function Sidebar() {
             canManageConfiguration
           );
         }
+        if (item.id === "safety") {
+          return canViewSafetyOverview || canViewSafetySubmissions;
+        }
         if (item.id === "sparepart") {
           return (
+            canViewSparepartOverview ||
             canViewSparepartStock ||
             canPostSparepartDocument ||
             canViewSparepartDocuments ||
@@ -339,6 +348,22 @@ export function Sidebar() {
             }),
           };
         }
+        if (item.id === "safety" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "overview") return canViewSafetyOverview;
+              if (child.id === "management") {
+                return (
+                  canViewSafetySubmissions ||
+                  canCreateSafetySubmission ||
+                  canUpdateSafetySubmission
+                );
+              }
+              return true;
+            }),
+          };
+        }
         if (item.id === "sparepart" && item.children) {
           const sparepartAccess = {
             canViewSparepartStock,
@@ -347,19 +372,13 @@ export function Sidebar() {
             canViewSparepartMaterials,
             canManageSparepartLocations,
           };
-          const hasAnySparepart =
-            canViewSparepartStock ||
-            canPostSparepartDocument ||
-            canViewSparepartDocuments ||
-            canViewSparepartMaterials ||
-            canManageSparepartLocations;
 
           return {
             ...item,
             children: item.children
               .map((child) => {
                 if (child.id === "overview") {
-                  return hasAnySparepart ? child : null;
+                  return canViewSparepartOverview ? child : null;
                 }
                 if (child.id === "management" && child.children) {
                   const nested = child.children.filter((leaf) =>
@@ -383,19 +402,24 @@ export function Sidebar() {
       });
   }, [
     canAccessSettings,
+    canCreateSafetySubmission,
     canManageAccounts,
     canManageConfiguration,
     canManageRoles,
     canManageSparepartLocations,
     canPostSparepartDocument,
+    canUpdateSafetySubmission,
     canViewDailyAnalysis,
     canViewDailyRecords,
     canViewItsmAnalysis,
     canViewItsmOverview,
     canViewItsmRequests,
     canViewOverview,
+    canViewSafetyOverview,
+    canViewSafetySubmissions,
     canViewSparepartDocuments,
     canViewSparepartMaterials,
+    canViewSparepartOverview,
     canViewSparepartStock,
   ]);
 

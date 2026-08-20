@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
+import {
+  PERMISSIONS,
+  requireAnyPermission,
+} from "@/lib/auth";
 
 function getSafetyUploadDir(): string {
   const dir = process.env.SAFETY_UPLOAD_DIR;
@@ -41,6 +45,12 @@ export async function GET(
     }>;
   },
 ) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.safetyOverviewView,
+    PERMISSIONS.safetySubmissionRead,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { path: fileSegments } = await params;
 

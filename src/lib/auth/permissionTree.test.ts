@@ -40,6 +40,9 @@ describe("PERMISSION_TREE", () => {
   });
 
   it("nests sparepart pages under Sparepart Management like the sidebar", () => {
+    const overview = findNode(PERMISSION_TREE, "sparepart-overview");
+    expect(overview?.codes).toEqual([PERMISSIONS.sparepartOverviewView]);
+
     const management = findNode(PERMISSION_TREE, "sparepart-management");
     expect(management?.label).toEqual({
       source: "nav",
@@ -51,6 +54,23 @@ describe("PERMISSION_TREE", () => {
       "sparepart-documents",
       "sparepart-materials",
       "sparepart-locations",
+    ]);
+  });
+
+  it("places safety overview and management under Safety", () => {
+    const safety = findNode(PERMISSION_TREE, "safety");
+    expect(safety?.children?.map((c) => c.id)).toEqual([
+      "safety-overview",
+      "safety-management",
+    ]);
+    expect(findNode(PERMISSION_TREE, "safety-overview")?.codes).toEqual([
+      PERMISSIONS.safetyOverviewView,
+    ]);
+    expect(findNode(PERMISSION_TREE, "safety-management")?.codes).toEqual([
+      PERMISSIONS.safetySubmissionRead,
+      PERMISSIONS.safetySubmissionCreate,
+      PERMISSIONS.safetySubmissionUpdate,
+      PERMISSIONS.safetySubmissionDelete,
     ]);
   });
 

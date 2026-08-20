@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SafetyGate } from "@/components/safety/SafetyGate";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
 type SubmissionStatus = "completed" | "not_submitted" | "not_applicable" | "case_found";
@@ -938,6 +940,13 @@ function getLastSubmissionDate(
 
 export default function SafetyManagementPage() {
   const { t } = useLang();
+  const {
+    canViewSafetySubmissions,
+    canCreateSafetySubmission,
+    canUpdateSafetySubmission,
+  } = useRoleAccess();
+  const canMutateSafety =
+    canCreateSafetySubmission || canUpdateSafetySubmission;
   const safetyLanguage: SafetyLanguage = t.safety.management === "安全管理" ? "cn" : "en";
   const [records, setRecords] = useState<WeeklyRecord[]>([]);
   const [monthly, setMonthly] = useState<MonthlyRecord>(INITIAL_MONTHLY_RECORD);
@@ -1608,12 +1617,16 @@ export default function SafetyManagementPage() {
   function openUpload(week: number, activity: ActivityType) {
     const config = [...WEEKLY_ACTIVITIES, ...MONTHLY_ACTIVITIES].find((a) => a.id === activity);
     if (!config) return;
-    resetForm();
-    setSelectedWeek(week);
-    setSelectedActivity(activity);
     const record = records.find((r) => r.week === week);
     const dataKey = config.dataKey;
     const existing = dataKey ? record?.[dataKey] : undefined;
+    const isUpdate = Boolean(existing && typeof existing === "object");
+    if (isUpdate ? !canUpdateSafetySubmission : !canCreateSafetySubmission) {
+      return;
+    }
+    resetForm();
+    setSelectedWeek(week);
+    setSelectedActivity(activity);
     if (existing && typeof existing === "object") {
       const detail = existing as SubmissionDetail;
       setFileNames(detail.fileNames ?? []);
@@ -1634,6 +1647,23 @@ export default function SafetyManagementPage() {
   function openMonthlyUpload(activity: ActivityType, submissionId?: number) {
     const config = MONTHLY_ACTIVITIES.find((a) => a.id === activity);
     if (!config) return;
+    const isUpdate = Boolean(submissionId) || (() => {
+      const dataKey =
+        config.id === "fire-drill"
+          ? "fireDrillData"
+          : config.id === "monthly-meeting"
+            ? "monthlyMeetingData"
+            : config.id === "hazard-case"
+              ? "hazardCaseData"
+              : config.id === "safety-ppt"
+                ? "safetyPptData"
+                : "rewardFindingData";
+      const existing = monthly[dataKey as keyof MonthlyRecord];
+      return Boolean(existing && typeof existing === "object");
+    })();
+    if (isUpdate ? !canUpdateSafetySubmission : !canCreateSafetySubmission) {
+      return;
+    }
     resetForm();
     setSelectedActivity(activity);
     setSelectedMonthlySubmissionId(
@@ -1695,6 +1725,8 @@ export default function SafetyManagementPage() {
   }
 
   async function toggleHse(week: number) {
+    if (!canUpdateSafetySubmission && !canCreateSafetySubmission) return;
+
     const current = records.find(
       (record) => record.week === week,
     );
@@ -1923,6 +1955,13 @@ export default function SafetyManagementPage() {
   const allActivities = [...WEEKLY_ACTIVITIES, ...MONTHLY_ACTIVITIES];
 
   return (
+    <SafetyGate
+      allow={(a) =>
+        a.canViewSafetySubmissions ||
+        a.canCreateSafetySubmission ||
+        a.canUpdateSafetySubmission
+      }
+    >
     <div className="space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -2268,7 +2307,9 @@ export default function SafetyManagementPage() {
                         </button>
                       )}
 
-                      {isHse ? (
+                      {((isCompleted && canUpdateSafetySubmission) ||
+                        (!isCompleted && canCreateSafetySubmission)) && (
+                        isHse ? (
                         <button
                           type="button"
                           onClick={() =>
@@ -2312,6 +2353,7 @@ export default function SafetyManagementPage() {
                             ? safetyText("update", safetyLanguage)
                             : `+ ${safetyText("upload", safetyLanguage)}`}
                         </button>
+                      )
                       )}
                     </div>
                   </div>
@@ -2655,9 +2697,16 @@ export default function SafetyManagementPage() {
                     submission.status,
                   )
                 }
-                onUploadNew={() => openMonthlyUpload(activity.id)}
-                onUpdate={(submissionId) =>
-                  openMonthlyUpload(activity.id, submissionId)
+                onUploadNew={
+                  canCreateSafetySubmission
+                    ? () => openMonthlyUpload(activity.id)
+                    : undefined
+                }
+                onUpdate={
+                  canUpdateSafetySubmission
+                    ? (submissionId) =>
+                        openMonthlyUpload(activity.id, submissionId)
+                    : undefined
                 }
               />
             );
@@ -2675,7 +2724,11 @@ export default function SafetyManagementPage() {
               onView={() =>
                 detail && openView(activity.title, detail, status)
               }
-              onUpload={() => openMonthlyUpload(activity.id)}
+              onUpload={
+                canMutateSafety
+                  ? () => openMonthlyUpload(activity.id)
+                  : undefined
+              }
             />
           );
         })}
@@ -2999,6 +3052,7 @@ export default function SafetyManagementPage() {
       )}
       {viewDetail && <ViewSubmissionModal language={safetyLanguage} title={viewDetail.title} status={viewDetail.status} detail={viewDetail.detail} onClose={() => setViewDetail(null)} />}
     </div>
+    </SafetyGate>
   );
 }
 
@@ -3211,8 +3265,8 @@ function MonthlyRewardFindingCard({
   submissions: MonthlyRewardSubmission[];
   rewardLabel: string;
   onView: (submission: MonthlyRewardSubmission) => void;
-  onUploadNew: () => void;
-  onUpdate: (submissionId: number) => void;
+  onUploadNew?: () => void;
+  onUpdate?: (submissionId: number) => void;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -3364,6 +3418,7 @@ function MonthlyRewardFindingCard({
               >
                 {safetyText("view", language)}
               </button>
+              {onUpdate && (
               <button
                 type="button"
                 onClick={() => onUpdate(currentSubmission.id)}
@@ -3371,6 +3426,7 @@ function MonthlyRewardFindingCard({
               >
                 {safetyText("update", language)}
               </button>
+              )}
             </div>
           </div>
 
@@ -3404,7 +3460,7 @@ function MonthlyRewardFindingCard({
         </div>
       )}
 
-      {!isFull && (
+      {!isFull && onUploadNew && (
         <button
           type="button"
           onClick={onUploadNew}
@@ -3434,7 +3490,7 @@ function MonthlyRequirementCard({
   hasDetail: boolean;
   hazardCase?: boolean;
   onView: () => void;
-  onUpload: () => void;
+  onUpload?: () => void;
 }) {
   const config = STATUS_CONFIG[status];
   const isGreen =
@@ -3563,6 +3619,7 @@ function MonthlyRequirementCard({
           </button>
         )}
 
+        {onUpload && (
         <button
           type="button"
           onClick={onUpload}
@@ -3578,6 +3635,7 @@ function MonthlyRequirementCard({
         >
           {actionLabel}
         </button>
+        )}
       </div>
     </div>
   );

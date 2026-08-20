@@ -46,6 +46,8 @@ export function OverviewGrid() {
     canViewDailyAnalysis,
     canViewItsmAnalysis,
     canViewSparepartStock,
+    canViewSafetyOverview,
+    canViewSafetySubmissions,
   } = useRoleAccess();
 
   const [modules, setModules] =
@@ -93,7 +95,8 @@ export function OverviewGrid() {
               )
             : Promise.resolve(null),
 
-          fetch(
+          canViewSafetyOverview || canViewSafetySubmissions
+            ? fetch(
             `/api/safety/weekly?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
             {
               method: "GET",
@@ -113,9 +116,11 @@ export function OverviewGrid() {
 
               return result;
             })
-            .catch(() => null),
+            .catch(() => null)
+            : Promise.resolve(null),
 
-          fetch(
+          canViewSafetyOverview || canViewSafetySubmissions
+            ? fetch(
             `/api/safety/monthly?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
             {
               method: "GET",
@@ -135,7 +140,8 @@ export function OverviewGrid() {
 
               return result;
             })
-            .catch(() => null),
+            .catch(() => null)
+            : Promise.resolve(null),
         ]);
 
         if (cancelled) return;
@@ -242,6 +248,8 @@ export function OverviewGrid() {
     authLoading,
     canViewDailyAnalysis,
     canViewItsmAnalysis,
+    canViewSafetyOverview,
+    canViewSafetySubmissions,
     canViewSparepartStock,
     lang,
   ]);

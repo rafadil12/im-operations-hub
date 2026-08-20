@@ -50,6 +50,8 @@ describe("guestHasPermission", () => {
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.itsmRequestExport);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyRecordExport);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyAnalysisView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetyOverviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetySubmissionRead);
     expect(guestHasPermission(PERMISSIONS.itsmAnalysisView)).toBe(true);
     expect(guestHasPermission(PERMISSIONS.adminRolesManage)).toBe(false);
   });
@@ -67,6 +69,9 @@ describe("getRoleAccess", () => {
     expect(access.canExportDailyRecord).toBe(true);
     expect(access.canViewDailyAnalysis).toBe(true);
     expect(access.canViewDailyRecords).toBe(true);
+    expect(access.canViewSafetyOverview).toBe(true);
+    expect(access.canViewSafetySubmissions).toBe(true);
+    expect(access.canCreateSafetySubmission).toBe(false);
     expect(access.canAddDailyRecord).toBe(false);
     expect(access.canUpdateDailyRecord).toBe(false);
     expect(access.canDeleteDailyRecord).toBe(false);
@@ -76,6 +81,7 @@ describe("getRoleAccess", () => {
     expect(access.canManageRoles).toBe(false);
     expect(access.canManageAccounts).toBe(false);
     expect(access.canManageConfiguration).toBe(false);
+    expect(access.canViewSparepartOverview).toBe(false);
     expect(access.canViewSparepartStock).toBe(false);
     expect(access.canPostSparepartDocument).toBe(false);
   });
@@ -169,16 +175,34 @@ describe("getRoleAccess", () => {
     const access = getRoleAccess(
       account({
         permissions: [
+          PERMISSIONS.sparepartOverviewView,
           PERMISSIONS.sparepartStockView,
           PERMISSIONS.sparepartDocumentPost,
         ],
       }),
     );
+    expect(access.canViewSparepartOverview).toBe(true);
     expect(access.canViewSparepartStock).toBe(true);
     expect(access.canPostSparepartDocument).toBe(true);
     expect(access.canViewSparepartDocuments).toBe(false);
     expect(access.canViewSparepartMaterials).toBe(false);
     expect(access.canManageSparepartLocations).toBe(false);
+  });
+
+  it("gates safety modules independently", () => {
+    const access = getRoleAccess(
+      account({
+        permissions: [
+          PERMISSIONS.safetyOverviewView,
+          PERMISSIONS.safetySubmissionCreate,
+        ],
+      }),
+    );
+    expect(access.canViewSafetyOverview).toBe(true);
+    expect(access.canViewSafetySubmissions).toBe(false);
+    expect(access.canCreateSafetySubmission).toBe(true);
+    expect(access.canUpdateSafetySubmission).toBe(false);
+    expect(access.canDeleteSafetySubmission).toBe(false);
   });
 
   it("exposes overview.view as canViewOverview", () => {
@@ -230,7 +254,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 31 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(31);
+  it("has exactly 37 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(37);
   });
 });

@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import {
+  accountHasPermission,
+  PERMISSIONS,
+  requireAnyPermission,
+  requirePermission,
+} from "@/lib/auth";
 import { pool } from "@/lib/db";
 import type {
   FieldPacket,
@@ -284,6 +290,12 @@ function normalizeStatus(
 export async function GET(
   request: NextRequest,
 ) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.safetyOverviewView,
+    PERMISSIONS.safetySubmissionRead,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const {
       year,
@@ -421,6 +433,12 @@ export async function GET(
 export async function POST(
   request: NextRequest,
 ) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.safetySubmissionCreate,
+    PERMISSIONS.safetySubmissionUpdate,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   let connection:
     Awaited<
       ReturnType<
@@ -1006,6 +1024,18 @@ export async function POST(
        UPDATE EXISTING MONTHLY
        ===================================================== */
 
+    const needed =
+      existingId !== null
+        ? PERMISSIONS.safetySubmissionUpdate
+        : PERMISSIONS.safetySubmissionCreate;
+    if (!accountHasPermission(gate.account, needed)) {
+      await connection.rollback();
+      return NextResponse.json(
+        { error: "Forbidden." },
+        { status: 403 },
+      );
+    }
+
     if (
       existingId !== null
     ) {
@@ -1426,6 +1456,11 @@ function resolveStoredFilePath(
 export async function DELETE(
   request: NextRequest,
 ) {
+  const gate = await requirePermission(
+    PERMISSIONS.safetySubmissionDelete,
+  );
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const url =
       new URL(request.url);

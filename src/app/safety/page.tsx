@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SafetyGate } from "@/components/safety/SafetyGate";
 import { useLang } from "@/lib/i18n";
 
 
@@ -1144,6 +1145,7 @@ export default function SafetyOverviewPage() {
       .slice(0, 6);
 
   return (
+    <SafetyGate allow={(a) => a.canViewSafetyOverview}>
     <>
       <style>{`
         @keyframes safetyOverviewFadeUp {
@@ -2246,6 +2248,7 @@ export default function SafetyOverviewPage() {
       </div>
       </div>
     </>
+    </SafetyGate>
   );
 }
 

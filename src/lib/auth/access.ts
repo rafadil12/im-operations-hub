@@ -19,6 +19,12 @@ export const PERMISSIONS = {
   itsmRequestExport: "itsm.request.export",
   itsmRequestTemplate: "itsm.request.template",
   itsmAnalysisView: "itsm.analysis.view",
+  safetyOverviewView: "safety.overview.view",
+  safetySubmissionRead: "safety.submission.read",
+  safetySubmissionCreate: "safety.submission.create",
+  safetySubmissionUpdate: "safety.submission.update",
+  safetySubmissionDelete: "safety.submission.delete",
+  sparepartOverviewView: "sparepart.overview.view",
   sparepartStockView: "sparepart.stock.view",
   sparepartDocumentRead: "sparepart.document.read",
   sparepartDocumentPost: "sparepart.document.post",
@@ -68,6 +74,8 @@ export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
   PERMISSIONS.dailyRecordRead,
   PERMISSIONS.dailyRecordExport,
   PERMISSIONS.dailyAnalysisView,
+  PERMISSIONS.safetyOverviewView,
+  PERMISSIONS.safetySubmissionRead,
 ] as const;
 
 export type RoleAccess = {
@@ -90,6 +98,12 @@ export type RoleAccess = {
   canExportItsmRequest: boolean;
   canDownloadItsmTemplate: boolean;
   canViewItsmAnalysis: boolean;
+  canViewSafetyOverview: boolean;
+  canViewSafetySubmissions: boolean;
+  canCreateSafetySubmission: boolean;
+  canUpdateSafetySubmission: boolean;
+  canDeleteSafetySubmission: boolean;
+  canViewSparepartOverview: boolean;
   canViewSparepartStock: boolean;
   canViewSparepartDocuments: boolean;
   canPostSparepartDocument: boolean;
@@ -219,6 +233,30 @@ export function getRoleAccess(
       PERMISSIONS.itsmRequestTemplate,
     ),
     canViewItsmAnalysis: hasPermission(account, PERMISSIONS.itsmAnalysisView),
+    canViewSafetyOverview: hasPermission(
+      account,
+      PERMISSIONS.safetyOverviewView,
+    ),
+    canViewSafetySubmissions: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionRead,
+    ),
+    canCreateSafetySubmission: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionCreate,
+    ),
+    canUpdateSafetySubmission: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionUpdate,
+    ),
+    canDeleteSafetySubmission: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionDelete,
+    ),
+    canViewSparepartOverview: hasPermission(
+      account,
+      PERMISSIONS.sparepartOverviewView,
+    ),
     canViewSparepartStock: hasPermission(
       account,
       PERMISSIONS.sparepartStockView,

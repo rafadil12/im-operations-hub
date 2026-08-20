@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import {
+  PERMISSIONS,
+  requireAnyPermission,
+} from "@/lib/auth";
 
 type UserRow = {
   id: number;
@@ -10,6 +14,12 @@ type UserRow = {
 };
 
 export async function GET() {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.safetyOverviewView,
+    PERMISSIONS.safetySubmissionRead,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const users = await query<UserRow[]>(
       `

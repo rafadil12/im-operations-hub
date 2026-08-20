@@ -73,7 +73,7 @@ const en = {
     overviewTitle: "Sparepart Overview",
     overviewDesc: "Stock levels, movements, and distribution across categories and locations",
     stockTitle: "Stock Overview",
-    stockDesc: "Current stock by material — totals across all storage locations; stock changes only via goods movements",
+    stockDesc: "Current stock by material — totals across all storage locations, stock changes only via goods movements",
     stockSearchHint: "Search by material code, description, brand, or model",
     postTitle: "Stock Transactions",
     postDesc: "Receive, issue, or transfer stock between storage locations",

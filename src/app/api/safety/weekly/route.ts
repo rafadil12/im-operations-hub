@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import {
+  accountHasPermission,
+  PERMISSIONS,
+  requireAnyPermission,
+} from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 function getSafetyUploadDir(): string {
@@ -84,6 +89,12 @@ function getExtension(name: string) {
 }
 
 export async function GET(request: Request) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.safetyOverviewView,
+    PERMISSIONS.safetySubmissionRead,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { searchParams } = new URL(request.url);
     const now = new Date();
@@ -250,6 +261,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const gate = await requireAnyPermission([
+    PERMISSIONS.safetySubmissionCreate,
+    PERMISSIONS.safetySubmissionUpdate,
+  ]);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const formData =
       await request.formData();
@@ -500,6 +517,14 @@ export async function POST(request: Request) {
           activityType,
         ],
       );
+
+    const needed =
+      existing.length > 0
+        ? PERMISSIONS.safetySubmissionUpdate
+        : PERMISSIONS.safetySubmissionCreate;
+    if (!accountHasPermission(gate.account, needed)) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
 
     /*
      * CREATE BARU:

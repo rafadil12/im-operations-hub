@@ -1294,5 +1294,13 @@ if (await tableExists("sparepart_storage_locations")) {
   }
 }
 
+// --- 020: Safety + sparepart overview permissions ---
+const catalogV3Sql = readFileSync(
+  join(__dirname, "migrations", "020_permissions_catalog_v3.sql"),
+  "utf8",
+);
+await conn.query(catalogV3Sql);
+console.log("Applied permissions catalog v3 (Safety + sparepart overview).");
+
 await conn.end();
 console.log("Migrations complete.");

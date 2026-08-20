@@ -15,6 +15,7 @@ export type PermissionTreeLabel =
         | "overview"
         | "itsm"
         | "dailyOperation"
+        | "safety"
         | "sparepart"
         | "settings"
         | "management"
@@ -104,9 +105,35 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     ],
   },
   {
+    id: "safety",
+    label: { source: "nav", key: "safety" },
+    children: [
+      {
+        id: "safety-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.safetyOverviewView],
+      },
+      {
+        id: "safety-management",
+        label: { source: "nav", key: "moduleManagement" },
+        codes: [
+          PERMISSIONS.safetySubmissionRead,
+          PERMISSIONS.safetySubmissionCreate,
+          PERMISSIONS.safetySubmissionUpdate,
+          PERMISSIONS.safetySubmissionDelete,
+        ],
+      },
+    ],
+  },
+  {
     id: "sparepart",
     label: { source: "nav", key: "sparepart" },
     children: [
+      {
+        id: "sparepart-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.sparepartOverviewView],
+      },
       {
         id: "sparepart-management",
         label: { source: "nav", key: "sparepartManagement" },

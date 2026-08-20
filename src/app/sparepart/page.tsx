@@ -42,6 +42,7 @@ export default function SparepartIndexPage() {
   const loadIdRef = useRef(0);
 
   const hasAnySparepart =
+    access.canViewSparepartOverview ||
     access.canViewSparepartStock ||
     access.canPostSparepartDocument ||
     access.canViewSparepartDocuments ||
@@ -64,7 +65,7 @@ export default function SparepartIndexPage() {
   }, [hasAnySparepart, loading, router]);
 
   useEffect(() => {
-    if (loading || !access.canViewSparepartStock) return;
+    if (loading || !access.canViewSparepartOverview) return;
 
     const ac = new AbortController();
     const requestId = ++loadIdRef.current;
@@ -99,7 +100,7 @@ export default function SparepartIndexPage() {
 
     return () => ac.abort();
   }, [
-    access.canViewSparepartStock,
+    access.canViewSparepartOverview,
     category,
     loading,
     range,
@@ -114,7 +115,7 @@ export default function SparepartIndexPage() {
     );
   }
 
-  if (!access.canViewSparepartStock) {
+  if (!access.canViewSparepartOverview) {
     const links = [
       {
         href: "/sparepart/stock",

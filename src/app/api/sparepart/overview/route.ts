@@ -146,7 +146,7 @@ function n(value: unknown): number {
 }
 
 export async function GET(request: NextRequest) {
-  const gate = await requirePermission(PERMISSIONS.sparepartStockView);
+  const gate = await requirePermission(PERMISSIONS.sparepartOverviewView);
   if (gate instanceof NextResponse) return gate;
 
   try {
