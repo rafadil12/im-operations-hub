@@ -237,7 +237,7 @@ export default function MaterialDocumentsPage() {
             placeholder={t.sparepart.allTypes}
           />
         </div>
-        <div className="min-w-[120px]">
+        <div className="w-[110px] shrink-0">
           <label className="mb-1 block text-[10px] uppercase text-text-dim">
             {t.sparepart.location}
           </label>
