@@ -399,7 +399,7 @@ export function StockTable({
                       )
                     : null}
                   {showItemStatus ? (
-                    <th className={`${th} text-center`}>
+                    <th className={`${th} text-center !text-center`}>
                       {t.sparepart.stockStatus}
                     </th>
                   ) : null}
@@ -423,7 +423,7 @@ export function StockTable({
                     </th>
                   ) : null}
                   {showItemStatus ? (
-                    <th className={`${th} text-center`}>
+                    <th className={`${th} text-center !text-center`}>
                       {t.sparepart.stockStatus}
                     </th>
                   ) : null}
