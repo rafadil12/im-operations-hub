@@ -37,7 +37,11 @@ type SubmissionDetail = {
   date: string;
   location?: string;
   description: string;
+  descriptionEn?: string;
+  descriptionCn?: string;
   pic: string;
+  picEn?: string;
+  picCn?: string;
   fileNames?: string[];
   fileUrls?: string[];
   filePreviews?: FilePreview[];
@@ -63,6 +67,12 @@ type WeeklyRecord = {
   potentialHazardData?: SubmissionDetail;
 };
 
+type MonthlyRewardSubmission = {
+  id: number;
+  detail: SubmissionDetail;
+  status: SubmissionStatus;
+};
+
 type MonthlyRecord = {
   fireDrill: SubmissionStatus;
   monthlyMeeting: SubmissionStatus;
@@ -74,6 +84,7 @@ type MonthlyRecord = {
   hazardCaseData?: SubmissionDetail;
   safetyPptData?: SubmissionDetail;
   rewardFindingData?: SubmissionDetail;
+  rewardSubmissions: MonthlyRewardSubmission[];
   rewardCount: number;
 };
 
@@ -96,8 +107,12 @@ type WeeklyDatabaseRow = {
   status: SubmissionStatus;
   submission_date: string | null;
   pic: string | null;
+  pic_en?: string | null;
+  pic_cn?: string | null;
   location: string | null;
   description: string | null;
+  description_en?: string | null;
+  description_cn?: string | null;
   file_name: string | null;
   file_url: string | null;
   files?: WeeklyDatabaseFile[];
@@ -224,6 +239,9 @@ const SAFETY_TEXT = {
   pic: ["PIC", "负责人"],
   location: ["Location", "地点"],
   description: ["Description", "描述"],
+  descriptionEnglish: ["Description (English)", "描述（英文）"],
+  descriptionChinese: ["Description (Chinese)", "描述（中文）"],
+  describeActivityChinese: ["Describe the activity or finding in Chinese...", "请用中文描述活动或发现..."],
   attachment: ["Attachment", "附件"],
   enterPic: ["Enter PIC", "输入负责人"],
   enterLocation: ["Enter location", "输入地点"],
@@ -251,7 +269,20 @@ const SAFETY_TEXT = {
   ],
   submissionDate: ["Submission Date", "提交日期"],
   noAttachment: ["No attachment", "无附件"],
+  attachmentsTitle: ["Attachments", "附件"],
   attachmentsPreview: ["Preview uploaded photos, videos and documents.", "预览已上传的照片、视频和文档。"],
+  powerpointPreviewHelp: [
+    "PowerPoint preview will work automatically when the file is stored at an accessible HTTP/HTTPS URL. You can open the uploaded file now.",
+    "当文件存储在可访问的 HTTP/HTTPS 地址时，PowerPoint 将自动预览。您现在可以打开已上传的文件。",
+  ],
+  excelPreviewHelp: [
+    "Excel files are shown as document attachments. You can open the uploaded file now.",
+    "Excel 文件将作为文档附件显示。您现在可以打开已上传的文件。",
+  ],
+  noBrowserPreview: [
+    "This file type does not have an in-browser preview.",
+    "此文件类型不支持浏览器内预览。",
+  ],
   noPreview: ["No preview available", "暂无预览"],
   noStoredPreview: ["This submission has no stored preview files.", "此提交没有已存储的预览文件。"],
   submissionVerified: ["✓ Submission Verified", "✓ 提交已验证"],
@@ -524,6 +555,7 @@ const INITIAL_MONTHLY_RECORD: MonthlyRecord = {
   hazardCase: "not_applicable",
   safetyPpt: "not_submitted",
   rewardFinding: "not_submitted",
+  rewardSubmissions: [],
   rewardCount: 0,
 };
 
@@ -714,6 +746,133 @@ function getWeekEvidence(
   return result;
 }
 
+type MonthlyEvidenceItem = {
+  activity: ActivityConfig;
+  detail: SubmissionDetail;
+  file: FilePreview;
+  /** For Reward Finding, this identifies which of the 2 submissions owns the file. */
+  submissionId?: number;
+  submissionNumber?: number;
+  sourceLabel?: string;
+};
+
+function getMonthlyEvidence(record: MonthlyRecord): MonthlyEvidenceItem[] {
+  const result: MonthlyEvidenceItem[] = [];
+
+  // Monthly activities biasa hanya punya 1 submission per bulan.
+  const dataByActivity: Record<
+    ActivityType,
+    SubmissionDetail | undefined
+  > = {
+    "fire-drill": record.fireDrillData,
+    "monthly-meeting": record.monthlyMeetingData,
+    "hazard-case": record.hazardCaseData,
+    "safety-ppt": record.safetyPptData,
+    "reward-finding": undefined,
+    training: undefined,
+    "routine-meeting": undefined,
+    "hse-tuesday": undefined,
+    ert: undefined,
+    "five-s": undefined,
+    "potential-hazard": undefined,
+  };
+
+  for (const activity of MONTHLY_ACTIVITIES) {
+    if (activity.id === "reward-finding") continue;
+
+    const detail = dataByActivity[activity.id];
+    if (!detail?.filePreviews?.length) continue;
+
+    for (const file of detail.filePreviews) {
+      const kind = getPreviewKind(file.name, file.type);
+      if (kind !== "image" && kind !== "ppt") continue;
+      result.push({
+        activity,
+        detail,
+        file,
+        sourceLabel: activity.shortTitle,
+      });
+    }
+  }
+
+  // Reward Finding adalah pengecualian: maksimal 2 submission.
+  // PENTING: semua submission dibaca, bukan hanya rewardFindingData/latestReward.
+  const rewardActivity = MONTHLY_ACTIVITIES.find(
+    (activity) => activity.id === "reward-finding",
+  );
+
+  if (rewardActivity) {
+    const submissions = [...record.rewardSubmissions].sort(
+      (a, b) => a.id - b.id,
+    );
+
+    submissions.forEach((submission, submissionIndex) => {
+      const detail = submission.detail;
+      if (!detail?.filePreviews?.length) return;
+
+      const submissionNumber = submissionIndex + 1;
+      const sourceLabel =
+        `Reward Finding #${submissionNumber}`;
+
+      for (const file of detail.filePreviews) {
+        const kind = getPreviewKind(file.name, file.type);
+        if (kind !== "image" && kind !== "ppt") continue;
+
+        result.push({
+          activity: rewardActivity,
+          detail,
+          file,
+          submissionId: submission.id,
+          submissionNumber,
+          sourceLabel,
+        });
+      }
+    });
+  }
+
+  return result;
+}
+
+function getMonthlyEvidenceCount(record: MonthlyRecord): number {
+  return getMonthlyEvidence(record).length;
+}
+
+/**
+ * The card only has 6 preview slots. Keep the full evidence array untouched,
+ * but make sure Reward Finding #1 and #2 are not hidden behind other files.
+ */
+function getMonthlyEvidencePreviewItems(
+  evidence: MonthlyEvidenceItem[],
+): MonthlyEvidenceItem[] {
+  if (evidence.length <= 6) return evidence;
+
+  const selected: MonthlyEvidenceItem[] = [];
+  const used = new Set<MonthlyEvidenceItem>();
+
+  // Guarantee at least one visible preview from each Reward Finding submission.
+  const rewardSubmissionNumbers = [1, 2];
+  for (const number of rewardSubmissionNumbers) {
+    const item = evidence.find(
+      (entry) => entry.submissionNumber === number,
+    );
+
+    if (item && !used.has(item)) {
+      selected.push(item);
+      used.add(item);
+    }
+  }
+
+  // Fill the remaining preview slots in the normal Monthly evidence order.
+  for (const item of evidence) {
+    if (selected.length >= 6) break;
+    if (used.has(item)) continue;
+    selected.push(item);
+    used.add(item);
+  }
+
+  return selected;
+}
+
 function getWeekImageCount(
   record: WeeklyRecord,
 ): number {
@@ -784,11 +943,18 @@ export default function SafetyManagementPage() {
   const [monthly, setMonthly] = useState<MonthlyRecord>(INITIAL_MONTHLY_RECORD);
   const [selectedWeek, setSelectedWeek] = useState(4);
   const [selectedActivity, setSelectedActivity] = useState<ActivityType | null>(null);
+  const [selectedMonthlySubmissionId, setSelectedMonthlySubmissionId] = useState<number | null>(null);
   const [viewDetail, setViewDetail] = useState<{ title: string; detail: SubmissionDetail; status: SubmissionStatus } | null>(null);
+  const [showEvidenceGallery, setShowEvidenceGallery] = useState(false);
+  const [selectedEvidenceIndex, setSelectedEvidenceIndex] = useState(0);
+  const [showMonthlyEvidenceGallery, setShowMonthlyEvidenceGallery] = useState(false);
+  const [selectedMonthlyEvidenceIndex, setSelectedMonthlyEvidenceIndex] = useState(0);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [fileNames, setFileNames] = useState<string[]>([]);
   const [filePreviews, setFilePreviews] = useState<FilePreview[]>([]);
-  const [description, setDescription] = useState("");
+  const [descriptionEn, setDescriptionEn] = useState("");
+  const [descriptionCn, setDescriptionCn] = useState("");
+  const description = descriptionEn;
   const [location, setLocation] = useState("");
   const [pic, setPic] = useState("");
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -804,6 +970,33 @@ export default function SafetyManagementPage() {
   const initialDate = new Date();
   const [selectedYear, setSelectedYear] = useState(initialDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(initialDate.getMonth() + 1);
+  const [safetyPoints, setSafetyPoints] = useState(0);
+
+  const safetyPointsStorageKey = `safety-points-${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(safetyPointsStorageKey);
+      setSafetyPoints(saved !== null ? Number(saved) || 0 : 0);
+    } catch (error) {
+      console.error("LOAD SAFETY POINTS ERROR:", error);
+      setSafetyPoints(0);
+    }
+  }, [safetyPointsStorageKey]);
+
+  function handleSafetyPointsChange(value: string) {
+    const nextValue = Math.max(0, Number(value) || 0);
+    setSafetyPoints(nextValue);
+
+    try {
+      window.localStorage.setItem(
+        safetyPointsStorageKey,
+        String(nextValue),
+      );
+    } catch (error) {
+      console.error("SAVE SAFETY POINTS ERROR:", error);
+    }
+  }
 
   const monthLabel = new Date(
     selectedYear,
@@ -839,13 +1032,19 @@ export default function SafetyManagementPage() {
   const monthlyDone =
     (monthly.fireDrill === "completed" ? 1 : 0) +
     (monthly.monthlyMeeting === "completed" ? 1 : 0) +
-    (monthly.hazardCase === "completed" || monthly.hazardCase === "not_applicable" ? 1 : 0) +
+    (monthly.hazardCase === "case_found"
+      ? -1
+      : monthly.hazardCase === "not_applicable"
+        ? 1
+        : 0) +
     (monthly.safetyPpt === "completed" ? 1 : 0) +
     Math.min(monthly.rewardCount, 2);
   const overallTarget = weeklyTotal + monthlyTargets;
   const overallDone = weeklyCompleted + monthlyDone;
   const overallRate = overallTarget ? Math.round((overallDone / overallTarget) * 100) : 0;
   const selectedWeekRecord = records.find((r) => r.week === selectedWeek) ?? null;
+  const evidenceForGallery = selectedWeekRecord ? getWeekEvidence(selectedWeekRecord) : [];
+  const monthlyEvidenceForGallery = getMonthlyEvidence(monthly);
   const hazardCaseActive = monthly.hazardCase === "case_found";
 
   const loadWeeklyData = useCallback(async () => {
@@ -962,9 +1161,24 @@ export default function SafetyManagementPage() {
                   : "—",
                 location: row.location ?? undefined,
                 description:
-                  row.description ??
+                  row.description_en ||
+                  row.description_cn ||
+                  row.description ||
                   "Dokumentasi safety telah diinput.",
-                pic: row.pic ?? "—",
+                descriptionEn:
+                  row.description_en ||
+                  row.description ||
+                  "",
+                descriptionCn:
+                  row.description_cn ||
+                  row.description ||
+                  "",
+                pic:
+                  safetyLanguage === "cn"
+                    ? row.pic_cn || row.pic_en || row.pic || "—"
+                    : row.pic_en || row.pic_cn || row.pic || "—",
+                picEn: row.pic_en || row.pic || "",
+                picCn: row.pic_cn || row.pic_en || row.pic || "",
                 fileNames: filePreviews.map(
                   (file) => file.name,
                 ),
@@ -1039,6 +1253,7 @@ export default function SafetyManagementPage() {
       hazardCaseData: undefined,
       safetyPptData: undefined,
       rewardFindingData: undefined,
+      rewardSubmissions: [],
 
       rewardCount: 0,
     };
@@ -1143,12 +1358,36 @@ export default function SafetyManagementPage() {
           undefined,
 
         description:
+          row.description_en ||
+          row.description_cn ||
           row.description ||
           "Dokumentasi safety telah diinput.",
 
+        descriptionEn:
+          row.description_en ||
+          row.description ||
+          "",
+
+        descriptionCn:
+          row.description_cn ||
+          row.description ||
+          "",
+
         pic:
+          safetyLanguage === "cn"
+            ? row.pic_cn || row.pic_en || row.pic || "—"
+            : row.pic_en || row.pic_cn || row.pic || "—",
+
+        picEn:
+          row.pic_en ||
           row.pic ||
-          "—",
+          "",
+
+        picCn:
+          row.pic_cn ||
+          row.pic_en ||
+          row.pic ||
+          "",
 
         fileNames:
           previews.map(
@@ -1272,6 +1511,12 @@ export default function SafetyManagementPage() {
           "completed",
       ).length;
 
+    next.rewardSubmissions = rewardRows.map((row: any) => ({
+      id: Number(row.id),
+      status: row.status as SubmissionStatus,
+      detail: buildDetail(row),
+    }));
+
     const latestReward =
       rewardRows[
         rewardRows.length - 1
@@ -1348,9 +1593,11 @@ export default function SafetyManagementPage() {
   }, [selectedYear, selectedMonth, showUploadModal]);
 
   function resetForm() {
+    setSelectedMonthlySubmissionId(null);
     setFileNames([]);
     setFilePreviews([]);
-    setDescription("");
+    setDescriptionEn("");
+    setDescriptionCn("");
     setLocation("");
     setPic("");
     setDate(
@@ -1371,19 +1618,27 @@ export default function SafetyManagementPage() {
       const detail = existing as SubmissionDetail;
       setFileNames(detail.fileNames ?? []);
       setFilePreviews(detail.filePreviews ?? []);
-      setDescription(detail.description ?? "");
+      setDescriptionEn(detail.descriptionEn ?? detail.description ?? "");
+      setDescriptionCn(detail.descriptionCn ?? detail.description ?? "");
       setLocation(detail.location ?? "");
-      setPic(detail.pic ?? "");
+      setPic(
+        safetyLanguage === "cn"
+          ? detail.picCn || detail.picEn || detail.pic || ""
+          : detail.picEn || detail.picCn || detail.pic || "",
+      );
       setDate(detail.date ? convertDisplayDateToInput(detail.date) : "2026-08-18");
     }
     setShowUploadModal(true);
   }
 
-  function openMonthlyUpload(activity: ActivityType) {
+  function openMonthlyUpload(activity: ActivityType, submissionId?: number) {
     const config = MONTHLY_ACTIVITIES.find((a) => a.id === activity);
     if (!config) return;
     resetForm();
     setSelectedActivity(activity);
+    setSelectedMonthlySubmissionId(
+      activity === "reward-finding" ? submissionId ?? null : null,
+    );
     const dataKey =
       config.id === "fire-drill"
         ? "fireDrillData"
@@ -1394,14 +1649,28 @@ export default function SafetyManagementPage() {
             : config.id === "safety-ppt"
               ? "safetyPptData"
               : "rewardFindingData";
-    const existing = monthly[dataKey as keyof MonthlyRecord];
+    const rewardSubmission =
+      activity === "reward-finding" && submissionId
+        ? monthly.rewardSubmissions.find(
+            (submission) => submission.id === submissionId,
+          )
+        : undefined;
+
+    const existing =
+      rewardSubmission?.detail ??
+      monthly[dataKey as keyof MonthlyRecord];
     if (existing && typeof existing === "object") {
       const detail = existing as SubmissionDetail;
       setFileNames(detail.fileNames ?? []);
       setFilePreviews(detail.filePreviews ?? []);
-      setDescription(detail.description ?? "");
+      setDescriptionEn(detail.descriptionEn ?? detail.description ?? "");
+      setDescriptionCn(detail.descriptionCn ?? detail.description ?? "");
       setLocation(detail.location ?? "");
-      setPic(detail.pic ?? "");
+      setPic(
+        safetyLanguage === "cn"
+          ? detail.picCn || detail.picEn || detail.pic || ""
+          : detail.picEn || detail.picCn || detail.pic || "",
+      );
       setDate(detail.date ? convertDisplayDateToInput(detail.date) : "2026-08-18");
     }
     setShowUploadModal(true);
@@ -1508,11 +1777,19 @@ export default function SafetyManagementPage() {
     if (!config) return;
 
     const isMonthly = !config.weekly;
+    const isHazardCase =
+      isMonthly && selectedActivity === "hazard-case";
+
+    const isCaseFound =
+      isHazardCase && fileNames.length > 0;
 
     // Weekly membutuhkan week. Monthly tidak.
     if (!isMonthly && !selectedWeek) return;
 
+    // Semua aktivitas tetap wajib upload sesuai requirement,
+    // kecuali Safety Case karena No Case boleh submit tanpa file.
     if (
+      !isHazardCase &&
       config.uploadKind !== "none" &&
       fileNames.length === 0
     ) {
@@ -1527,33 +1804,58 @@ export default function SafetyManagementPage() {
       const databaseActivity =
         uiActivityToDatabaseActivity(selectedActivity);
 
-      formData.append(
-        "activityType",
-        databaseActivity,
-      );
-      formData.append(
-        "year",
-        String(selectedYear),
-      );
-      formData.append(
-        "month",
-        String(selectedMonth),
-      );
-      formData.append(
-        "submissionDate",
-        date,
-      );
-      formData.append("pic", pic);
+      formData.append("activityType", databaseActivity);
+      formData.append("year", String(selectedYear));
+      formData.append("month", String(selectedMonth));
+      formData.append("submissionDate", date);
+
+      // PIC disimpan dalam 3 bentuk: legacy, English, dan Chinese.
+      // Nilai select tetap memakai name_en sebagai value agar update lama tetap kompatibel.
+      const selectedUser = users.find((user) => {
+        const nameEn = user.name_en?.trim() || "";
+        const nameCn = user.name_cn?.trim() || "";
+        return pic === nameEn || pic === nameCn;
+      });
+
+      const picEn = selectedUser?.name_en?.trim() || pic;
+      const picCn = selectedUser?.name_cn?.trim() || selectedUser?.name_en?.trim() || pic;
+
+      formData.append("pic", picEn);
+      formData.append("pic_en", picEn);
+      formData.append("pic_cn", picCn);
       formData.append("location", location);
-      formData.append("description", description);
+      formData.append("description_en", descriptionEn);
+      formData.append("description_cn", descriptionCn);
+      formData.append("description", descriptionEn || descriptionCn);
       formData.append("fileGroup", "general");
+
+      // Safety Case:
+      // - tanpa evidence = No Case = GREEN
+      // - dengan evidence = Case Found = RED
+      // Aktivitas lain tetap Completed.
+      const submitStatus: SubmissionStatus =
+        isHazardCase
+          ? isCaseFound
+            ? "case_found"
+            : "not_applicable"
+          : "completed";
+
+      formData.append("status", submitStatus);
+
+      if (
+        isMonthly &&
+        selectedActivity === "reward-finding" &&
+        selectedMonthlySubmissionId !== null
+      ) {
+        formData.append(
+          "submissionId",
+          String(selectedMonthlySubmissionId),
+        );
+      }
 
       // Hanya Weekly yang mengirim week.
       if (!isMonthly && selectedWeek) {
-        formData.append(
-          "week",
-          String(selectedWeek),
-        );
+        formData.append("week", String(selectedWeek));
       }
 
       // Ambil file asli dari input upload.
@@ -1577,6 +1879,9 @@ export default function SafetyManagementPage() {
         selectedActivity,
         databaseActivity,
         isMonthly,
+        status: submitStatus,
+        isCaseFound,
+        fileCount: fileNames.length,
       });
 
       const response = await fetch(apiUrl, {
@@ -1603,10 +1908,7 @@ export default function SafetyManagementPage() {
       setShowUploadModal(false);
       setSelectedActivity(null);
     } catch (error) {
-      console.error(
-        "SAFETY UPLOAD ERROR:",
-        error,
-      );
+      console.error("SAFETY UPLOAD ERROR:", error);
 
       alert(
         error instanceof Error
@@ -2068,39 +2370,39 @@ export default function SafetyManagementPage() {
                             );
 
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={`${item.activity.id}-${item.file.name}-${index}`}
-                              className="overflow-hidden rounded-xl border border-border bg-bg/20"
+                              onClick={() => {
+                                setSelectedEvidenceIndex(index);
+                                setShowEvidenceGallery(true);
+                              }}
+                              className="group block w-full cursor-pointer overflow-hidden rounded-xl border border-border bg-bg/20 text-left transition-all duration-200 hover:-translate-y-1 hover:border-accent/50 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-accent/40"
                             >
                               <div className="relative flex h-24 items-center justify-center overflow-hidden bg-bg/40">
                                 {kind === "image" ? (
                                   <img
-                                    src={
-                                      item.file.url
-                                    }
-                                    alt={
-                                      item.file.name
-                                    }
-                                    className="h-full w-full object-cover"
+                                    src={item.file.url}
+                                    alt={item.file.name}
+                                    className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-125"
                                   />
                                 ) : (
-                                  <div className="flex flex-col items-center gap-1 text-xl">
-                                    <span>
-                                      {getFileIcon(
-                                        kind,
-                                      )}
-                                    </span>
+                                  <div className="flex flex-col items-center gap-1 text-xl transition-transform duration-300 group-hover:scale-110">
+                                    <span>{getFileIcon(kind)}</span>
                                     <span className="text-[8px] font-medium uppercase text-text-muted">
                                       {getReadableFileKind(kind, safetyLanguage)}
                                     </span>
                                   </div>
                                 )}
 
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/25">
+                                  <span className="rounded-full bg-white/90 px-3 py-1.5 text-[9px] font-semibold text-slate-800 opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100">
+                                    {safetyLanguage === "cn" ? "放大查看" : "View larger"}
+                                  </span>
+                                </div>
+
                                 <span className="absolute left-2 top-2 rounded-md bg-surface/90 px-2 py-1 text-[8px] font-medium text-text shadow-sm">
-                                  {
-                                    item.activity
-                                      .shortTitle
-                                  }
+                                  {item.activity.shortTitle}
                                 </span>
                               </div>
 
@@ -2122,7 +2424,7 @@ export default function SafetyManagementPage() {
                                   {getReadableFileKind(kind, safetyLanguage)}
                                 </p>
                               </div>
-                            </div>
+                            </button>
                           );
                         })}
                     </div>
@@ -2133,7 +2435,7 @@ export default function SafetyManagementPage() {
 
             <div className="rounded-2xl border border-border bg-surface p-5">
               <h3 className="text-sm font-semibold text-text">
-                Week Snapshot
+                {safetyText("weekSnapshot", safetyLanguage)}
               </h3>
               <p className="mt-1 text-[10px] text-text-muted">
                 {safetyText("snapshotDescription", safetyLanguage)}
@@ -2190,7 +2492,130 @@ export default function SafetyManagementPage() {
         </section>
       )}
 
-      <section><div className="mb-3"><h2 className="text-base font-semibold text-text">{safetyText("monthlyRequirements", safetyLanguage)}</h2><p className="mt-1 text-xs text-text-muted">{safetyText("monthlyRequirementsDescription", safetyLanguage)}</p></div><div className="grid gap-3 md:grid-cols-2">
+
+      {showEvidenceGallery && evidenceForGallery.length > 0 && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowEvidenceGallery(false)}
+        >
+          <div
+            className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-5 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-text">
+                  {evidenceForGallery[selectedEvidenceIndex]?.file.name}
+                </p>
+                <p className="mt-1 text-[10px] text-text-dim">
+                  {selectedEvidenceIndex + 1} / {evidenceForGallery.length}
+                  {" • "}
+                  {evidenceForGallery[selectedEvidenceIndex]?.activity.shortTitle}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEvidenceGallery(false)}
+                className="ml-4 rounded-lg px-3 py-1.5 text-xl leading-none text-text-dim hover:bg-surface-hover hover:text-text"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-auto bg-bg/20 p-4">
+              <div className="flex min-h-[55vh] items-center justify-center">
+                {(() => {
+                  const current = evidenceForGallery[selectedEvidenceIndex];
+                  if (!current) return null;
+
+                  const currentKind = getPreviewKind(
+                    current.file.name,
+                    current.file.type,
+                  );
+
+                  if (currentKind === "image") {
+                    return (
+                      <img
+                        src={current.file.url}
+                        alt={current.file.name}
+                        className="max-h-[68vh] max-w-full rounded-lg object-contain shadow-2xl"
+                      />
+                    );
+                  }
+
+                  if (currentKind === "video") {
+                    return (
+                      <video
+                        src={current.file.url}
+                        controls
+                        autoPlay
+                        className="max-h-[68vh] max-w-full rounded-lg bg-black object-contain shadow-2xl"
+                      />
+                    );
+                  }
+
+                  return (
+                    <div className="flex flex-col items-center justify-center gap-3 p-10 text-center">
+                      <div className="text-6xl">{getFileIcon(currentKind)}</div>
+                      <p className="text-sm font-semibold text-text">
+                        {current.file.name}
+                      </p>
+                      <p className="text-xs text-text-dim">
+                        {getReadableFileKind(currentKind, safetyLanguage)}
+                      </p>
+                      <a
+                        href={current.file.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-text hover:bg-surface-hover"
+                      >
+                        {safetyText("open", safetyLanguage)}
+                      </a>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {evidenceForGallery.map((galleryItem, galleryIndex) => {
+                  const galleryKind = getPreviewKind(
+                    galleryItem.file.name,
+                    galleryItem.file.type,
+                  );
+
+                  return (
+                    <button
+                      key={`${galleryItem.activity.id}-${galleryItem.file.name}-gallery-${galleryIndex}`}
+                      type="button"
+                      onClick={() => setSelectedEvidenceIndex(galleryIndex)}
+                      className={`relative h-16 cursor-pointer overflow-hidden rounded-lg border transition-all ${
+                        galleryIndex === selectedEvidenceIndex
+                          ? "border-accent ring-2 ring-accent/30"
+                          : "border-border hover:border-accent/50"
+                      }`}
+                    >
+                      {galleryKind === "image" ? (
+                        <img
+                          src={galleryItem.file.url}
+                          alt={galleryItem.file.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-bg/50 text-xl">
+                          {getFileIcon(galleryKind)}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      <section><div className="mb-3"><h2 className="text-base font-semibold text-text">{safetyText("monthlyRequirements", safetyLanguage)}</h2><p className="mt-1 text-xs text-text-muted">{safetyText("monthlyRequirementsDescription", safetyLanguage)}</p></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {MONTHLY_ACTIVITIES.map((rawActivity) => {
           const activity = localizeActivity(rawActivity, safetyLanguage);
           const status =
@@ -2215,11 +2640,328 @@ export default function SafetyManagementPage() {
                     ? monthly.safetyPptData
                     : monthly.rewardFindingData;
           const rewardLabel = activity.id === "reward-finding" ? `${monthly.rewardCount}/2 ${safetyText("submitted", safetyLanguage)}` : activity.requirement;
-          return <MonthlyRequirementCard key={activity.id} language={safetyLanguage} activity={activity} status={status} rewardLabel={rewardLabel} hasDetail={Boolean(detail)} hazardCase={activity.id === "hazard-case"} onView={() => detail && openView(activity.title, detail, status)} onUpload={() => openMonthlyUpload(activity.id)} />;
+          if (activity.id === "reward-finding") {
+            return (
+              <MonthlyRewardFindingCard
+                key={activity.id}
+                language={safetyLanguage}
+                activity={activity}
+                submissions={monthly.rewardSubmissions}
+                rewardLabel={rewardLabel}
+                onView={(submission) =>
+                  openView(
+                    `${activity.title} #${submission.id}`,
+                    submission.detail,
+                    submission.status,
+                  )
+                }
+                onUploadNew={() => openMonthlyUpload(activity.id)}
+                onUpdate={(submissionId) =>
+                  openMonthlyUpload(activity.id, submissionId)
+                }
+              />
+            );
+          }
+
+          return (
+            <MonthlyRequirementCard
+              key={activity.id}
+              language={safetyLanguage}
+              activity={activity}
+              status={status}
+              rewardLabel={rewardLabel}
+              hasDetail={Boolean(detail)}
+              hazardCase={activity.id === "hazard-case"}
+              onView={() =>
+                detail && openView(activity.title, detail, status)
+              }
+              onUpload={() => openMonthlyUpload(activity.id)}
+            />
+          );
         })}
+
+        <div className="rounded-xl border border-border bg-surface p-5 transition-all hover:border-accent/40 hover:shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex size-11 items-center justify-center rounded-xl bg-accent/10 text-xl">📚</div>
+            <span className="rounded-md border border-border px-2 py-1 text-[9px] font-medium text-text-muted">
+              {getMonthlyEvidenceCount(monthly)} {safetyText("attachments", safetyLanguage)}
+            </span>
+          </div>
+
+          <h3 className="mt-4 text-sm font-semibold text-text">
+            {safetyText("evidenceLibrary", safetyLanguage)}
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-text-muted">
+            {safetyLanguage === "cn"
+              ? "查看本月所有已上传的图片和PPT文件。"
+              : "View all images and PPT files uploaded this month."}
+          </p>
+
+          {monthlyEvidenceForGallery.length > 0 ? (
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {getMonthlyEvidencePreviewItems(monthlyEvidenceForGallery).map((item) => {
+                const kind = getPreviewKind(item.file.name, item.file.type);
+                const fullIndex = monthlyEvidenceForGallery.findIndex(
+                  (entry) =>
+                    entry === item ||
+                    (entry.file.url === item.file.url &&
+                      entry.file.name === item.file.name &&
+                      entry.submissionId === item.submissionId),
+                );
+
+                return (
+                  <button
+                    key={`monthly-evidence-${item.activity.id}-${item.file.name}-${item.submissionId ?? "single"}`}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMonthlyEvidenceIndex(
+                        fullIndex >= 0 ? fullIndex : 0,
+                      );
+                      setShowMonthlyEvidenceGallery(true);
+                    }}
+                    className="group relative h-20 cursor-pointer overflow-hidden rounded-lg border border-border bg-bg/40 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent/40"
+                    title={item.file.name}
+                  >
+                    {kind === "image" ? (
+                      <img
+                        src={item.file.url}
+                        alt={item.file.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-bg/50 text-lg">
+                        <span>{getFileIcon(kind)}</span>
+                        <span className="max-w-full truncate px-1 text-[7px] font-medium text-text-muted">
+                          {getReadableFileKind(kind, safetyLanguage)}
+                        </span>
+                      </div>
+                    )}
+                    <span className="absolute inset-x-1 bottom-1 truncate rounded bg-black/55 px-1.5 py-0.5 text-[7px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      {item.sourceLabel ? `${item.sourceLabel} • ${item.file.name}` : item.file.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-6 text-center">
+              <div className="text-xl">📂</div>
+              <p className="mt-2 text-[10px] font-medium text-text">
+                {safetyText("noEvidenceTitle", safetyLanguage)}
+              </p>
+              <p className="mt-1 text-[9px] text-text-muted">
+                {safetyText("evidenceWillAppear", safetyLanguage)}
+              </p>
+            </div>
+          )}
+
+          {monthlyEvidenceForGallery.length > 6 && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMonthlyEvidenceIndex(0);
+                setShowMonthlyEvidenceGallery(true);
+              }}
+              className="mt-3 w-full cursor-pointer rounded-lg border border-border px-3 py-2 text-[9px] font-medium text-text-muted transition hover:bg-surface-hover hover:text-text"
+            >
+              {safetyLanguage === "cn"
+                ? `查看全部 ${monthlyEvidenceForGallery.length} 个附件`
+                : `View all ${monthlyEvidenceForGallery.length} attachments`}
+            </button>
+          )}
+        </div>
       </div></section>
 
-      <section><div className="mb-3"><h2 className="text-base font-semibold text-text">{safetyText("requirementRules", safetyLanguage)}</h2><p className="mt-1 text-xs text-text-muted">{safetyText("requirementRulesDescription", safetyLanguage)}</p></div><div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">{allActivities.map((rawActivity) => { const a = localizeActivity(rawActivity, safetyLanguage); return <div key={a.id} className="rounded-xl border border-border bg-surface p-4"><div className="flex items-start gap-3"><div className="flex size-9 items-center justify-center rounded-lg bg-accent/10 text-base">{a.icon}</div><div className="min-w-0"><p className="text-xs font-semibold text-text">{a.title}</p><p className="mt-1 text-[10px] text-text-muted">{a.requirement}</p><p className="mt-1 text-[9px] text-text-dim">{a.uploadKind === "none" ? safetyText("checklistOnly", safetyLanguage) : a.uploadKind === "before-after" ? safetyText("beforeAfter", safetyLanguage) : a.uploadKind === "image-video" ? safetyText("photoVideo", safetyLanguage) : a.uploadKind === "video-excel" ? safetyText("videoExcel", safetyLanguage) : safetyText("pptFile", safetyLanguage)}</p></div></div></div>; })}</div></section>
+      {showMonthlyEvidenceGallery && monthlyEvidenceForGallery.length > 0 && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowMonthlyEvidenceGallery(false)}
+        >
+          <div
+            className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-5 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-text">
+                  {monthlyEvidenceForGallery[selectedMonthlyEvidenceIndex]?.file.name}
+                </p>
+                <p className="mt-1 text-[10px] text-text-dim">
+                  {selectedMonthlyEvidenceIndex + 1} / {monthlyEvidenceForGallery.length}
+                  {" • "}
+                  {monthlyEvidenceForGallery[selectedMonthlyEvidenceIndex]
+                    ? (monthlyEvidenceForGallery[selectedMonthlyEvidenceIndex].sourceLabel ||
+                      localizeActivity(
+                        monthlyEvidenceForGallery[selectedMonthlyEvidenceIndex].activity,
+                        safetyLanguage,
+                      ).shortTitle)
+                    : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMonthlyEvidenceGallery(false)}
+                className="ml-4 cursor-pointer rounded-lg px-3 py-1.5 text-xl leading-none text-text-dim hover:bg-surface-hover hover:text-text"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-auto bg-bg/20 p-4">
+              {(() => {
+                const current = monthlyEvidenceForGallery[selectedMonthlyEvidenceIndex];
+                if (!current) return null;
+                const currentKind = getPreviewKind(current.file.name, current.file.type);
+
+                if (currentKind === "image") {
+                  return (
+                    <div className="flex min-h-[55vh] items-center justify-center">
+                      <img
+                        src={current.file.url}
+                        alt={current.file.name}
+                        className="max-h-[68vh] max-w-full rounded-lg object-contain shadow-2xl"
+                      />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex min-h-[55vh] flex-col items-center justify-center gap-3 p-10 text-center">
+                    <div className="text-6xl">{getFileIcon(currentKind)}</div>
+                    <p className="text-sm font-semibold text-text">{current.file.name}</p>
+                    <p className="text-xs text-text-dim">{getReadableFileKind(currentKind, safetyLanguage)}</p>
+                    <a
+                      href={current.file.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-text hover:bg-surface-hover"
+                    >
+                      {safetyText("open", safetyLanguage)}
+                    </a>
+                  </div>
+                );
+              })()}
+
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {monthlyEvidenceForGallery.map((item, index) => {
+                  const kind = getPreviewKind(item.file.name, item.file.type);
+                  return (
+                    <button
+                      key={`monthly-gallery-${item.activity.id}-${item.submissionId ?? "single"}-${item.file.name}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedMonthlyEvidenceIndex(index)}
+                      className={`relative h-16 cursor-pointer overflow-hidden rounded-lg border transition-all ${
+                        index === selectedMonthlyEvidenceIndex
+                          ? "border-accent ring-2 ring-accent/30"
+                          : "border-border hover:border-accent/50"
+                      }`}
+                    >
+                      {kind === "image" ? (
+                        <img src={item.file.url} alt={item.file.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-bg/50 text-xl">
+                          {getFileIcon(kind)}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section>
+        <div className="mb-3">
+          <h2 className="text-base font-semibold text-text">
+            {safetyText("requirementRules", safetyLanguage)}
+          </h2>
+          <p className="mt-1 text-xs text-text-muted">
+            {safetyText("requirementRulesDescription", safetyLanguage)}
+          </p>
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          {/* Manual monthly Safety Points card */}
+          <div className="rounded-xl border border-border bg-surface p-4 transition-all hover:border-accent/40 hover:shadow-sm">
+            <div className="flex h-full items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-base">
+                🎯
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-text">
+                  {safetyLanguage === "cn" ? "安全积分" : "Safety Points"}
+                </p>
+
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="shrink-0 text-[10px] text-text-muted">
+                    {safetyLanguage === "cn" ? "本月" : "This Month"}
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={safetyPoints}
+                    onChange={(event) =>
+                      handleSafetyPointsChange(event.target.value)
+                    }
+                    className="h-8 w-28 rounded-md border border-border bg-bg px-2 text-sm font-semibold text-text outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    aria-label={
+                      safetyLanguage === "cn"
+                        ? "本月安全积分"
+                        : "This month's safety points"
+                    }
+                  />
+
+                  <span className="shrink-0 text-[10px] font-medium text-text-muted">
+                    {safetyLanguage === "cn" ? "分" : "pts"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {allActivities.map((rawActivity) => {
+            const a = localizeActivity(rawActivity, safetyLanguage);
+
+            return (
+              <div
+                key={a.id}
+                className="rounded-xl border border-border bg-surface p-4 transition-all hover:border-accent/40 hover:shadow-sm"
+              >
+                <div className="flex h-full items-start gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-base">
+                    {a.icon}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-text">
+                      {a.title}
+                    </p>
+                    <p className="mt-1 text-[10px] text-text-muted">
+                      {a.requirement}
+                    </p>
+                    <p className="mt-1 text-[9px] text-text-dim">
+                      {a.uploadKind === "none"
+                        ? safetyText("checklistOnly", safetyLanguage)
+                        : a.uploadKind === "before-after"
+                          ? safetyText("beforeAfter", safetyLanguage)
+                          : a.uploadKind === "image-video"
+                            ? safetyText("photoVideo", safetyLanguage)
+                            : a.uploadKind === "video-excel"
+                              ? safetyText("videoExcel", safetyLanguage)
+                              : safetyText("pptFile", safetyLanguage)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {showUploadModal && selectedActivity && (
         <UploadModal
@@ -2232,7 +2974,8 @@ export default function SafetyManagementPage() {
           )}
           date={date}
           location={location}
-          description={description}
+          descriptionEn={descriptionEn}
+          descriptionCn={descriptionCn}
           pic={pic}
           users={users}
           loadingUsers={loadingUsers}
@@ -2241,7 +2984,8 @@ export default function SafetyManagementPage() {
           submitting={submitting}
           setDate={setDate}
           setLocation={setLocation}
-          setDescription={setDescription}
+          setDescriptionEn={setDescriptionEn}
+          setDescriptionCn={setDescriptionCn}
           setPic={setPic}
           onFileChange={handleFileChange}
           onClose={() => {
@@ -2297,12 +3041,14 @@ function StatusMonitorCell({
 }
 
 function StatusCell({
+  language,
   status,
   hasDetail,
   onView,
   onAction,
   checklist = false,
 }: {
+  language: SafetyLanguage;
   status: SubmissionStatus;
   hasDetail: boolean;
   onView: () => void;
@@ -2315,11 +3061,11 @@ function StatusCell({
 
   const actionLabel = checklist
     ? status === "completed"
-      ? "Uncheck"
-      : "Check"
+      ? safetyText("uncheck", language)
+      : safetyText("check", language)
     : status === "not_submitted"
-      ? "Upload"
-      : "Update";
+      ? safetyText("upload", language)
+      : safetyText("update", language);
 
   return (
     <div className="min-w-0 w-full">
@@ -2337,8 +3083,8 @@ function StatusCell({
             }`}
           >
             {checklist && status === "completed"
-              ? "Participated"
-              : config.label}
+              ? safetyText("completedParticipated", language)
+              : getSafetyStatusLabel(status, language)}
           </p>
         </div>
       </div>
@@ -2350,7 +3096,7 @@ function StatusCell({
             onClick={onView}
             className="cursor-pointer text-[10px] font-medium text-accent hover:underline"
           >
-            View
+            {safetyText("view", language)}
           </button>
         )}
 
@@ -2451,19 +3197,390 @@ function ActivitySubmissionCard({
   );
 }
 
-function MonthlyRequirementCard({ language, activity, status, rewardLabel, hasDetail, hazardCase, onView, onUpload }: { language: SafetyLanguage; activity: ActivityConfig; status: SubmissionStatus; rewardLabel: string; hasDetail: boolean; hazardCase?: boolean; onView: () => void; onUpload: () => void }) {
-  const config = STATUS_CONFIG[status];
-  const isGreen = status === "completed" || status === "not_applicable";
+function MonthlyRewardFindingCard({
+  language,
+  activity,
+  submissions,
+  rewardLabel,
+  onView,
+  onUploadNew,
+  onUpdate,
+}: {
+  language: SafetyLanguage;
+  activity: ActivityConfig;
+  submissions: MonthlyRewardSubmission[];
+  rewardLabel: string;
+  onView: (submission: MonthlyRewardSubmission) => void;
+  onUploadNew: () => void;
+  onUpdate: (submissionId: number) => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
-  // Setelah berhasil upload, tombol harus berubah menjadi Update.
-  // Hazard Case tetap menggunakan Report / Clear Case karena fungsinya berbeda.
-  const actionLabel = hazardCase
-    ? (language === "cn" ? "报告 / 清除案件" : "Report / Clear Case")
+  const isFull = submissions.length >= 2;
+  const safeIndex = submissions.length > 0
+    ? Math.min(currentIndex, submissions.length - 1)
+    : 0;
+  const currentSubmission = submissions[safeIndex];
+
+  function goTo(index: number) {
+    if (submissions.length === 0) return;
+    const nextIndex = Math.max(0, Math.min(index, submissions.length - 1));
+    setCurrentIndex(nextIndex);
+  }
+
+  function goPrevious() {
+    goTo(safeIndex - 1);
+  }
+
+  function goNext() {
+    goTo(safeIndex + 1);
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    setTouchStartX(event.touches[0]?.clientX ?? null);
+  }
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    if (touchStartX === null) return;
+
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const distance = endX - touchStartX;
+
+    if (Math.abs(distance) >= 40) {
+      if (distance < 0) {
+        goNext();
+      } else {
+        goPrevious();
+      }
+    }
+
+    setTouchStartX(null);
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-5 transition-all hover:border-accent/40 hover:shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex size-11 items-center justify-center rounded-xl bg-accent/10 text-xl">
+          {activity.icon}
+        </div>
+        <span className="rounded-md border border-border px-2 py-1 text-[9px] font-medium text-text-muted">
+          {rewardLabel}
+        </span>
+      </div>
+
+      <h3 className="mt-4 text-sm font-semibold text-text">{activity.title}</h3>
+      <p className="mt-1 text-xs leading-5 text-text-muted">
+        {activity.description}
+      </p>
+
+      {currentSubmission ? (
+        <div className="mt-3">
+          <div
+            className="relative overflow-hidden rounded-xl border border-border-subtle bg-bg/30 p-3 touch-pan-y"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold text-text">
+                  {language === "cn"
+                    ? `提交 ${safeIndex + 1}`
+                    : `Submission ${safeIndex + 1}`}
+                </p>
+                <p className="mt-0.5 text-[9px] text-text-dim">
+                  {currentSubmission.detail.filePreviews?.length ?? 0}{" "}
+                  {(currentSubmission.detail.filePreviews?.length ?? 0) === 1
+                    ? safetyText("file", language)
+                    : safetyText("files", language)}
+                </p>
+              </div>
+
+              {submissions.length > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={goPrevious}
+                    disabled={safeIndex === 0}
+                    aria-label={language === "cn" ? "上一个提交" : "Previous submission"}
+                    className="flex size-7 cursor-pointer items-center justify-center rounded-full border border-border text-sm text-text-muted transition hover:border-accent hover:text-text disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    ‹
+                  </button>
+                  <span className="min-w-10 text-center text-[9px] font-semibold text-text-muted">
+                    {safeIndex + 1} / {submissions.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={safeIndex === submissions.length - 1}
+                    aria-label={language === "cn" ? "下一个提交" : "Next submission"}
+                    className="flex size-7 cursor-pointer items-center justify-center rounded-full border border-border text-sm text-text-muted transition hover:border-accent hover:text-text disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {(currentSubmission.detail.filePreviews ?? []).slice(0, 2).map((file, fileIndex) => {
+                const kind = getPreviewKind(file.name, file.type);
+                return (
+                  <div
+                    key={`${currentSubmission.id}-${file.name}-${fileIndex}`}
+                    className="relative h-24 overflow-hidden rounded-lg border border-border bg-surface"
+                  >
+                    {kind === "image" ? (
+                      <img
+                        src={file.url}
+                        alt={file.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-text-muted">
+                        <span className="text-2xl">{getFileIcon(kind)}</span>
+                        <span className="max-w-full truncate px-2 text-[8px]">
+                          {file.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="mt-2 text-center text-[8px] text-text-dim">
+              {language === "cn"
+                ? "左右滑动切换提交"
+                : "Swipe left or right to switch submissions"}
+            </p>
+
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => onView(currentSubmission)}
+                className="flex-1 cursor-pointer rounded-md border border-border px-3 py-2 text-[10px] font-medium text-text-muted hover:bg-surface-hover"
+              >
+                {safetyText("view", language)}
+              </button>
+              <button
+                type="button"
+                onClick={() => onUpdate(currentSubmission.id)}
+                className="flex-1 cursor-pointer rounded-md border border-border px-3 py-2 text-[10px] font-semibold text-text hover:bg-surface-hover"
+              >
+                {safetyText("update", language)}
+              </button>
+            </div>
+          </div>
+
+          {submissions.length > 1 && (
+            <div className="mt-2 flex justify-center gap-1.5">
+              {submissions.map((submission, index) => (
+                <button
+                  key={submission.id}
+                  type="button"
+                  onClick={() => goTo(index)}
+                  aria-label={
+                    language === "cn"
+                      ? `选择提交 ${index + 1}`
+                      : `Select submission ${index + 1}`
+                  }
+                  className={`size-2 cursor-pointer rounded-full transition-all ${
+                    index === safeIndex
+                      ? "w-5 bg-accent"
+                      : "bg-border hover:bg-accent/50"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3 rounded-xl border border-dashed border-border p-4 text-center text-[10px] text-text-dim">
+          {language === "cn"
+            ? "本月还没有奖励发现提交。"
+            : "No reward finding submission yet this month."}
+        </div>
+      )}
+
+      {!isFull && (
+        <button
+          type="button"
+          onClick={onUploadNew}
+          className="mt-3 w-full cursor-pointer rounded-md bg-accent px-3 py-2 text-[10px] font-semibold text-white hover:opacity-90"
+        >
+          + {safetyText("upload", language)}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MonthlyRequirementCard({
+  language,
+  activity,
+  status,
+  rewardLabel,
+  hasDetail,
+  hazardCase,
+  onView,
+  onUpload,
+}: {
+  language: SafetyLanguage;
+  activity: ActivityConfig;
+  status: SubmissionStatus;
+  rewardLabel: string;
+  hasDetail: boolean;
+  hazardCase?: boolean;
+  onView: () => void;
+  onUpload: () => void;
+}) {
+  const config = STATUS_CONFIG[status];
+  const isGreen =
+    status === "completed" ||
+    status === "not_applicable";
+  const isSafetyCase = hazardCase === true;
+  const isCaseFound =
+    isSafetyCase && status === "case_found";
+
+  const safetyCasePoint =
+    isCaseFound
+      ? -1
+      : status === "not_applicable"
+        ? 1
+        : 0;
+
+  const actionLabel = isSafetyCase
+    ? language === "cn"
+      ? "报告 / 清除案件"
+      : "Report / Clear Case"
     : isGreen && hasDetail
       ? safetyText("update", language)
       : `+ ${safetyText("upload", language)}`;
 
-  return <div className={`rounded-xl border p-5 transition-all ${hazardCase && isGreen ? "border-success/20 bg-success/[0.025]" : hazardCase ? "border-danger/30 bg-danger/[0.035]" : "border-border bg-surface"}`}><div className="flex items-start justify-between gap-3"><div className="flex size-11 items-center justify-center rounded-xl bg-accent/10 text-xl">{activity.icon}</div><span className={`rounded-md border px-2 py-1 text-[9px] font-medium ${config.className}`}>{hazardCase && isGreen ? safetyText("noCaseGreen", language) : hazardCase && !isGreen ? safetyText("caseFoundRed", language) : getSafetyStatusLabel(status, language)}</span></div><h3 className="mt-4 text-sm font-semibold text-text">{activity.title}</h3><p className="mt-1 text-xs leading-5 text-text-muted">{activity.description}</p><div className="mt-3 rounded-lg border border-border-subtle bg-bg/30 px-3 py-2"><p className="text-[9px] uppercase tracking-wide text-text-dim">{safetyText("target", language)}</p><p className="mt-1 text-xs font-medium text-text">{rewardLabel}</p></div><div className="mt-4 flex gap-2">{hasDetail && <button type="button" onClick={onView} className="flex-1 cursor-pointer rounded-md border border-border px-3 py-2 text-[10px] font-medium text-text-muted hover:bg-surface-hover">{safetyText("view", language)}</button>}<button type="button" onClick={onUpload} className={`flex-1 cursor-pointer rounded-md px-3 py-2 text-[10px] font-medium ${isGreen && hasDetail && !hazardCase ? "border border-border text-text-muted hover:bg-surface-hover" : "bg-accent text-white hover:opacity-90"}`}>{actionLabel}</button></div></div>;
+  return (
+    <div
+      className={`rounded-xl border p-5 transition-all ${
+        isSafetyCase
+          ? isCaseFound
+            ? "border-danger/30 bg-danger/[0.035]"
+            : "border-success/20 bg-success/[0.025]"
+          : "border-border bg-surface"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className={`flex size-11 items-center justify-center rounded-xl text-xl ${
+            isSafetyCase
+              ? isCaseFound
+                ? "bg-danger/10"
+                : "bg-success/10"
+              : "bg-accent/10"
+          }`}
+        >
+          {activity.icon}
+        </div>
+
+        <span
+          className={`rounded-md border px-2 py-1 text-[9px] font-medium ${
+            isSafetyCase
+              ? isCaseFound
+                ? "border-danger/30 bg-danger/10 text-danger"
+                : "border-success/20 bg-success/10 text-success"
+              : config.className
+          }`}
+        >
+          {isSafetyCase
+            ? isCaseFound
+              ? safetyText("caseFoundRed", language)
+              : safetyText("noCaseGreen", language)
+            : getSafetyStatusLabel(status, language)}
+        </span>
+      </div>
+
+      <h3 className="mt-4 text-sm font-semibold text-text">
+        {activity.title}
+      </h3>
+
+      <p className="mt-1 text-xs leading-5 text-text-muted">
+        {activity.description}
+      </p>
+
+      <div
+        className={`mt-3 rounded-lg border px-3 py-2 ${
+          isSafetyCase
+            ? isCaseFound
+              ? "border-danger/20 bg-danger/5"
+              : "border-success/20 bg-success/5"
+            : "border-border-subtle bg-bg/30"
+        }`}
+      >
+        <p className="text-[9px] uppercase tracking-wide text-text-dim">
+          {isSafetyCase
+            ? language === "cn"
+              ? "本月积分"
+              : "Monthly Point"
+            : safetyText("target", language)}
+        </p>
+
+        {isSafetyCase ? (
+          <div className="mt-1 flex items-center gap-2">
+            <span
+              className={`text-lg font-bold ${
+                isCaseFound ? "text-danger" : "text-success"
+              }`}
+            >
+              {safetyCasePoint > 0
+                ? `+${safetyCasePoint}`
+                : safetyCasePoint}
+            </span>
+            <span
+              className={`text-[10px] font-semibold ${
+                isCaseFound ? "text-danger" : "text-success"
+              }`}
+            >
+              {isCaseFound
+                ? safetyText("caseFoundRed", language)
+                : safetyText("noCaseGreen", language)}
+            </span>
+          </div>
+        ) : (
+          <p className="mt-1 text-xs font-medium text-text">
+            {rewardLabel}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        {hasDetail && (
+          <button
+            type="button"
+            onClick={onView}
+            className="flex-1 cursor-pointer rounded-md border border-border px-3 py-2 text-[10px] font-medium text-text-muted hover:bg-surface-hover"
+          >
+            {safetyText("view", language)}
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={onUpload}
+          className={`flex-1 cursor-pointer rounded-md px-3 py-2 text-[10px] font-medium ${
+            isSafetyCase
+              ? isCaseFound
+                ? "bg-danger text-white hover:opacity-90"
+                : "bg-success text-white hover:opacity-90"
+              : isGreen && hasDetail
+                ? "border border-border text-text-muted hover:bg-surface-hover"
+                : "bg-accent text-white hover:opacity-90"
+          }`}
+        >
+          {actionLabel}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function UploadModal({
@@ -2471,7 +3588,8 @@ function UploadModal({
   activity,
   date,
   location,
-  description,
+  descriptionEn,
+  descriptionCn,
   pic,
   users,
   loadingUsers,
@@ -2480,7 +3598,8 @@ function UploadModal({
   submitting,
   setDate,
   setLocation,
-  setDescription,
+  setDescriptionEn,
+  setDescriptionCn,
   setPic,
   onFileChange,
   onClose,
@@ -2490,7 +3609,8 @@ function UploadModal({
   activity: ActivityConfig;
   date: string;
   location: string;
-  description: string;
+  descriptionEn: string;
+  descriptionCn: string;
   pic: string;
   users: UserOption[];
   loadingUsers: boolean;
@@ -2499,7 +3619,8 @@ function UploadModal({
   submitting: boolean;
   setDate: (v: string) => void;
   setLocation: (v: string) => void;
-  setDescription: (v: string) => void;
+  setDescriptionEn: (v: string) => void;
+  setDescriptionCn: (v: string) => void;
   setPic: (v: string) => void;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClose: () => void;
@@ -2551,7 +3672,14 @@ function UploadModal({
       );
     })}
   </select>
-</FormField></div>{activity.id !== "hazard-case" && <FormField label={safetyText("location", language)}><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={safetyText("enterLocation", language)} className={inputClass} /></FormField>}<FormField label={safetyText("description", language)}><textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={activity.id === "hazard-case" ? "Isi detail kasus. Jika tidak ada kasus, kosongkan file dan submit untuk status GREEN." : safetyText("describeActivity", language)} rows={4} className={`${inputClass} resize-none`} /></FormField>{activity.uploadKind !== "none" && <FormField label={safetyText("attachment", language)}><label className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-border bg-bg/30 px-4 py-8 text-center hover:border-accent/60 hover:bg-accent/5"><div className="flex size-11 items-center justify-center rounded-full bg-accent/10 text-lg">↑</div><span className="mt-3 text-xs font-medium text-text">{safetyText("clickUpload", language)}</span><span className="mt-1 text-[10px] text-text-dim">{uploadText}</span><input data-safety-upload="true" type="file" multiple className="hidden" accept={accept} onChange={onFileChange} /></label>{filePreviews.length > 0 && (
+</FormField></div>{activity.id !== "hazard-case" && <FormField label={safetyText("location", language)}><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={safetyText("enterLocation", language)} className={inputClass} /></FormField>}<div className="grid gap-4 md:grid-cols-2">
+<FormField label={safetyText("descriptionEnglish", language)}>
+<textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} placeholder={activity.id === "hazard-case" ? "Describe the case details. Leave both descriptions empty if there is no case." : safetyText("describeActivity", language)} rows={4} className={`${inputClass} resize-none`} />
+</FormField>
+<FormField label={safetyText("descriptionChinese", language)}>
+<textarea value={descriptionCn} onChange={(e) => setDescriptionCn(e.target.value)} placeholder={activity.id === "hazard-case" ? "请描述案件详情。如果没有案件，请将两个描述都留空。" : safetyText("describeActivityChinese", language)} rows={4} className={`${inputClass} resize-none`} />
+</FormField>
+</div>{activity.uploadKind !== "none" && <FormField label={safetyText("attachment", language)}><label className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-border bg-bg/30 px-4 py-8 text-center hover:border-accent/60 hover:bg-accent/5"><div className="flex size-11 items-center justify-center rounded-full bg-accent/10 text-lg">↑</div><span className="mt-3 text-xs font-medium text-text">{safetyText("clickUpload", language)}</span><span className="mt-1 text-[10px] text-text-dim">{uploadText}</span><input data-safety-upload="true" type="file" multiple className="hidden" accept={accept} onChange={onFileChange} /></label>{filePreviews.length > 0 && (
   <div className="mt-3 grid gap-2 sm:grid-cols-2">
     {filePreviews.map((file) => {
       const kind = getPreviewKind(file.name, file.type);
@@ -2612,6 +3740,11 @@ function ViewSubmissionModal({
 }) {
   const files = detail.filePreviews ?? [];
 
+  const fileCountLabel =
+    files.length === 1
+      ? safetyText("file", language)
+      : safetyText("files", language);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
       <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
@@ -2637,6 +3770,7 @@ function ViewSubmissionModal({
             type="button"
             onClick={onClose}
             className="cursor-pointer text-2xl leading-none text-text-dim hover:text-text"
+            aria-label={safetyText("close", language)}
           >
             ×
           </button>
@@ -2653,7 +3787,11 @@ function ViewSubmissionModal({
 
             <DetailItem
               label={safetyText("pic", language)}
-              value={detail.pic}
+              value={
+                language === "cn"
+                  ? detail.picCn || detail.picEn || detail.pic || "—"
+                  : detail.picEn || detail.picCn || detail.pic || "—"
+              }
             />
 
             <DetailItem
@@ -2665,8 +3803,8 @@ function ViewSubmissionModal({
               label={safetyText("attachment", language)}
               value={
                 detail.fileNames?.length
-                  ? `${detail.fileNames.length} file(s)`
-                  : "No attachment"
+                  ? `${detail.fileNames.length} ${fileCountLabel}`
+                  : safetyText("noAttachment", language)
               }
             />
           </div>
@@ -2674,11 +3812,13 @@ function ViewSubmissionModal({
           {/* Description */}
           <div className="mt-4 rounded-xl border border-border-subtle bg-bg/30 p-4">
             <p className="text-[9px] font-semibold uppercase tracking-wide text-text-dim">
-              Description
+              {safetyText("description", language)}
             </p>
 
-            <p className="mt-2 text-xs leading-6 text-text-muted">
-              {detail.description}
+            <p className="mt-2 whitespace-pre-wrap text-xs leading-6 text-text-muted">
+              {language === "cn"
+                ? detail.descriptionCn || detail.descriptionEn || detail.description
+                : detail.descriptionEn || detail.descriptionCn || detail.description}
             </p>
           </div>
 
@@ -2687,16 +3827,16 @@ function ViewSubmissionModal({
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-text">
-                  Attachments
+                  {safetyText("attachmentsTitle", language)}
                 </p>
 
                 <p className="mt-1 text-[10px] text-text-dim">
-                  Preview uploaded photos, videos and documents.
+                  {safetyText("attachmentsPreview", language)}
                 </p>
               </div>
 
               <span className="rounded-md bg-accent/10 px-2 py-1 text-[9px] font-medium text-accent">
-                {files.length} file(s)
+                {files.length} {fileCountLabel}
               </span>
             </div>
 
@@ -2705,11 +3845,11 @@ function ViewSubmissionModal({
                 <div className="text-3xl">📎</div>
 
                 <p className="mt-2 text-xs font-medium text-text">
-                  No preview available
+                  {safetyText("noPreview", language)}
                 </p>
 
                 <p className="mt-1 text-[10px] text-text-dim">
-                  This submission has no stored preview files.
+                  {safetyText("noStoredPreview", language)}
                 </p>
 
                 {detail.fileNames?.length ? (
@@ -2816,10 +3956,10 @@ function AttachmentPreview({
 
             <p className="mt-1 max-w-sm text-[10px] leading-5 text-text-dim">
               {kind === "ppt"
-                ? "PowerPoint preview will work automatically when the file is stored at an accessible HTTP/HTTPS URL. You can open the uploaded file now."
+                ? safetyText("powerpointPreviewHelp", language)
                 : kind === "excel"
-                  ? "Excel files are shown as document attachments. You can open the uploaded file now."
-                  : "This file type does not have an in-browser preview."}
+                  ? safetyText("excelPreviewHelp", language)
+                  : safetyText("noBrowserPreview", language)}
             </p>
           </div>
         )}
@@ -2844,7 +3984,7 @@ function AttachmentPreview({
             rel="noreferrer"
             className="shrink-0 rounded-md border border-border px-3 py-1.5 text-[10px] font-medium text-text-muted hover:bg-surface-hover"
           >
-            Open
+            {safetyText("open", language)}
           </a>
         </div>
       </div>
@@ -2969,7 +4109,7 @@ function getReadableFileKind(
 ): string {
   switch (kind) {
     case "image":
-      return "图片";
+      return safetyText("image", language);
     case "video":
       return safetyText("video", language);
     case "excel":

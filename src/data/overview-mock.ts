@@ -209,7 +209,7 @@ export const dashboardModules: ModuleCardData[] = [
     title: "SECURITY (SAFETY) DASHBOARD",
     icon: "shield",
     accentColor: "#ef4444",
-    href: "/",
+    href: "/safety",
     layout: "safety",
     stats: [
       {
