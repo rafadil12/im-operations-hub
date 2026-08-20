@@ -665,18 +665,22 @@ export function MovementCalendar({
         <p className="text-sm text-text-muted">{t.common.noData}</p>
       ) : (
         <div
-          className="grid w-fit gap-[8px]"
+          className="grid w-fit gap-x-0 gap-y-2"
           style={{
-            gridTemplateColumns: `4rem repeat(${weeks.length}, 36px)`,
+            gridTemplateColumns: `4rem repeat(${weeks.length}, 52px)`,
           }}
         >
           <div />
           {ticks.map((label, i) => (
             <div
               key={`tick-${i}`}
-              className="overflow-visible whitespace-nowrap text-center text-[12px] leading-4 text-text-dim"
+              className="relative h-4 overflow-visible"
             >
-              {label ?? ""}
+              {label ? (
+                <span className="absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap px-1 text-[11px] leading-4 tracking-wide text-text-dim">
+                  {label}
+                </span>
+              ) : null}
             </div>
           ))}
           {dow.map((day, row) => (
@@ -693,7 +697,7 @@ export function MovementCalendar({
                   <div
                     key={cell.date}
                     title={`${cell.date}: ${cell.qty}`}
-                    className={`size-[24px] rounded-[2px] ${heatmapColor(cell.qty, max)}`}
+                    className={`mx-auto size-[24px] rounded-[2px] ${heatmapColor(cell.qty, max)}`}
                   />
                 );
               })}
