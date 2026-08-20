@@ -22,6 +22,7 @@ import {
   type SortKey,
 } from "@/components/sparepart/StockTable";
 import { sortStockBalanceRows } from "@/lib/sparepartSort";
+import type { StockLevelStatus } from "@/lib/sparepartCategories";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
 
@@ -29,6 +30,13 @@ type StockResponse = {
   rows: SparepartStockBalanceRow[];
   locations: string[];
   locationOptions?: { code: string; name: string }[];
+};
+
+type StockFilters = {
+  q: string;
+  location: string;
+  category: string;
+  status: "" | StockLevelStatus;
 };
 
 export default function StockOverviewPage() {
@@ -41,7 +49,7 @@ export default function StockOverviewPage() {
   const [q, setQ] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
-  const [lowStock, setLowStock] = useState(false);
+  const [status, setStatus] = useState<"" | StockLevelStatus>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -52,12 +60,7 @@ export default function StockOverviewPage() {
   const [exporting, setExporting] = useState(false);
 
   const load = useCallback(
-    async (filters: {
-      q: string;
-      location: string;
-      category: string;
-      lowStock: boolean;
-    }) => {
+    async (filters: StockFilters) => {
       setLoading(true);
       setError(null);
       try {
@@ -65,7 +68,7 @@ export default function StockOverviewPage() {
         if (filters.q) params.set("q", filters.q);
         if (filters.location) params.set("location", filters.location);
         if (filters.category) params.set("category", filters.category);
-        if (filters.lowStock) params.set("lowStock", "1");
+        if (filters.status) params.set("status", filters.status);
         const data = await apiGetAbs<StockResponse>(
           `/api/sparepart/stock?${params.toString()}`,
         );
@@ -82,7 +85,7 @@ export default function StockOverviewPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
-    load({ q: "", location: "", category: "", lowStock: false });
+    load({ q: "", location: "", category: "", status: "" });
     apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
       .then((data) => setCategories(data.rows))
       .catch(() => setCategories([]));
@@ -154,6 +157,17 @@ export default function StockOverviewPage() {
       label: localizedName(row, lang),
     })),
   ];
+  const statusOptions = [
+    { value: "", label: t.common.all },
+    { value: "critical", label: t.sparepart.statusCritical },
+    { value: "low", label: t.sparepart.statusLow },
+    { value: "normal", label: t.sparepart.statusNormal },
+  ];
+
+  const applyFilters = () => {
+    setPage(1);
+    load({ q, location, category, status });
+  };
 
   return (
     <SparepartGate allow={(a) => a.canViewSparepartStock}>
@@ -197,10 +211,7 @@ export default function StockOverviewPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                setPage(1);
-                load({ q, location, category, lowStock });
-              }
+              if (e.key === "Enter") applyFilters();
             }}
             placeholder={t.sparepart.stockSearchHint}
           />
@@ -231,20 +242,24 @@ export default function StockOverviewPage() {
             placeholder={t.common.all}
           />
         </div>
-        <label className="mb-2 flex items-center gap-2 text-[10px] uppercase text-text-dim">
-          <input
-            type="checkbox"
-            checked={lowStock}
-            onChange={(e) => setLowStock(e.target.checked)}
+        <div className="min-w-[120px]">
+          <label className="mb-1 block text-[10px] uppercase text-text-dim">
+            {t.sparepart.stockStatus}
+          </label>
+          <SparepartDropdown
+            className="w-full"
+            compact
+            value={status}
+            onChange={(next) =>
+              setStatus((next || "") as "" | StockLevelStatus)
+            }
+            options={statusOptions}
+            placeholder={t.common.all}
           />
-          {t.sparepart.lowStockOnly}
-        </label>
+        </div>
         <button
           type="button"
-          onClick={() => {
-            setPage(1);
-            load({ q, location, category, lowStock });
-          }}
+          onClick={applyFilters}
           className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
           {t.common.apply}

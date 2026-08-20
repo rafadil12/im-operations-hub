@@ -51,7 +51,18 @@ export async function GET(request: NextRequest) {
       params.push(category.toUpperCase());
     }
 
-    if (sp.get("lowStock") === "1") {
+    const status = sp.get("status")?.trim().toLowerCase();
+    if (status === "critical") {
+      conditions.push("i.is_active = 1 AND i.min_stock > 0 AND i.stock_current <= 0");
+    } else if (status === "low") {
+      conditions.push(
+        "i.is_active = 1 AND i.min_stock > 0 AND i.stock_current > 0 AND i.stock_current <= i.min_stock",
+      );
+    } else if (status === "normal") {
+      conditions.push(
+        `NOT (${LOW_STOCK_SQL})`,
+      );
+    } else if (sp.get("lowStock") === "1") {
       conditions.push(LOW_STOCK_SQL);
     }
 
