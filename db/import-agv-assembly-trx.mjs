@@ -138,8 +138,8 @@ console.log(`Created-by: ${superAdmin.label} (system_user_id=${superAdmin.system
 
 // Pre-load location labels
 const [locRows] = await conn.query(
-  `SELECT id, code, name FROM sparepart_storage_locations WHERE is_active = 1`,
-);
+  `SELECT id, code, name_en, name_cn FROM sparepart_storage_locations WHERE is_active = 1`,
+  );
 const locMap = new Map(locRows.map((r) => [Number(r.id), r]));
 
 await conn.beginTransaction();
@@ -180,7 +180,7 @@ try {
       warnings.push(`Row ${row.sourceRow}: location id ${row.locationId} not found, skipped.`);
       continue;
     }
-    const locLabel = `${loc.code} — ${loc.name}`;
+    const locLabel = `${loc.code} — ${loc.name_en}`;
 
     const headerText =
       row.moveType === "101"
@@ -227,7 +227,7 @@ try {
 
   // Final check: no negative balances
   const [neg] = await conn.query(
-    `SELECT i.code, b.qty, loc.name AS loc
+    `SELECT i.code, b.qty, loc.name_en AS loc
      FROM sparepart_stock_balances b
      JOIN sparepart_items i ON i.id = b.item_id
      JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { useLang } from "@/lib/i18n";
+import { localizedName, useLang } from "@/lib/i18n";
 import type { MovementType, SparepartMatDoc } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -96,12 +96,30 @@ function formatPostingDateOnly(postingDate: string | null | undefined): string {
   return match?.[1] ?? postingValue.slice(0, 10);
 }
 
+function formatLocationLabel(
+  code: string | null | undefined,
+  nameEn: string | null | undefined,
+  nameCn: string | null | undefined,
+  lang: "en" | "cn",
+  fallback?: string | null,
+): string {
+  if (code) {
+    const name = localizedName(
+      { name_en: nameEn ?? null, name_cn: nameCn ?? null },
+      lang,
+    );
+    if (name && name !== "-") return `${code} — ${name}`;
+    return code;
+  }
+  return fallback?.trim() || "-";
+}
+
 function isReversalMovement(type: MovementType): boolean {
   return type === "102" || type === "202" || type === "312";
 }
 
 export default function MaterialDocumentsPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
   const { canReverseSparepartDocument } = useRoleAccess();
   const searchParams = useSearchParams();
@@ -600,11 +618,20 @@ export default function MaterialDocumentsPage() {
                   </thead>
                   <tbody>
                     {(detail.lines ?? []).map((line) => {
-                      const fromLabel =
-                        line.from_storage_location ||
-                        line.storage_location ||
-                        "-";
-                      const toLabel = line.to_storage_location || "-";
+                      const fromLabel = formatLocationLabel(
+                        line.from_location_code,
+                        line.from_location_name_en,
+                        line.from_location_name_cn,
+                        lang,
+                        line.from_storage_location || line.storage_location,
+                      );
+                      const toLabel = formatLocationLabel(
+                        line.to_location_code,
+                        line.to_location_name_en,
+                        line.to_location_name_cn,
+                        lang,
+                        line.to_storage_location,
+                      );
                       const isTransfer =
                         detail.movement_type === "311" ||
                         detail.movement_type === "312";

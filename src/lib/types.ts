@@ -271,7 +271,8 @@ export type SparepartUom = {
 export type SparepartStorageLocation = {
   id: number;
   code: string;
-  name: string;
+  name_en: string;
+  name_cn: string;
   is_active: number | boolean;
   created_at: string | null;
   updated_at: string | null;
@@ -284,6 +285,8 @@ export type SparepartStockBalance = {
   qty: number;
   location_code?: string;
   location_name?: string;
+  location_name_en?: string | null;
+  location_name_cn?: string | null;
   updated_at?: string | null;
 };
 
@@ -360,8 +363,14 @@ export type SparepartMatDocLine = {
   to_storage_location_id?: number | null;
   /** Joined label for storage_location_id */
   from_storage_location?: string | null;
+  from_location_code?: string | null;
+  from_location_name_en?: string | null;
+  from_location_name_cn?: string | null;
   /** Joined label for to_storage_location_id */
   to_storage_location?: string | null;
+  to_location_code?: string | null;
+  to_location_name_en?: string | null;
+  to_location_name_cn?: string | null;
   note: string | null;
   item_code?: string | null;
   item_name?: string | null;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
-import { useLang } from "@/lib/i18n";
+import { localizedName, useLang } from "@/lib/i18n";
 import type { SparepartItem, SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { LocationCombobox } from "@/components/sparepart/LocationCombobox";
@@ -60,7 +60,7 @@ function newClientRequestId(): string {
 }
 
 export default function PostGoodsMovementPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
   const [movementType, setMovementType] = useState<"101" | "201" | "311">("101");
   const [postingDate, setPostingDate] = useState(todayLocalDateInputValue);
@@ -76,7 +76,8 @@ export default function PostGoodsMovementPage() {
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
   const label = "mb-1 block text-xs font-medium text-text-muted";
 
-  const locationLabel = (loc: SparepartStorageLocation) => `${loc.code} — ${loc.name}`;
+  const locationLabel = (loc: SparepartStorageLocation) =>
+    `${loc.code} — ${localizedName(loc, lang)}`;
 
   const locationOptionsForItem = (item?: SparepartItem | null) => {
     if (!item) return [] as SparepartStorageLocation[];
@@ -87,14 +88,21 @@ export default function PostGoodsMovementPage() {
       byId.set(balance.storage_location_id, {
         id: balance.storage_location_id,
         code: balance.location_code ?? "",
-        name: balance.location_name ?? "",
+        name_en: balance.location_name_en ?? balance.location_name ?? "",
+        name_cn:
+          balance.location_name_cn ??
+          balance.location_name_en ??
+          balance.location_name ??
+          "",
         is_active: 1,
         created_at: null,
         updated_at: null,
       });
     }
 
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return [...byId.values()].sort((a, b) =>
+      localizedName(a, lang).localeCompare(localizedName(b, lang)),
+    );
   };
 
   const handlePost = async () => {

@@ -174,7 +174,15 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                       className="border-b border-border-subtle/60 last:border-0"
                     >
                       <td className={td}>{b.location_code ?? "-"}</td>
-                      <td className={td}>{b.location_name ?? "-"}</td>
+                      <td className={td}>
+                        {localizedName(
+                          {
+                            name_en: b.location_name_en ?? b.location_name ?? null,
+                            name_cn: b.location_name_cn ?? null,
+                          },
+                          lang,
+                        )}
+                      </td>
                       <td className={`${td} text-right tabular-nums`}>
                         {item.uom_code ? `${b.qty} ${item.uom_code}` : b.qty}
                       </td>

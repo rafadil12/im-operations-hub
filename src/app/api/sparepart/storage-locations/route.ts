@@ -6,6 +6,23 @@ import { query, withTransaction } from "@/lib/db";
 import { slugLocationCode } from "@/lib/sparepartLocations";
 import type { SparepartStorageLocation } from "@/lib/types";
 
+const LOCATION_SELECT =
+  "id, code, name_en, name_cn, is_active, created_at, updated_at";
+
+function parseNames(body: {
+  name_en?: string;
+  name_cn?: string;
+  name?: string;
+}): { name_en: string; name_cn: string } | null {
+  const nameEn = String(body.name_en ?? body.name ?? "").trim();
+  const nameCn = String(body.name_cn ?? body.name_en ?? body.name ?? "").trim();
+  if (!nameEn && !nameCn) return null;
+  return {
+    name_en: nameEn || nameCn,
+    name_cn: nameCn || nameEn,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const gate = await requireAnyPermission([
     PERMISSIONS.sparepartLocationsManage,
@@ -21,10 +38,10 @@ export async function GET(request: NextRequest) {
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const rows = await query<SparepartStorageLocation[]>(
-      `SELECT id, code, name, is_active, created_at, updated_at
+      `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations
        ${where}
-       ORDER BY name ASC`,
+       ORDER BY name_en ASC`,
     );
     return NextResponse.json({ rows });
   } catch (error) {
@@ -44,29 +61,35 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       code?: string;
       name?: string;
+      name_en?: string;
+      name_cn?: string;
       is_active?: boolean;
     };
-    const name = String(body.name ?? "").trim();
-    if (!name) {
-      return NextResponse.json({ error: "Name is required." }, { status: 400 });
+    const names = parseNames(body);
+    if (!names) {
+      return NextResponse.json(
+        { error: "Name EN and Name CN are required." },
+        { status: 400 },
+      );
     }
-    if (name.includes(",")) {
+    if (names.name_en.includes(",") || names.name_cn.includes(",")) {
       return NextResponse.json(
         { error: "Location name must not contain commas." },
         { status: 400 },
       );
     }
-    const code = String(body.code ?? "").trim() || slugLocationCode(name);
+    const code =
+      String(body.code ?? "").trim() || slugLocationCode(names.name_en);
     const isActive = body.is_active === false ? 0 : 1;
 
     const result = await query<ResultSetHeader>(
-      `INSERT INTO sparepart_storage_locations (code, name, is_active)
-       VALUES (?, ?, ?)`,
-      [code, name, isActive],
+      `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
+       VALUES (?, ?, ?, ?)`,
+      [code, names.name_en, names.name_cn, isActive],
     );
 
     const rows = await query<SparepartStorageLocation[]>(
-      `SELECT id, code, name, is_active, created_at, updated_at
+      `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
       [result.insertId],
     );
@@ -96,6 +119,8 @@ export async function PUT(request: NextRequest) {
       id?: number;
       code?: string;
       name?: string;
+      name_en?: string;
+      name_cn?: string;
       is_active?: boolean;
     };
     const id = Number(body.id);
@@ -104,7 +129,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const existing = await query<SparepartStorageLocation[]>(
-      `SELECT id, code, name, is_active, created_at, updated_at
+      `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
       [id],
     );
@@ -112,15 +137,25 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
 
-    const name = body.name != null ? String(body.name).trim() : existing[0].name;
-    const code = body.code != null ? String(body.code).trim() : existing[0].code;
-    if (!name || !code) {
+    const nameEn =
+      body.name_en != null
+        ? String(body.name_en).trim()
+        : body.name != null
+          ? String(body.name).trim()
+          : existing[0].name_en;
+    const nameCn =
+      body.name_cn != null
+        ? String(body.name_cn).trim()
+        : existing[0].name_cn;
+    const code =
+      body.code != null ? String(body.code).trim() : existing[0].code;
+    if (!nameEn || !nameCn || !code) {
       return NextResponse.json(
-        { error: "code and name are required." },
+        { error: "code, name_en, and name_cn are required." },
         { status: 400 },
       );
     }
-    if (name.includes(",")) {
+    if (nameEn.includes(",") || nameCn.includes(",")) {
       return NextResponse.json(
         { error: "Location name must not contain commas." },
         { status: 400 },
@@ -153,13 +188,13 @@ export async function PUT(request: NextRequest) {
 
     await query(
       `UPDATE sparepart_storage_locations
-       SET code = ?, name = ?, is_active = ?
+       SET code = ?, name_en = ?, name_cn = ?, is_active = ?
        WHERE id = ?`,
-      [code, name, nextActive, id],
+      [code, nameEn, nameCn, nextActive, id],
     );
 
     const rows = await query<SparepartStorageLocation[]>(
-      `SELECT id, code, name, is_active, created_at, updated_at
+      `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
       [id],
     );

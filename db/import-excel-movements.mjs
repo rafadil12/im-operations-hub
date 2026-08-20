@@ -147,38 +147,53 @@ async function ensureLocation(displayName) {
   const preferred = LOCATION_ALIASES[key] || displayName.trim();
 
   const [byName] = await conn.query(
-    `SELECT id, code, name FROM sparepart_storage_locations
-     WHERE is_active = 1 AND (UPPER(name) = UPPER(?) OR UPPER(code) = UPPER(?))
+    `SELECT id, code, name_en, name_cn FROM sparepart_storage_locations
+     WHERE is_active = 1
+       AND (
+         UPPER(name_en) = UPPER(?)
+         OR UPPER(name_cn) = UPPER(?)
+         OR UPPER(code) = UPPER(?)
+       )
      LIMIT 1`,
-    [preferred, preferred],
+    [preferred, preferred, preferred],
   );
   if (byName[0]) return byName[0];
 
   // Also try original display name
   if (preferred !== displayName.trim()) {
     const [orig] = await conn.query(
-      `SELECT id, code, name FROM sparepart_storage_locations
-       WHERE is_active = 1 AND (UPPER(name) = UPPER(?) OR UPPER(code) = UPPER(?))
+      `SELECT id, code, name_en, name_cn FROM sparepart_storage_locations
+       WHERE is_active = 1
+         AND (
+           UPPER(name_en) = UPPER(?)
+           OR UPPER(name_cn) = UPPER(?)
+           OR UPPER(code) = UPPER(?)
+         )
        LIMIT 1`,
-      [displayName.trim(), displayName.trim()],
+      [displayName.trim(), displayName.trim(), displayName.trim()],
     );
     if (orig[0]) return orig[0];
   }
 
   const code = slugLocationCode(preferred);
   const [byCode] = await conn.query(
-    `SELECT id, code, name FROM sparepart_storage_locations
+    `SELECT id, code, name_en, name_cn FROM sparepart_storage_locations
      WHERE code = ? LIMIT 1`,
     [code],
   );
   if (byCode[0]) return byCode[0];
 
   const [ins] = await conn.query(
-    `INSERT INTO sparepart_storage_locations (code, name, is_active)
-     VALUES (?, ?, 1)`,
-    [code, preferred],
+    `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
+     VALUES (?, ?, ?, 1)`,
+    [code, preferred, preferred],
   );
-  return { id: ins.insertId, code, name: preferred };
+  return {
+    id: ins.insertId,
+    code,
+    name_en: preferred,
+    name_cn: preferred,
+  };
 }
 
 async function nextDocNumber(postingDate) {
@@ -465,7 +480,7 @@ try {
     for (const part of parts) {
       lineNo += 1;
       const loc = await resolveLoc(part.name);
-      const locLabel = `${loc.code} — ${loc.name}`;
+      const locLabel = `${loc.code} — ${loc.name_en}`;
       await conn.query(
         `INSERT INTO sparepart_mat_doc_items
           (doc_id, item_id, line_no, qty, storage_location, storage_location_id, note)
@@ -485,7 +500,7 @@ try {
       const nextQty = await adjustBalance(itemId, loc.id, delta);
       if (nextQty < 0) {
         warnings.push(
-          `${mov.code} @ ${mov.postingDate.slice(0, 10)} ${mov.movementType} ${loc.name}: temp ${nextQty}`,
+          `${mov.code} @ ${mov.postingDate.slice(0, 10)} ${mov.movementType} ${loc.name_en}: temp ${nextQty}`,
         );
       }
     }
@@ -496,7 +511,7 @@ try {
   }
 
   const [neg] = await conn.query(
-    `SELECT i.code, b.qty, loc.name AS loc
+    `SELECT i.code, b.qty, loc.name_en AS loc
      FROM sparepart_stock_balances b
      JOIN sparepart_items i ON i.id = b.item_id
      JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id

@@ -39,14 +39,20 @@ export async function GET(_request: NextRequest, context: Ctx) {
               COALESCE(i.name_en, i.name_cn) AS item_name,
               COALESCE(i.brand_en, i.brand_cn) AS item_brand,
               i.model AS item_model,
+              loc_from.code AS from_location_code,
+              loc_from.name_en AS from_location_name_en,
+              loc_from.name_cn AS from_location_name_cn,
               CASE
                 WHEN loc_from.id IS NOT NULL
-                  THEN CONCAT(loc_from.code, ' — ', loc_from.name)
+                  THEN CONCAT(loc_from.code, ' — ', loc_from.name_en)
                 ELSE NULL
               END AS from_storage_location,
+              loc_to.code AS to_location_code,
+              loc_to.name_en AS to_location_name_en,
+              loc_to.name_cn AS to_location_name_cn,
               CASE
                 WHEN loc_to.id IS NOT NULL
-                  THEN CONCAT(loc_to.code, ' — ', loc_to.name)
+                  THEN CONCAT(loc_to.code, ' — ', loc_to.name_en)
                 ELSE NULL
               END AS to_storage_location
        FROM sparepart_mat_doc_items li

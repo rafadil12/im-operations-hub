@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { localizedName, useLang } from "@/lib/i18n";
 import {
   categoryColor,
+  localizedCategoryLabel,
   normalizeCategoryCode,
   SPAREPART_CATEGORY_CODES,
   type SparepartCategoryCode,
@@ -295,7 +296,10 @@ export function SparepartOverview({
         <div className="space-y-4">
           <section className={panel}>
             <h2 className={titleCls}>{t.sparepart.topUsedItems}</h2>
-            <TopUsedList items={data.topUsedItems} />
+            <TopUsedList
+              items={data.topUsedItems}
+              categories={data.categories}
+            />
           </section>
 
           <section className={panel}>
@@ -307,12 +311,19 @@ export function SparepartOverview({
 
       <section className={panel}>
         <h2 className={titleCls}>{t.sparepart.movementTrend}</h2>
-        <TrendLines rows={data.trendDaily} visible={visibleCodes} />
+        <TrendLines
+          rows={data.trendDaily}
+          visible={visibleCodes}
+          categories={data.categories}
+        />
       </section>
 
       <section className={panel}>
         <h2 className={titleCls}>{t.sparepart.categoryLocationHeatmap}</h2>
-        <CategoryLocationHeatmap cells={data.categoryLocationHeatmap} />
+        <CategoryLocationHeatmap
+          cells={data.categoryLocationHeatmap}
+          categories={data.categories}
+        />
       </section>
 
       <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-3">
@@ -320,8 +331,17 @@ export function SparepartOverview({
           title={t.sparepart.topStockItems}
           subtitle={t.sparepart.topStockSubtitle}
           items={data.topStock}
+          categories={data.categories}
           renderMeta={(item) =>
-            `${localizedName(item, lang)} · ${item.category_code}`
+            `${localizedName(item, lang)} · ${localizedCategoryLabel(
+              item.category_code,
+              data.categories,
+              lang,
+              {
+                name_en: item.category_name_en,
+                name_cn: item.category_name_cn,
+              },
+            )}`
           }
           badgeClass="bg-danger/15 text-danger"
           badgeLabel={t.sparepart.statusCritical}
@@ -330,6 +350,7 @@ export function SparepartOverview({
           title={t.sparepart.lowStockPriority}
           subtitle={t.sparepart.lowStockSubtitle}
           items={data.lowStockItems.filter((item) => item.status === "low")}
+          categories={data.categories}
           renderMeta={(item) => {
             const uom =
               item.uom_code && item.uom_code.toUpperCase() === "PCS"
@@ -394,6 +415,8 @@ type AlertItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  category_name_en?: string | null;
+  category_name_cn?: string | null;
   uom_code?: string | null;
   stock_current: number;
   min_stock?: number;
@@ -403,6 +426,7 @@ function AlertItemsCard({
   title,
   subtitle,
   items,
+  categories,
   renderMeta,
   badgeClass,
   badgeLabel,
@@ -410,6 +434,7 @@ function AlertItemsCard({
   title: string;
   subtitle: string;
   items: AlertItem[];
+  categories: SparepartOverviewData["categories"];
   renderMeta: (item: AlertItem) => string;
   badgeClass: string;
   badgeLabel: string;
@@ -428,6 +453,8 @@ function AlertItemsCard({
         item.name_en ?? "",
         item.name_cn ?? "",
         item.category_code,
+        item.category_name_en ?? "",
+        item.category_name_cn ?? "",
         renderMeta(item),
       ];
       return haystacks.some((value) => value.toLowerCase().includes(needle));
@@ -537,6 +564,7 @@ function AlertItemsCard({
                     <AlertItemCompactRow
                       key={item.code}
                       item={item}
+                      categories={categories}
                       badgeClass={badgeClass}
                       badgeLabel={badgeLabel}
                     />
@@ -579,10 +607,12 @@ function AlertItemRow({
 
 function AlertItemCompactRow({
   item,
+  categories,
   badgeClass,
   badgeLabel,
 }: {
   item: AlertItem;
+  categories: SparepartOverviewData["categories"];
   badgeClass: string;
   badgeLabel: string;
 }) {
@@ -596,7 +626,12 @@ function AlertItemCompactRow({
     <div className="grid grid-cols-[120px_minmax(0,1fr)_90px_84px] gap-3 border-t border-border-subtle/70 px-4 py-3 text-sm first:border-t-0">
       <div className="min-w-0">
         <p className="font-semibold text-text">{item.code}</p>
-        <p className="mt-0.5 text-[11px] text-text-dim">{item.category_code}</p>
+        <p className="mt-0.5 text-[11px] text-text-dim">
+          {localizedCategoryLabel(item.category_code, categories, lang, {
+            name_en: item.category_name_en,
+            name_cn: item.category_name_cn,
+          })}
+        </p>
       </div>
       <div className="min-w-0">
         <p className="truncate text-text-muted">{localizedName(item, lang)}</p>

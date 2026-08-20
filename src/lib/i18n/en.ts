@@ -107,6 +107,8 @@ const en = {
     location: "Storage Location",
     locationCode: "Location Code",
     locationName: "Location Name",
+    locationNameEn: "Location Name (EN)",
+    locationNameCn: "Location Name (CN)",
     locationActive: "Active",
     locationDeleteConfirm:
       "This inactive storage location will be permanently deleted. Continue?",

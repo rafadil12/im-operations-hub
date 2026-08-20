@@ -53,12 +53,12 @@ export async function GET(request: NextRequest) {
               i.model AS item_model,
               CASE
                 WHEN loc_from.id IS NOT NULL
-                  THEN CONCAT(loc_from.code, ' — ', loc_from.name)
+                  THEN CONCAT(loc_from.code, ' — ', loc_from.name_en)
                 ELSE COALESCE(li.storage_location, '')
               END AS from_location,
               CASE
                 WHEN loc_to.id IS NOT NULL
-                  THEN CONCAT(loc_to.code, ' — ', loc_to.name)
+                  THEN CONCAT(loc_to.code, ' — ', loc_to.name_en)
                 ELSE NULL
               END AS to_location
        FROM sparepart_mat_docs d

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
-import { useLang } from "@/lib/i18n";
+import { localizedName, useLang } from "@/lib/i18n";
 import type { SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Modal } from "@/components/ui/Modal";
@@ -44,7 +44,7 @@ function compareStrings(a: string, b: string): number {
 }
 
 export default function StorageLocationsPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
   const [rows, setRows] = useState<SparepartStorageLocation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,8 @@ export default function StorageLocationsPage() {
   const [editing, setEditing] = useState<SparepartStorageLocation | null>(null);
   const [creating, setCreating] = useState(false);
   const [code, setCode] = useState("");
-  const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
+  const [nameCn, setNameCn] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [sortKey, setSortKey] = useState<LocationSortKey | null>(null);
@@ -83,7 +84,8 @@ export default function StorageLocationsPage() {
     setCreating(true);
     setEditing(null);
     setCode("");
-    setName("");
+    setNameEn("");
+    setNameCn("");
     setIsActive(true);
   };
 
@@ -91,7 +93,8 @@ export default function StorageLocationsPage() {
     setEditing(row);
     setCreating(false);
     setCode(row.code);
-    setName(row.name);
+    setNameEn(row.name_en);
+    setNameCn(row.name_cn);
     setIsActive(Boolean(row.is_active));
   };
 
@@ -107,13 +110,15 @@ export default function StorageLocationsPage() {
         await apiSendAbs("/api/sparepart/storage-locations", "PUT", {
           id: editing.id,
           code: code.trim(),
-          name: name.trim(),
+          name_en: nameEn.trim(),
+          name_cn: nameCn.trim(),
           is_active: isActive,
         });
       } else {
         await apiSendAbs("/api/sparepart/storage-locations", "POST", {
           code: code.trim() || undefined,
-          name: name.trim(),
+          name_en: nameEn.trim(),
+          name_cn: nameCn.trim(),
           is_active: isActive,
         });
       }
@@ -160,15 +165,20 @@ export default function StorageLocationsPage() {
       let cmp = 0;
       if (key === "is_active") {
         cmp = Number(a.is_active) - Number(b.is_active);
+      } else if (key === "name") {
+        cmp = compareStrings(
+          localizedName(a, lang),
+          localizedName(b, lang),
+        );
       } else {
-        cmp = compareStrings(String(a[key] ?? ""), String(b[key] ?? ""));
+        cmp = compareStrings(String(a.code ?? ""), String(b.code ?? ""));
       }
       if (cmp !== 0) return cmp * dir;
-      return compareStrings(a.name, b.name);
+      return compareStrings(a.name_en, b.name_en);
     });
-  }, [rows, sortDir, sortKey]);
+  }, [lang, rows, sortDir, sortKey]);
 
-  const renderSortHeader = (label: string, columnKey: LocationSortKey) => {
+  const renderSortHeader = (labelText: string, columnKey: LocationSortKey) => {
     const active = sortKey === columnKey;
     const open = openSortKey === columnKey;
     const chevronDir = active && sortDir === "asc" ? "up" : "down";
@@ -219,7 +229,7 @@ export default function StorageLocationsPage() {
               active || open ? "text-text" : "text-text-dim",
             ].join(" ")}
           >
-            {label}
+            {labelText}
             <ChevronIcon
               direction={chevronDir}
               active={active || open}
@@ -276,6 +286,8 @@ export default function StorageLocationsPage() {
     return <SortMenu />;
   };
 
+  const canSave = Boolean(nameEn.trim() && nameCn.trim());
+
   return (
     <SparepartGate allow={(a) => a.canManageSparepartLocations}>
     <div>
@@ -323,7 +335,7 @@ export default function StorageLocationsPage() {
                   className="border-b border-border-subtle/60 last:border-0"
                 >
                   <td className={`${td} font-medium text-text`}>{row.code}</td>
-                  <td className={td}>{row.name}</td>
+                  <td className={td}>{localizedName(row, lang)}</td>
                   <td className={td}>
                     {row.is_active ? t.common.yes : t.common.no}
                   </td>
@@ -369,7 +381,7 @@ export default function StorageLocationsPage() {
               </button>
               <button
                 type="button"
-                disabled={busy || !name.trim()}
+                disabled={busy || !canSave}
                 onClick={save}
                 className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
               >
@@ -389,11 +401,20 @@ export default function StorageLocationsPage() {
               />
             </div>
             <div>
-              <label className={label}>{t.sparepart.locationName} *</label>
+              <label className={label}>{t.sparepart.locationNameEn} *</label>
               <input
                 className={field}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={nameEn}
+                onChange={(e) => setNameEn(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className={label}>{t.sparepart.locationNameCn} *</label>
+              <input
+                className={field}
+                value={nameCn}
+                onChange={(e) => setNameCn(e.target.value)}
                 required
               />
             </div>

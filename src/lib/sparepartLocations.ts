@@ -12,7 +12,9 @@ export function slugLocationCode(name: string): string {
   return slug || "LOC";
 }
 
-/** Resolve location by id, code, or exact name. Single string only (no comma-split). */
+const LOCATION_SELECT = `id, code, name_en, name_cn, is_active, created_at, updated_at`;
+
+/** Resolve location by id, code, or exact EN/CN name. Single string only (no comma-split). */
 export async function findStorageLocation(
   conn: PoolConnection | null,
   ref: string | number,
@@ -28,7 +30,7 @@ export async function findStorageLocation(
   if (typeof ref === "number" || /^\d+$/.test(String(ref))) {
     const id = Number(ref);
     const rows = await run<SparepartStorageLocation[]>(
-      `SELECT id, code, name, is_active, created_at, updated_at
+      `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
       [id],
     );
@@ -39,11 +41,11 @@ export async function findStorageLocation(
   if (!text) return null;
 
   const rows = await run<SparepartStorageLocation[]>(
-    `SELECT id, code, name, is_active, created_at, updated_at
+    `SELECT ${LOCATION_SELECT}
      FROM sparepart_storage_locations
-     WHERE code = ? OR name = ?
+     WHERE code = ? OR name_en = ? OR name_cn = ?
      LIMIT 1`,
-    [text, text],
+    [text, text, text],
   );
   return rows[0] ?? null;
 }
@@ -65,21 +67,22 @@ export async function ensureStorageLocation(
 
   const code = slugLocationCode(text);
   const [byCode] = await conn.query<RowDataPacket[]>(
-    `SELECT id, code, name, is_active, created_at, updated_at
+    `SELECT ${LOCATION_SELECT}
      FROM sparepart_storage_locations WHERE code = ? LIMIT 1`,
     [code],
   );
   if (byCode[0]) return byCode[0] as SparepartStorageLocation;
 
   const [ins] = await conn.query<ResultSetHeader>(
-    `INSERT INTO sparepart_storage_locations (code, name, is_active)
-     VALUES (?, ?, 1)`,
-    [code, text],
+    `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
+     VALUES (?, ?, ?, 1)`,
+    [code, text, text],
   );
   return {
     id: ins.insertId,
     code,
-    name: text,
+    name_en: text,
+    name_cn: text,
     is_active: 1,
     created_at: null,
     updated_at: null,
@@ -90,9 +93,9 @@ export async function listActiveStorageLocations(): Promise<
   SparepartStorageLocation[]
 > {
   return query<SparepartStorageLocation[]>(
-    `SELECT id, code, name, is_active, created_at, updated_at
+    `SELECT ${LOCATION_SELECT}
      FROM sparepart_storage_locations
      WHERE is_active = 1
-     ORDER BY name ASC`,
+     ORDER BY name_en ASC`,
   );
 }

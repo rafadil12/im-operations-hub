@@ -7,7 +7,7 @@ import type { SparepartStorageLocation } from "@/lib/types";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
-const SELECT_COLS = `id, code, name, is_active, created_at, updated_at`;
+const SELECT_COLS = `id, code, name_en, name_cn, is_active, created_at, updated_at`;
 
 /** Strip LIKE metacharacters so user input cannot broaden the pattern. */
 function sanitizeLike(value: string): string {
@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
       const rows = await query<SparepartStorageLocation[]>(
         `SELECT ${SELECT_COLS}
          FROM sparepart_storage_locations
-         WHERE is_active = 1 AND (code = ? OR name = ?)
+         WHERE is_active = 1 AND (code = ? OR name_en = ? OR name_cn = ?)
          LIMIT 5`,
-        [exactCode, exactCode],
+        [exactCode, exactCode, exactCode],
       );
       return NextResponse.json({ rows });
     }
@@ -67,7 +67,9 @@ export async function GET(request: NextRequest) {
     const params: Array<string | number> = [
       like,
       like,
+      like,
       needle,
+      prefix,
       prefix,
       prefix,
     ];
@@ -78,16 +80,16 @@ export async function GET(request: NextRequest) {
       `SELECT ${SELECT_COLS}
        FROM sparepart_storage_locations
        WHERE is_active = 1
-         AND (code LIKE ? OR name LIKE ?)
+         AND (code LIKE ? OR name_en LIKE ? OR name_cn LIKE ?)
          ${excludeClause}
        ORDER BY
          CASE
            WHEN code = ? THEN 0
            WHEN code LIKE ? THEN 1
-           WHEN name LIKE ? THEN 2
+           WHEN name_en LIKE ? OR name_cn LIKE ? THEN 2
            ELSE 3
          END,
-         name ASC
+         name_en ASC
        LIMIT ?`,
       params,
     );

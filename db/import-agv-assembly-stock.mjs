@@ -188,10 +188,10 @@ async function syncStockCurrent(itemId) {
 async function ensureLocation(name) {
   const preferred = cellText(name);
   const [byName] = await conn.query(
-    `SELECT id, code, name FROM sparepart_storage_locations
-     WHERE LOWER(name) = LOWER(?)
+    `SELECT id, code, name_en, name_cn FROM sparepart_storage_locations
+     WHERE LOWER(name_en) = LOWER(?) OR LOWER(name_cn) = LOWER(?)
      LIMIT 1`,
-    [preferred],
+    [preferred, preferred],
   );
   if (byName[0]) return byName[0];
 
@@ -200,18 +200,23 @@ async function ensureLocation(name) {
   );
   const code = seed?.[0] ?? slugLocationCode(preferred);
   const [byCode] = await conn.query(
-    `SELECT id, code, name FROM sparepart_storage_locations
+    `SELECT id, code, name_en, name_cn FROM sparepart_storage_locations
      WHERE code = ? LIMIT 1`,
     [code],
   );
   if (byCode[0]) return byCode[0];
 
   const [ins] = await conn.query(
-    `INSERT INTO sparepart_storage_locations (code, name, is_active)
-     VALUES (?, ?, 1)`,
-    [code, preferred],
+    `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
+     VALUES (?, ?, ?, 1)`,
+    [code, preferred, preferred],
   );
-  return { id: ins.insertId, code, name: preferred };
+  return {
+    id: ins.insertId,
+    code,
+    name_en: preferred,
+    name_cn: preferred,
+  };
 }
 
 console.log(`Loading ${WORKBOOK}…`);
@@ -404,7 +409,7 @@ try {
     }
 
     const loc = await resolveLoc(item.location);
-    const locLabel = `${loc.code} — ${loc.name}`;
+    const locLabel = `${loc.code} — ${loc.name_en}`;
     const docNumber = await nextDocNumber(postingDate);
     const [docIns] = await conn.query(
       `INSERT INTO sparepart_mat_docs

@@ -434,20 +434,33 @@ const balanceCount = Number(balanceCountRows[0]?.c ?? 0);
 
 if (balanceCount === 0 && (await tableExists("sparepart_items"))) {
   const locationIdByName = new Map();
+  const hasLocNameEn = await columnExists("sparepart_storage_locations", "name_en");
 
   async function ensureLocation(name, { active = true } = {}) {
     const key = name.toLowerCase();
     if (locationIdByName.has(key)) return locationIdByName.get(key);
     const code = slugLocationCode(name);
     const [existing] = await conn.query(
-      `SELECT id, name FROM sparepart_storage_locations
-       WHERE code = ? OR LOWER(name) = ? LIMIT 1`,
+      hasLocNameEn
+        ? `SELECT id, name_en AS name FROM sparepart_storage_locations
+           WHERE code = ? OR LOWER(name_en) = ? LIMIT 1`
+        : `SELECT id, name FROM sparepart_storage_locations
+           WHERE code = ? OR LOWER(name) = ? LIMIT 1`,
       [code, key],
     );
     if (existing[0]) {
       locationIdByName.set(key, existing[0].id);
       locationIdByName.set(String(existing[0].name).toLowerCase(), existing[0].id);
       return existing[0].id;
+    }
+    if (hasLocNameEn) {
+      const [ins] = await conn.query(
+        `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
+         VALUES (?, ?, ?, ?)`,
+        [code, name, name, active ? 1 : 0],
+      );
+      locationIdByName.set(key, ins.insertId);
+      return ins.insertId;
     }
     const [ins] = await conn.query(
       `INSERT INTO sparepart_storage_locations (code, name, is_active)
@@ -923,7 +936,7 @@ if (await tableExists("sparepart_categories")) {
     }
     await conn.query(
       `UPDATE sparepart_categories
-       SET code = 'ASM', name_en = 'ASSEMBLY', name_cn = '组装',
+       SET code = 'ASM', name_en = 'ASSEMBLY', name_cn = '管道',
            sort_order = 3, is_active = 1
        WHERE id = ?`,
       [keepId],
@@ -937,7 +950,7 @@ await conn.query(
    VALUES
      ('IT', 'IT', 'IT', 1, 1),
      ('AGV', 'AGV', 'AGV', 2, 1),
-     ('ASM', 'ASSEMBLY', '组装', 3, 1),
+     ('ASM', 'ASSEMBLY', '管道', 3, 1),
      ('MES', 'MES', 'MES', 4, 1)
    ON DUPLICATE KEY UPDATE
      name_en = VALUES(name_en),
@@ -1098,28 +1111,41 @@ if (await tableExists("sparepart_items")) {
 
 if (await tableExists("sparepart_storage_locations")) {
   const rackLocations = [
-    ["AGV-RACK", "AGV RACK"],
-    ["ASM-RACK-A", "ASSEMBLY RACK A"],
-    ["ASM-RACK-B", "ASSEMBLY RACK B"],
-    ["ASM-RACK-C", "ASSEMBLY RACK C"],
-    ["ASM-RACK-D", "ASSEMBLY RACK D"],
-    ["ASM-RACK-E", "ASSEMBLY RACK E"],
-    ["ASM-RACK-F", "ASSEMBLY RACK F"],
+    ["AGV-RACK", "AGV RACK", "AGV货架"],
+    ["ASM-RACK-A", "ASSEMBLY RACK A", "管道货架 A"],
+    ["ASM-RACK-B", "ASSEMBLY RACK B", "管道货架 B"],
+    ["ASM-RACK-C", "ASSEMBLY RACK C", "管道货架 C"],
+    ["ASM-RACK-D", "ASSEMBLY RACK D", "管道货架 D"],
+    ["ASM-RACK-E", "ASSEMBLY RACK E", "管道货架 E"],
+    ["ASM-RACK-F", "ASSEMBLY RACK F", "管道货架 F"],
   ];
-  for (const [code, name] of rackLocations) {
+  const hasNameEn = await columnExists("sparepart_storage_locations", "name_en");
+  for (const [code, nameEn, nameCn] of rackLocations) {
     const [existing] = await conn.query(
-      `SELECT id FROM sparepart_storage_locations
-       WHERE code = ? OR LOWER(name) = LOWER(?)
-       LIMIT 1`,
-      [code, name],
+      hasNameEn
+        ? `SELECT id FROM sparepart_storage_locations
+           WHERE code = ? OR LOWER(name_en) = LOWER(?)
+           LIMIT 1`
+        : `SELECT id FROM sparepart_storage_locations
+           WHERE code = ? OR LOWER(name) = LOWER(?)
+           LIMIT 1`,
+      [code, nameEn],
     );
     if (existing[0]) continue;
-    await conn.query(
-      `INSERT INTO sparepart_storage_locations (code, name, is_active)
-       VALUES (?, ?, 1)`,
-      [code, name],
-    );
-    console.log(`Seeded storage location ${code} (${name}).`);
+    if (hasNameEn) {
+      await conn.query(
+        `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
+         VALUES (?, ?, ?, 1)`,
+        [code, nameEn, nameCn],
+      );
+    } else {
+      await conn.query(
+        `INSERT INTO sparepart_storage_locations (code, name, is_active)
+         VALUES (?, ?, 1)`,
+        [code, nameEn],
+      );
+    }
+    console.log(`Seeded storage location ${code} (${nameEn}).`);
   }
 }
 
@@ -1133,6 +1159,139 @@ if (await columnExists("sparepart_items", "is_active")) {
      AFTER \`min_stock\``,
   );
   console.log("Added sparepart_items.is_active.");
+}
+
+// --- 018: ASSEMBLY category CN label 组装 → 管道 ---
+if (await tableExists("sparepart_categories")) {
+  const [updated] = await conn.query(
+    `UPDATE sparepart_categories
+     SET name_cn = '管道'
+     WHERE UPPER(code) IN ('ASM', 'ASSEMBLY')
+       AND name_cn <> '管道'`,
+  );
+  const count = /** @type {{ affectedRows?: number }} */ (updated).affectedRows ?? 0;
+  if (count > 0) {
+    console.log(`Updated ASSEMBLY category name_cn to 管道 (${count} row(s)).`);
+  } else {
+    console.log("ASSEMBLY category name_cn already 管道.");
+  }
+}
+
+// --- 019: storage location bilingual names ---
+if (await tableExists("sparepart_storage_locations")) {
+  const hasName = await columnExists("sparepart_storage_locations", "name");
+  const hasNameEn = await columnExists("sparepart_storage_locations", "name_en");
+  const hasNameCn = await columnExists("sparepart_storage_locations", "name_cn");
+
+  if (hasName && !hasNameEn) {
+    await conn.query(
+      `ALTER TABLE \`sparepart_storage_locations\`
+       ADD COLUMN \`name_en\` VARCHAR(255) NULL AFTER \`code\``,
+    );
+    await conn.query(
+      `UPDATE \`sparepart_storage_locations\` SET \`name_en\` = \`name\``,
+    );
+    await conn.query(
+      `ALTER TABLE \`sparepart_storage_locations\`
+       MODIFY COLUMN \`name_en\` VARCHAR(255) NOT NULL`,
+    );
+    console.log("Added sparepart_storage_locations.name_en from name.");
+  } else if (hasNameEn) {
+    console.log("sparepart_storage_locations.name_en already exists.");
+  }
+
+  if (!hasNameCn) {
+    await conn.query(
+      `ALTER TABLE \`sparepart_storage_locations\`
+       ADD COLUMN \`name_cn\` VARCHAR(255) NULL AFTER \`name_en\``,
+    );
+    console.log("Added sparepart_storage_locations.name_cn.");
+  } else {
+    console.log("sparepart_storage_locations.name_cn already exists.");
+  }
+
+  /** @type {Array<[string, string]>} code → name_cn */
+  const cnByCode = [
+    ["SL000", "未分配"],
+    ["SL001", "机房"],
+    ["SL002", "前台接待"],
+    ["SL003", "前台"],
+    ["SL004", "IT工位"],
+    ["SL005", "仓库"],
+    ["SL006", "内部仓库"],
+    ["SL007", "会议室"],
+    ["SL008", "AGV货架"],
+    ["SL009", "管道货架 A"],
+    ["SL010", "管道货架 B"],
+    ["SL011", "管道货架 C"],
+    ["SL012", "管道货架 D"],
+    ["SL013", "管道货架 E"],
+    ["SL014", "管道货架 F"],
+    ["SL015", "AGV工作站"],
+    ["AGV-RACK", "AGV货架"],
+    ["ASM-RACK-A", "管道货架 A"],
+    ["ASM-RACK-B", "管道货架 B"],
+    ["ASM-RACK-C", "管道货架 C"],
+    ["ASM-RACK-D", "管道货架 D"],
+    ["ASM-RACK-E", "管道货架 E"],
+    ["ASM-RACK-F", "管道货架 F"],
+  ];
+  /** @type {Array<[string, string]>} name_en → name_cn */
+  const cnByNameEn = [
+    ["UNASSIGNED", "未分配"],
+    ["SERVER ROOM", "机房"],
+    ["RECEPTIONIST", "前台接待"],
+    ["FRONT DESK", "前台"],
+    ["IT DESK", "IT工位"],
+    ["WAREHOUSE", "仓库"],
+    ["INTERNAL WAREHOUSE", "内部仓库"],
+    ["MEETING ROOM", "会议室"],
+    ["AGV RACK", "AGV货架"],
+    ["ASSEMBLY RACK A", "管道货架 A"],
+    ["ASSEMBLY RACK B", "管道货架 B"],
+    ["ASSEMBLY RACK C", "管道货架 C"],
+    ["ASSEMBLY RACK D", "管道货架 D"],
+    ["ASSEMBLY RACK E", "管道货架 E"],
+    ["ASSEMBLY RACK F", "管道货架 F"],
+    ["AGV WORKSTATION", "AGV工作站"],
+  ];
+
+  for (const [code, nameCn] of cnByCode) {
+    await conn.query(
+      `UPDATE sparepart_storage_locations
+       SET name_cn = ?
+       WHERE UPPER(code) = UPPER(?)`,
+      [nameCn, code],
+    );
+  }
+  for (const [nameEn, nameCn] of cnByNameEn) {
+    await conn.query(
+      `UPDATE sparepart_storage_locations
+       SET name_cn = ?
+       WHERE UPPER(TRIM(name_en)) = UPPER(?)
+         AND (name_cn IS NULL OR name_cn = '' OR name_cn = name_en)`,
+      [nameCn, nameEn],
+    );
+  }
+  await conn.query(
+    `UPDATE sparepart_storage_locations
+     SET name_cn = name_en
+     WHERE name_cn IS NULL OR TRIM(name_cn) = ''`,
+  );
+  await conn.query(
+    `ALTER TABLE \`sparepart_storage_locations\`
+     MODIFY COLUMN \`name_cn\` VARCHAR(255) NOT NULL`,
+  );
+  console.log("Backfilled sparepart_storage_locations.name_cn.");
+
+  if (await columnExists("sparepart_storage_locations", "name")) {
+    await conn.query(
+      `ALTER TABLE \`sparepart_storage_locations\` DROP COLUMN \`name\``,
+    );
+    console.log("Dropped sparepart_storage_locations.name.");
+  } else {
+    console.log("sparepart_storage_locations.name already dropped.");
+  }
 }
 
 await conn.end();

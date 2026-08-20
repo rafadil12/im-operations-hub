@@ -67,6 +67,8 @@ export type SparepartOverviewTopUsedItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  category_name_en?: string | null;
+  category_name_cn?: string | null;
   uom_code?: string | null;
   qty: number;
 };
@@ -83,6 +85,8 @@ export type SparepartOverviewLocationStock = {
   locationId: number;
   code: string;
   name: string;
+  name_en?: string | null;
+  name_cn?: string | null;
   qty: number;
 };
 
@@ -90,6 +94,8 @@ export type SparepartOverviewHeatmapCell = {
   categoryCode: string;
   locationId: number;
   locationName: string;
+  locationNameEn?: string | null;
+  locationNameCn?: string | null;
   qty: number;
 };
 
@@ -98,6 +104,8 @@ export type SparepartOverviewTopItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  category_name_en?: string | null;
+  category_name_cn?: string | null;
   uom_code?: string | null;
   stock_current: number;
 };
@@ -107,6 +115,8 @@ export type SparepartOverviewLowItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  category_name_en?: string | null;
+  category_name_cn?: string | null;
   uom_code?: string | null;
   stock_current: number;
   min_stock: number;
@@ -123,6 +133,8 @@ export type SparepartOverviewSparseItem = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  category_name_en?: string | null;
+  category_name_cn?: string | null;
   uom_code?: string | null;
   stock_current: number;
   min_stock: number;

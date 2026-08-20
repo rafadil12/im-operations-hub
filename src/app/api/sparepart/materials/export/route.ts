@@ -15,7 +15,8 @@ type BalanceExportRow = {
   brand_cn: string | null;
   model: string | null;
   location_code: string;
-  location_name: string;
+  location_name_en: string;
+  location_name_cn: string;
   qty: number;
 };
 
@@ -50,12 +51,15 @@ export async function GET() {
 
     const balanceRows = await query<BalanceExportRow[]>(
       `SELECT i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
-              loc.code AS location_code, loc.name AS location_name, b.qty
+              loc.code AS location_code,
+              loc.name_en AS location_name_en,
+              loc.name_cn AS location_name_cn,
+              b.qty
        FROM sparepart_stock_balances b
        JOIN sparepart_items i ON i.id = b.item_id
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
        WHERE i.deleted_at IS NULL AND b.qty > 0
-       ORDER BY i.code ASC, loc.name ASC`,
+       ORDER BY i.code ASC, loc.name_en ASC`,
     );
 
     const workbook = new ExcelJS.Workbook();
@@ -100,7 +104,8 @@ export async function GET() {
       { header: "Brand CN", key: "brand_cn", width: 16 },
       { header: "Model", key: "model", width: 28 },
       { header: "Location Code", key: "location_code", width: 16 },
-      { header: "Location Name", key: "location_name", width: 20 },
+      { header: "Location Name EN", key: "location_name_en", width: 20 },
+      { header: "Location Name CN", key: "location_name_cn", width: 20 },
       { header: "Qty", key: "qty", width: 10 },
     ];
     for (const row of balanceRows) {
@@ -112,7 +117,8 @@ export async function GET() {
         brand_cn: row.brand_cn ?? "",
         model: row.model ?? "",
         location_code: row.location_code,
-        location_name: row.location_name,
+        location_name_en: row.location_name_en,
+        location_name_cn: row.location_name_cn,
         qty: row.qty,
       });
     }

@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
-import { useLang } from "@/lib/i18n";
+import { localizedName, useLang } from "@/lib/i18n";
 import type { SparepartStorageLocation } from "@/lib/types";
 import {
   sparepartDropdownMenuClass,
@@ -30,8 +30,11 @@ type Props = {
   excludeId?: string;
 };
 
-function labelFor(loc: SparepartStorageLocation): string {
-  return `${loc.code} — ${loc.name}`;
+function labelFor(
+  loc: SparepartStorageLocation,
+  lang: "en" | "cn",
+): string {
+  return `${loc.code} — ${localizedName(loc, lang)}`;
 }
 
 function isAbortError(err: unknown): boolean {
@@ -48,7 +51,7 @@ export function LocationCombobox({
   disabled = false,
   excludeId,
 }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,7 +90,7 @@ export function LocationCombobox({
           return;
         }
         setSelected(row);
-        setQuery(labelFor(row));
+        setQuery(labelFor(row, lang));
       })
       .catch((err) => {
         if (isAbortError(err)) return;
@@ -163,7 +166,7 @@ export function LocationCombobox({
   const pick = (loc: SparepartStorageLocation) => {
     setSelected(loc);
     onChange(String(loc.id), loc);
-    setQuery(labelFor(loc));
+    setQuery(labelFor(loc, lang));
     setSuggestions([]);
     setOpen(false);
   };
@@ -175,7 +178,7 @@ export function LocationCombobox({
       onChange("", null);
       return;
     }
-    if (selected && labelFor(selected).toLowerCase() === code.toLowerCase()) {
+    if (selected && labelFor(selected, lang).toLowerCase() === code.toLowerCase()) {
       return;
     }
 
@@ -198,7 +201,7 @@ export function LocationCombobox({
       if (isAbortError(err)) return;
     }
 
-    if (!selected || labelFor(selected) !== query) {
+    if (!selected || labelFor(selected, lang) !== query) {
       setSelected(null);
       onChange("", null);
     }
@@ -283,7 +286,7 @@ export function LocationCombobox({
                 onClick={() => pick(loc)}
                 onMouseEnter={() => setHighlight(index)}
               >
-                {labelFor(loc)}
+                {labelFor(loc, lang)}
               </button>
             </li>
           ))}

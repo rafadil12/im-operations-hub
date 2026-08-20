@@ -108,6 +108,8 @@ const cn: Dict = {
     location: "库存地点",
     locationCode: "地点代码",
     locationName: "地点名称",
+    locationNameEn: "地点名称（英文）",
+    locationNameCn: "地点名称（中文）",
     locationActive: "启用",
     locationDeleteConfirm: "将永久删除此停用的库存地点。是否继续？",
     locationDeleteActiveBlocked: "无法删除启用中的库存地点。请先停用。",

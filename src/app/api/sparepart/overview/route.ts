@@ -41,13 +41,15 @@ type DayRow = { day_key: string; qty: number };
 type LocRow = {
   location_id: number;
   code: string;
-  name: string;
+  name_en: string;
+  name_cn: string;
   qty: number;
 };
 type HeatRow = {
   category_code: string;
   location_id: number;
-  location_name: string;
+  location_name_en: string;
+  location_name_cn: string;
   qty: number;
 };
 type ItemRow = {
@@ -55,6 +57,8 @@ type ItemRow = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  category_name_en: string | null;
+  category_name_cn: string | null;
   uom_code: string | null;
   stock_current: number;
   min_stock: number;
@@ -64,6 +68,8 @@ type UsedItemRow = {
   name_en: string | null;
   name_cn: string | null;
   category_code: string;
+  category_name_en: string | null;
+  category_name_cn: string | null;
   uom_code: string | null;
   qty: number;
 };
@@ -395,7 +401,7 @@ export async function GET(request: NextRequest) {
       ),
       query<LocRow[]>(
         `SELECT
-           loc.id AS location_id, loc.code, loc.name,
+           loc.id AS location_id, loc.code, loc.name_en, loc.name_cn,
            COALESCE(SUM(b.qty), 0) AS qty
          FROM sparepart_storage_locations loc
          LEFT JOIN sparepart_stock_balances b ON b.storage_location_id = loc.id
@@ -403,15 +409,16 @@ export async function GET(request: NextRequest) {
          LEFT JOIN sparepart_categories c ON c.id = i.category_id
          WHERE loc.is_active = 1
            ${catMatch ? `AND (i.id IS NULL OR ${catMatch.sql})` : ""}
-         GROUP BY loc.id, loc.code, loc.name
-         ORDER BY qty DESC, loc.name ASC`,
+         GROUP BY loc.id, loc.code, loc.name_en, loc.name_cn
+         ORDER BY qty DESC, loc.name_en ASC`,
         catParams,
       ),
       query<HeatRow[]>(
         `SELECT
            c.code AS category_code,
            loc.id AS location_id,
-           loc.name AS location_name,
+           loc.name_en AS location_name_en,
+           loc.name_cn AS location_name_cn,
            COALESCE(SUM(b.qty), 0) AS qty
          FROM sparepart_categories c
          CROSS JOIN sparepart_storage_locations loc
@@ -421,12 +428,13 @@ export async function GET(request: NextRequest) {
            ON b.item_id = i.id AND b.storage_location_id = loc.id
          WHERE c.is_active = 1 AND loc.is_active = 1
            ${catSql}
-         GROUP BY c.code, loc.id, loc.name, c.sort_order
-         ORDER BY c.sort_order ASC, loc.name ASC`,
+         GROUP BY c.code, loc.id, loc.name_en, loc.name_cn, c.sort_order
+         ORDER BY c.sort_order ASC, loc.name_en ASC`,
         catParams,
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
+                c.name_en AS category_name_en, c.name_cn AS category_name_cn,
                 u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere} AND ${LOW_STOCK_SQL} AND i.stock_current <= 0
@@ -436,6 +444,7 @@ export async function GET(request: NextRequest) {
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
+                c.name_en AS category_name_en, c.name_cn AS category_name_cn,
                 u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere} AND ${LOW_STOCK_SQL} AND i.stock_current > 0
@@ -446,12 +455,13 @@ export async function GET(request: NextRequest) {
       query<UsedItemRow[]>(
         `SELECT
            i.code, i.name_en, i.name_cn, c.code AS category_code,
+           c.name_en AS category_name_en, c.name_cn AS category_name_cn,
            u.code AS uom_code,
            COALESCE(SUM(${OUT_QTY_SQL}), 0) AS qty
          ${moveJoin}
          JOIN uoms u ON u.id = i.uom_id
          WHERE ${moveWhere}
-         GROUP BY i.id, i.code, i.name_en, i.name_cn, c.code, u.code
+         GROUP BY i.id, i.code, i.name_en, i.name_cn, c.code, c.name_en, c.name_cn, u.code
          HAVING qty > 0
          ORDER BY qty DESC, i.code ASC
          LIMIT 5`,
@@ -482,6 +492,7 @@ export async function GET(request: NextRequest) {
       ),
       query<ItemRow[]>(
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
+                c.name_en AS category_name_en, c.name_cn AS category_name_cn,
                 u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere}
@@ -651,6 +662,8 @@ export async function GET(request: NextRequest) {
         name_en: row.name_en,
         name_cn: row.name_cn,
         category_code: canonicalCategoryCode(row.category_code),
+        category_name_en: row.category_name_en,
+        category_name_cn: row.category_name_cn,
         uom_code: row.uom_code,
         qty: n(row.qty),
       })),
@@ -667,7 +680,9 @@ export async function GET(request: NextRequest) {
         .map((row) => ({
           locationId: n(row.location_id),
           code: row.code,
-          name: row.name,
+          name: row.name_en,
+          name_en: row.name_en,
+          name_cn: row.name_cn,
           qty: n(row.qty),
         }))
         .filter((row) => row.qty > 0)
@@ -682,7 +697,9 @@ export async function GET(request: NextRequest) {
             map.set(key, {
               categoryCode,
               locationId,
-              locationName: row.location_name,
+              locationName: row.location_name_en,
+              locationNameEn: row.location_name_en,
+              locationNameCn: row.location_name_cn,
               qty: (prev?.qty ?? 0) + n(row.qty),
             });
             return map;
@@ -694,6 +711,8 @@ export async function GET(request: NextRequest) {
         name_en: row.name_en,
         name_cn: row.name_cn,
         category_code: canonicalCategoryCode(row.category_code),
+        category_name_en: row.category_name_en,
+        category_name_cn: row.category_name_cn,
         uom_code: row.uom_code,
         stock_current: n(row.stock_current),
       })),
@@ -702,6 +721,8 @@ export async function GET(request: NextRequest) {
         name_en: row.name_en,
         name_cn: row.name_cn,
         category_code: canonicalCategoryCode(row.category_code),
+        category_name_en: row.category_name_en,
+        category_name_cn: row.category_name_cn,
         uom_code: row.uom_code,
         stock_current: n(row.stock_current),
         min_stock: n(row.min_stock),
@@ -716,6 +737,8 @@ export async function GET(request: NextRequest) {
         name_en: row.name_en,
         name_cn: row.name_cn,
         category_code: canonicalCategoryCode(row.category_code),
+        category_name_en: row.category_name_en,
+        category_name_cn: row.category_name_cn,
         uom_code: row.uom_code,
         stock_current: n(row.stock_current),
         min_stock: n(row.min_stock),

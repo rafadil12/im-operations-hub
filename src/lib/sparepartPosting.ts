@@ -204,16 +204,22 @@ async function loadActiveLocation(
   conn: PoolConnection,
   locationId: number,
   lineNo: number,
-): Promise<{ id: number; code: string; name: string }> {
+): Promise<{ id: number; code: string; name_en: string; name_cn: string }> {
   const [rows] = await conn.query<RowDataPacket[]>(
-    `SELECT id, code, name, is_active FROM sparepart_storage_locations
+    `SELECT id, code, name_en, name_cn, is_active FROM sparepart_storage_locations
      WHERE id = ?
      LIMIT 1
      FOR UPDATE`,
     [locationId],
   );
   const loc = rows[0] as
-    | { id: number; code: string; name: string; is_active: number }
+    | {
+        id: number;
+        code: string;
+        name_en: string;
+        name_cn: string;
+        is_active: number;
+      }
     | undefined;
   if (!loc) {
     throw new SparepartPostingError(
@@ -226,11 +232,20 @@ async function loadActiveLocation(
       `Line ${lineNo}: storage location ${loc.code} is inactive.`,
     );
   }
-  return { id: loc.id, code: loc.code, name: loc.name };
+  return {
+    id: loc.id,
+    code: loc.code,
+    name_en: loc.name_en,
+    name_cn: loc.name_cn,
+  };
 }
 
-function locationLabel(loc: { code: string; name: string }): string {
-  return `${loc.code} — ${loc.name}`;
+function locationLabel(loc: {
+  code: string;
+  name_en: string;
+  name_cn?: string;
+}): string {
+  return `${loc.code} — ${loc.name_en}`;
 }
 
 async function ensureBalanceRow(

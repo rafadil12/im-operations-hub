@@ -77,12 +77,13 @@ export function buildMatDocListFilters(sp: URLSearchParams): {
             AND (
               li2.storage_location LIKE ?
               OR loc.code = ?
-              OR loc.name LIKE ?
+              OR loc.name_en LIKE ?
+              OR loc.name_cn LIKE ?
             )
         )`,
     );
     const like = `%${location}%`;
-    params.push(like, location, like);
+    params.push(like, location, like, like);
   }
 
   return {

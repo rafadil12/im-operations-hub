@@ -1,4 +1,6 @@
 import type { SparepartCategoryCode } from "@/lib/types";
+import type { Lang } from "@/lib/types";
+import { localizedName } from "@/lib/i18n";
 
 export type { SparepartCategoryCode };
 
@@ -131,4 +133,28 @@ export function stockLevelStatus(
   if (isCriticalStock(minStock, stockCurrent, isActive)) return "critical";
   if (isLowStock(minStock, stockCurrent, isActive)) return "low";
   return "normal";
+}
+
+/** Prefer localized category name; fall back to canonical code. */
+export function localizedCategoryLabel(
+  code: string | null | undefined,
+  categories: { code: string; name_en: string | null; name_cn: string | null }[],
+  lang: Lang,
+  names?: { name_en?: string | null; name_cn?: string | null },
+): string {
+  if (names?.name_en || names?.name_cn) {
+    const label = localizedName(
+      { name_en: names.name_en ?? null, name_cn: names.name_cn ?? null },
+      lang,
+    );
+    if (label && label !== "-") return label;
+  }
+  if (!code) return "-";
+  const canon = canonicalCategoryCode(code);
+  const hit = categories.find((c) => canonicalCategoryCode(c.code) === canon);
+  if (hit) {
+    const label = localizedName(hit, lang);
+    if (label && label !== "-") return label;
+  }
+  return canon;
 }

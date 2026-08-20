@@ -21,12 +21,14 @@ import {
 import { localizedName, useLang } from "@/lib/i18n";
 import {
   categoryColor,
+  localizedCategoryLabel,
   type SparepartCategoryCode,
 } from "@/lib/sparepartCategories";
 import type {
   SparepartOverviewBarGrain,
   SparepartOverviewByCategory,
   SparepartOverviewCalendarCell,
+  SparepartOverviewCategoryTab,
   SparepartOverviewHeatmapCell,
   SparepartOverviewLocationStock,
   SparepartOverviewMonthlyBar,
@@ -212,8 +214,10 @@ export function TypeDonut({
 
 export function TopUsedList({
   items,
+  categories,
 }: {
   items: SparepartOverviewTopUsedItem[];
+  categories: SparepartOverviewCategoryTab[];
 }) {
   const { t, lang } = useLang();
   const rankTone = [
@@ -274,8 +278,16 @@ export function TopUsedList({
                 </span>
               </div>
 
-              <div className="mt-2 text-[11px] uppercase tracking-wide text-text-dim">
-                {item.category_code}
+              <div className="mt-2 text-[11px] tracking-wide text-text-dim">
+                {localizedCategoryLabel(
+                  item.category_code,
+                  categories,
+                  lang,
+                  {
+                    name_en: item.category_name_en,
+                    name_cn: item.category_name_cn,
+                  },
+                )}
               </div>
             </div>
           </div>
@@ -336,9 +348,11 @@ export function InOutBars({
 export function TrendLines({
   rows,
   visible,
+  categories,
 }: {
   rows: SparepartOverviewTrendPoint[];
   visible: SparepartCategoryCode[];
+  categories: SparepartOverviewCategoryTab[];
 }) {
   const { lang } = useLang();
   const colors = useChartTheme();
@@ -367,7 +381,7 @@ export function TrendLines({
             key={code}
             type="monotone"
             dataKey={code}
-            name={code}
+            name={localizedCategoryLabel(code, categories, lang)}
             stroke={categoryColor(code)}
             strokeWidth={2}
             dot={false}
@@ -383,7 +397,7 @@ export function LocationBars({
 }: {
   rows: SparepartOverviewLocationStock[];
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const data = rows.slice(0, 5);
   const max = Math.max(1, ...data.map((row) => row.qty));
   const total = data.reduce((sum, row) => sum + row.qty, 0);
@@ -396,6 +410,13 @@ export function LocationBars({
     <div className="space-y-2.5">
       {data.map((row) => {
         const pctOfTotal = total > 0 ? Math.round((row.qty / total) * 100) : 0;
+        const displayName = localizedName(
+          {
+            name_en: row.name_en ?? row.name,
+            name_cn: row.name_cn ?? null,
+          },
+          lang,
+        );
         return (
           <div
             key={`${row.locationId}-${row.code}`}
@@ -404,7 +425,9 @@ export function LocationBars({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="truncate text-sm font-semibold text-text">{row.name}</p>
+                  <p className="truncate text-sm font-semibold text-text">
+                    {displayName}
+                  </p>
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-text">
                     {row.qty.toLocaleString()}
                   </span>
@@ -449,13 +472,27 @@ export function Sparkline({ points }: { points: { date: string; qty: number }[] 
 
 export function CategoryLocationHeatmap({
   cells,
+  categories,
 }: {
   cells: SparepartOverviewHeatmapCell[];
+  categories: SparepartOverviewCategoryTab[];
 }) {
+  const { lang } = useLang();
   const locations = Array.from(
-    new Map(cells.map((c) => [c.locationId, c.locationName])).entries(),
+    new Map(
+      cells.map((c) => [
+        c.locationId,
+        localizedName(
+          {
+            name_en: c.locationNameEn ?? c.locationName,
+            name_cn: c.locationNameCn ?? null,
+          },
+          lang,
+        ),
+      ]),
+    ).entries(),
   );
-  const categories = Array.from(new Set(cells.map((c) => c.categoryCode)));
+  const categoryCodes = Array.from(new Set(cells.map((c) => c.categoryCode)));
   const max = Math.max(1, ...cells.map((c) => c.qty));
   const lookup = new Map(
     cells.map((c) => [`${c.categoryCode}|${c.locationId}`, c.qty]),
@@ -475,9 +512,11 @@ export function CategoryLocationHeatmap({
           </tr>
         </thead>
         <tbody>
-          {categories.map((code) => (
+          {categoryCodes.map((code) => (
             <tr key={code}>
-              <td className="px-2 py-1.5 font-medium text-text">{code}</td>
+              <td className="px-2 py-1.5 font-medium text-text">
+                {localizedCategoryLabel(code, categories, lang)}
+              </td>
               {locations.map(([id]) => {
                 const qty = lookup.get(`${code}|${id}`) ?? 0;
                 const t = qty / max;

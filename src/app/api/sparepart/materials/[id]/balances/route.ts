@@ -22,11 +22,14 @@ export async function GET(_request: NextRequest, context: Ctx) {
 
     const balances = await query<SparepartStockBalance[]>(
       `SELECT b.id, b.item_id, b.storage_location_id, b.qty, b.updated_at,
-              loc.code AS location_code, loc.name AS location_name
+              loc.code AS location_code,
+              loc.name_en AS location_name_en,
+              loc.name_cn AS location_name_cn,
+              loc.name_en AS location_name
        FROM sparepart_stock_balances b
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
        WHERE b.item_id = ? AND b.qty > 0
-       ORDER BY loc.name ASC`,
+       ORDER BY loc.name_en ASC`,
       [itemId],
     );
 

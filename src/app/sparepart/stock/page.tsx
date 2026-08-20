@@ -29,7 +29,7 @@ const DEFAULT_PAGE_SIZE: PageSize = 10;
 type StockResponse = {
   rows: SparepartStockBalanceRow[];
   locations: string[];
-  locationOptions?: { code: string; name: string }[];
+  locationOptions?: { code: string; name_en: string; name_cn: string }[];
 };
 
 type StockFilters = {
@@ -45,6 +45,9 @@ export default function StockOverviewPage() {
   const { canExportSparepartMaterials } = useRoleAccess();
   const [rows, setRows] = useState<SparepartStockBalanceRow[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [locationOptionsRaw, setLocationOptionsRaw] = useState<
+    { code: string; name_en: string; name_cn: string }[]
+  >([]);
   const [categories, setCategories] = useState<SparepartCategory[]>([]);
   const [q, setQ] = useState("");
   const [location, setLocation] = useState("");
@@ -74,6 +77,7 @@ export default function StockOverviewPage() {
         );
         setRows(data.rows);
         setLocations(data.locations);
+        setLocationOptionsRaw(data.locationOptions ?? []);
       } catch (e) {
         setError(e instanceof Error ? e.message : t.common.error);
       } finally {
@@ -148,7 +152,12 @@ export default function StockOverviewPage() {
     "inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60";
   const locationOptions = [
     { value: "", label: t.common.all },
-    ...locations.map((loc) => ({ value: loc, label: loc })),
+    ...(locationOptionsRaw.length
+      ? locationOptionsRaw.map((loc) => ({
+          value: loc.code,
+          label: `${loc.code} — ${localizedName(loc, lang)}`,
+        }))
+      : locations.map((loc) => ({ value: loc, label: loc }))),
   ];
   const categoryOptions = [
     { value: "", label: t.sparepart.allCategories },

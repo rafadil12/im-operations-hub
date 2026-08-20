@@ -12,7 +12,7 @@ type SummaryRow = {
   total_current: number;
 };
 
-type LocRow = { code: string; name: string };
+type LocRow = { code: string; name_en: string; name_cn: string };
 
 export async function GET(request: NextRequest) {
   const gate = await requirePermission(PERMISSIONS.sparepartStockView);
@@ -39,10 +39,18 @@ export async function GET(request: NextRequest) {
         `EXISTS (
            SELECT 1 FROM sparepart_stock_balances b
            JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
-           WHERE b.item_id = i.id AND (loc.code = ? OR loc.name = ?)
+           WHERE b.item_id = i.id
+             AND (
+               loc.code = ?
+               OR loc.name_en = ?
+               OR loc.name_cn = ?
+               OR loc.name_en LIKE ?
+               OR loc.name_cn LIKE ?
+             )
          )`,
       );
-      params.push(location, location);
+      const like = `%${location}%`;
+      params.push(location, location, location, like, like);
     }
 
     const category = sp.get("category")?.trim();
@@ -105,10 +113,10 @@ export async function GET(request: NextRequest) {
     );
 
     const locations = await query<LocRow[]>(
-      `SELECT code, name
+      `SELECT code, name_en, name_cn
        FROM sparepart_storage_locations
        WHERE is_active = 1
-       ORDER BY name ASC`,
+       ORDER BY name_en ASC`,
     );
 
     return NextResponse.json({
