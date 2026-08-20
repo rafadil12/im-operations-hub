@@ -3,6 +3,17 @@ import { mkdir, writeFile, unlink } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import { pool } from "@/lib/db";
+import type {
+  FieldPacket,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
+
+export const runtime = "nodejs";
+
+/* =========================================================
+   SAFETY UPLOAD DIRECTORY
+   ========================================================= */
 
 function getSafetyUploadDir(): string {
   const dir = process.env.SAFETY_UPLOAD_DIR;
@@ -15,15 +26,10 @@ function getSafetyUploadDir(): string {
 
   return dir;
 }
-import type {
-  FieldPacket,
-  ResultSetHeader,
-  RowDataPacket,
-} from "mysql2/promise";
 
 /* =========================================================
-   MONTHLY ACTIVITY
-   HARUS SAMA DENGAN DATABASE
+   MONTHLY ACTIVITIES
+   HARUS SAMA DENGAN DATABASE / FRONTEND
    ========================================================= */
 
 const MONTHLY_ACTIVITIES = [
@@ -48,7 +54,7 @@ type MonthlyStatus =
   | "not_submitted";
 
 /* =========================================================
-   ROW TYPE
+   DATABASE ROW
    ========================================================= */
 
 type MonthlyRow = RowDataPacket & {
@@ -100,7 +106,6 @@ function getYearMonth(
   request: NextRequest,
 ) {
   const url = new URL(request.url);
-
   const now = new Date();
 
   const yearParam =
@@ -144,7 +149,7 @@ function getYearMonth(
 }
 
 /* =========================================================
-   NORMALIZE FILE DATA
+   NORMALIZE STORED FILES
    ========================================================= */
 
 function parseStoredFiles(
@@ -164,8 +169,7 @@ function parseStoredFiles(
         JSON.parse(fileName);
 
       if (Array.isArray(parsed)) {
-        names =
-          parsed.map(String);
+        names = parsed.map(String);
       } else {
         names = [fileName];
       }
@@ -182,8 +186,7 @@ function parseStoredFiles(
         JSON.parse(fileUrl);
 
       if (Array.isArray(parsed)) {
-        urls =
-          parsed.map(String);
+        urls = parsed.map(String);
       } else {
         urls = [fileUrl];
       }
@@ -213,11 +216,8 @@ function normalizeStatus(
   /*
    * Safety Case:
    *
-   * case_found      = ada case
-   * not_applicable  = tidak ada case
-   *
-   * Kalau status tidak dikirim:
-   * default ke completed untuk activity biasa.
+   * case_found     = ada case
+   * not_applicable = tidak ada case
    */
 
   if (
@@ -245,11 +245,6 @@ function normalizeStatus(
       return "not_applicable";
     }
 
-    /*
-     * Support beberapa kemungkinan
-     * value dari frontend.
-     */
-
     if (
       value === "case" ||
       value === "found" ||
@@ -273,8 +268,7 @@ function normalizeStatus(
 
     /*
      * Default Safety Case:
-     * kalau tidak ada status,
-     * anggap No Case.
+     * tidak ada status = No Case.
      */
     return "not_applicable";
   }
@@ -411,6 +405,8 @@ export async function GET(
    activityType
    submissionDate
    pic
+   pic_en
+   pic_cn
    location
    description
    description_en
@@ -458,13 +454,6 @@ export async function POST(
         ) ?? "",
       ) as MonthlyActivity;
 
-    /*
-     * Status dari frontend.
-     *
-     * Untuk Safety Case:
-     * case_found
-     * not_applicable
-     */
     const rawStatus =
       formData.get("status");
 
@@ -527,7 +516,9 @@ export async function POST(
 
     const pic =
       picValue !== null
-        ? String(picValue).trim() || null
+        ? String(
+            picValue,
+          ).trim() || null
         : null;
 
     const picEnValue =
@@ -535,7 +526,9 @@ export async function POST(
 
     const picEn =
       picEnValue !== null
-        ? String(picEnValue).trim() || null
+        ? String(
+            picEnValue,
+          ).trim() || null
         : null;
 
     const picCnValue =
@@ -543,7 +536,9 @@ export async function POST(
 
     const picCn =
       picCnValue !== null
-        ? String(picCnValue).trim() || null
+        ? String(
+            picCnValue,
+          ).trim() || null
         : null;
 
     /* =====================================================
@@ -684,6 +679,7 @@ export async function POST(
      * Kalau frontend mengirim
      * submissionId, update record tersebut.
      */
+
     if (
       validSubmissionId !== null
     ) {
@@ -707,13 +703,10 @@ export async function POST(
             month,
           ],
         ) as [
-          Array<
-            Pick<
-              MonthlyRow,
-              | "id"
-              | "activity_type"
-            >
-          >,
+          Array<{
+            id: number;
+            activity_type: string;
+          }>,
           FieldPacket[],
         ];
 
@@ -779,7 +772,9 @@ export async function POST(
             activityType,
           ],
         ) as [
-          MonthlyRow[],
+          Array<{
+            id: number;
+          }>,
           FieldPacket[],
         ];
 
@@ -823,7 +818,9 @@ export async function POST(
             month,
           ],
         ) as [
-          MonthlyRow[],
+          Array<{
+            id: number;
+          }>,
           FieldPacket[],
         ];
 
@@ -847,12 +844,12 @@ export async function POST(
        ===================================================== */
 
     /*
-     * Untuk Safety Case:
+     * Safety Case:
      *
      * - Case Found -> wajib upload evidence
      * - No Case -> boleh tanpa file
      *
-     * Untuk aktivitas lain:
+     * Aktivitas lain:
      * - CREATE -> wajib file
      * - UPDATE -> file baru tidak wajib
      */
@@ -883,6 +880,7 @@ export async function POST(
      * Safety Case yang Case Found
      * wajib punya evidence.
      */
+
     if (
       isCaseFound &&
       uploadedFiles.length ===
@@ -910,12 +908,16 @@ export async function POST(
     if (
       uploadedFiles.length > 0
     ) {
-      const uploadDir = path.join(
-        getSafetyUploadDir(),
-        String(year),
-        String(month),
-        "monthly",
-      );
+      const uploadDir =
+        path.join(
+          getSafetyUploadDir(),
+          String(year),
+          String(month).padStart(
+            2,
+            "0",
+          ),
+          "monthly",
+        );
 
       await mkdir(
         uploadDir,
@@ -975,8 +977,27 @@ export async function POST(
           originalName,
         );
 
+        /*
+         * URL yang disimpan di database.
+         *
+         * Browser tidak membaca
+         * SAFETY_UPLOAD_DIR langsung.
+         *
+         * Browser akan meminta:
+         *
+         * /api/safety/files/...
+         *
+         * lalu route files membaca
+         * file fisik dari SAFETY_UPLOAD_DIR.
+         */
+
         fileUrls.push(
-          `/uploads/safety/${year}/${month}/monthly/${filename}`,
+          `/api/safety/files/${year}/${String(
+            month,
+          ).padStart(
+            2,
+            "0",
+          )}/monthly/${filename}`,
         );
       }
     }
@@ -998,6 +1019,7 @@ export async function POST(
        * Kalau tidak upload file baru,
        * gunakan file lama.
        */
+
       if (
         uploadedFiles.length ===
         0
@@ -1014,13 +1036,14 @@ export async function POST(
             `,
             [existingId],
           ) as [
-            Array<
-              Pick<
-                MonthlyRow,
-                | "file_name"
-                | "file_url"
-              >
-            >,
+            Array<{
+              file_name:
+                | string
+                | null;
+              file_url:
+                | string
+                | null;
+            }>,
             FieldPacket[],
           ];
 
@@ -1128,29 +1151,6 @@ export async function POST(
     /* =====================================================
        INSERT NEW MONTHLY
        ===================================================== */
-
-    /*
-     * Kolom:
-     *
-     * 1  year
-     * 2  month
-     * 3  period_type
-     * 4  week
-     * 5  activity_type
-     * 6  status
-     * 7  submission_date
-     * 8  pic
-     * 9  location
-     * 10 description
-     * 11 description_en
-     * 12 description_cn
-     * 13 file_name
-     * 14 file_url
-     * 15 verified_by
-     * 16 verified_at
-     *
-     * TOTAL = 16
-     */
 
     const [
       insertResult,
@@ -1294,6 +1294,131 @@ export async function POST(
 }
 
 /* =========================================================
+   RESOLVE STORED FILE PATH
+   ========================================================= */
+
+/*
+ * Mendukung URL baru:
+ *
+ * /api/safety/files/2026/08/monthly/file.jpg
+ *
+ * menjadi:
+ *
+ * SAFETY_UPLOAD_DIR/2026/08/monthly/file.jpg
+ *
+ * Juga masih mendukung URL lama:
+ *
+ * /uploads/safety/2026/08/monthly/file.jpg
+ *
+ * supaya DELETE data lama tetap aman.
+ */
+
+function resolveStoredFilePath(
+  fileUrl: string,
+): string | null {
+  const cleanUrl =
+    fileUrl
+      .replace(/^\/+/, "")
+      .replace(/\\/g, "/");
+
+  const parts =
+    cleanUrl
+      .split("/")
+      .filter(Boolean);
+
+  let relativeParts: string[] | null =
+    null;
+
+  /*
+   * URL baru:
+   * api/safety/files/...
+   */
+  const filesIndex =
+    parts.findIndex(
+      (part) =>
+        part === "files",
+    );
+
+  if (
+    filesIndex >= 0 &&
+    filesIndex <
+      parts.length - 1
+  ) {
+    relativeParts =
+      parts.slice(
+        filesIndex + 1,
+      );
+  }
+
+  /*
+   * URL lama:
+   * uploads/safety/...
+   */
+  if (
+    !relativeParts
+  ) {
+    const safetyIndex =
+      parts.findIndex(
+        (part) =>
+          part === "safety",
+      );
+
+    if (
+      safetyIndex >= 0 &&
+      safetyIndex <
+        parts.length - 1
+    ) {
+      relativeParts =
+        parts.slice(
+          safetyIndex + 1,
+        );
+    }
+  }
+
+  if (
+    !relativeParts ||
+    relativeParts.length === 0
+  ) {
+    return null;
+  }
+
+  const uploadDir =
+    path.resolve(
+      getSafetyUploadDir(),
+    );
+
+  const filePath =
+    path.resolve(
+      uploadDir,
+      ...relativeParts,
+    );
+
+  /*
+   * Security:
+   * Pastikan file tetap berada
+   * di dalam SAFETY_UPLOAD_DIR.
+   */
+
+  const uploadDirWithSeparator =
+    uploadDir.endsWith(
+      path.sep,
+    )
+      ? uploadDir
+      : `${uploadDir}${path.sep}`;
+
+  if (
+    filePath !== uploadDir &&
+    !filePath.startsWith(
+      uploadDirWithSeparator,
+    )
+  ) {
+    return null;
+  }
+
+  return filePath;
+}
+
+/* =========================================================
    DELETE
    /api/safety/monthly?id=123
    ========================================================= */
@@ -1306,7 +1431,9 @@ export async function DELETE(
       new URL(request.url);
 
     const id = Number(
-      url.searchParams.get("id"),
+      url.searchParams.get(
+        "id",
+      ),
     );
 
     if (
@@ -1322,6 +1449,7 @@ export async function DELETE(
       await pool.execute(
         `
           SELECT
+            file_name,
             file_url
           FROM safety_submissions
           WHERE id = ?
@@ -1331,6 +1459,9 @@ export async function DELETE(
         [id],
       ) as [
         Array<{
+          file_name:
+            | string
+            | null;
           file_url:
             | string
             | null;
@@ -1349,7 +1480,7 @@ export async function DELETE(
 
     const fileUrls =
       parseStoredFiles(
-        null,
+        rows[0].file_name,
         rows[0].file_url,
       );
 
@@ -1375,48 +1506,37 @@ export async function DELETE(
     for (
       const file of fileUrls
     ) {
-      if (!file.url) continue;
-
-      const relative =
-        file.url.replace(
-          /^\/+/,
-          "",
-        );
-
-      const relativeParts = relative
-        .split(/[\\/]+/)
-        .filter(Boolean);
-
-      /*
-       * URL:
-       * /uploads/safety/{year}/{month}/monthly/{filename}
-       *
-       * Physical:
-       * SAFETY_UPLOAD_DIR/{year}/{month}/monthly/{filename}
-       */
-      const uploadsIndex =
-        relativeParts.findIndex(
-          (part) => part === "safety",
-        );
+      if (!file.url) {
+        continue;
+      }
 
       const filePath =
-        uploadsIndex >= 0
-          ? path.join(
-              getSafetyUploadDir(),
-              ...relativeParts.slice(
-                uploadsIndex + 1,
-              ),
-            )
-          : path.join(
-              getSafetyUploadDir(),
-              relative,
-            );
+        resolveStoredFilePath(
+          file.url,
+        );
+
+      if (!filePath) {
+        console.warn(
+          "Unable to resolve safety monthly file path:",
+          file.url,
+        );
+
+        continue;
+      }
 
       try {
         await unlink(
           filePath,
         );
-      } catch {}
+      } catch (
+        error
+      ) {
+        console.warn(
+          "Unable to delete safety monthly file:",
+          filePath,
+          error,
+        );
+      }
     }
 
     return NextResponse.json({
