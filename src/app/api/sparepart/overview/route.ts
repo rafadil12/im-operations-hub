@@ -420,9 +420,9 @@ export async function GET(request: NextRequest) {
         `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
                 u.code AS uom_code, i.stock_current, i.min_stock
          ${itemCatJoin}
-         WHERE ${itemWhere}
-         ORDER BY i.stock_current DESC, i.code ASC
-         LIMIT 5`,
+         WHERE ${itemWhere} AND i.is_active = 1 AND i.stock_current <= 0
+         ORDER BY i.code ASC
+         LIMIT 20`,
         itemParams,
       ),
       query<ItemRow[]>(

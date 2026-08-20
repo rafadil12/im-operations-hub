@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { localizedName, useLang } from "@/lib/i18n";
 import {
   categoryColor,
@@ -139,29 +140,39 @@ export function SparepartOverview({
         <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
-          label={t.sparepart.totalItems}
+          icon="inventory"
+          label={t.sparepart.kpiTotalInventory}
+          hint={t.sparepart.kpiTotalInventoryHint}
           value={data.kpi.totalItems.toLocaleString()}
         />
         <KpiCard
+          icon="stock"
           label={t.sparepart.kpiTotalStock}
+          hint={t.sparepart.kpiTotalStockHint}
           value={`${data.kpi.totalStock.toLocaleString()} ${t.sparepart.qty}`}
           change={data.kpi.totalStockMomPct}
           spark={data.kpi.sparkline}
         />
         <KpiCard
+          icon="alert"
           label={t.sparepart.kpiLowStock}
+          hint={t.sparepart.kpiLowStockHint}
           value={data.kpi.lowStockCount.toLocaleString()}
           change={data.kpi.lowStockMomPct}
           invert
         />
         <KpiCard
+          icon="movement"
           label={t.sparepart.kpiMovement}
+          hint={t.sparepart.kpiMovementHint}
           value={`${data.kpi.movementQty.toLocaleString()} ${t.sparepart.qty}`}
           change={data.kpi.movementMomPct}
           spark={data.kpi.sparkline}
         />
         <KpiCard
+          icon="location"
           label={t.sparepart.kpiActiveLocations}
+          hint={t.sparepart.kpiActiveLocationsHint}
           value={data.kpi.activeLocations.toLocaleString()}
         />
       </div>
@@ -279,8 +290,13 @@ export function SparepartOverview({
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <section className={panel}>
-          <h2 className={titleCls}>{t.sparepart.topStockItems}</h2>
-          <ul className="space-y-2">
+          <h2 className={titleCls}>
+            {t.sparepart.topStockItems}{" "}
+            <span className="text-xs font-normal text-text-muted">
+              {t.sparepart.topStockSubtitle}
+            </span>
+          </h2>
+          <ul className="max-h-[280px] space-y-2 overflow-y-auto">
             {data.topStock.length === 0 ? (
               <li className="text-sm text-text-muted">{t.common.noData}</li>
             ) : (
@@ -295,49 +311,69 @@ export function SparepartOverview({
                       {localizedName(item, lang)} · {item.category_code}
                     </p>
                   </div>
-                  <span className="shrink-0 tabular-nums font-semibold text-text">
-                    {item.stock_current.toLocaleString()}
-                    {item.uom_code ? ` ${item.uom_code}` : ""}
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase bg-danger/15 text-danger">
+                    {t.sparepart.statusCritical}
                   </span>
                 </li>
               ))
             )}
           </ul>
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
+            <span className="text-text-muted">
+              Total {data.topStock.length} Items
+            </span>
+            <a
+              href="/sparepart/stock"
+              className="font-medium text-primary hover:underline"
+            >
+              {t.sparepart.viewAll}
+            </a>
+          </div>
         </section>
         <section className={panel}>
-          <h2 className={titleCls}>{t.sparepart.lowStockPriority}</h2>
-          <ul className="space-y-2">
-            {data.lowStockItems.length === 0 ? (
+          <h2 className={titleCls}>
+            {t.sparepart.lowStockPriority}{" "}
+            <span className="text-xs font-normal text-text-muted">
+              {t.sparepart.lowStockSubtitle}
+            </span>
+          </h2>
+          <ul className="max-h-[280px] space-y-2 overflow-y-auto">
+            {data.lowStockItems.filter((item) => item.status === "low").length === 0 ? (
               <li className="text-sm text-text-muted">{t.common.noData}</li>
             ) : (
-              data.lowStockItems.map((item) => (
-                <li
-                  key={item.code}
-                  className="flex items-start justify-between gap-2 text-xs"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-text">{item.code}</p>
-                    <p className="truncate text-text-muted">
-                      {localizedName(item, lang)} · {item.stock_current}/
-                      {item.min_stock}
-                      {item.uom_code ? ` ${item.uom_code}` : ""}
-                    </p>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                      item.status === "critical"
-                        ? "bg-danger/15 text-danger"
-                        : "bg-warning/15 text-warning"
-                    }`}
+              data.lowStockItems
+                .filter((item) => item.status === "low")
+                .map((item) => (
+                  <li
+                    key={item.code}
+                    className="flex items-start justify-between gap-2 text-xs"
                   >
-                    {item.status === "critical"
-                      ? t.sparepart.statusCritical
-                      : t.sparepart.statusLow}
-                  </span>
-                </li>
-              ))
+                    <div className="min-w-0">
+                      <p className="font-medium text-text">{item.code}</p>
+                      <p className="truncate text-text-muted">
+                        {localizedName(item, lang)} · {item.stock_current}/
+                        {item.min_stock}
+                        {item.uom_code ? ` ${item.uom_code}` : ""}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase bg-warning/15 text-warning">
+                      {t.sparepart.statusLow}
+                    </span>
+                  </li>
+                ))
             )}
           </ul>
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
+            <span className="text-text-muted">
+              Total {data.lowStockItems.filter((item) => item.status === "low").length} Items
+            </span>
+            <a
+              href="/sparepart/stock"
+              className="font-medium text-primary hover:underline"
+            >
+              {t.sparepart.viewAll}
+            </a>
+          </div>
         </section>
         <section className={panel}>
           <MovementCalendar
@@ -383,14 +419,75 @@ export function SparepartOverview({
   );
 }
 
+const kpiIconMeta = {
+  inventory: { color: "#2563eb", bg: "#2563eb22" },
+  stock: { color: "#16a34a", bg: "#16a34a22" },
+  alert: { color: "#ea580c", bg: "#ea580c22" },
+  movement: { color: "#0ea5e9", bg: "#0ea5e922" },
+  location: { color: "#7c3aed", bg: "#7c3aed22" },
+} as const;
+
+type KpiIconType = keyof typeof kpiIconMeta;
+
+function KpiIcon({ type }: { type: KpiIconType }) {
+  const meta = kpiIconMeta[type];
+  const icon: Record<KpiIconType, ReactNode> = {
+    inventory: (
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <path d="M3.3 7 12 12l8.7-5M12 22V12" />
+      </svg>
+    ),
+    stock: (
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="13" width="4" height="8" rx="1" />
+        <rect x="10" y="8" width="4" height="13" rx="1" />
+        <rect x="17" y="3" width="4" height="18" rx="1" />
+      </svg>
+    ),
+    alert: (
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+        <path d="M12 9v4M12 17h.01" />
+      </svg>
+    ),
+    movement: (
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 8H3M7 4 3 8l4 4" />
+        <path d="M7 16h14M17 12l4 4-4 4" />
+      </svg>
+    ),
+    location: (
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 21s7-4.4 7-11a7 7 0 1 0-14 0c0 6.6 7 11 7 11Z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </svg>
+    ),
+  };
+
+  return (
+    <span
+      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full"
+      style={{ backgroundColor: meta.bg, color: meta.color }}
+      aria-hidden
+    >
+      {icon[type]}
+    </span>
+  );
+}
+
 function KpiCard({
+  icon,
   label,
+  hint,
   value,
   change,
   invert = false,
   spark,
 }: {
+  icon: KpiIconType;
   label: string;
+  hint: string;
   value: string;
   change?: number | null;
   invert?: boolean;
@@ -399,10 +496,18 @@ function KpiCard({
   const { t } = useLang();
   return (
     <div className={panel}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-dim">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold text-text">{value}</p>
+      <div className="flex items-center gap-2.5">
+        <KpiIcon type={icon} />
+        <div className="min-w-0">
+          <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-text">
+            {label}
+          </p>
+          <p className="truncate text-[10px] uppercase tracking-wide text-text-dim">
+            {hint}
+          </p>
+        </div>
+      </div>
+      <p className="mt-2 text-xl font-semibold text-text">{value}</p>
       {change !== undefined ? (
         <p className={`mt-1 text-[11px] ${pctTone(change ?? null, invert)}`}>
           {formatPct(change ?? null)} {t.sparepart.vsPreviousPeriod}
