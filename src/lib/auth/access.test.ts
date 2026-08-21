@@ -52,6 +52,9 @@ describe("guestHasPermission", () => {
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyAnalysisView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetyOverviewView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetySubmissionRead);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartOverviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartStockView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartDocumentRead);
     expect(guestHasPermission(PERMISSIONS.itsmAnalysisView)).toBe(true);
     expect(guestHasPermission(PERMISSIONS.adminRolesManage)).toBe(false);
   });
@@ -81,9 +84,11 @@ describe("getRoleAccess", () => {
     expect(access.canManageRoles).toBe(false);
     expect(access.canManageAccounts).toBe(false);
     expect(access.canManageConfiguration).toBe(false);
-    expect(access.canViewSparepartOverview).toBe(false);
-    expect(access.canViewSparepartStock).toBe(false);
+    expect(access.canViewSparepartOverview).toBe(true);
+    expect(access.canViewSparepartStock).toBe(true);
+    expect(access.canViewSparepartDocuments).toBe(true);
     expect(access.canPostSparepartDocument).toBe(false);
+    expect(access.canReverseSparepartDocument).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {

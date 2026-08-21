@@ -42,7 +42,8 @@ type StockFilters = {
 export default function StockOverviewPage() {
   const { t, lang } = useLang();
   const { error: toastError } = useToast();
-  const { canExportSparepartMaterials } = useRoleAccess();
+  const { canExportSparepartMaterials, canPostSparepartDocument } =
+    useRoleAccess();
   const [rows, setRows] = useState<SparepartStockBalanceRow[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [locationOptionsRaw, setLocationOptionsRaw] = useState<
@@ -200,13 +201,12 @@ export default function StockOverviewPage() {
               {exporting ? t.common.exporting : t.common.export}
             </button>
           ) : null}
-          <Link
-            href="/sparepart/post"
-            className={toolbarBtn}
-          >
-            <NotesIcon className="size-3.5" />
-            {t.sparepart.goPost}
-          </Link>
+          {canPostSparepartDocument ? (
+            <Link href="/sparepart/post" className={toolbarBtn}>
+              <NotesIcon className="size-3.5" />
+              {t.sparepart.goPost}
+            </Link>
+          ) : null}
         </div>
       </div>
 

@@ -76,6 +76,9 @@ export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
   PERMISSIONS.dailyAnalysisView,
   PERMISSIONS.safetyOverviewView,
   PERMISSIONS.safetySubmissionRead,
+  PERMISSIONS.sparepartOverviewView,
+  PERMISSIONS.sparepartStockView,
+  PERMISSIONS.sparepartDocumentRead,
 ] as const;
 
 export type RoleAccess = {
