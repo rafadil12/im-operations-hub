@@ -344,7 +344,7 @@ async function postForwardLines(
       line.storage_location_id,
       lineNo,
     );
-    let toLoc: { id: number; code: string; name: string } | null = null;
+    let toLoc: Awaited<ReturnType<typeof loadActiveLocation>> | null = null;
     if (movementType === "311" && line.to_storage_location_id) {
       toLoc = await loadActiveLocation(
         conn,
@@ -489,7 +489,7 @@ async function postReversalLines(
       line.storage_location_id,
       lineNo,
     );
-    let toLoc: { id: number; code: string; name: string } | null = null;
+    let toLoc: Awaited<ReturnType<typeof loadActiveLocation>> | null = null;
     if (forward === "311" && line.to_storage_location_id) {
       toLoc = await loadActiveLocation(
         conn,
