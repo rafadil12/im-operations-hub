@@ -79,6 +79,14 @@ INSERT INTO `permissions` (`code`, `description`)
 SELECT 'admin.accounts.manage', 'Manage login accounts and role assignment'
 WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'admin.accounts.manage');
 
+INSERT INTO `permissions` (`code`, `description`)
+SELECT 'sparepart.document.post', 'Post sparepart material documents'
+WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'sparepart.document.post');
+
+INSERT INTO `permissions` (`code`, `description`)
+SELECT 'sparepart.document.reverse', 'Reverse sparepart material documents'
+WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'sparepart.document.reverse');
+
 -- --- Migrate itsm.view → split ITSM codes ---
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT rp.role_id, p_new.id
@@ -135,46 +143,6 @@ AND NOT EXISTS (
 );
 
 -- Default seeded roles (in case they had no mappings yet)
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'overview.view',
-  'daily_operation.record.read',
-  'daily_operation.record.create',
-  'daily_operation.record.update',
-  'daily_operation.record.delete',
-  'daily_operation.analysis.view',
-  'daily_operation.master.manage',
-  'itsm.overview.view',
-  'itsm.request.read',
-  'itsm.analysis.view'
-)
-WHERE r.name = 'manager'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'overview.view',
-  'daily_operation.record.read',
-  'daily_operation.record.create',
-  'daily_operation.record.update',
-  'daily_operation.analysis.view',
-  'itsm.overview.view',
-  'itsm.request.read',
-  'itsm.analysis.view'
-)
-WHERE r.name = 'operator'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
 FROM `roles` r

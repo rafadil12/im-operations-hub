@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
+import { isProtectedAccountEmployeeNo } from "@/lib/auth/access";
 import { useLang } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
 import { SettingsTabs } from "./SettingsTabs";
@@ -278,7 +279,10 @@ export function AccountsManager() {
               <select
                 className={inputCls}
                 value={roleId ?? ""}
-                disabled={Boolean(temporaryPassword)}
+                disabled={
+                  Boolean(temporaryPassword) ||
+                  isProtectedAccountEmployeeNo(editRow.employeeNo)
+                }
                 onChange={(e) =>
                   setRoleId(e.target.value ? Number(e.target.value) : null)
                 }
@@ -296,7 +300,10 @@ export function AccountsManager() {
                 <input
                   type="checkbox"
                   checked={isActive}
-                  disabled={Boolean(temporaryPassword)}
+                  disabled={
+                    Boolean(temporaryPassword) ||
+                    isProtectedAccountEmployeeNo(editRow.employeeNo)
+                  }
                   onChange={(e) => setIsActive(e.target.checked)}
                 />
                 {t.settings.active}

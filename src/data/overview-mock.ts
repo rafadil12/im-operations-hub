@@ -24,6 +24,7 @@ export type StatItem = {
 
 export type BarItem = {
   label: string;
+  sublabel?: string;
   value: number;
   max: number;
   color: string;
@@ -116,11 +117,11 @@ export type ModuleCardData = {
   recentRows?: TrainingRow[];
 };
 
-export const overviewModules: ModuleCardData[] = [
+export const dashboardModules: ModuleCardData[] = [
   {
     id: "itsm",
     number: 1,
-    title: "ITSM OVERVIEW",
+    title: "ITSM DASHBOARD",
     icon: "headset",
     accentColor: "#3b82f6",
     href: "/itsm",
@@ -165,7 +166,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "daily-operation",
     number: 2,
-    title: "DAILY OPERATION OVERVIEW",
+    title: "DAILY OPERATION DASHBOARD",
     icon: "calendar",
     accentColor: "#22c55e",
     href: "/daily-operation/analysis",
@@ -205,34 +206,34 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "safety",
     number: 3,
-    title: "SECURITY (SAFETY) OVERVIEW",
+    title: "SECURITY (SAFETY) DASHBOARD",
     icon: "shield",
     accentColor: "#ef4444",
-    href: "/",
+    href: "/safety",
     layout: "safety",
     stats: [
       {
         label: "Today's Finding",
         value: "15",
-        // trend: "↑ 25% vs yesterday",
+        // trend: "??25% vs yesterday",
         tone: "warning",
       },
       {
         label: "Open Finding",
         value: "37",
-        // trend: "↑ 12% vs yesterday",
+        // trend: "??12% vs yesterday",
         tone: "warning",
       },
       {
         label: "Closed Finding",
         value: "112",
-        // trend: "↑ 18% vs yesterday",
+        // trend: "??18% vs yesterday",
         tone: "success",
       },
       {
         label: "Avg. Finding",
         value: "5",
-        // trend: "↑ 2 vs yesterday",
+        // trend: "??2 vs yesterday",
         tone: "warning",
       },
     ],
@@ -273,52 +274,35 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "sparepart",
     number: 4,
-    title: "SPAREPART OVERVIEW",
+    title: "SPAREPART DASHBOARD",
     icon: "sparepart",
     accentColor: "#a855f7",
     href: "/",
     layout: "sparepart",
     stats: [
-      { label: "Total Items", value: "1,248", tone: "accent" },
-      { label: "Low Stock", value: "36", trend: "+8", tone: "warning" },
-      { label: "Critical", value: "9", trend: "+2", tone: "warning" },
-      { label: "Purchase Request", value: "14", tone: "accent" },
+      { label: "Total Items", value: "0", tone: "accent" },
+      { label: "Zero Stock", value: "0", tone: "warning" },
+      { label: "Usage This Month", value: "0", tone: "accent" },
+      { label: "Usage This Year", value: "0", tone: "accent" },
     ],
     bars: {
-      title: "Top Used Items",
-      items: [
-        { label: "SSD 512GB", value: 42, max: 50, color: "#a855f7" },
-        { label: "RAM 16GB", value: 35, max: 50, color: "#c084fc" },
-        { label: "Power Supply", value: 28, max: 50, color: "#d8b4fe" },
-        { label: "Network Cable", value: 21, max: 50, color: "#e9d5ff" },
-      ],
+      title: "Most Used Items (This Month)",
+      items: [],
     },
     chart: {
-      title: "Inventory Trend (Last 30 Days)",
+      title: "Used Trend",
       type: "trend",
       legend: [
-        { label: "Stock In", color: "#22c55e" },
-        { label: "Stock Out", color: "#a855f7" },
+        { label: "This Year", color: "#25ebb3" },
+        { label: "Last Year", color: "#C9D1DB" },
       ],
-      series: [
-        { date: "2026-07-10", current: 18, previous: 12 },
-        { date: "2026-07-15", current: 24, previous: 16 },
-        { date: "2026-07-20", current: 15, previous: 20 },
-        { date: "2026-07-25", current: 30, previous: 18 },
-        { date: "2026-07-30", current: 22, previous: 14 },
-        { date: "2026-08-05", current: 28, previous: 19 },
-      ],
+      series: [],
     },
-    stockFlows: [
-      { label: "Incoming", value: "86", tone: "success" },
-      { label: "Outgoing", value: "72", tone: "accent" },
-      { label: "Adjustment", value: "11", tone: "warning" },
-    ],
   },
   {
     id: "organization",
     number: 5,
-    title: "ORGANIZATION OVERVIEW",
+    title: "ORGANIZATION DASHBOARD",
     icon: "organization",
     accentColor: "#38bdf8",
     href: "/",
@@ -346,7 +330,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "report",
     number: 6,
-    title: "REPORT OVERVIEW",
+    title: "REPORT DASHBOARD",
     icon: "report",
     accentColor: "#eab308",
     href: "/",
@@ -391,7 +375,7 @@ export const overviewModules: ModuleCardData[] = [
   {
     id: "training",
     number: 7,
-    title: "TRAINING OVERVIEW",
+    title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",
     href: "/",

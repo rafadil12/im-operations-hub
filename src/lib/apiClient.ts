@@ -1,14 +1,21 @@
 const BASES = {
   daily: "/api/daily-operation",
   itsm: "/api/itsm",
+  sparepart: "/api/sparepart",
 } as const;
 
 type ModuleType = keyof typeof BASES;
 
-export type ApiFailure = {
-  message: string;
+/** API failure that remains an Error so `instanceof Error` callers keep working. */
+export class ApiError extends Error {
   status: number;
-};
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
 
 export function getApiErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -29,30 +36,7 @@ async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const message =
       (data as { error?: string }).error || `Request failed (${res.status})`;
-
-    // #region agent log
-    fetch("http://127.0.0.1:7441/ingest/b0db2ec0-9a05-4761-88ea-3462e0be0a54", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "72cffc",
-      },
-      body: JSON.stringify({
-        sessionId: "72cffc",
-        runId: "post-fix",
-        hypothesisId: "F-no-throw",
-        location: "apiClient.ts:handle",
-        message: "api non-ok reject without throw",
-        data: { status: res.status, url: res.url, errorMessage: message },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    // Reject with a plain object (no `throw new Error`) so Next.js/Turbopack
-    // dev overlay does not treat expected 401/403 as a runtime crash.
-    const failure: ApiFailure = { message, status: res.status };
-    return Promise.reject(failure);
+    throw new ApiError(message, res.status);
   }
 
   return data as T;
@@ -88,9 +72,12 @@ export async function apiSend<T>(
   return handle<T>(res);
 }
 
-/** Absolute-path GET (e.g. `/api/settings/...`). */
-export async function apiGetAbs<T>(path: string): Promise<T> {
-  const res = await fetch(path, { cache: "no-store" });
+/** Fetch against an absolute API path (e.g. `/api/settings/roles`). */
+export async function apiGetAbs<T>(
+  path: string,
+  init?: { signal?: AbortSignal },
+): Promise<T> {
+  const res = await fetch(path, { cache: "no-store", signal: init?.signal });
   return handle<T>(res);
 }
 

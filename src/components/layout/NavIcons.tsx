@@ -298,7 +298,7 @@ export function SettingsIcon({ active, className }: NavIconProps) {
 }
 
 export type NavIconId =
-  | "overview"
+  | "dashboard"
   | "itsm"
   | "daily-operation"
   | "safety"
@@ -312,7 +312,7 @@ const iconMap: Record<
   NavIconId,
   (props: NavIconProps) => ReactElement
 > = {
-  overview: OverviewIcon,
+  dashboard: OverviewIcon,
   itsm: ItsmIcon,
   "daily-operation": DailyOperationIcon,
   safety: SafetyIcon,

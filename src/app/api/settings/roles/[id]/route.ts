@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { PERMISSIONS, requirePermission } from "@/lib/auth";
+import {
+  isProtectedRoleName,
+  PERMISSIONS,
+  requirePermission,
+} from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -20,7 +24,9 @@ export async function PUT(request: NextRequest, context: Ctx) {
     const name = body.name?.toString().trim().toLowerCase() ?? "";
     const description = body.description?.toString().trim() || null;
     const permissionIds: number[] = Array.isArray(body.permissionIds)
-      ? body.permissionIds.map((x: unknown) => Number(x)).filter((n: number) => !Number.isNaN(n))
+      ? body.permissionIds
+          .map((x: unknown) => Number(x))
+          .filter((n: number) => !Number.isNaN(n))
       : [];
 
     if (!name) {
@@ -33,7 +39,6 @@ export async function PUT(request: NextRequest, context: Ctx) {
       );
     }
 
-    // Prevent renaming the last admin away from "admin" if this is the admin role
     const existing = await query<RowDataPacket[]>(
       "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
       [id],
@@ -41,14 +46,14 @@ export async function PUT(request: NextRequest, context: Ctx) {
     if (!existing[0]) {
       return NextResponse.json({ error: "Role not found." }, { status: 404 });
     }
-    if (existing[0].name === "admin" && name !== "admin") {
+    if (isProtectedRoleName(existing[0].name) && name !== existing[0].name) {
       return NextResponse.json(
-        { error: "The admin role name cannot be changed." },
+        { error: "The superadmin role name cannot be changed." },
         { status: 400 },
       );
     }
 
-    if (existing[0].name === "admin") {
+    if (isProtectedRoleName(existing[0].name)) {
       const critical = await query<RowDataPacket[]>(
         `SELECT id, code FROM permissions
          WHERE code IN (?, ?)`,
@@ -61,7 +66,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
         return NextResponse.json(
           {
             error:
-              "Cannot remove admin.roles.manage or admin.accounts.manage from the admin role.",
+              "Cannot remove admin.roles.manage or admin.accounts.manage from the superadmin role.",
           },
           { status: 400 },
         );
@@ -112,9 +117,9 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     if (!existing[0]) {
       return NextResponse.json({ error: "Role not found." }, { status: 404 });
     }
-    if (existing[0].name === "admin") {
+    if (isProtectedRoleName(existing[0].name)) {
       return NextResponse.json(
-        { error: "The admin role cannot be deleted." },
+        { error: "The superadmin role cannot be deleted." },
         { status: 400 },
       );
     }

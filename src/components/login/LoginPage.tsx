@@ -276,7 +276,7 @@ export function LoginPage() {
               <div className="mt-5 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
                 Signed in as {account.displayName}.{" "}
                 <Link href="/" className="underline underline-offset-2">
-                  Go to overview
+                  Go to dashboard
                 </Link>
               </div>
             ) : null}

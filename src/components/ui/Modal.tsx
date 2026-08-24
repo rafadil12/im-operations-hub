@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 type ModalProps = {
-  title: string;
+  title: ReactNode;
+  subtitle?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
@@ -21,8 +22,13 @@ const SIZE_CLASS = {
   "2xl": "max-w-7xl",
 } as const;
 
+function subscribe() {
+  return () => {};
+}
+
 export function Modal({
   title,
+  subtitle,
   onClose,
   children,
   footer,
@@ -30,11 +36,7 @@ export function Modal({
   size = "md",
   closeDisabled = false,
 }: ModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -52,7 +54,7 @@ export function Modal({
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-10">
       <button
         type="button"
         aria-label="Close overlay"
@@ -71,8 +73,11 @@ export function Modal({
         ].join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-          <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-text">{title}</h3>
+        <div className="flex items-start justify-between gap-3 border-b border-border-subtle px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold text-text">{title}</h3>
+            {subtitle ? <div className="mt-1">{subtitle}</div> : null}
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             {headerActions}
             <button
@@ -80,7 +85,7 @@ export function Modal({
               onClick={onClose}
               disabled={closeDisabled}
               aria-label="Close"
-              className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:pointer-events-none disabled:opacity-50"
+              className="rounded-md px-2 py-1 text-sm leading-none text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:pointer-events-none disabled:opacity-50"
             >
               ✕
             </button>

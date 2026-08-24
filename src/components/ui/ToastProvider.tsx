@@ -32,6 +32,13 @@ function show(message: string, variant: ToastVariant = "info") {
   }
 }
 
+/** Stable API — avoids useEffect refetch loops when toast is in deps. */
+const toastApi: ToastContextValue = {
+  toast: show,
+  success: (message: string) => show(message, "success"),
+  error: (message: string) => show(message, "error"),
+};
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const { theme } = useTheme();
   return (
@@ -52,9 +59,5 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 export function useToast(): ToastContextValue {
-  return {
-    toast: show,
-    success: (message: string) => show(message, "success"),
-    error: (message: string) => show(message, "error"),
-  };
+  return toastApi;
 }

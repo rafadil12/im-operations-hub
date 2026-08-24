@@ -18,8 +18,8 @@ function account(
     systemUserId: 10,
     employeeId: "E001",
     displayName: "Test User",
-    roleName: "operator",
-    roleLabel: "Operator",
+    roleName: "viewer",
+    roleLabel: "Viewer",
     sessionVersion: 1,
     ...overrides,
   };
@@ -50,6 +50,11 @@ describe("guestHasPermission", () => {
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.itsmRequestExport);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyRecordExport);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyAnalysisView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetyOverviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetySubmissionRead);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartOverviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartStockView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartDocumentRead);
     expect(guestHasPermission(PERMISSIONS.itsmAnalysisView)).toBe(true);
     expect(guestHasPermission(PERMISSIONS.adminRolesManage)).toBe(false);
   });
@@ -67,6 +72,9 @@ describe("getRoleAccess", () => {
     expect(access.canExportDailyRecord).toBe(true);
     expect(access.canViewDailyAnalysis).toBe(true);
     expect(access.canViewDailyRecords).toBe(true);
+    expect(access.canViewSafetyOverview).toBe(true);
+    expect(access.canViewSafetySubmissions).toBe(true);
+    expect(access.canCreateSafetySubmission).toBe(false);
     expect(access.canAddDailyRecord).toBe(false);
     expect(access.canUpdateDailyRecord).toBe(false);
     expect(access.canDeleteDailyRecord).toBe(false);
@@ -76,6 +84,11 @@ describe("getRoleAccess", () => {
     expect(access.canManageRoles).toBe(false);
     expect(access.canManageAccounts).toBe(false);
     expect(access.canManageConfiguration).toBe(false);
+    expect(access.canViewSparepartOverview).toBe(true);
+    expect(access.canViewSparepartStock).toBe(true);
+    expect(access.canViewSparepartDocuments).toBe(true);
+    expect(access.canPostSparepartDocument).toBe(false);
+    expect(access.canReverseSparepartDocument).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {
@@ -163,6 +176,40 @@ describe("getRoleAccess", () => {
     expect(access.canAccessSettings).toBe(false);
   });
 
+  it("gates sparepart modules independently", () => {
+    const access = getRoleAccess(
+      account({
+        permissions: [
+          PERMISSIONS.sparepartOverviewView,
+          PERMISSIONS.sparepartStockView,
+          PERMISSIONS.sparepartDocumentPost,
+        ],
+      }),
+    );
+    expect(access.canViewSparepartOverview).toBe(true);
+    expect(access.canViewSparepartStock).toBe(true);
+    expect(access.canPostSparepartDocument).toBe(true);
+    expect(access.canViewSparepartDocuments).toBe(false);
+    expect(access.canViewSparepartMaterials).toBe(false);
+    expect(access.canManageSparepartLocations).toBe(false);
+  });
+
+  it("gates safety modules independently", () => {
+    const access = getRoleAccess(
+      account({
+        permissions: [
+          PERMISSIONS.safetyOverviewView,
+          PERMISSIONS.safetySubmissionCreate,
+        ],
+      }),
+    );
+    expect(access.canViewSafetyOverview).toBe(true);
+    expect(access.canViewSafetySubmissions).toBe(false);
+    expect(access.canCreateSafetySubmission).toBe(true);
+    expect(access.canUpdateSafetySubmission).toBe(false);
+    expect(access.canDeleteSafetySubmission).toBe(false);
+  });
+
   it("exposes overview.view as canViewOverview", () => {
     const access = getRoleAccess(
       account({ permissions: [PERMISSIONS.overviewView] }),
@@ -189,6 +236,11 @@ describe("privileged role assignment helpers", () => {
     ).toBe(true);
     expect(
       canAssignPrivilegedRoles(
+        account({ roleName: "superadmin", permissions: [] }),
+      ),
+    ).toBe(true);
+    expect(
+      canAssignPrivilegedRoles(
         account({
           roleName: "custom",
           permissions: [PERMISSIONS.adminRolesManage],
@@ -207,7 +259,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 19 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(19);
+  it("has exactly 37 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(37);
   });
 });

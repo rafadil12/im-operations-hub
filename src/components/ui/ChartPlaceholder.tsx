@@ -10,13 +10,18 @@ type BarChartPlaceholderProps = {
 export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
   return (
     <div className="flex h-full flex-col justify-between gap-2.5">
-      {items.map((item) => {
+      {items.map((item, index) => {
         const width = Math.max(8, Math.round((item.value / item.max) * 100));
         return (
-          <div key={item.label}>
-            <div className="mb-0 flex items-center justify-between text-[11px] text-text-muted">
-              <span className="truncate pr-2">{item.label}</span>
-              <span className="text-text">{item.value}</span>
+          <div key={`${item.label}-${index}`}>
+            <div className="mb-0.5 flex items-start justify-between gap-2 text-[11px]">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-text">{item.label}</p>
+                {item.sublabel ? (
+                  <p className="truncate text-text-muted">{item.sublabel}</p>
+                ) : null}
+              </div>
+              <span className="shrink-0 font-medium text-text">{item.value}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-border-subtle">
               <div
@@ -42,11 +47,11 @@ export function VerticalBarChartPlaceholder({
 
   return (
     <div className="flex h-full min-h-28 items-end gap-1.5 pt-4">
-      {items.map((item) => {
+      {items.map((item, index) => {
         const height = Math.max(8, Math.round((item.value / max) * 100));
         return (
           <div
-            key={item.label}
+            key={`${item.label}-${index}`}
             className="flex h-full min-w-0 flex-1 flex-col items-center gap-1"
           >
             <span className="text-[10px] font-semibold text-text">{item.value}</span>

@@ -80,11 +80,18 @@ function normalizeHeader(value: unknown): string {
     .replace(/\s+/g, " ");
 }
 
+/** Excel wall-clock datetime as UTC components (ExcelJS Date / serial). */
+function excelDateToWallClock(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+}
+
 function cellToString(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}`;
+    // ExcelJS maps Excel datetimes to UTC wall clock — do not use local getters
+    // or WIB (+7) shifts 08:10 → 15:10 on import.
+    return excelDateToWallClock(value);
   }
   if (typeof value === "object" && value !== null && "text" in value) {
     return String((value as { text: unknown }).text ?? "").trim();
@@ -96,15 +103,13 @@ function cellToString(value: unknown): string {
 }
 
 function excelSerialToDateTime(serial: number): string {
-  // Excel serial date (days since 1899-12-30), local wall clock
+  // Excel serial date (days since 1899-12-30), wall clock via UTC
   const ms = Math.round((serial - 25569) * 86400 * 1000);
-  const date = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+  return excelDateToWallClock(new Date(ms));
 }
 
 function normalizeDateTimeCell(value: unknown): string {
-  if (value instanceof Date) return cellToString(value);
+  if (value instanceof Date) return excelDateToWallClock(value);
   if (typeof value === "number" && Number.isFinite(value)) {
     return excelSerialToDateTime(value);
   }

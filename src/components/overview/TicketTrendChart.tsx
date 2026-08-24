@@ -24,12 +24,14 @@ type Props = {
   data: TrendPoint[];
   height?: number;
   compact?: boolean;
+  legendLabels?: string[];
 };
 
 export function TicketTrendChart({
   data,
   height = 140,
   compact = false,
+  legendLabels,
 }: Props) {
   const { lang } = useLang();
   const { theme } = useTheme();
@@ -41,6 +43,13 @@ export function TicketTrendChart({
   const previousLabelColor = theme === "dark" ? "#f8fafc76" : "#33415553";
   const fontSize = compact ? 11 : 13;
   const labelFontSize = compact ? 11 : 15;
+
+  const showPrevious = (legendLabels?.length ?? 2) > 1;
+
+  const currentLegend =
+    legendLabels?.[0] ?? (lang === "cn" ? "当前时间段" : "Current Period");
+  const previousLegend =
+    legendLabels?.[1] ?? (lang === "cn" ? "对比时间段" : "Previous Period");
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -115,14 +124,7 @@ export function TicketTrendChart({
           }}
           formatter={(value) => {
             const label =
-              value === "current"
-                ? lang === "cn"
-                  ? "当前时间段"
-                  : "Current Period"
-                : lang === "cn"
-                  ? "对比时间段"
-                  : "Previous Period";
-
+              value === "current" ? currentLegend : previousLegend;
             return <span style={{ color: legendColor }}>{label}</span>;
           }}
         />
@@ -152,65 +154,69 @@ export function TicketTrendChart({
                     color: "#60A5FA",
                     fontWeight: 700,
                     fontSize: 13,
-                    marginBottom: 4,
+                    marginBottom: showPrevious ? 4 : 0,
                   }}
                 >
-                  {lang === "cn" ? "当前" : "Current"}: {current}
+                  {currentLegend}: {current}
                 </div>
-                <div style={{ color: "#CBD5E1", fontWeight: 700, fontSize: 13 }}>
-                  {lang === "cn" ? "上期" : "Previous"}: {previous}
-                </div>
+                {showPrevious ? (
+                  <div style={{ color: "#CBD5E1", fontWeight: 700, fontSize: 13 }}>
+                    {previousLegend}: {previous}
+                  </div>
+                ) : null}
               </div>
             );
           }}
         />
 
-        <Line
-          type="natural"
-          dataKey="previous"
-          name="previous"
-          stroke="#C9D1DB"
-          strokeWidth={2.5}
-          animationDuration={1800}
-          animationEasing="ease-in-out"
-          dot={{
-            r: compact ? 3 : 4,
-            fill: "#BFC7D4",
-            stroke: "#FFFFFF",
-            strokeWidth: 2,
-          }}
-          activeDot={{
-            r: 5,
-            fill: "#AAB4C3",
-            stroke: "#FFFFFF",
-            strokeWidth: 2,
-          }}
-        >
-          {!compact && (
-            <LabelList
-              dataKey="previous"
-              content={(props) => {
-                const x = Number(props.x ?? 0);
-                const y = Number(props.y ?? 0);
-                const width = Number(props.width ?? 0);
-                const index = props.index ?? 0;
+        {showPrevious ? (
+          <Line
+            type="natural"
+            dataKey="previous"
+            name="previous"
+            stroke="#C9D1DB"
+            strokeWidth={2.5}
+            animationDuration={1800}
+            animationEasing="ease-in-out"
+            dot={{
+              r: compact ? 3 : 4,
+              fill: "#BFC7D4",
+              stroke: "#FFFFFF",
+              strokeWidth: 2,
+            }}
+            activeDot={{
+              r: 5,
+              fill: "#AAB4C3",
+              stroke: "#FFFFFF",
+              strokeWidth: 2,
+            }}
+          >
+            {!compact && (
+              <LabelList
+                dataKey="previous"
+                content={(props) => {
+                  const x = Number(props.x ?? 0);
+                  const y = Number(props.y ?? 0);
+                  const width = Number(props.width ?? 0);
+                  const index = props.index ?? 0;
 
-                return (
-                  <text
-                    x={x + width / 2 + (index === 0 ? 12 : 0)}
-                    y={y - 16}
-                    textAnchor="middle"
-                    fontSize={labelFontSize}
-                    fontWeight={700}
-                    fill={previousLabelColor}
-                  >
-                    {props.value}
-                  </text>
-                );
-              }}
-            />
-          )}
-        </Line>
+                  return (
+                    <text
+                      x={x + width / 2 + (index === 0 ? 12 : 0)}
+                      y={y - 16}
+                      textAnchor="middle"
+                      fontSize={labelFontSize}
+                      fontWeight={700}
+                      fill={previousLabelColor}
+                    >
+                      {props.value}
+                    </text>
+                  );
+                }}
+              />
+            )}
+          </Line>
+        ) : null}
 
         <Line
           type="natural"

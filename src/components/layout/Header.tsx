@@ -122,17 +122,23 @@ export function Header({ title }: HeaderProps) {
   const menuItemClass =
     "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text";
 
+  const titleByRoute: Record<string, string> = {
+    Dashboard: t.nav.dashboard,
+    "Daily Operation": t.nav.dailyOperation,
+    ITSM: t.nav.itsm,
+    Sparepart: t.nav.sparepart,
+    Safety: t.nav.safety,
+    Settings: t.nav.settings,
+  };
+  const routeLabel = titleByRoute[title] ?? title;
+
   return (
     <header className="sticky top-0 z-20 border-b border-border-subtle bg-bg/95 backdrop-blur-sm">
       <div className="flex h-[var(--topbar-height)] items-center justify-between gap-4 px-5">
         <div className="flex items-center gap-3">
           {/* Route label, not a heading: each page owns its own <h1>. */}
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-text">
-            {title === "Overview"
-              ? t.nav.overview
-              : title === "Daily Operation"
-                ? t.nav.dailyOperation
-                : title}
+            {routeLabel}
           </p>
         </div>
 

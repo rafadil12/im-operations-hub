@@ -23,7 +23,7 @@ export async function GET() {
 
   try {
     const roles = await query<RoleRow[]>(
-      "SELECT id, name, description FROM roles ORDER BY name",
+      "SELECT id, name, description FROM roles ORDER BY id ASC",
     );
     const links = await query<RowDataPacket[]>(
       "SELECT role_id, permission_id FROM role_permissions",

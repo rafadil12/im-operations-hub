@@ -19,9 +19,45 @@ export const PERMISSIONS = {
   itsmRequestExport: "itsm.request.export",
   itsmRequestTemplate: "itsm.request.template",
   itsmAnalysisView: "itsm.analysis.view",
+  safetyOverviewView: "safety.overview.view",
+  safetySubmissionRead: "safety.submission.read",
+  safetySubmissionCreate: "safety.submission.create",
+  safetySubmissionUpdate: "safety.submission.update",
+  safetySubmissionDelete: "safety.submission.delete",
+  sparepartOverviewView: "sparepart.overview.view",
+  sparepartStockView: "sparepart.stock.view",
+  sparepartDocumentRead: "sparepart.document.read",
+  sparepartDocumentPost: "sparepart.document.post",
+  sparepartDocumentReverse: "sparepart.document.reverse",
+  sparepartMaterialsRead: "sparepart.materials.read",
+  sparepartMaterialsCreate: "sparepart.materials.create",
+  sparepartMaterialsUpdate: "sparepart.materials.update",
+  sparepartMaterialsDelete: "sparepart.materials.delete",
+  sparepartMaterialsImport: "sparepart.materials.import",
+  sparepartMaterialsExport: "sparepart.materials.export",
+  sparepartMaterialsTemplate: "sparepart.materials.template",
+  sparepartLocationsManage: "sparepart.locations.manage",
   adminRolesManage: "admin.roles.manage",
   adminAccountsManage: "admin.accounts.manage",
 } as const;
+
+/** System role that cannot be deleted/renamed (protections key off name, not id). */
+export const PROTECTED_ROLE_NAME = "superadmin";
+
+/** Bootstrap account employee_no that cannot be demoted/deactivated. */
+export const PROTECTED_ACCOUNT_EMPLOYEE_NO = "SUPERADMIN";
+
+export function isProtectedRoleName(name: string | null | undefined): boolean {
+  return String(name ?? "").toLowerCase() === PROTECTED_ROLE_NAME;
+}
+
+export function isProtectedAccountEmployeeNo(
+  employeeNo: string | null | undefined,
+): boolean {
+  return (
+    String(employeeNo ?? "").toUpperCase() === PROTECTED_ACCOUNT_EMPLOYEE_NO
+  );
+}
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
@@ -38,6 +74,11 @@ export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
   PERMISSIONS.dailyRecordRead,
   PERMISSIONS.dailyRecordExport,
   PERMISSIONS.dailyAnalysisView,
+  PERMISSIONS.safetyOverviewView,
+  PERMISSIONS.safetySubmissionRead,
+  PERMISSIONS.sparepartOverviewView,
+  PERMISSIONS.sparepartStockView,
+  PERMISSIONS.sparepartDocumentRead,
 ] as const;
 
 export type RoleAccess = {
@@ -60,6 +101,24 @@ export type RoleAccess = {
   canExportItsmRequest: boolean;
   canDownloadItsmTemplate: boolean;
   canViewItsmAnalysis: boolean;
+  canViewSafetyOverview: boolean;
+  canViewSafetySubmissions: boolean;
+  canCreateSafetySubmission: boolean;
+  canUpdateSafetySubmission: boolean;
+  canDeleteSafetySubmission: boolean;
+  canViewSparepartOverview: boolean;
+  canViewSparepartStock: boolean;
+  canViewSparepartDocuments: boolean;
+  canPostSparepartDocument: boolean;
+  canReverseSparepartDocument: boolean;
+  canViewSparepartMaterials: boolean;
+  canCreateSparepartMaterial: boolean;
+  canUpdateSparepartMaterial: boolean;
+  canDeleteSparepartMaterial: boolean;
+  canImportSparepartMaterials: boolean;
+  canExportSparepartMaterials: boolean;
+  canDownloadSparepartTemplate: boolean;
+  canManageSparepartLocations: boolean;
   /** Enter Settings module (settings.access or roles/accounts manage). */
   canAccessSettings: boolean;
   canManageRoles: boolean;
@@ -88,11 +147,12 @@ export function permissionsIncludeAdminManage(permissions: string[]): boolean {
   );
 }
 
-/** True when the caller may assign privileged roles (admin / admin.* manage). */
+/** True when the caller may assign privileged roles (superadmin / admin / roles-manage). */
 export function canAssignPrivilegedRoles(
   account: AuthAccountPublic | null | undefined,
 ): boolean {
   if (!account) return false;
+  if (isProtectedRoleName(account.roleName)) return true;
   if (account.roleName === "admin") return true;
   return accountHasPermission(account, PERMISSIONS.adminRolesManage);
 }
@@ -109,7 +169,8 @@ export function getRoleAccess(
 ): RoleAccess {
   const roleName = account?.roleName ?? null;
   const isGuest = !account;
-  const isAdmin = roleName === "admin";
+  const isAdmin =
+    roleName === "admin" || isProtectedRoleName(roleName);
   const isTechnician = roleName === "technician";
 
   const hasSettingsModule = hasPermission(
@@ -175,6 +236,78 @@ export function getRoleAccess(
       PERMISSIONS.itsmRequestTemplate,
     ),
     canViewItsmAnalysis: hasPermission(account, PERMISSIONS.itsmAnalysisView),
+    canViewSafetyOverview: hasPermission(
+      account,
+      PERMISSIONS.safetyOverviewView,
+    ),
+    canViewSafetySubmissions: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionRead,
+    ),
+    canCreateSafetySubmission: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionCreate,
+    ),
+    canUpdateSafetySubmission: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionUpdate,
+    ),
+    canDeleteSafetySubmission: hasPermission(
+      account,
+      PERMISSIONS.safetySubmissionDelete,
+    ),
+    canViewSparepartOverview: hasPermission(
+      account,
+      PERMISSIONS.sparepartOverviewView,
+    ),
+    canViewSparepartStock: hasPermission(
+      account,
+      PERMISSIONS.sparepartStockView,
+    ),
+    canViewSparepartDocuments: hasPermission(
+      account,
+      PERMISSIONS.sparepartDocumentRead,
+    ),
+    canPostSparepartDocument: hasPermission(
+      account,
+      PERMISSIONS.sparepartDocumentPost,
+    ),
+    canReverseSparepartDocument: hasPermission(
+      account,
+      PERMISSIONS.sparepartDocumentReverse,
+    ),
+    canViewSparepartMaterials: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsRead,
+    ),
+    canCreateSparepartMaterial: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsCreate,
+    ),
+    canUpdateSparepartMaterial: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsUpdate,
+    ),
+    canDeleteSparepartMaterial: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsDelete,
+    ),
+    canImportSparepartMaterials: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsImport,
+    ),
+    canExportSparepartMaterials: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsExport,
+    ),
+    canDownloadSparepartTemplate: hasPermission(
+      account,
+      PERMISSIONS.sparepartMaterialsTemplate,
+    ),
+    canManageSparepartLocations: hasPermission(
+      account,
+      PERMISSIONS.sparepartLocationsManage,
+    ),
     canAccessSettings:
       hasSettingsModule || canManageRoles || canManageAccounts,
     canManageRoles,
