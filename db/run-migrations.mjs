@@ -1302,5 +1302,24 @@ const catalogV3Sql = readFileSync(
 await conn.query(catalogV3Sql);
 console.log("Applied permissions catalog v3 (Safety + sparepart overview).");
 
+// --- 021: Daily Operation PIC flag on login accounts ---
+if (!(await columnExists("system_users", "is_daily_operation_pic"))) {
+  await conn.query(
+    "ALTER TABLE `system_users` ADD COLUMN `is_daily_operation_pic` TINYINT(1) NOT NULL DEFAULT 0",
+  );
+  await conn.query(
+    `UPDATE system_users su
+     INNER JOIN users u ON u.id = su.user_id
+     SET su.is_daily_operation_pic = 1
+     WHERE su.is_active = 1
+       AND UPPER(COALESCE(u.employee_no, '')) <> 'SUPERADMIN'`,
+  );
+  console.log(
+    "Added system_users.is_daily_operation_pic and backfilled existing active non-superadmin accounts.",
+  );
+} else {
+  console.log("system_users.is_daily_operation_pic already exists.");
+}
+
 await conn.end();
 console.log("Migrations complete.");

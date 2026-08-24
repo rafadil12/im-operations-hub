@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { PROTECTED_ACCOUNT_EMPLOYEE_NO } from "@/lib/auth/access";
 import type {
   Category,
   Division,
@@ -22,7 +23,14 @@ export async function loadMasters(): Promise<Masters> {
         "SELECT id, category_id, name_cn, name_en FROM subcategories ORDER BY name_en",
       ),
       query<User[]>(
-        "SELECT id, name_cn, name_en, division_id FROM users ORDER BY name_en",
+        `SELECT u.id, u.name_cn, u.name_en, u.division_id
+         FROM users u
+         INNER JOIN system_users su ON su.user_id = u.id
+         WHERE su.is_daily_operation_pic = 1
+           AND su.is_active = 1
+           AND UPPER(COALESCE(u.employee_no, '')) <> ?
+         ORDER BY u.name_en`,
+        [PROTECTED_ACCOUNT_EMPLOYEE_NO],
       ),
       query<MesType[]>("SELECT id, name_cn, name_en FROM mes_type ORDER BY id"),
       query<MesStatus[]>(

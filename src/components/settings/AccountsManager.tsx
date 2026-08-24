@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
-import { isProtectedAccountEmployeeNo } from "@/lib/auth/access";
-import { useLang } from "@/lib/i18n";
+import { isProtectedAccountEmployeeNo, isProtectedRoleName } from "@/lib/auth/access";
+import { localizedName, useLang } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
 import { SettingsTabs } from "./SettingsTabs";
 
@@ -12,6 +12,12 @@ type RoleOption = {
   name: string;
   description: string | null;
   permissionIds: number[];
+};
+
+type DivisionOption = {
+  id: number;
+  nameEn: string | null;
+  nameCn: string | null;
 };
 
 type AccountRow = {
@@ -37,10 +43,16 @@ export function AccountsManager() {
   const { t, lang } = useLang();
   const [rows, setRows] = useState<AccountRow[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [divisions, setDivisions] = useState<DivisionOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState<AccountRow | null>(null);
+  const [employeeNo, setEmployeeNo] = useState("");
+  const [nameEn, setNameEn] = useState("");
+  const [nameCn, setNameCn] = useState("");
+  const [divisionId, setDivisionId] = useState<number | null>(null);
   const [roleId, setRoleId] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [password, setPassword] = useState("");
@@ -50,15 +62,25 @@ export function AccountsManager() {
     null,
   );
 
+  const assignableRoles = roles.filter((role) => {
+    if (!isProtectedRoleName(role.name)) return true;
+    return Boolean(
+      editRow && isProtectedAccountEmployeeNo(editRow.employeeNo),
+    );
+  });
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [accountsRes, rolesRes] = await Promise.all([
-        apiGetAbs<{ rows: AccountRow[] }>("/api/settings/accounts"),
+        apiGetAbs<{ rows: AccountRow[]; divisions?: DivisionOption[] }>(
+          "/api/settings/accounts",
+        ),
         apiGetAbs<{ rows: RoleOption[] }>("/api/settings/roles"),
       ]);
       setRows(accountsRes.rows);
+      setDivisions(accountsRes.divisions ?? []);
       setRoles(rolesRes.rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : t.common.error);
@@ -73,14 +95,35 @@ export function AccountsManager() {
   }, [load]);
 
   const closeForm = () => {
+    setAddOpen(false);
     setEditRow(null);
     setFormError(null);
+    setEmployeeNo("");
+    setNameEn("");
+    setNameCn("");
+    setDivisionId(null);
     setPassword("");
     setConfirmPassword("");
     setTemporaryPassword(null);
   };
 
+  const openAdd = () => {
+    setEditRow(null);
+    setAddOpen(true);
+    setEmployeeNo("");
+    setNameEn("");
+    setNameCn("");
+    setDivisionId(null);
+    setRoleId(null);
+    setIsActive(true);
+    setPassword("");
+    setConfirmPassword("");
+    setFormError(null);
+    setTemporaryPassword(null);
+  };
+
   const openEdit = (row: AccountRow) => {
+    setAddOpen(false);
     setEditRow(row);
     setRoleId(row.roleId);
     setIsActive(row.isActive);
@@ -90,7 +133,78 @@ export function AccountsManager() {
     setTemporaryPassword(null);
   };
 
-  const submit = async (generateTemporaryPassword = false) => {
+  const submitAdd = async (generateTemporaryPassword = false) => {
+    if (!employeeNo.trim()) {
+      setFormError(t.settings.employeeIdRequired);
+      return;
+    }
+    if (!nameEn.trim() && !nameCn.trim()) {
+      setFormError(t.common.required);
+      return;
+    }
+    if (!generateTemporaryPassword) {
+      if (!password) {
+        setFormError(t.settings.passwordRequired);
+        return;
+      }
+      if (password !== confirmPassword) {
+        setFormError(t.auth.passwordMismatch);
+        return;
+      }
+      if (password.length < 8) {
+        setFormError(t.auth.passwordTooShort);
+        return;
+      }
+    }
+
+    setSaving(true);
+    setFormError(null);
+    try {
+      const body: {
+        employee_no: string;
+        name_en: string | null;
+        name_cn: string | null;
+        division_id: number | null;
+        role_id: number | null;
+        is_active: boolean;
+        password?: string;
+        confirm_password?: string;
+        generate_temporary_password?: boolean;
+      } = {
+        employee_no: employeeNo.trim(),
+        name_en: nameEn.trim() || null,
+        name_cn: nameCn.trim() || null,
+        division_id: divisionId,
+        role_id: roleId,
+        is_active: isActive,
+      };
+      if (generateTemporaryPassword) {
+        body.generate_temporary_password = true;
+      } else {
+        body.password = password;
+        body.confirm_password = confirmPassword;
+      }
+      const res = await apiSendAbs<{
+        ok: true;
+        temporaryPassword?: string;
+      }>("/api/settings/accounts", "POST", body);
+      if (res.temporaryPassword) {
+        setTemporaryPassword(res.temporaryPassword);
+        setPassword("");
+        setConfirmPassword("");
+        await load();
+        return;
+      }
+      closeForm();
+      await load();
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : t.common.error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitEdit = async (generateTemporaryPassword = false) => {
     if (!editRow) return;
 
     if (!generateTemporaryPassword && (password || confirmPassword)) {
@@ -148,15 +262,26 @@ export function AccountsManager() {
     return row.nameEn || row.nameCn || row.employeeNo || "-";
   };
 
+  const modalOpen = addOpen || Boolean(editRow);
+
   return (
     <div>
       <SettingsTabs />
 
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-text">
-          {t.settings.accountsTitle}
-        </h1>
-        <p className="text-sm text-text-muted">{t.settings.accountsDesc}</p>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-text">
+            {t.settings.accountsTitle}
+          </h1>
+          <p className="text-sm text-text-muted">{t.settings.accountsDesc}</p>
+        </div>
+        <button
+          type="button"
+          onClick={openAdd}
+          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          + {t.common.add}
+        </button>
       </div>
 
       {error ? (
@@ -221,9 +346,9 @@ export function AccountsManager() {
         </div>
       )}
 
-      {editRow ? (
+      {modalOpen ? (
         <Modal
-          title={t.common.edit}
+          title={addOpen ? t.settings.addAccount : t.common.edit}
           onClose={closeForm}
           footer={
             <>
@@ -237,7 +362,9 @@ export function AccountsManager() {
               {!temporaryPassword ? (
                 <button
                   type="button"
-                  onClick={() => void submit(false)}
+                  onClick={() =>
+                    void (addOpen ? submitAdd(false) : submitEdit(false))
+                  }
                   disabled={saving}
                   className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
                 >
@@ -266,14 +393,83 @@ export function AccountsManager() {
                 </p>
               </div>
             ) : null}
-            <div>
-              <label className={labelCls}>{t.settings.employeeNo}</label>
-              <p className="text-sm text-text">{editRow.employeeNo ?? "-"}</p>
-            </div>
-            <div>
-              <label className={labelCls}>{t.settings.accountName}</label>
-              <p className="text-sm text-text">{displayName(editRow)}</p>
-            </div>
+            {addOpen ? (
+              <>
+                <div>
+                  <label className={labelCls} htmlFor="account-employee-no">
+                    {t.settings.employeeNo}
+                  </label>
+                  <input
+                    id="account-employee-no"
+                    className={inputCls}
+                    value={employeeNo}
+                    disabled={Boolean(temporaryPassword)}
+                    onChange={(e) => setEmployeeNo(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="account-name-en">
+                    {t.settings.nameEn}
+                  </label>
+                  <input
+                    id="account-name-en"
+                    className={inputCls}
+                    value={nameEn}
+                    disabled={Boolean(temporaryPassword)}
+                    onChange={(e) => setNameEn(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="account-name-cn">
+                    {t.settings.nameCn}
+                  </label>
+                  <input
+                    id="account-name-cn"
+                    className={inputCls}
+                    value={nameCn}
+                    disabled={Boolean(temporaryPassword)}
+                    onChange={(e) => setNameCn(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="account-division">
+                    {t.settings.division}
+                  </label>
+                  <select
+                    id="account-division"
+                    className={inputCls}
+                    value={divisionId ?? ""}
+                    disabled={Boolean(temporaryPassword)}
+                    onChange={(e) =>
+                      setDivisionId(
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
+                  >
+                    <option value="">{t.common.none}</option>
+                    {divisions.map((division) => (
+                      <option key={division.id} value={division.id}>
+                        {localizedName(
+                          { name_en: division.nameEn, name_cn: division.nameCn },
+                          lang,
+                        )}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : editRow ? (
+              <>
+                <div>
+                  <label className={labelCls}>{t.settings.employeeNo}</label>
+                  <p className="text-sm text-text">{editRow.employeeNo ?? "-"}</p>
+                </div>
+                <div>
+                  <label className={labelCls}>{t.settings.accountName}</label>
+                  <p className="text-sm text-text">{displayName(editRow)}</p>
+                </div>
+              </>
+            ) : null}
             <div>
               <label className={labelCls}>{t.settings.roleName}</label>
               <select
@@ -281,14 +477,16 @@ export function AccountsManager() {
                 value={roleId ?? ""}
                 disabled={
                   Boolean(temporaryPassword) ||
-                  isProtectedAccountEmployeeNo(editRow.employeeNo)
+                  Boolean(
+                    editRow && isProtectedAccountEmployeeNo(editRow.employeeNo),
+                  )
                 }
                 onChange={(e) =>
                   setRoleId(e.target.value ? Number(e.target.value) : null)
                 }
               >
                 <option value="">{t.common.none}</option>
-                {roles.map((role) => (
+                {assignableRoles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {role.name}
                   </option>
@@ -302,7 +500,9 @@ export function AccountsManager() {
                   checked={isActive}
                   disabled={
                     Boolean(temporaryPassword) ||
-                    isProtectedAccountEmployeeNo(editRow.employeeNo)
+                    Boolean(
+                      editRow && isProtectedAccountEmployeeNo(editRow.employeeNo),
+                    )
                   }
                   onChange={(e) => setIsActive(e.target.checked)}
                 />
@@ -313,20 +513,26 @@ export function AccountsManager() {
               <div className="border-t border-border-subtle pt-3">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-medium text-text">
-                    {t.settings.resetPassword}
+                    {addOpen
+                      ? t.settings.newPassword
+                      : t.settings.resetPassword}
                   </p>
                   <button
                     type="button"
                     disabled={saving}
-                    onClick={() => void submit(true)}
+                    onClick={() =>
+                      void (addOpen ? submitAdd(true) : submitEdit(true))
+                    }
                     className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-60"
                   >
                     {t.settings.generateTemporaryPassword}
                   </button>
                 </div>
-                <p className="mb-3 text-[11px] text-text-dim">
-                  {t.settings.passwordOptionalHint}
-                </p>
+                {addOpen ? null : (
+                  <p className="mb-3 text-[11px] text-text-dim">
+                    {t.settings.passwordOptionalHint}
+                  </p>
+                )}
                 <div className="grid grid-cols-1 gap-3">
                   <div>
                     <label className={labelCls} htmlFor="admin-new-password">

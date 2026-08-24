@@ -1,19 +1,13 @@
 import { pageMetadata } from "@/lib/seo";
-import { MasterManager } from "@/components/daily-operation/master/MasterManager";
+import { PicManager } from "@/components/daily-operation/master/PicManager";
 
 export const metadata = pageMetadata({
-  title: "Users · Master Data",
+  title: "PIC · Master Data",
   description:
-    "Maintain the user reference data used across the Daily Operation module, including the division each user belongs to.",
+    "Assign login accounts that can appear as PIC on Daily Operation activities.",
   path: "/daily-operation/master/users",
 });
 
 export default function MasterUsersPage() {
-  return (
-    <MasterManager
-      titleKey="masterUsers"
-      endpoint="/users"
-      relation="division"
-    />
-  );
+  return <PicManager />;
 }

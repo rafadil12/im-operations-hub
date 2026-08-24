@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import {
   PERMISSIONS,
+  PROTECTED_ACCOUNT_EMPLOYEE_NO,
   requireAnyPermission,
 } from "@/lib/auth";
 
@@ -24,17 +25,18 @@ export async function GET() {
     const users = await query<UserRow[]>(
       `
         SELECT
-          id,
-          employee_no,
-          name_cn,
-          name_en,
-          division_id
-        FROM users
-        WHERE employee_no IS NOT NULL
-           OR name_en IS NOT NULL
-           OR name_cn IS NOT NULL
-        ORDER BY employee_no ASC
+          u.id,
+          u.employee_no,
+          u.name_cn,
+          u.name_en,
+          u.division_id
+        FROM system_users su
+        INNER JOIN users u ON u.id = su.user_id
+        WHERE su.is_active = 1
+          AND UPPER(COALESCE(u.employee_no, '')) <> ?
+        ORDER BY u.employee_no ASC
       `,
+      [PROTECTED_ACCOUNT_EMPLOYEE_NO],
     );
 
     return NextResponse.json({

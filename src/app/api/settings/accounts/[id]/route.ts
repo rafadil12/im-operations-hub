@@ -142,6 +142,19 @@ export async function PUT(request: NextRequest, context: Ctx) {
         );
       }
 
+      if (roleChanged && roleId !== null) {
+        const assignedRole = await query<RowDataPacket[]>(
+          "SELECT name FROM roles WHERE id = ? LIMIT 1",
+          [roleId],
+        );
+        if (isProtectedRoleName(assignedRole[0]?.name as string | undefined)) {
+          return NextResponse.json(
+            { error: "The Super Admin role cannot be assigned." },
+            { status: 400 },
+          );
+        }
+      }
+
       if (roleChanged) {
         if (
           id === gate.session.systemUserId &&

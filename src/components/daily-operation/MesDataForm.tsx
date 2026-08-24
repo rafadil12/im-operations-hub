@@ -113,10 +113,25 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
     () => subcategoriesForCategory(masters, categoryId),
     [masters, categoryId],
   );
-  const userOptions = useMemo(
-    () => usersForDivision(masters, divisionId),
-    [masters, divisionId],
-  );
+  const userOptions = useMemo(() => {
+    const list = usersForDivision(masters, divisionId);
+    if (
+      initial?.user_id &&
+      !list.some((u) => u.id === initial.user_id) &&
+      (divisionId == null || initial.division_id === divisionId)
+    ) {
+      return [
+        ...list,
+        {
+          id: initial.user_id,
+          name_en: initial.pic_en,
+          name_cn: initial.pic_cn,
+          division_id: initial.division_id,
+        },
+      ];
+    }
+    return list;
+  }, [masters, divisionId, initial]);
 
   const handleDivision = (value: number | null) => {
     setDivisionId(value);
