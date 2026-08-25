@@ -10,7 +10,7 @@ function getSecret(): string {
   const secret = process.env.AUTH_SECRET;
   if (!secret || secret.length < 16) {
     throw new Error(
-      "AUTH_SECRET is missing or too short. Set a secret of at least 16 characters in .env.local",
+      "AUTH_SECRET is missing or too short. Set a secret of at least 16 characters in .env.local"
     );
   }
   return secret;
@@ -38,15 +38,12 @@ function decodePayload(encoded: string): SessionPayload | null {
       return null;
     }
     // Pre-session_version cookies are treated as version 0 (always invalid vs DB default 1).
-    const sessionVersion =
-      typeof parsed.sessionVersion === "number" ? parsed.sessionVersion : 0;
+    const sessionVersion = typeof parsed.sessionVersion === "number" ? parsed.sessionVersion : 0;
     return {
       systemUserId: parsed.systemUserId,
       userId: parsed.userId,
       roleName:
-        typeof parsed.roleName === "string" || parsed.roleName === null
-          ? parsed.roleName
-          : null,
+        typeof parsed.roleName === "string" || parsed.roleName === null ? parsed.roleName : null,
       sessionVersion,
       exp: parsed.exp,
     };
@@ -56,9 +53,7 @@ function decodePayload(encoded: string): SessionPayload | null {
 }
 
 function sign(encodedPayload: string): string {
-  return createHmac("sha256", getSecret())
-    .update(encodedPayload)
-    .digest("base64url");
+  return createHmac("sha256", getSecret()).update(encodedPayload).digest("base64url");
 }
 
 export function createSessionToken(input: {
@@ -107,7 +102,7 @@ export async function readSession(): Promise<SessionPayload | null> {
 
 export async function setSessionCookie(
   token: string,
-  options?: { maxAgeSeconds?: number },
+  options?: { maxAgeSeconds?: number }
 ): Promise<void> {
   const jar = await cookies();
   const maxAge = options?.maxAgeSeconds ?? MAX_AGE_SECONDS;

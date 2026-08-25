@@ -12,6 +12,7 @@ export default function ItsmPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch overview on mount
     setLoading(true);
     setError(null);
 

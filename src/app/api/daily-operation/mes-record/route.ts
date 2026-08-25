@@ -5,7 +5,7 @@ import { resolveRange } from "@/lib/dateRange";
 import {
   parseAndValidateMesBody,
   type MesValidationErrorKey,
-} from "@/lib/mesRecordValidation";
+} from "@/lib/daily-operation/mesRecordValidation";
 import type { MesDataInput, MesDataRow } from "@/lib/types";
 import { notifyMesRecordCreated } from "@/lib/wecomNotification";
 
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q");
     if (q) {
       conditions.push(
-        "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)",
+        "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
       );
       const like = `%${q}%`;
       params.push(like, like, like, like);
@@ -87,10 +87,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ rows, range: { start, end } });
   } catch (error) {
     console.error("GET /mes-record failed", error);
-    return NextResponse.json(
-      { error: "Failed to load records." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load records." }, { status: 500 });
   }
 }
 
@@ -134,7 +131,7 @@ export async function POST(request: NextRequest) {
           error: VALIDATION_MESSAGES[parsed.messageKey],
           errors: parsed.errors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -159,13 +156,11 @@ export async function POST(request: NextRequest) {
         data.status_id,
         data.start_time,
         data.end_time,
-      ],
+      ]
     );
 
     try {
-      const rows = await query<MesDataRow[]>(RECORD_DETAIL_SQL, [
-        result.insertId,
-      ]);
+      const rows = await query<MesDataRow[]>(RECORD_DETAIL_SQL, [result.insertId]);
       const record = rows[0];
       if (record) {
         await notifyMesRecordCreated(record);
@@ -177,9 +172,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ id: result.insertId }, { status: 201 });
   } catch (error) {
     console.error("POST /mes-record failed", error);
-    return NextResponse.json(
-      { error: "Failed to create record." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create record." }, { status: 500 });
   }
 }

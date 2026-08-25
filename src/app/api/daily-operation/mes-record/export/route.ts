@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
-import { buildActivitiesExport } from "@/lib/mesRecordImport";
+import { buildActivitiesExport } from "@/lib/daily-operation/mesRecordImport";
 import type { MesDataRow } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q");
     if (q) {
       conditions.push(
-        "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)",
+        "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
       );
       const like = `%${q}%`;
       params.push(like, like, like, like);
@@ -82,17 +82,13 @@ export async function GET(request: NextRequest) {
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "no-store",
       },
     });
   } catch (error) {
     console.error("GET /mes-record/export failed", error);
-    return NextResponse.json(
-      { error: "Failed to export records." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to export records." }, { status: 500 });
   }
 }

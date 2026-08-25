@@ -25,10 +25,7 @@ type FormState = {
 };
 
 type Props = {
-  titleKey:
-    | "masterUsers"
-    | "masterCategories"
-    | "masterSubcategories";
+  titleKey: "masterUsers" | "masterCategories" | "masterSubcategories";
   endpoint: string;
   relation: Relation;
 };
@@ -65,8 +62,7 @@ export function MasterManager({ titleKey, endpoint, relation }: Props) {
       : masters.categories
     : [];
 
-  const relationLabel =
-    relation === "division" ? t.fields.division : t.fields.category;
+  const relationLabel = relation === "division" ? t.fields.division : t.fields.category;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,9 +89,11 @@ export function MasterManager({ titleKey, endpoint, relation }: Props) {
   const relationNameFor = (row: MasterRow): string => {
     const id = relation === "division" ? row.division_id : row.category_id;
     if (!id || !masters) return "-";
-    const source =
-      relation === "division" ? masters.divisions : masters.categories;
-    return localizedName(source.find((x) => x.id === id), lang);
+    const source = relation === "division" ? masters.divisions : masters.categories;
+    return localizedName(
+      source.find((x) => x.id === id),
+      lang
+    );
   };
 
   const openAdd = () => {
@@ -109,8 +107,7 @@ export function MasterManager({ titleKey, endpoint, relation }: Props) {
     setForm({
       name_en: row.name_en ?? "",
       name_cn: row.name_cn ?? "",
-      relationId:
-        (relation === "division" ? row.division_id : row.category_id) ?? null,
+      relationId: (relation === "division" ? row.division_id : row.category_id) ?? null,
     });
     setFormOpen(true);
   };
@@ -126,8 +123,7 @@ export function MasterManager({ titleKey, endpoint, relation }: Props) {
       const body = {
         name_en: form.name_en.trim() || null,
         name_cn: form.name_cn.trim() || null,
-        [relation === "division" ? "division_id" : "category_id"]:
-          form.relationId,
+        [relation === "division" ? "division_id" : "category_id"]: form.relationId,
       };
       if (editRow) {
         await apiSend(`${endpoint}/${editRow.id}`, "PUT", body);
@@ -270,9 +266,7 @@ export function MasterManager({ titleKey, endpoint, relation }: Props) {
               <input
                 className={inputCls}
                 value={form.name_en}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name_en: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))}
               />
             </div>
             <div>
@@ -280,17 +274,13 @@ export function MasterManager({ titleKey, endpoint, relation }: Props) {
               <input
                 className={inputCls}
                 value={form.name_cn}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name_cn: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, name_cn: e.target.value }))}
               />
             </div>
             <div>
               <label className={labelCls}>
                 {relationLabel}
-                {relation === "category" ? (
-                  <span className="text-danger"> *</span>
-                ) : null}
+                {relation === "category" ? <span className="text-danger"> *</span> : null}
               </label>
               <select
                 className={inputCls}

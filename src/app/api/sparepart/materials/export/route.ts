@@ -46,7 +46,7 @@ export async function GET() {
        JOIN sparepart_categories c ON c.id = i.category_id
        JOIN uoms u ON u.id = i.uom_id
        WHERE i.deleted_at IS NULL
-       ORDER BY i.code ASC`,
+       ORDER BY i.code ASC`
     );
 
     const balanceRows = await query<BalanceExportRow[]>(
@@ -59,7 +59,7 @@ export async function GET() {
        JOIN sparepart_items i ON i.id = b.item_id
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
        WHERE i.deleted_at IS NULL AND b.qty > 0
-       ORDER BY i.code ASC, loc.name_en ASC`,
+       ORDER BY i.code ASC, loc.name_en ASC`
     );
 
     const workbook = new ExcelJS.Workbook();
@@ -128,16 +128,12 @@ export async function GET() {
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="sparepart-export.xlsx"`,
       },
     });
   } catch (error) {
     console.error("GET /sparepart/materials/export failed", error);
-    return NextResponse.json(
-      { error: "Failed to export materials." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to export materials." }, { status: 500 });
   }
 }

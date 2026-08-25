@@ -188,9 +188,7 @@ export function Header({ title }: HeaderProps) {
                 <ProfileIcon />
                 {account ? (
                   <>
-                    <span className="max-w-[8rem] truncate">
-                      {account.displayName}
-                    </span>
+                    <span className="max-w-[8rem] truncate">{account.displayName}</span>
                     <span className="text-text-dim">·</span>
                     <span>{account.roleLabel}</span>
                   </>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { IS_SERVICE_REQUEST_SQL } from "@/lib/itsmServiceRequest";
+import { IS_SERVICE_REQUEST_SQL } from "@/lib/itsm/serviceRequest";
 
 export async function GET() {
   const gate = await requirePermission(PERMISSIONS.itsmOverviewView);
@@ -51,7 +51,7 @@ export async function GET() {
             < DATE_FORMAT(CURDATE(), '%Y-%m-01')
       `),
       // Current Month Service Requests
-        query<Record<string, unknown>[]>(`
+      query<Record<string, unknown>[]>(`
           SELECT COUNT(*) AS total
           FROM itsm_requests
           WHERE ${IS_SERVICE_REQUEST_SQL}
@@ -61,8 +61,8 @@ export async function GET() {
                 < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
         `),
 
-        // Previous Month Service Requests
-        query<Record<string, unknown>[]>(`
+      // Previous Month Service Requests
+      query<Record<string, unknown>[]>(`
           SELECT COUNT(*) AS total
           FROM itsm_requests
           WHERE ${IS_SERVICE_REQUEST_SQL}
@@ -188,9 +188,7 @@ export async function GET() {
     const highestGroupTickets = Number(topGroups[0]?.count ?? 0);
 
     const highestGroupPercent =
-      totalTickets > 0
-        ? Math.round((highestGroupTickets / totalTickets) * 100)
-        : 0;
+      totalTickets > 0 ? Math.round((highestGroupTickets / totalTickets) * 100) : 0;
 
     // Total Ticket Change
     const currentMonthTickets = Number(currentMonth[0]?.total ?? 0);
@@ -204,60 +202,52 @@ export async function GET() {
     const topRequesterTickets = Number(topRequesters[0]?.totalTickets ?? 0);
 
     const topRequesterPercent =
-      totalTickets > 0
-        ? Math.round((topRequesterTickets / totalTickets) * 100)
-        : 0;
+      totalTickets > 0 ? Math.round((topRequesterTickets / totalTickets) * 100) : 0;
 
     const incidentCount = Number(incidents[0]?.total ?? 0);
 
-    const incidentPercent =
-      totalTickets > 0
-        ? Math.round((incidentCount / totalTickets) * 100)
-        : 0;
+    const incidentPercent = totalTickets > 0 ? Math.round((incidentCount / totalTickets) * 100) : 0;
 
     return NextResponse.json({
       kpi: {
-         totalTickets,
-          totalChange,
+        totalTickets,
+        totalChange,
 
-          openTickets: Number(open[0]?.total ?? 0),
+        openTickets: Number(open[0]?.total ?? 0),
 
-          inProgressTickets: Number(progress[0]?.total ?? 0),
+        inProgressTickets: Number(progress[0]?.total ?? 0),
 
-          serviceRequests: Number(serviceRequests[0]?.serviceRequests ?? 0),
-          serviceChange,
+        serviceRequests: Number(serviceRequests[0]?.serviceRequests ?? 0),
+        serviceChange,
 
-          closedToday: Number(closedToday[0]?.total ?? 0),
+        closedToday: Number(closedToday[0]?.total ?? 0),
 
-          overdueTickets: Number(overdue[0]?.total ?? 0),
-          
+        overdueTickets: Number(overdue[0]?.total ?? 0),
 
-          slaCompliance: 98.5,
-        },
+        slaCompliance: 98.5,
+      },
 
       highlights: {
-      highestPriorityGroup: topGroups[0]?.name ?? "-",
+        highestPriorityGroup: topGroups[0]?.name ?? "-",
 
-      highestPriorityGroupTickets: highestGroupTickets,
-      highestPriorityGroupPercent: highestGroupPercent,
+        highestPriorityGroupTickets: highestGroupTickets,
+        highestPriorityGroupPercent: highestGroupPercent,
 
-      busiestTechnician: topTechnicians[0]?.technician ?? "-",
-      busiestTechnicianTickets: Number(topTechnicians[0]?.totalTickets ?? 0),
-      busiestTechnicianPercent:
-        totalTickets > 0
-          ? Math.round(
-              (Number(topTechnicians[0]?.totalTickets ?? 0) / totalTickets) * 100
-            )
-          : 0,
+        busiestTechnician: topTechnicians[0]?.technician ?? "-",
+        busiestTechnicianTickets: Number(topTechnicians[0]?.totalTickets ?? 0),
+        busiestTechnicianPercent:
+          totalTickets > 0
+            ? Math.round((Number(topTechnicians[0]?.totalTickets ?? 0) / totalTickets) * 100)
+            : 0,
 
-      oldestOpenTicket: String(oldestTickets[0]?.requestId ?? "-"),
-      oldestOpenDays: Number(oldestTickets[0]?.daysOpen ?? 0),
-      topRequester: topRequesters[0]?.requester ?? "-",
-      topRequesterTickets,
-      topRequesterPercent,
+        oldestOpenTicket: String(oldestTickets[0]?.requestId ?? "-"),
+        oldestOpenDays: Number(oldestTickets[0]?.daysOpen ?? 0),
+        topRequester: topRequesters[0]?.requester ?? "-",
+        topRequesterTickets,
+        topRequesterPercent,
 
-      incidentCount,
-      incidentPercent,
+        incidentCount,
+        incidentPercent,
       },
 
       topTechnicians,

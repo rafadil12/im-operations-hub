@@ -73,14 +73,14 @@ const en = {
     overviewTitle: "Sparepart Overview",
     overviewDesc: "Stock levels, movements, and distribution across categories and locations",
     stockTitle: "Stock Overview",
-    stockDesc: "Current stock by material — totals across all storage locations, stock changes only via goods movements",
+    stockDesc:
+      "Current stock by material — totals across all storage locations, stock changes only via goods movements",
     stockSearchHint: "Search by material code, description, brand, or model",
     postTitle: "Stock Transactions",
     postDesc: "Receive, issue, or transfer stock between storage locations",
     documentsTitle: "Transaction History",
     documentsDesc: "History of posted stock transactions",
-    documentsSearchHint:
-      "Search by document number, material code, recipient, or note",
+    documentsSearchHint: "Search by document number, material code, recipient, or note",
     materialsTitle: "Items",
     materialsDesc: "Maintain item master data (code, name, brand, model, category, min stock)",
     materialsSearchHint: "Search by material code, description, brand, or model",
@@ -110,10 +110,8 @@ const en = {
     locationNameEn: "Location Name (EN)",
     locationNameCn: "Location Name (CN)",
     locationActive: "Active",
-    locationDeleteConfirm:
-      "This inactive storage location will be permanently deleted. Continue?",
-    locationDeleteActiveBlocked:
-      "Cannot delete an active storage location. Deactivate it first.",
+    locationDeleteConfirm: "This inactive storage location will be permanently deleted. Continue?",
+    locationDeleteActiveBlocked: "Cannot delete an active storage location. Deactivate it first.",
     stockByLocation: "Stock by Location",
     noBalances: "No stock balances recorded.",
     image: "Image",
@@ -223,8 +221,7 @@ const en = {
     rolesTitle: "Roles",
     rolesDesc: "Define roles and assign permissions",
     accountsTitle: "Accounts",
-    accountsDesc:
-      "Create a login account. Daily Operation PIC is assigned separately.",
+    accountsDesc: "Create a login account. Daily Operation PIC is assigned separately.",
     addAccount: "Add account",
     nameEn: "Name (EN)",
     nameCn: "Name (CN)",
@@ -251,8 +248,7 @@ const en = {
       "Share this password securely. The user should change it after signing in.",
     newPassword: "New password",
     confirmPassword: "Confirm password",
-    passwordOptionalHint:
-      "Leave blank to keep the current password, or set a new one manually.",
+    passwordOptionalHint: "Leave blank to keep the current password, or set a new one manually.",
     passwordResetSuccess: "Password reset successfully.",
   },
   auth: {
@@ -285,10 +281,8 @@ const en = {
       "Choose login accounts that can appear as PIC on activities. Create accounts in Settings.",
     assignPic: "Assign PIC",
     unassign: "Unassign",
-    unassignPicConfirm:
-      "This account will no longer appear as a PIC on activities. Continue?",
-    picEmpty:
-      "No PIC assigned yet. Add an account in Settings, then assign them here.",
+    unassignPicConfirm: "This account will no longer appear as a PIC on activities. Continue?",
+    picEmpty: "No PIC assigned yet. Add an account in Settings, then assign them here.",
     noPicCandidates: "No available accounts to assign.",
     selectAccount: "Account",
   },
@@ -300,11 +294,9 @@ const en = {
     manageDesc: "Track and manage IT service tickets",
 
     analysisTitle: "ITSM Analysis",
-    analysisDesc:
-      "View ITSM ticket trends, status, technician and support group analysis",
+    analysisDesc: "View ITSM ticket trends, status, technician and support group analysis",
 
-    masterDesc:
-      "Manage support groups, categories, subcategories, and other configurations",
+    masterDesc: "Manage support groups, categories, subcategories, and other configurations",
 
     requestId: "Request ID",
     subject: "Subject",
@@ -363,16 +355,14 @@ const en = {
     importTitle: "Import ITSM Requests",
     importHint:
       "Upload a ManageEngine Requests export (.xlsx). Header row is detected automatically (usually row 7). Existing Request IDs are overwritten; new IDs are inserted.",
-    importSuccess:
-      "Import complete: {imported} new, {updated} updated ({total} total).",
+    importSuccess: "Import complete: {imported} new, {updated} updated ({total} total).",
   },
 
   safety: {
     management: "Safety Management",
 
     overviewTitle: "Monthly Safety Overview",
-    overviewSubtitle:
-      "Monitor the completion of weekly safety requirements.",
+    overviewSubtitle: "Monitor the completion of weekly safety requirements.",
 
     monthlyProgress: "Monthly Progress",
     weeklyPeriods: "weekly periods",
@@ -406,8 +396,7 @@ const en = {
   },
   dashboard: {
     title: "Dashboard",
-    subtitle:
-      "Dashboard — click a card to expand, then open the module detail.",
+    subtitle: "Dashboard — click a card to expand, then open the module detail.",
 
     itsmDashboard: "ITSM Dashboard",
     dailyOperationDashboard: "Daily Operation Dashboard",
@@ -571,7 +560,6 @@ const en = {
     requestType: "Request Type",
     ofTotal: "of Total",
     tickets: "Tickets",
-
   },
   fields: {
     pic: "PIC",

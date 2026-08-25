@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import {
-  PERMISSIONS,
-  PROTECTED_ACCOUNT_EMPLOYEE_NO,
-  requireAnyPermission,
-} from "@/lib/auth";
+import { PERMISSIONS, PROTECTED_ACCOUNT_EMPLOYEE_NO, requireAnyPermission } from "@/lib/auth";
+import { jsonError } from "@/lib/safety/apiHelpers";
 
 type UserRow = {
   id: number;
@@ -36,7 +33,7 @@ export async function GET() {
           AND UPPER(COALESCE(u.employee_no, '')) <> ?
         ORDER BY u.employee_no ASC
       `,
-      [PROTECTED_ACCOUNT_EMPLOYEE_NO],
+      [PROTECTED_ACCOUNT_EMPLOYEE_NO]
     );
 
     return NextResponse.json({
@@ -45,13 +42,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/safety/users failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to load users.",
-      },
-      { status: 500 },
-    );
+    return jsonError("Failed to load users.", 500);
   }
 }

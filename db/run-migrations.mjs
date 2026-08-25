@@ -1,12 +1,21 @@
-// Idempotent migration runner. Usage:
-//   node --env-file=.env.local db/run-migrations.mjs
-
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+/**
+ * Idempotent migration runner — applies schema/data changes in fixed order.
+ *
+ * Usage:
+ *   node --env-file=.env.local db/run-migrations.mjs
+ *
+ * Optional:
+ *   ALLOW_DEV_PASSWORD_RESET=1  — reset all system_users passwords (local dev only)
+ *
+ * SQL reference files live in db/migrations/*.sql; guards here keep re-runs safe
+ * on databases that already applied some steps manually or via an older runner.
+ */
 import mysql from "mysql2/promise";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { createMigrationHelpers } from "./lib/migrationHelpers.mjs";
+import { readMigrationSql } from "./lib/readMigrationFiles.mjs";
+import { createSchemaIntrospection } from "./lib/schemaIntrospection.mjs";
+import { seedSparepartLocationsAndBalances } from "./lib/sparepartLocationSeed.mjs";
+import { migrateSuperadminRoleId } from "./lib/superadminRoleId.mjs";
 
 const conn = await mysql.createConnection({
   host: process.env.DB_HOST,
@@ -17,80 +26,24 @@ const conn = await mysql.createConnection({
   multipleStatements: true,
 });
 
-async function columnExists(table, column) {
-  const [rows] = await conn.query(
-    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-    [process.env.DB_NAME, table, column],
-  );
-  return rows.length > 0;
-}
+const schema = createSchemaIntrospection(conn, process.env.DB_NAME);
+const { columnExists, columnType, columnLength, tableExists, indexExists, constraintExists, columnNullable } =
+  schema;
+const { tryAddFk, tryAddConstraint, applySqlFile } = createMigrationHelpers(conn);
 
-async function columnType(table, column) {
-  const [rows] = await conn.query(
-    `SELECT DATA_TYPE FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-    [process.env.DB_NAME, table, column],
-  );
-  return rows[0]?.DATA_TYPE?.toLowerCase() ?? null;
-}
-
-async function columnLength(table, column) {
-  const [rows] = await conn.query(
-    `SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-    [process.env.DB_NAME, table, column],
-  );
-  return Number(rows[0]?.CHARACTER_MAXIMUM_LENGTH ?? 0);
-}
-
-async function tableExists(table) {
-  const [rows] = await conn.query(
-    `SELECT TABLE_NAME FROM information_schema.TABLES
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
-    [process.env.DB_NAME, table],
-  );
-  return rows.length > 0;
-}
-
-async function indexExists(table, indexName) {
-  const [rows] = await conn.query(
-    `SELECT INDEX_NAME FROM information_schema.STATISTICS
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?`,
-    [process.env.DB_NAME, table, indexName],
-  );
-  return rows.length > 0;
-}
-
-async function constraintExists(table, name) {
-  const [rows] = await conn.query(
-    `SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ?`,
-    [process.env.DB_NAME, table, name],
-  );
-  return rows.length > 0;
-}
-
-async function columnNullable(table, column) {
-  const [rows] = await conn.query(
-    `SELECT IS_NULLABLE FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-    [process.env.DB_NAME, table, column],
-  );
-  return rows[0]?.IS_NULLABLE === "YES";
-}
-
-// --- 001: mes_data.deleted_at ---
+// ---------------------------------------------------------------------------
+// 001: mes_data.deleted_at
+// ---------------------------------------------------------------------------
 if (await columnExists("mes_data", "deleted_at")) {
   console.log("mes_data.deleted_at already exists.");
 } else {
-  await conn.query(
-    "ALTER TABLE `mes_data` ADD COLUMN `deleted_at` DATETIME NULL DEFAULT NULL",
-  );
+  await conn.query(readMigrationSql("001_add_deleted_at.sql"));
   console.log("Added mes_data.deleted_at.");
 }
 
-// --- 002: Option B RBAC ---
+// ---------------------------------------------------------------------------
+// 002: Option B RBAC (DDL guards + seed file)
+// ---------------------------------------------------------------------------
 if (!(await columnExists("system_users", "role_id"))) {
   await conn.query(
     "ALTER TABLE `system_users` ADD COLUMN `role_id` INT NULL DEFAULT NULL",
@@ -107,31 +60,13 @@ if (!(await indexExists("system_users", "idx_system_users_role_id"))) {
   console.log("Added index idx_system_users_role_id.");
 }
 
-// FK may already exist from a previous run
-try {
-  await conn.query(
-    `ALTER TABLE \`system_users\`
-     ADD CONSTRAINT \`fk_system_users_role\`
-     FOREIGN KEY (\`role_id\`) REFERENCES \`roles\` (\`id\`)
-     ON DELETE RESTRICT ON UPDATE RESTRICT`,
-  );
-  console.log("Added fk_system_users_role.");
-} catch (err) {
-  const code = /** @type {{ code?: string }} */ (err).code;
-  if (code === "ER_DUP_KEYNAME" || code === "ER_FK_DUP_NAME" || code === "ER_CANNOT_ADD_FOREIGN") {
-    console.log("fk_system_users_role already present (or skipped).");
-  } else if (String(err).includes("Duplicate") || code === "ER_DUP_FIELDNAME") {
-    console.log("fk_system_users_role already present.");
-  } else {
-    // MariaDB often uses errno 121 for duplicate FK
-    const errno = /** @type {{ errno?: number }} */ (err).errno;
-    if (errno === 121 || errno === 1005 || errno === 1826) {
-      console.log("fk_system_users_role already present.");
-    } else {
-      throw err;
-    }
-  }
-}
+await tryAddConstraint(
+  `ALTER TABLE \`system_users\`
+   ADD CONSTRAINT \`fk_system_users_role\`
+   FOREIGN KEY (\`role_id\`) REFERENCES \`roles\` (\`id\`)
+   ON DELETE RESTRICT ON UPDATE RESTRICT`,
+  "fk_system_users_role",
+);
 
 if (!(await tableExists("role_permissions"))) {
   await conn.query(`
@@ -153,7 +88,6 @@ if (!(await tableExists("role_permissions"))) {
 }
 
 if (!(await indexExists("users", "uk_users_employee_no"))) {
-  // Only add UNIQUE if no duplicate employee_no values
   const [dups] = await conn.query(
     `SELECT employee_no, COUNT(*) AS c FROM users
      WHERE employee_no IS NOT NULL AND employee_no != ''
@@ -171,37 +105,31 @@ if (!(await indexExists("users", "uk_users_employee_no"))) {
   console.log("uk_users_employee_no already exists.");
 }
 
-const seedSql = readFileSync(
-  join(__dirname, "migrations", "002_rbac_option_b.sql"),
-  "utf8",
+await applySqlFile(
+  "002_rbac_option_b.sql",
+  readMigrationSql,
+  "Applied RBAC seed (roles, permissions, mappings, admin bootstrap).",
 );
-await conn.query(seedSql);
-console.log("Applied RBAC seed (roles, permissions, mappings, admin bootstrap).");
 
-// --- 003: Sparepart inventory ---
+// ---------------------------------------------------------------------------
+// 003: Sparepart inventory
+// ---------------------------------------------------------------------------
 if (await tableExists("sparepart_items")) {
   console.log("sparepart_items already exists.");
 } else {
-  const sparepartSql = readFileSync(
-    join(__dirname, "migrations", "003_sparepart_inventory.sql"),
-    "utf8",
-  );
-  await conn.query(sparepartSql);
+  await conn.query(readMigrationSql("003_sparepart_inventory.sql"));
   console.log("Created sparepart_items.");
 }
 
-// --- 004: SAP IM material documents ---
+// ---------------------------------------------------------------------------
+// 004: SAP IM material documents (+ legacy inbound/outbound migration)
+// ---------------------------------------------------------------------------
 if (await tableExists("sparepart_mat_docs")) {
   console.log("sparepart_mat_docs already exists.");
 } else {
-  const sapSql = readFileSync(
-    join(__dirname, "migrations", "004_sparepart_sap_im.sql"),
-    "utf8",
-  );
-  await conn.query(sapSql);
+  await conn.query(readMigrationSql("004_sparepart_sap_im.sql"));
   console.log("Created sparepart_mat_docs, sparepart_mat_doc_items.");
 
-  // Migrate legacy inbound → docs 101
   if (await tableExists("sparepart_inbound")) {
     const [inbounds] = await conn.query(
       `SELECT id, item_id, txn_date, qty, note FROM sparepart_inbound ORDER BY id ASC`,
@@ -226,7 +154,6 @@ if (await tableExists("sparepart_mat_docs")) {
     }
   }
 
-  // Migrate legacy outbound → docs 201
   if (await tableExists("sparepart_outbound")) {
     const [outbounds] = await conn.query(
       `SELECT id, item_id, txn_date, qty, note FROM sparepart_outbound ORDER BY id ASC`,
@@ -237,12 +164,7 @@ if (await tableExists("sparepart_mat_docs")) {
         `INSERT INTO sparepart_mat_docs
           (doc_number, movement_type, posting_date, header_text, recipient)
          VALUES (?, '201', ?, ?, ?)`,
-        [
-          docNumber,
-          row.txn_date,
-          "Migrated outbound",
-          row.note || "unknown",
-        ],
+        [docNumber, row.txn_date, "Migrated outbound", row.note || "unknown"],
       );
       await conn.query(
         `INSERT INTO sparepart_mat_doc_items
@@ -266,73 +188,11 @@ if (await tableExists("sparepart_outbound")) {
   console.log("Dropped sparepart_outbound.");
 }
 
-// --- 005: Multi-location stock ---
-function slugLocationCode(name) {
-  const slug = String(name)
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 64);
-  return slug || "LOC";
-}
-
-function normalizeLocationName(raw) {
-  const trimmed = String(raw ?? "").trim();
-  if (!trimmed || trimmed === "-") return null;
-  if (/^recepcionist$/i.test(trimmed)) return "Receptionist";
-  return trimmed;
-}
-
-function splitLocationNames(raw) {
-  if (raw == null || String(raw).trim() === "" || String(raw).trim() === "-") {
-    return [];
-  }
-  const parts = String(raw)
-    .split(",")
-    .map((p) => normalizeLocationName(p))
-    .filter(Boolean);
-  const seen = new Set();
-  const out = [];
-  for (const name of parts) {
-    const key = name.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(name);
-  }
-  return out;
-}
-
-/** One-shot physical corrections for mes_dashboard (not used by new imports). */
-const SEED_BALANCE_EXCEPTIONS = {
-  IT00056: [
-    { name: "Gudang Internal", qty: 6 },
-    { name: "Meja IT", qty: 0 },
-  ],
-  IT00057: [
-    { name: "Gudang Internal", qty: 17 },
-    { name: "Meja IT", qty: 0 },
-  ],
-  IT00058: [
-    { name: "Gudang Internal", qty: 13 },
-    { name: "Meja IT", qty: 0 },
-  ],
-  IT00104: [
-    { name: "Server Room", qty: 1 },
-    { name: "Meja IT", qty: 1 },
-  ],
-  IT00004: [
-    { name: "Server Room", qty: 0 },
-    { name: "Meja IT", qty: 0 },
-  ],
-};
-
+// ---------------------------------------------------------------------------
+// 005: Multi-location stock (tables, columns, seed, FKs)
+// ---------------------------------------------------------------------------
 if (!(await tableExists("sparepart_storage_locations"))) {
-  const sql005 = readFileSync(
-    join(__dirname, "migrations", "005_storage_locations.sql"),
-    "utf8",
-  );
-  await conn.query(sql005);
+  await conn.query(readMigrationSql("005_storage_locations.sql"));
   console.log("Created sparepart_storage_locations, sparepart_stock_balances.");
 } else {
   console.log("sparepart_storage_locations already exists.");
@@ -359,7 +219,6 @@ if (!(await columnExists("sparepart_mat_doc_items", "to_storage_location_id"))) 
 }
 
 if (!(await columnExists("sparepart_items", "default_storage_location_id"))) {
-  // Intentionally not re-adding: column removed in migration 007.
   console.log("sparepart_items.default_storage_location_id not present (dropped).");
 } else {
   console.log("sparepart_items.default_storage_location_id still present (will drop below).");
@@ -426,180 +285,7 @@ if (!(await indexExists("sparepart_mat_docs", "idx_sparepart_mat_docs_created_by
   console.log("idx_sparepart_mat_docs_created_by_su already exists.");
 }
 
-// Seed locations + balances once (idempotent: skip if any balance exists)
-const [balanceCountRows] = await conn.query(
-  `SELECT COUNT(*) AS c FROM sparepart_stock_balances`,
-);
-const balanceCount = Number(balanceCountRows[0]?.c ?? 0);
-
-if (balanceCount === 0 && (await tableExists("sparepart_items"))) {
-  const locationIdByName = new Map();
-  const hasLocNameEn = await columnExists("sparepart_storage_locations", "name_en");
-
-  async function ensureLocation(name, { active = true } = {}) {
-    const key = name.toLowerCase();
-    if (locationIdByName.has(key)) return locationIdByName.get(key);
-    const code = slugLocationCode(name);
-    const [existing] = await conn.query(
-      hasLocNameEn
-        ? `SELECT id, name_en AS name FROM sparepart_storage_locations
-           WHERE code = ? OR LOWER(name_en) = ? LIMIT 1`
-        : `SELECT id, name FROM sparepart_storage_locations
-           WHERE code = ? OR LOWER(name) = ? LIMIT 1`,
-      [code, key],
-    );
-    if (existing[0]) {
-      locationIdByName.set(key, existing[0].id);
-      locationIdByName.set(String(existing[0].name).toLowerCase(), existing[0].id);
-      return existing[0].id;
-    }
-    if (hasLocNameEn) {
-      const [ins] = await conn.query(
-        `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
-         VALUES (?, ?, ?, ?)`,
-        [code, name, name, active ? 1 : 0],
-      );
-      locationIdByName.set(key, ins.insertId);
-      return ins.insertId;
-    }
-    const [ins] = await conn.query(
-      `INSERT INTO sparepart_storage_locations (code, name, is_active)
-       VALUES (?, ?, ?)`,
-      [code, name, active ? 1 : 0],
-    );
-    locationIdByName.set(key, ins.insertId);
-    return ins.insertId;
-  }
-
-  const unassignedId = await ensureLocation("UNASSIGNED");
-
-  const hasLegacyLocation = await columnExists("sparepart_items", "location");
-  const [itemRows] = await conn.query(
-    hasLegacyLocation
-      ? `SELECT id, code, location, stock_current
-         FROM sparepart_items
-         WHERE deleted_at IS NULL
-         ORDER BY id ASC`
-      : `SELECT id, code, NULL AS location, stock_current
-         FROM sparepart_items
-         WHERE deleted_at IS NULL
-         ORDER BY id ASC`,
-  );
-
-  // Collect all location names first
-  for (const item of itemRows) {
-    for (const name of splitLocationNames(item.location)) {
-      await ensureLocation(name);
-    }
-  }
-  for (const entries of Object.values(SEED_BALANCE_EXCEPTIONS)) {
-    for (const e of entries) {
-      await ensureLocation(e.name);
-    }
-  }
-
-  for (const item of itemRows) {
-    const code = String(item.code);
-    const exception = SEED_BALANCE_EXCEPTIONS[code];
-    /** @type {{ name: string, qty: number }[]} */
-    let seeds;
-    if (exception) {
-      seeds = exception;
-    } else {
-      const names = splitLocationNames(item.location);
-      if (names.length === 0) {
-        seeds = [{ name: "UNASSIGNED", qty: Number(item.stock_current) || 0 }];
-      } else {
-        seeds = names.map((name, idx) => ({
-          name,
-          qty: idx === 0 ? Number(item.stock_current) || 0 : 0,
-        }));
-      }
-    }
-
-    let firstLocId = unassignedId;
-    for (let i = 0; i < seeds.length; i += 1) {
-      const seed = seeds[i];
-      const locId = await ensureLocation(seed.name);
-      if (i === 0) firstLocId = locId;
-      await conn.query(
-        `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE qty = VALUES(qty)`,
-        [item.id, locId, seed.qty],
-      );
-    }
-
-    const [sumRows] = await conn.query(
-      `SELECT COALESCE(SUM(qty), 0) AS total
-       FROM sparepart_stock_balances WHERE item_id = ?`,
-      [item.id],
-    );
-    const sumQty = Number(sumRows[0]?.total ?? 0);
-    if (sumQty !== Number(item.stock_current)) {
-      throw new Error(
-        `Seed balance mismatch for ${code}: SUM(balances)=${sumQty} vs stock_current=${item.stock_current}`,
-      );
-    }
-
-    if (await columnExists("sparepart_items", "default_storage_location_id")) {
-      await conn.query(
-        `UPDATE sparepart_items
-         SET default_storage_location_id = ?
-         WHERE id = ?`,
-        [firstLocId, item.id],
-      );
-    }
-  }
-
-  // Backfill mat_doc_items.storage_location_id from text snapshot
-  const [docLines] = await conn.query(
-    `SELECT id, storage_location FROM sparepart_mat_doc_items
-     WHERE storage_location_id IS NULL AND storage_location IS NOT NULL
-       AND storage_location != ''`,
-  );
-  let backfilled = 0;
-  for (const line of docLines) {
-    const names = splitLocationNames(line.storage_location);
-    const name = names[0];
-    if (!name) continue;
-    const locId = locationIdByName.get(name.toLowerCase());
-    if (!locId) continue;
-    await conn.query(
-      `UPDATE sparepart_mat_doc_items SET storage_location_id = ? WHERE id = ?`,
-      [locId, line.id],
-    );
-    backfilled += 1;
-  }
-
-  console.log(
-    `Seeded locations/balances for ${itemRows.length} item(s); backfilled ${backfilled} doc line location id(s).`,
-  );
-} else if (balanceCount > 0) {
-  console.log("sparepart_stock_balances already seeded; skipping seed.");
-}
-
-// Soft FKs for new columns (best-effort)
-async function tryAddFk(sql, label) {
-  try {
-    await conn.query(sql);
-    console.log(`Added ${label}.`);
-  } catch (err) {
-    const errno = /** @type {{ errno?: number }} */ (err).errno;
-    const code = /** @type {{ code?: string }} */ (err).code;
-    if (
-      errno === 121 ||
-      errno === 1005 ||
-      errno === 1826 ||
-      code === "ER_DUP_KEYNAME" ||
-      code === "ER_FK_DUP_NAME"
-    ) {
-      console.log(`${label} already present.`);
-    } else {
-      console.log(`Skipped ${label}: ${err.message ?? err}`);
-    }
-  }
-}
+await seedSparepartLocationsAndBalances(conn, schema);
 
 await tryAddFk(
   `ALTER TABLE \`sparepart_mat_doc_items\`
@@ -630,7 +316,9 @@ await tryAddFk(
   "fk_sparepart_mat_docs_created_by_su",
 );
 
-// --- 006: drop legacy sparepart_items.location ---
+// ---------------------------------------------------------------------------
+// 006: drop legacy sparepart_items.location
+// ---------------------------------------------------------------------------
 if (await columnExists("sparepart_items", "location")) {
   if (await indexExists("sparepart_items", "idx_sparepart_items_location")) {
     await conn.query(
@@ -644,7 +332,9 @@ if (await columnExists("sparepart_items", "location")) {
   console.log("sparepart_items.location already dropped.");
 }
 
-// --- 007: drop sparepart_items.default_storage_location_id ---
+// ---------------------------------------------------------------------------
+// 007: drop sparepart_items.default_storage_location_id
+// ---------------------------------------------------------------------------
 if (await columnExists("sparepart_items", "default_storage_location_id")) {
   try {
     await conn.query(
@@ -662,11 +352,11 @@ if (await columnExists("sparepart_items", "default_storage_location_id")) {
   console.log("sparepart_items.default_storage_location_id already dropped.");
 }
 
-// --- 008: upgrade sparepart_mat_docs.posting_date to DATETIME ---
+// ---------------------------------------------------------------------------
+// 008: upgrade sparepart_mat_docs.posting_date to DATETIME
+// ---------------------------------------------------------------------------
 if ((await columnType("sparepart_mat_docs", "posting_date")) === "date") {
-  await conn.query(
-    "ALTER TABLE `sparepart_mat_docs` MODIFY COLUMN `posting_date` DATETIME NOT NULL",
-  );
+  await conn.query(readMigrationSql("008_sparepart_posting_date_datetime.sql"));
   console.log("Updated sparepart_mat_docs.posting_date to DATETIME.");
 } else {
   console.log("sparepart_mat_docs.posting_date already DATETIME-compatible.");
@@ -686,15 +376,10 @@ if (await tableExists("sparepart_stock_balances")) {
 }
 
 // Dev-only: reset all login passwords to the documented local test password.
-// Never enable ALLOW_DEV_PASSWORD_RESET against shared/staging/production DBs.
 if (process.env.ALLOW_DEV_PASSWORD_RESET === "1") {
-  await conn.query(
-    "UPDATE `system_users` SET `password_hash` = ?",
-    [
-      // bcrypt hash of the local test password documented in README (dev bootstrap only)
-      "$2b$12$cI4pxfYd4Rl7BCh28HcnJOjYPSgw2e83P4xhntednum009ojIEp/W",
-    ],
-  );
+  await conn.query("UPDATE `system_users` SET `password_hash` = ?", [
+    "$2b$12$cI4pxfYd4Rl7BCh28HcnJOjYPSgw2e83P4xhntednum009ojIEp/W",
+  ]);
   console.warn(
     "ALLOW_DEV_PASSWORD_RESET=1: all system_users passwords were reset (local bootstrap only).",
   );
@@ -704,49 +389,47 @@ if (process.env.ALLOW_DEV_PASSWORD_RESET === "1") {
   );
 }
 
-// --- 004: remove redundant guest role (Guest Mode = not logged in) ---
-const removeGuestSql = readFileSync(
-  join(__dirname, "migrations", "004_remove_guest_role.sql"),
-  "utf8",
+// ---------------------------------------------------------------------------
+// Remove redundant guest role (Guest Mode = not logged in)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "004_remove_guest_role.sql",
+  readMigrationSql,
+  "Removed guest role (if present).",
 );
-await conn.query(removeGuestSql);
-console.log("Removed guest role (if present).");
 
-// --- 005: session_version for password-change invalidation ---
+// ---------------------------------------------------------------------------
+// session_version for password-change invalidation
+// ---------------------------------------------------------------------------
 if (!(await columnExists("system_users", "session_version"))) {
-  await conn.query(
-    "ALTER TABLE `system_users` ADD COLUMN `session_version` INT NOT NULL DEFAULT 1",
-  );
+  await conn.query(readMigrationSql("005_session_version.sql"));
   console.log("Added system_users.session_version.");
 } else {
   console.log("system_users.session_version already exists.");
 }
 
-// --- 006: expand permission catalog (19 codes) + migrate legacy ---
-const catalogV2Sql = readFileSync(
-  join(__dirname, "migrations", "006_permissions_catalog_v2.sql"),
-  "utf8",
+// ---------------------------------------------------------------------------
+// Permissions catalog v2 + sparepart RBAC + role cleanup
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "006_permissions_catalog_v2.sql",
+  readMigrationSql,
+  "Applied permissions catalog v2 (19 codes + legacy migration).",
 );
-await conn.query(catalogV2Sql);
-console.log("Applied permissions catalog v2 (19 codes + legacy migration).");
-
-// --- 009: sparepart RBAC catalog ---
-const sparepartPermSql = readFileSync(
-  join(__dirname, "migrations", "009_sparepart_permissions.sql"),
-  "utf8",
+await applySqlFile(
+  "009_sparepart_permissions.sql",
+  readMigrationSql,
+  "Applied sparepart permissions catalog.",
 );
-await conn.query(sparepartPermSql);
-console.log("Applied sparepart permissions catalog.");
-
-// --- 010: remove seeded manager/operator roles ---
-const removeManagerOperatorSql = readFileSync(
-  join(__dirname, "migrations", "010_remove_manager_operator_roles.sql"),
-  "utf8",
+await applySqlFile(
+  "010_remove_manager_operator_roles.sql",
+  readMigrationSql,
+  "Removed manager/operator roles (if present).",
 );
-await conn.query(removeManagerOperatorSql);
-console.log("Removed manager/operator roles (if present).");
 
-// --- 011: drop sparepart_items.stock_in / stock_out ---
+// ---------------------------------------------------------------------------
+// 011: drop sparepart_items.stock_in / stock_out
+// ---------------------------------------------------------------------------
 if (await columnExists("sparepart_items", "stock_in")) {
   await conn.query("ALTER TABLE `sparepart_items` DROP COLUMN `stock_in`");
   console.log("Dropped sparepart_items.stock_in.");
@@ -760,85 +443,24 @@ if (await columnExists("sparepart_items", "stock_out")) {
   console.log("sparepart_items.stock_out already dropped.");
 }
 
-// --- 012: Super Admin role + account ---
-const superadminSql = readFileSync(
-  join(__dirname, "migrations", "012_superadmin_bootstrap.sql"),
-  "utf8",
+// ---------------------------------------------------------------------------
+// 012: Super Admin role + account
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "012_superadmin_bootstrap.sql",
+  readMigrationSql,
+  "Applied Super Admin bootstrap (role + user + system_users).",
 );
-await conn.query(superadminSql);
-console.log("Applied Super Admin bootstrap (role + user + system_users).");
 
-// --- 013: ensure superadmin has roles.id = 1 ---
-{
-  const [[sa]] = await conn.query(
-    `SELECT id FROM roles WHERE name = 'superadmin' LIMIT 1`,
-  );
-  const [[adm]] = await conn.query(
-    `SELECT id FROM roles WHERE name = 'admin' LIMIT 1`,
-  );
-  if (!sa) {
-    console.log("Skip 013: superadmin role missing.");
-  } else if (Number(sa.id) === 1) {
-    console.log("superadmin already roles.id=1.");
-  } else if (!adm || Number(adm.id) !== 1) {
-    // superadmin not 1, and id=1 is free or not admin — move superadmin to 1
-    const oldSa = Number(sa.id);
-    await conn.query("SET FOREIGN_KEY_CHECKS = 0");
-    await conn.query(`UPDATE roles SET id = 1 WHERE id = ?`, [oldSa]);
-    await conn.query(`UPDATE role_permissions SET role_id = 1 WHERE role_id = ?`, [
-      oldSa,
-    ]);
-    await conn.query(`UPDATE system_users SET role_id = 1 WHERE role_id = ?`, [
-      oldSa,
-    ]);
-    await conn.query("SET FOREIGN_KEY_CHECKS = 1");
-    console.log(`Moved superadmin id ${oldSa} → 1.`);
-  } else {
-    // Swap admin (1) <-> superadmin (oldSa)
-    const oldSa = Number(sa.id);
-    const TEMP = 900001;
-    await conn.query("SET FOREIGN_KEY_CHECKS = 0");
-    // admin 1 → TEMP
-    await conn.query(`UPDATE roles SET id = ? WHERE id = 1`, [TEMP]);
-    await conn.query(`UPDATE role_permissions SET role_id = ? WHERE role_id = 1`, [
-      TEMP,
-    ]);
-    await conn.query(`UPDATE system_users SET role_id = ? WHERE role_id = 1`, [
-      TEMP,
-    ]);
-    // superadmin oldSa → 1
-    await conn.query(`UPDATE roles SET id = 1 WHERE id = ?`, [oldSa]);
-    await conn.query(`UPDATE role_permissions SET role_id = 1 WHERE role_id = ?`, [
-      oldSa,
-    ]);
-    await conn.query(`UPDATE system_users SET role_id = 1 WHERE role_id = ?`, [
-      oldSa,
-    ]);
-    // admin TEMP → oldSa
-    await conn.query(`UPDATE roles SET id = ? WHERE id = ?`, [oldSa, TEMP]);
-    await conn.query(`UPDATE role_permissions SET role_id = ? WHERE role_id = ?`, [
-      oldSa,
-      TEMP,
-    ]);
-    await conn.query(`UPDATE system_users SET role_id = ? WHERE role_id = ?`, [
-      oldSa,
-      TEMP,
-    ]);
-    await conn.query("SET FOREIGN_KEY_CHECKS = 1");
-    console.log(`Swapped roles: superadmin → id=1, admin → id=${oldSa}.`);
-  }
+// ---------------------------------------------------------------------------
+// 013: ensure superadmin has roles.id = 1
+// ---------------------------------------------------------------------------
+await migrateSuperadminRoleId(conn);
 
-  // Keep SUPERADMIN account on superadmin role
-  await conn.query(
-    `UPDATE system_users su
-     JOIN users u ON u.id = su.user_id
-     JOIN roles r ON r.name = 'superadmin'
-     SET su.role_id = r.id, su.is_active = 1
-     WHERE u.employee_no = 'SUPERADMIN'`,
-  );
-}
-
-// --- 014: sparepart_items bilingual name/brand ---
+// ---------------------------------------------------------------------------
+// 014: sparepart_items bilingual name/brand
+// (inline guards: COALESCE(NULLIF(...)) differs from 014 SQL file)
+// ---------------------------------------------------------------------------
 if (!(await columnExists("sparepart_items", "name_en"))) {
   await conn.query(
     "ALTER TABLE `sparepart_items` ADD COLUMN `name_en` VARCHAR(255) NULL AFTER `code`",
@@ -892,13 +514,11 @@ if (await columnExists("sparepart_items", "brand")) {
   console.log("sparepart_items.brand already dropped.");
 }
 
-// --- 015: sparepart categories + min_stock ---
+// ---------------------------------------------------------------------------
+// 015: sparepart categories + min_stock
+// ---------------------------------------------------------------------------
 if (!(await tableExists("sparepart_categories"))) {
-  const sql015 = readFileSync(
-    join(__dirname, "migrations", "015_sparepart_category_min_stock.sql"),
-    "utf8",
-  );
-  await conn.query(sql015);
+  await conn.query(readMigrationSql("015_sparepart_category_min_stock.sql"));
   console.log("Created sparepart_categories.");
 } else {
   console.log("sparepart_categories already exists.");
@@ -1028,10 +648,11 @@ if (await tableExists("sparepart_items")) {
   }
 }
 
-// --- 016: uoms + sparepart_items.uom_id + AGV/ASSEMBLY racks ---
+// ---------------------------------------------------------------------------
+// 016: uoms + sparepart_items.uom_id + AGV/ASSEMBLY racks
+// ---------------------------------------------------------------------------
 if (!(await tableExists("uoms"))) {
-  const sql016 = readFileSync(join(__dirname, "migrations", "016_uoms.sql"), "utf8");
-  await conn.query(sql016);
+  await conn.query(readMigrationSql("016_uoms.sql"));
   console.log("Created uoms.");
 } else {
   console.log("uoms already exists.");
@@ -1149,19 +770,19 @@ if (await tableExists("sparepart_storage_locations")) {
   }
 }
 
-// --- 017: sparepart_items.is_active ---
+// ---------------------------------------------------------------------------
+// 017: sparepart_items.is_active
+// ---------------------------------------------------------------------------
 if (await columnExists("sparepart_items", "is_active")) {
   console.log("sparepart_items.is_active already exists.");
 } else {
-  await conn.query(
-    `ALTER TABLE \`sparepart_items\`
-     ADD COLUMN \`is_active\` TINYINT(1) NOT NULL DEFAULT 1
-     AFTER \`min_stock\``,
-  );
+  await conn.query(readMigrationSql("017_sparepart_items_is_active.sql"));
   console.log("Added sparepart_items.is_active.");
 }
 
-// --- 018: ASSEMBLY category CN label 组装 → 管道 ---
+// ---------------------------------------------------------------------------
+// 018: ASSEMBLY category CN label 组装 → 管道
+// ---------------------------------------------------------------------------
 if (await tableExists("sparepart_categories")) {
   const [updated] = await conn.query(
     `UPDATE sparepart_categories
@@ -1177,7 +798,9 @@ if (await tableExists("sparepart_categories")) {
   }
 }
 
-// --- 019: storage location bilingual names ---
+// ---------------------------------------------------------------------------
+// 019: storage location bilingual names
+// ---------------------------------------------------------------------------
 if (await tableExists("sparepart_storage_locations")) {
   const hasName = await columnExists("sparepart_storage_locations", "name");
   const hasNameEn = await columnExists("sparepart_storage_locations", "name_en");
@@ -1210,7 +833,7 @@ if (await tableExists("sparepart_storage_locations")) {
     console.log("sparepart_storage_locations.name_cn already exists.");
   }
 
-  /** @type {Array<[string, string]>} code → name_cn */
+  /** @type {Array<[string, string]>} */
   const cnByCode = [
     ["SL000", "未分配"],
     ["SL001", "机房"],
@@ -1236,7 +859,7 @@ if (await tableExists("sparepart_storage_locations")) {
     ["ASM-RACK-E", "管道货架 E"],
     ["ASM-RACK-F", "管道货架 F"],
   ];
-  /** @type {Array<[string, string]>} name_en → name_cn */
+  /** @type {Array<[string, string]>} */
   const cnByNameEn = [
     ["UNASSIGNED", "未分配"],
     ["SERVER ROOM", "机房"],
@@ -1294,26 +917,20 @@ if (await tableExists("sparepart_storage_locations")) {
   }
 }
 
-// --- 020: Safety + sparepart overview permissions ---
-const catalogV3Sql = readFileSync(
-  join(__dirname, "migrations", "020_permissions_catalog_v3.sql"),
-  "utf8",
+// ---------------------------------------------------------------------------
+// 020: Safety + sparepart overview permissions
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "020_permissions_catalog_v3.sql",
+  readMigrationSql,
+  "Applied permissions catalog v3 (Safety + sparepart overview).",
 );
-await conn.query(catalogV3Sql);
-console.log("Applied permissions catalog v3 (Safety + sparepart overview).");
 
-// --- 021: Daily Operation PIC flag on login accounts ---
+// ---------------------------------------------------------------------------
+// 021: Daily Operation PIC flag on login accounts
+// ---------------------------------------------------------------------------
 if (!(await columnExists("system_users", "is_daily_operation_pic"))) {
-  await conn.query(
-    "ALTER TABLE `system_users` ADD COLUMN `is_daily_operation_pic` TINYINT(1) NOT NULL DEFAULT 0",
-  );
-  await conn.query(
-    `UPDATE system_users su
-     INNER JOIN users u ON u.id = su.user_id
-     SET su.is_daily_operation_pic = 1
-     WHERE su.is_active = 1
-       AND UPPER(COALESCE(u.employee_no, '')) <> 'SUPERADMIN'`,
-  );
+  await conn.query(readMigrationSql("021_daily_operation_pic.sql"));
   console.log(
     "Added system_users.is_daily_operation_pic and backfilled existing active non-superadmin accounts.",
   );

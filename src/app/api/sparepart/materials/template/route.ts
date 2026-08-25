@@ -42,17 +42,12 @@ export async function GET() {
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition":
-          'attachment; filename="sparepart-template.xlsx"',
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="sparepart-template.xlsx"',
       },
     });
   } catch (error) {
     console.error("GET /sparepart/materials/template failed", error);
-    return NextResponse.json(
-      { error: "Failed to download template." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to download template." }, { status: 500 });
   }
 }

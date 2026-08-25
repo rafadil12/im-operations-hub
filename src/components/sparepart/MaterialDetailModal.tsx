@@ -31,14 +31,11 @@ type Props = {
 
 export function MaterialDetailModal({ item, onClose }: Props) {
   const { t, lang } = useLang();
-  const [fetchedBalances, setFetchedBalances] = useState<
-    SparepartStockBalance[] | null
-  >(null);
+  const [fetchedBalances, setFetchedBalances] = useState<SparepartStockBalance[] | null>(null);
   const [loadingBalances, setLoadingBalances] = useState(!item.balances);
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const imgFailed =
-    failedImageUrl !== null && failedImageUrl === item.image_url;
+  const imgFailed = failedImageUrl !== null && failedImageUrl === item.image_url;
 
   useEffect(() => {
     if (item.balances) return;
@@ -47,7 +44,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
     (async () => {
       try {
         const data = await apiGetAbs<{ balances: SparepartStockBalance[] }>(
-          `/api/sparepart/materials/${item.id}/balances`,
+          `/api/sparepart/materials/${item.id}/balances`
         );
         if (!cancelled) setFetchedBalances(data.balances);
       } catch {
@@ -87,8 +84,10 @@ export function MaterialDetailModal({ item, onClose }: Props) {
               name_en: item.category_name_en ?? null,
               name_cn: item.category_name_cn ?? null,
             },
-            lang,
-          ) || item.category_code || "-",
+            lang
+          ) ||
+          item.category_code ||
+          "-",
       },
       { label: t.sparepart.uom, value: item.uom_code || "-" },
     ],
@@ -96,9 +95,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
       { label: t.sparepart.minStock, value: item.min_stock ?? 0 },
       {
         label: t.sparepart.stockCurrent,
-        value: item.uom_code
-          ? `${item.stock_current} ${item.uom_code}`
-          : item.stock_current,
+        value: item.uom_code ? `${item.stock_current} ${item.uom_code}` : item.stock_current,
       },
     ],
     [{ label: t.sparepart.notes, value: item.notes || "-" }],
@@ -142,15 +139,13 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                   </dt>
                   <dd className="text-sm font-medium text-text">{row.value}</dd>
                 </div>
-              )),
+              ))
             )}
           </dl>
         </div>
 
         <div className="mt-4">
-          <h3 className="mb-3 text-sm font-semibold text-text">
-            {t.sparepart.stockByLocation}
-          </h3>
+          <h3 className="mb-3 text-sm font-semibold text-text">{t.sparepart.stockByLocation}</h3>
           {showLoading ? (
             <p className="text-xs text-text-muted">{t.common.loading}</p>
           ) : balances.length === 0 ? (
@@ -162,17 +157,12 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                   <tr>
                     <th className={th}>{t.sparepart.locationCode}</th>
                     <th className={th}>{t.sparepart.locationName}</th>
-                    <th className={`${th} text-right`}>
-                      {t.sparepart.stockCurrent}
-                    </th>
+                    <th className={`${th} text-right`}>{t.sparepart.stockCurrent}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {balances.map((b) => (
-                    <tr
-                      key={b.id}
-                      className="border-b border-border-subtle/60 last:border-0"
-                    >
+                    <tr key={b.id} className="border-b border-border-subtle/60 last:border-0">
                       <td className={td}>{b.location_code ?? "-"}</td>
                       <td className={td}>
                         {localizedName(
@@ -180,7 +170,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                             name_en: b.location_name_en ?? b.location_name ?? null,
                             name_cn: b.location_name_cn ?? null,
                           },
-                          lang,
+                          lang
                         )}
                       </td>
                       <td className={`${td} text-right tabular-nums`}>

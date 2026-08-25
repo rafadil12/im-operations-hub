@@ -4,8 +4,7 @@ import type { AuthAccountPublic } from "./types";
 import { hashPassword, verifyPassword } from "./password";
 
 export type ChangePasswordResult =
-  | { ok: true }
-  | { ok: false; code: "not_found" | "wrong_current" };
+  { ok: true } | { ok: false; code: "not_found" | "wrong_current" };
 
 type AccountRow = RowDataPacket & {
   system_user_id: number;
@@ -21,15 +20,12 @@ type AccountRow = RowDataPacket & {
 };
 
 function displayName(
-  row: Pick<AccountRow, "user_id" | "name_en" | "name_cn" | "employee_no">,
+  row: Pick<AccountRow, "user_id" | "name_en" | "name_cn" | "employee_no">
 ): string {
   return row.name_en || row.name_cn || row.employee_no || `User #${row.user_id}`;
 }
 
-function toPublic(
-  row: AccountRow,
-  permissions: string[],
-): AuthAccountPublic {
+function toPublic(row: AccountRow, permissions: string[]): AuthAccountPublic {
   const roleName = row.role_name;
   return {
     id: row.user_id,
@@ -37,9 +33,7 @@ function toPublic(
     employeeId: row.employee_no,
     displayName: displayName(row),
     roleName,
-    roleLabel: roleName
-      ? roleName.charAt(0).toUpperCase() + roleName.slice(1)
-      : "No role",
+    roleLabel: roleName ? roleName.charAt(0).toUpperCase() + roleName.slice(1) : "No role",
     permissions,
     sessionVersion: Number(row.session_version) || 1,
   };
@@ -58,9 +52,7 @@ const ACCOUNT_SELECT = `
   r.name AS role_name
 `;
 
-export async function loadPermissionsForRole(
-  roleId: number | null,
-): Promise<string[]> {
+export async function loadPermissionsForRole(roleId: number | null): Promise<string[]> {
   if (!roleId) return [];
   const rows = await query<RowDataPacket[]>(
     `SELECT p.code
@@ -68,14 +60,12 @@ export async function loadPermissionsForRole(
      INNER JOIN permissions p ON p.id = rp.permission_id
      WHERE rp.role_id = ?
      ORDER BY p.code`,
-    [roleId],
+    [roleId]
   );
   return rows.map((r) => String(r.code));
 }
 
-export async function findAccountByEmployeeNo(
-  employeeNo: string,
-): Promise<AccountRow | null> {
+export async function findAccountByEmployeeNo(employeeNo: string): Promise<AccountRow | null> {
   const rows = await query<AccountRow[]>(
     `SELECT ${ACCOUNT_SELECT}
      FROM system_users su
@@ -83,14 +73,12 @@ export async function findAccountByEmployeeNo(
      LEFT JOIN roles r ON r.id = su.role_id
      WHERE u.employee_no = ?
      LIMIT 1`,
-    [employeeNo],
+    [employeeNo]
   );
   return rows[0] ?? null;
 }
 
-export async function findAccountBySystemUserId(
-  systemUserId: number,
-): Promise<AccountRow | null> {
+export async function findAccountBySystemUserId(systemUserId: number): Promise<AccountRow | null> {
   const rows = await query<AccountRow[]>(
     `SELECT ${ACCOUNT_SELECT}
      FROM system_users su
@@ -98,14 +86,12 @@ export async function findAccountBySystemUserId(
      LEFT JOIN roles r ON r.id = su.role_id
      WHERE su.id = ?
      LIMIT 1`,
-    [systemUserId],
+    [systemUserId]
   );
   return rows[0] ?? null;
 }
 
-export async function getAccountPublic(
-  systemUserId: number,
-): Promise<AuthAccountPublic | null> {
+export async function getAccountPublic(systemUserId: number): Promise<AuthAccountPublic | null> {
   const row = await findAccountBySystemUserId(systemUserId);
   if (!row || !row.is_active) return null;
   const permissions = await loadPermissionsForRole(row.role_id);
@@ -114,7 +100,7 @@ export async function getAccountPublic(
 
 export async function authenticateLogin(
   login: string,
-  password: string,
+  password: string
 ): Promise<AuthAccountPublic | null> {
   const employeeNo = login.trim();
   if (!employeeNo || !password) return null;
@@ -125,10 +111,7 @@ export async function authenticateLogin(
   const ok = await verifyPassword(password, row.password_hash);
   if (!ok) return null;
 
-  await execute(
-    "UPDATE system_users SET last_login_at = NOW() WHERE id = ?",
-    [row.system_user_id],
-  );
+  await execute("UPDATE system_users SET last_login_at = NOW() WHERE id = ?", [row.system_user_id]);
 
   const permissions = await loadPermissionsForRole(row.role_id);
   return toPublic(row, permissions);
@@ -137,7 +120,7 @@ export async function authenticateLogin(
 export async function changePassword(
   systemUserId: number,
   currentPassword: string,
-  newPassword: string,
+  newPassword: string
 ): Promise<ChangePasswordResult> {
   const row = await findAccountBySystemUserId(systemUserId);
   if (!row || !row.is_active) return { ok: false, code: "not_found" };
@@ -150,15 +133,12 @@ export async function changePassword(
     `UPDATE system_users
      SET password_hash = ?, session_version = COALESCE(session_version, 1) + 1
      WHERE id = ?`,
-    [passwordHash, systemUserId],
+    [passwordHash, systemUserId]
   );
   return { ok: true };
 }
 
-export async function resetPassword(
-  systemUserId: number,
-  newPassword: string,
-): Promise<boolean> {
+export async function resetPassword(systemUserId: number, newPassword: string): Promise<boolean> {
   const row = await findAccountBySystemUserId(systemUserId);
   if (!row) return false;
 
@@ -167,7 +147,7 @@ export async function resetPassword(
     `UPDATE system_users
      SET password_hash = ?, session_version = COALESCE(session_version, 1) + 1
      WHERE id = ?`,
-    [passwordHash, systemUserId],
+    [passwordHash, systemUserId]
   );
   return true;
 }

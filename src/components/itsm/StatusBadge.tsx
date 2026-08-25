@@ -6,11 +6,7 @@ function toneFromKey(toneKey: string | null | undefined): string {
   const key = (toneKey ?? "").toLowerCase().trim();
 
   // Resolved / 已解决
-  if (
-    key.includes("resolved") ||
-    key.includes("已解决") ||
-    key.includes("solved")
-  ) {
+  if (key.includes("resolved") || key.includes("已解决") || key.includes("solved")) {
     return "bg-emerald-100 text-emerald-800";
   }
 
@@ -20,11 +16,7 @@ function toneFromKey(toneKey: string | null | undefined): string {
   }
 
   // In Progress / 处理中
-  if (
-    key.includes("progress") ||
-    key.includes("处理中") ||
-    key.includes("processing")
-  ) {
+  if (key.includes("progress") || key.includes("处理中") || key.includes("processing")) {
     return "bg-sky-100 text-sky-800";
   }
 
@@ -40,12 +32,7 @@ function toneFromKey(toneKey: string | null | undefined): string {
   }
 
   // Open / Created / 已创建
-  if (
-    key.includes("open") ||
-    key.includes("created") ||
-    key.includes("已创建") ||
-    key === "新建"
-  ) {
+  if (key.includes("open") || key.includes("created") || key.includes("已创建") || key === "新建") {
     return "bg-rose-100 text-rose-800";
   }
 
@@ -77,10 +64,7 @@ type TicketStatusBadgeProps = {
   toneKey?: string | null;
 };
 
-export default function TicketStatusBadge({
-  label,
-  toneKey,
-}: TicketStatusBadgeProps) {
+export default function TicketStatusBadge({ label, toneKey }: TicketStatusBadgeProps) {
   if (!label || label === "-") {
     return <span className="text-text-dim">-</span>;
   }
@@ -88,7 +72,7 @@ export default function TicketStatusBadge({
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${toneFromKey(
-        toneKey ?? label,
+        toneKey ?? label
       )}`}
     >
       {label}

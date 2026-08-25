@@ -30,8 +30,7 @@ type FormState = {
 const inputCls =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent";
 const labelCls = "mb-1 block text-xs font-medium text-text-muted";
-const th =
-  "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
+const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
 const td = "px-3 py-2 text-xs text-text-muted";
 
 export function RolesManager() {
@@ -150,9 +149,7 @@ export function RolesManager() {
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-text">
-            {t.settings.rolesTitle}
-          </h1>
+          <h1 className="text-lg font-semibold text-text">{t.settings.rolesTitle}</h1>
           <p className="text-sm text-text-muted">{t.settings.rolesDesc}</p>
         </div>
         <button
@@ -201,15 +198,9 @@ export function RolesManager() {
                     <td className={`${td} font-medium text-text`}>{row.name}</td>
                     <td className={td}>{row.description ?? "-"}</td>
                     <td className={td}>
-                      <span className="text-text">
-                        {row.permissionIds.length}
-                      </span>
+                      <span className="text-text">{row.permissionIds.length}</span>
                       <span className="ml-1 text-text-dim">
-                        (
-                        {row.permissionIds
-                          .slice(0, 3)
-                          .map(permissionLabel)
-                          .join(", ")}
+                        ({row.permissionIds.slice(0, 3).map(permissionLabel).join(", ")}
                         {row.permissionIds.length > 3 ? "…" : ""})
                       </span>
                     </td>
@@ -277,9 +268,7 @@ export function RolesManager() {
                 className={inputCls}
                 value={form.name}
                 disabled={editRow?.name === "superadmin"}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="e.g. operator"
               />
             </div>
@@ -288,9 +277,7 @@ export function RolesManager() {
               <input
                 className={inputCls}
                 value={form.description}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
             </div>
             <div>
@@ -298,9 +285,7 @@ export function RolesManager() {
               <PermissionTreePicker
                 permissions={permissions}
                 selectedIds={form.permissionIds}
-                onChange={(permissionIds) =>
-                  setForm((f) => ({ ...f, permissionIds }))
-                }
+                onChange={(permissionIds) => setForm((f) => ({ ...f, permissionIds }))}
               />
             </div>
           </div>

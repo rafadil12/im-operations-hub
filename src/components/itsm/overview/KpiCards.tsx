@@ -79,13 +79,7 @@ export default function KpiCards({ data }: Props) {
         icon={<ClipboardList size={20} />}
         color="cyan"
         change={Math.abs(data.serviceChange)}
-        trend={
-          data.serviceChange > 0
-            ? "up"
-            : data.serviceChange < 0
-              ? "down"
-              : "flat"
-        }
+        trend={data.serviceChange > 0 ? "up" : data.serviceChange < 0 ? "down" : "flat"}
       />
     </div>
   );

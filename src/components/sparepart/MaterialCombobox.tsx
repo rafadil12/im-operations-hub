@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang, localizedName, localizedField } from "@/lib/i18n";
 import type { SparepartItem } from "@/lib/types";
@@ -125,10 +119,9 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       limit: String(SUGGEST_LIMIT),
     });
 
-    apiGetAbs<SuggestResponse>(
-      `/api/sparepart/materials/suggest?${params.toString()}`,
-      { signal: ac.signal },
-    )
+    apiGetAbs<SuggestResponse>(`/api/sparepart/materials/suggest?${params.toString()}`, {
+      signal: ac.signal,
+    })
       .then((data) => {
         setSuggestions(data.rows);
         setHighlight(0);
@@ -175,7 +168,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       const params = new URLSearchParams({ exactCode: code });
       const data = await apiGetAbs<SuggestResponse>(
         `/api/sparepart/materials/suggest?${params.toString()}`,
-        { signal: ac.signal },
+        { signal: ac.signal }
       );
       if (data.rows.length === 1) {
         pick(data.rows[0]);
@@ -195,9 +188,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setOpen(true);
-      setHighlight((h) =>
-        suggestions.length ? Math.min(h + 1, suggestions.length - 1) : 0,
-      );
+      setHighlight((h) => (suggestions.length ? Math.min(h + 1, suggestions.length - 1) : 0));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
@@ -276,13 +267,9 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
                     index === highlight ? "text-white/80" : "text-text-dim"
                   }`}
                 >
-                  {localizedField(item.brand_en, item.brand_cn, lang) +
-                    " / " +
-                    (item.model || "-")}{" "}
+                  {localizedField(item.brand_en, item.brand_cn, lang) + " / " + (item.model || "-")}{" "}
                   · stock:{" "}
-                  {item.uom_code
-                    ? `${item.stock_current} ${item.uom_code}`
-                    : item.stock_current}
+                  {item.uom_code ? `${item.stock_current} ${item.uom_code}` : item.stock_current}
                 </span>
               </button>
             </li>
@@ -291,8 +278,8 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       ) : null}
       {selected ? (
         <p className="mt-1 text-[11px] text-text-dim">
-          {localizedField(selected.brand_en, selected.brand_cn, lang)} /{" "}
-          {selected.model ?? "-"} · stock:{" "}
+          {localizedField(selected.brand_en, selected.brand_cn, lang)} / {selected.model ?? "-"} ·
+          stock:{" "}
           {selected.uom_code
             ? `${selected.stock_current} ${selected.uom_code}`
             : selected.stock_current}

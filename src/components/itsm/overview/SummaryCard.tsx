@@ -2,11 +2,7 @@
 
 import { ReactNode } from "react";
 import { useLang } from "@/lib/i18n";
-import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
-} from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 type SummaryCardProps = {
   title: string;
@@ -71,11 +67,7 @@ export default function SummaryCard({
   const c = colors[color];
   const { t } = useLang();
   const trendColor =
-    trend === "up"
-      ? "text-emerald-400"
-      : trend === "down"
-        ? "text-red-400"
-        : "text-gray-400";
+    trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-gray-400";
 
   return (
     <div className="flex h-full min-w-0 flex-col rounded-xl border border-border-subtle bg-surface p-4 shadow-sm transition-all hover:shadow-md sm:p-5">
@@ -121,27 +113,17 @@ export default function SummaryCard({
         {change !== undefined && trend !== undefined && (
           <div className="flex min-w-0 items-end justify-between gap-2">
             <div className="min-w-0">
-              <div
-                className={`flex items-center gap-1 text-sm font-semibold ${trendColor}`}
-              >
+              <div className={`flex items-center gap-1 text-sm font-semibold ${trendColor}`}>
                 {trend === "up" && <TrendingUp size={14} className="shrink-0" />}
-                {trend === "down" && (
-                  <TrendingDown size={14} className="shrink-0" />
-                )}
+                {trend === "down" && <TrendingDown size={14} className="shrink-0" />}
                 {trend === "flat" && <Minus size={14} className="shrink-0" />}
                 <span className="truncate">{change}</span>
               </div>
 
-              <p className="truncate text-xs text-text-muted">
-                {t.itsm.vsLastMonth}
-              </p>
+              <p className="truncate text-xs text-text-muted">{t.itsm.vsLastMonth}</p>
             </div>
 
-            <svg
-              className="h-[30px] w-[72px] shrink-0 sm:w-[90px]"
-              viewBox="0 0 90 30"
-              aria-hidden
-            >
+            <svg className="h-[30px] w-[72px] shrink-0 sm:w-[90px]" viewBox="0 0 90 30" aria-hidden>
               <path
                 d="M2 26C10 26 16 18 24 18C32 18 38 26 46 26C56 26 60 6 70 6C80 6 84 24 88 18"
                 fill="none"

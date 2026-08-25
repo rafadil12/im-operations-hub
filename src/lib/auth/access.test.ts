@@ -11,7 +11,7 @@ import {
 import type { AuthAccountPublic } from "@/lib/auth/types";
 
 function account(
-  overrides: Partial<AuthAccountPublic> & { permissions: string[] },
+  overrides: Partial<AuthAccountPublic> & { permissions: string[] }
 ): AuthAccountPublic {
   return {
     id: 1,
@@ -28,13 +28,9 @@ function account(
 describe("accountHasPermission", () => {
   it("applies guest defaults when account is missing", () => {
     expect(accountHasPermission(null, PERMISSIONS.itsmRequestRead)).toBe(true);
-    expect(accountHasPermission(undefined, PERMISSIONS.overviewView)).toBe(
-      true,
-    );
+    expect(accountHasPermission(undefined, PERMISSIONS.overviewView)).toBe(true);
     expect(accountHasPermission(null, PERMISSIONS.settingsAccess)).toBe(false);
-    expect(accountHasPermission(null, PERMISSIONS.dailyRecordCreate)).toBe(
-      false,
-    );
+    expect(accountHasPermission(null, PERMISSIONS.dailyRecordCreate)).toBe(false);
   });
 
   it("returns true only when code is present for logged-in accounts", () => {
@@ -99,7 +95,7 @@ describe("getRoleAccess", () => {
           PERMISSIONS.dailyRecordCreate,
           PERMISSIONS.dailyRecordUpdate,
         ],
-      }),
+      })
     );
     expect(access.canAddDailyRecord).toBe(true);
     expect(access.canUpdateDailyRecord).toBe(true);
@@ -114,16 +110,14 @@ describe("getRoleAccess", () => {
           PERMISSIONS.dailyRecordExport,
           PERMISSIONS.dailyRecordTemplate,
         ],
-      }),
+      })
     );
     expect(withIo.canImportDailyRecord).toBe(true);
     expect(withIo.canExportDailyRecord).toBe(true);
     expect(withIo.canDownloadDailyTemplate).toBe(true);
     expect(withIo.canAccessSettings).toBe(false);
 
-    const settingsOnly = getRoleAccess(
-      account({ permissions: [PERMISSIONS.settingsAccess] }),
-    );
+    const settingsOnly = getRoleAccess(account({ permissions: [PERMISSIONS.settingsAccess] }));
     expect(settingsOnly.canAccessSettings).toBe(true);
     expect(settingsOnly.canImportDailyRecord).toBe(false);
     expect(settingsOnly.canExportDailyRecord).toBe(false);
@@ -133,11 +127,8 @@ describe("getRoleAccess", () => {
   it("gates itsm modules independently", () => {
     const access = getRoleAccess(
       account({
-        permissions: [
-          PERMISSIONS.itsmOverviewView,
-          PERMISSIONS.itsmRequestImport,
-        ],
-      }),
+        permissions: [PERMISSIONS.itsmOverviewView, PERMISSIONS.itsmRequestImport],
+      })
     );
     expect(access.canViewItsmOverview).toBe(true);
     expect(access.canViewItsmRequests).toBe(false);
@@ -151,7 +142,7 @@ describe("getRoleAccess", () => {
       account({
         roleName: "custom",
         permissions: [PERMISSIONS.adminRolesManage],
-      }),
+      })
     );
     expect(access.canAccessSettings).toBe(true);
     expect(access.canManageRoles).toBe(true);
@@ -160,18 +151,14 @@ describe("getRoleAccess", () => {
   });
 
   it("grants accounts manage independently of roles manage", () => {
-    const access = getRoleAccess(
-      account({ permissions: [PERMISSIONS.adminAccountsManage] }),
-    );
+    const access = getRoleAccess(account({ permissions: [PERMISSIONS.adminAccountsManage] }));
     expect(access.canAccessSettings).toBe(true);
     expect(access.canManageAccounts).toBe(true);
     expect(access.canManageRoles).toBe(false);
   });
 
   it("maps configuration manage from daily master permission", () => {
-    const access = getRoleAccess(
-      account({ permissions: [PERMISSIONS.dailyMasterManage] }),
-    );
+    const access = getRoleAccess(account({ permissions: [PERMISSIONS.dailyMasterManage] }));
     expect(access.canManageConfiguration).toBe(true);
     expect(access.canAccessSettings).toBe(false);
   });
@@ -184,7 +171,7 @@ describe("getRoleAccess", () => {
           PERMISSIONS.sparepartStockView,
           PERMISSIONS.sparepartDocumentPost,
         ],
-      }),
+      })
     );
     expect(access.canViewSparepartOverview).toBe(true);
     expect(access.canViewSparepartStock).toBe(true);
@@ -197,11 +184,8 @@ describe("getRoleAccess", () => {
   it("gates safety modules independently", () => {
     const access = getRoleAccess(
       account({
-        permissions: [
-          PERMISSIONS.safetyOverviewView,
-          PERMISSIONS.safetySubmissionCreate,
-        ],
-      }),
+        permissions: [PERMISSIONS.safetyOverviewView, PERMISSIONS.safetySubmissionCreate],
+      })
     );
     expect(access.canViewSafetyOverview).toBe(true);
     expect(access.canViewSafetySubmissions).toBe(false);
@@ -211,49 +195,37 @@ describe("getRoleAccess", () => {
   });
 
   it("exposes overview.view as canViewOverview", () => {
-    const access = getRoleAccess(
-      account({ permissions: [PERMISSIONS.overviewView] }),
-    );
+    const access = getRoleAccess(account({ permissions: [PERMISSIONS.overviewView] }));
     expect(access.canViewOverview).toBe(true);
   });
 });
 
 describe("privileged role assignment helpers", () => {
   it("detects admin manage permissions", () => {
-    expect(
-      permissionsIncludeAdminManage([PERMISSIONS.adminAccountsManage]),
-    ).toBe(true);
-    expect(
-      permissionsIncludeAdminManage([PERMISSIONS.itsmRequestRead]),
-    ).toBe(false);
+    expect(permissionsIncludeAdminManage([PERMISSIONS.adminAccountsManage])).toBe(true);
+    expect(permissionsIncludeAdminManage([PERMISSIONS.itsmRequestRead])).toBe(false);
   });
 
   it("allows privileged assignment for admin role or roles-manage", () => {
-    expect(
-      canAssignPrivilegedRoles(
-        account({ roleName: "admin", permissions: [] }),
-      ),
-    ).toBe(true);
-    expect(
-      canAssignPrivilegedRoles(
-        account({ roleName: "superadmin", permissions: [] }),
-      ),
-    ).toBe(true);
+    expect(canAssignPrivilegedRoles(account({ roleName: "admin", permissions: [] }))).toBe(true);
+    expect(canAssignPrivilegedRoles(account({ roleName: "superadmin", permissions: [] }))).toBe(
+      true
+    );
     expect(
       canAssignPrivilegedRoles(
         account({
           roleName: "custom",
           permissions: [PERMISSIONS.adminRolesManage],
-        }),
-      ),
+        })
+      )
     ).toBe(true);
     expect(
       canAssignPrivilegedRoles(
         account({
           roleName: "custom",
           permissions: [PERMISSIONS.adminAccountsManage],
-        }),
-      ),
+        })
+      )
     ).toBe(false);
   });
 });

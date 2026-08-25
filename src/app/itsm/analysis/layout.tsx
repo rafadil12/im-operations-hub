@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { pageMetadata } from "@/lib/seo";
 
-// The page itself is a Client Component, which cannot export metadata.
+// Metadata stays here; interactive UI lives in AnalysisClient.
 export const metadata = pageMetadata({
   title: "Analysis · Daily Operation",
   description:

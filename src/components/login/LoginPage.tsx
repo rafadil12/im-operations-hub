@@ -3,11 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  useState,
-  useSyncExternalStore,
-  type FormEvent,
-} from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { ImOneLogo } from "@/components/brand/ImOneLogo";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useLang } from "@/lib/i18n";
@@ -136,11 +132,7 @@ export function LoginPage() {
   const { login, account, loading: authLoading } = useAuth();
   const { lang, setLang, t } = useLang();
   const { theme, toggleTheme } = useTheme();
-  const clock = useSyncExternalStore(
-    subscribeClock,
-    getClockSnapshot,
-    getClockServerSnapshot,
-  );
+  const clock = useSyncExternalStore(subscribeClock, getClockSnapshot, getClockServerSnapshot);
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -241,8 +233,8 @@ export function LoginPage() {
             Operations, One Platform.
           </h1>
           <p className="mt-3 max-w-[40rem] text-[15px] leading-relaxed text-text-muted">
-            Unified visibility across factory floor, IT services, logistics, and
-            daily operations — all in one place.
+            Unified visibility across factory floor, IT services, logistics, and daily operations —
+            all in one place.
           </p>
 
           <div className="relative mt-2 w-full max-w-[480px] lg:mt-3 lg:max-w-[520px] xl:max-w-[640px]">
@@ -265,12 +257,8 @@ export function LoginPage() {
         {/* Right: Sign In card */}
         <section className="flex w-full shrink-0 justify-center lg:w-[380px] lg:justify-end xl:w-[400px]">
           <div className="w-full max-w-[400px] rounded-2xl border border-border/80 bg-bg-elevated p-8 shadow-[0_18px_50px_rgba(15,23,42,0.10)]">
-            <h2 className="text-[1.75rem] font-bold leading-none text-accent">
-              Sign In
-            </h2>
-            <p className="mt-2 text-sm text-text-muted">
-              Access your operations dashboard.
-            </p>
+            <h2 className="text-[1.75rem] font-bold leading-none text-accent">Sign In</h2>
+            <p className="mt-2 text-sm text-text-muted">Access your operations dashboard.</p>
 
             {account && !authLoading ? (
               <div className="mt-5 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
@@ -283,9 +271,7 @@ export function LoginPage() {
 
             <form className="mt-7 space-y-5" onSubmit={onSubmit}>
               <label className="block">
-                <span className="mb-2 block text-sm text-text-muted">
-                  Employee ID
-                </span>
+                <span className="mb-2 block text-sm text-text-muted">Employee ID</span>
                 <span className="relative block">
                   <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-dim">
                     <UserIcon />
@@ -303,9 +289,7 @@ export function LoginPage() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm text-text-muted">
-                  Password
-                </span>
+                <span className="mb-2 block text-sm text-text-muted">Password</span>
                 <span className="relative block">
                   <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-dim">
                     <LockIcon />
@@ -323,9 +307,7 @@ export function LoginPage() {
                     type="button"
                     className="absolute inset-y-0 right-2 grid w-9 place-items-center text-text-dim hover:text-text"
                     onClick={() => setShowPassword((v) => !v)}
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     <EyeIcon open={showPassword} />
                   </button>
@@ -342,10 +324,7 @@ export function LoginPage() {
                   />
                   Remember me
                 </label>
-                <Link
-                  href="/"
-                  className="font-medium text-accent hover:underline"
-                >
+                <Link href="/" className="font-medium text-accent hover:underline">
                   {t.auth.goToDashboard}
                 </Link>
               </div>
@@ -378,15 +357,9 @@ export function LoginPage() {
           </div>
           <p className="hidden sm:block">Kayy_Nou</p>
           <div className="flex flex-wrap gap-5">
-            <span className="cursor-default hover:text-text-muted">
-              Privacy Policy
-            </span>
-            <span className="cursor-default hover:text-text-muted">
-              Help Desk
-            </span>
-            <span className="cursor-default hover:text-text-muted">
-              IT Support
-            </span>
+            <span className="cursor-default hover:text-text-muted">Privacy Policy</span>
+            <span className="cursor-default hover:text-text-muted">Help Desk</span>
+            <span className="cursor-default hover:text-text-muted">IT Support</span>
           </div>
         </div>
       </footer>

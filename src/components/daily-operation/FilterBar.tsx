@@ -26,15 +26,12 @@ export function FilterBar({ masters, initial, onApply }: Props) {
   const { lang, t } = useLang();
   const [draft, setDraft] = useState<Filters>(initial);
 
-  const update = (patch: Partial<Filters>) =>
-    setDraft((prev) => ({ ...prev, ...patch }));
+  const update = (patch: Partial<Filters>) => setDraft((prev) => ({ ...prev, ...patch }));
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.fields.from}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.fields.from}</label>
         <input
           type="date"
           className={ctrl}
@@ -43,9 +40,7 @@ export function FilterBar({ masters, initial, onApply }: Props) {
         />
       </div>
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.fields.to}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.fields.to}</label>
         <input
           type="date"
           className={ctrl}
@@ -73,9 +68,7 @@ export function FilterBar({ masters, initial, onApply }: Props) {
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.fields.status}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.fields.status}</label>
         <select
           className={ctrl}
           value={draft.statusId}
@@ -91,9 +84,7 @@ export function FilterBar({ masters, initial, onApply }: Props) {
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.fields.type}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.fields.type}</label>
         <select
           className={ctrl}
           value={draft.typeId}
@@ -109,9 +100,7 @@ export function FilterBar({ masters, initial, onApply }: Props) {
       </div>
 
       <div className="flex-1 min-w-40">
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.common.search}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.common.search}</label>
         <input
           type="text"
           className={`${ctrl} w-full`}

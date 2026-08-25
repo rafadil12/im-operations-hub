@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import {
-  PERMISSIONS,
-  PROTECTED_ACCOUNT_EMPLOYEE_NO,
-  requirePermission,
-} from "@/lib/auth";
+import { PERMISSIONS, PROTECTED_ACCOUNT_EMPLOYEE_NO, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 const PIC_SELECT = `
@@ -40,7 +36,7 @@ export async function GET() {
          WHERE su.is_daily_operation_pic = 1
            AND UPPER(COALESCE(u.employee_no, '')) <> ?
          ORDER BY u.employee_no`,
-        [PROTECTED_ACCOUNT_EMPLOYEE_NO],
+        [PROTECTED_ACCOUNT_EMPLOYEE_NO]
       ),
       query<RowDataPacket[]>(
         `SELECT ${PIC_SELECT}
@@ -50,7 +46,7 @@ export async function GET() {
            AND su.is_daily_operation_pic = 0
            AND UPPER(COALESCE(u.employee_no, '')) <> ?
          ORDER BY u.employee_no`,
-        [PROTECTED_ACCOUNT_EMPLOYEE_NO],
+        [PROTECTED_ACCOUNT_EMPLOYEE_NO]
       ),
     ]);
 
@@ -72,9 +68,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const userId = Number(body.user_id);
     const divisionId =
-      body.division_id === null ||
-      body.division_id === "" ||
-      body.division_id === undefined
+      body.division_id === null || body.division_id === "" || body.division_id === undefined
         ? null
         : Number(body.division_id);
 
@@ -82,10 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Account is required." }, { status: 400 });
     }
     if (divisionId === null || Number.isNaN(divisionId)) {
-      return NextResponse.json(
-        { error: "Division is required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Division is required." }, { status: 400 });
     }
 
     const account = await query<RowDataPacket[]>(
@@ -94,59 +85,41 @@ export async function POST(request: NextRequest) {
        INNER JOIN users u ON u.id = su.user_id
        WHERE u.id = ?
        LIMIT 1`,
-      [userId],
+      [userId]
     );
     if (!account[0]) {
-      return NextResponse.json(
-        { error: "Account not found." },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Account not found." }, { status: 404 });
     }
-    if (
-      String(account[0].employee_no ?? "").toUpperCase() ===
-      PROTECTED_ACCOUNT_EMPLOYEE_NO
-    ) {
+    if (String(account[0].employee_no ?? "").toUpperCase() === PROTECTED_ACCOUNT_EMPLOYEE_NO) {
       return NextResponse.json(
         { error: "The Super Admin account cannot be assigned as PIC." },
-        { status: 400 },
+        { status: 400 }
       );
     }
     if (!account[0].is_active) {
       return NextResponse.json(
         { error: "Inactive accounts cannot be assigned as PIC." },
-        { status: 400 },
+        { status: 400 }
       );
     }
     if (Number(account[0].is_daily_operation_pic) === 1) {
-      return NextResponse.json(
-        { error: "This account is already a PIC." },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: "This account is already a PIC." }, { status: 409 });
     }
 
     const divisions = await query<RowDataPacket[]>(
       "SELECT id FROM divisions WHERE id = ? LIMIT 1",
-      [divisionId],
+      [divisionId]
     );
     if (!divisions[0]) {
       return NextResponse.json({ error: "Division not found." }, { status: 404 });
     }
 
-    await execute("UPDATE users SET division_id = ? WHERE id = ?", [
-      divisionId,
-      userId,
-    ]);
-    await execute(
-      "UPDATE system_users SET is_daily_operation_pic = 1 WHERE user_id = ?",
-      [userId],
-    );
+    await execute("UPDATE users SET division_id = ? WHERE id = ?", [divisionId, userId]);
+    await execute("UPDATE system_users SET is_daily_operation_pic = 1 WHERE user_id = ?", [userId]);
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     console.error("POST /users failed", error);
-    return NextResponse.json(
-      { error: "Failed to assign PIC." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to assign PIC." }, { status: 500 });
   }
 }

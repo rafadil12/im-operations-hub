@@ -12,10 +12,7 @@ function collectCodes(def: PermissionTreeDef): string[] {
   return [...own, ...nested];
 }
 
-function findNode(
-  nodes: PermissionTreeDef[],
-  id: string,
-): PermissionTreeDef | undefined {
+function findNode(nodes: PermissionTreeDef[], id: string): PermissionTreeDef | undefined {
   for (const node of nodes) {
     if (node.id === id) return node;
     const nested = findNode(node.children ?? [], id);
@@ -59,10 +56,7 @@ describe("PERMISSION_TREE", () => {
 
   it("places safety overview and management under Safety", () => {
     const safety = findNode(PERMISSION_TREE, "safety");
-    expect(safety?.children?.map((c) => c.id)).toEqual([
-      "safety-overview",
-      "safety-management",
-    ]);
+    expect(safety?.children?.map((c) => c.id)).toEqual(["safety-overview", "safety-management"]);
     expect(findNode(PERMISSION_TREE, "safety-overview")?.codes).toEqual([
       PERMISSIONS.safetyOverviewView,
     ]);

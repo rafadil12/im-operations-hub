@@ -15,10 +15,9 @@ import {
 import { query, withTransaction } from "@/lib/db";
 
 async function roleIsPrivileged(roleId: number): Promise<boolean> {
-  const roles = await query<RowDataPacket[]>(
-    "SELECT name FROM roles WHERE id = ? LIMIT 1",
-    [roleId],
-  );
+  const roles = await query<RowDataPacket[]>("SELECT name FROM roles WHERE id = ? LIMIT 1", [
+    roleId,
+  ]);
   const name = roles[0]?.name;
   if (typeof name !== "string") return false;
   if (isProtectedRoleName(name) || name === "admin") return true;
@@ -45,19 +44,17 @@ export async function GET() {
        FROM system_users su
        INNER JOIN users u ON u.id = su.user_id
        LEFT JOIN roles r ON r.id = su.role_id
-       ORDER BY u.employee_no`,
+       ORDER BY u.employee_no`
     );
 
-    const callerIsSuperAdmin = isProtectedAccountEmployeeNo(
-      gate.account?.employeeId,
-    );
+    const callerIsSuperAdmin = isProtectedAccountEmployeeNo(gate.account?.employeeId);
     const visible = rows.filter((r) => {
       if (callerIsSuperAdmin) return true;
       return !isProtectedAccountEmployeeNo(r.employee_no as string | null);
     });
 
     const divisions = await query<RowDataPacket[]>(
-      "SELECT id, name_en, name_cn FROM divisions ORDER BY name_en",
+      "SELECT id, name_en, name_cn FROM divisions ORDER BY name_en"
     );
 
     return NextResponse.json({
@@ -80,10 +77,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/settings/accounts failed", error);
-    return NextResponse.json(
-      { error: "Failed to load accounts." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load accounts." }, { status: 500 });
   }
 }
 
@@ -100,48 +94,30 @@ export async function POST(request: NextRequest) {
     const nameEn = body.name_en?.toString().trim() || null;
     const nameCn = body.name_cn?.toString().trim() || null;
     const divisionId =
-      body.division_id === null ||
-      body.division_id === "" ||
-      body.division_id === undefined
+      body.division_id === null || body.division_id === "" || body.division_id === undefined
         ? null
         : Number(body.division_id);
     const roleId =
       body.role_id === null || body.role_id === "" || body.role_id === undefined
         ? null
         : Number(body.role_id);
-    const isActive =
-      body.is_active === undefined ? true : Boolean(body.is_active);
+    const isActive = body.is_active === undefined ? true : Boolean(body.is_active);
     const generateTemp = Boolean(body.generate_temporary_password);
-    const newPassword =
-      typeof body.password === "string" ? body.password : "";
+    const newPassword = typeof body.password === "string" ? body.password : "";
     const confirmPassword =
-      typeof body.confirm_password === "string"
-        ? body.confirm_password
-        : undefined;
+      typeof body.confirm_password === "string" ? body.confirm_password : undefined;
 
     if (!employeeNo) {
-      return NextResponse.json(
-        { error: "Employee ID is required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Employee ID is required." }, { status: 400 });
     }
     if (isProtectedAccountEmployeeNo(employeeNo)) {
-      return NextResponse.json(
-        { error: "That Employee ID is reserved." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "That Employee ID is reserved." }, { status: 400 });
     }
     if (!nameEn && !nameCn) {
-      return NextResponse.json(
-        { error: "Name (EN or CN) is required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Name (EN or CN) is required." }, { status: 400 });
     }
     if (divisionId !== null && Number.isNaN(divisionId)) {
-      return NextResponse.json(
-        { error: "Invalid division id." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid division id." }, { status: 400 });
     }
     if (roleId !== null && Number.isNaN(roleId)) {
       return NextResponse.json({ error: "Invalid role id." }, { status: 400 });
@@ -150,10 +126,9 @@ export async function POST(request: NextRequest) {
     if (generateTemp && newPassword.length > 0) {
       return NextResponse.json(
         {
-          error:
-            "Provide either a manual password or generate_temporary_password, not both.",
+          error: "Provide either a manual password or generate_temporary_password, not both.",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -162,15 +137,12 @@ export async function POST(request: NextRequest) {
       passwordToSet = generateTemporaryPassword();
     } else {
       if (!newPassword) {
-        return NextResponse.json(
-          { error: "Password is required." },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "Password is required." }, { status: 400 });
       }
       if (newPassword !== confirmPassword) {
         return NextResponse.json(
           { error: "New password and confirmation do not match." },
-          { status: 400 },
+          { status: 400 }
         );
       }
       if (newPassword.length < MIN_PASSWORD_LENGTH) {
@@ -178,7 +150,7 @@ export async function POST(request: NextRequest) {
           {
             error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
       passwordToSet = newPassword;
@@ -187,7 +159,7 @@ export async function POST(request: NextRequest) {
     if (roleId !== null) {
       const roles = await query<RowDataPacket[]>(
         "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
-        [roleId],
+        [roleId]
       );
       if (!roles[0]) {
         return NextResponse.json({ error: "Role not found." }, { status: 404 });
@@ -196,19 +168,15 @@ export async function POST(request: NextRequest) {
       if (isProtectedRoleName(roleName)) {
         return NextResponse.json(
           { error: "The Super Admin role cannot be assigned." },
-          { status: 400 },
+          { status: 400 }
         );
       }
-      if (
-        (await roleIsPrivileged(roleId)) &&
-        !canAssignPrivilegedRoles(gate.account)
-      ) {
+      if ((await roleIsPrivileged(roleId)) && !canAssignPrivilegedRoles(gate.account)) {
         return NextResponse.json(
           {
-            error:
-              "Assigning admin or privileged roles requires roles-manage permission.",
+            error: "Assigning admin or privileged roles requires roles-manage permission.",
           },
-          { status: 403 },
+          { status: 403 }
         );
       }
     }
@@ -216,39 +184,33 @@ export async function POST(request: NextRequest) {
     if (divisionId !== null) {
       const divisions = await query<RowDataPacket[]>(
         "SELECT id FROM divisions WHERE id = ? LIMIT 1",
-        [divisionId],
+        [divisionId]
       );
       if (!divisions[0]) {
-        return NextResponse.json(
-          { error: "Division not found." },
-          { status: 404 },
-        );
+        return NextResponse.json({ error: "Division not found." }, { status: 404 });
       }
     }
 
     const existing = await query<RowDataPacket[]>(
       "SELECT id FROM users WHERE employee_no = ? LIMIT 1",
-      [employeeNo],
+      [employeeNo]
     );
     if (existing[0]) {
-      return NextResponse.json(
-        { error: "Employee ID already exists." },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: "Employee ID already exists." }, { status: 409 });
     }
 
     const passwordHash = await hashPassword(passwordToSet);
     const created = await withTransaction(async (conn) => {
       const [userResult] = await conn.execute(
         "INSERT INTO users (employee_no, name_cn, name_en, division_id) VALUES (?, ?, ?, ?)",
-        [employeeNo, nameCn, nameEn, divisionId],
+        [employeeNo, nameCn, nameEn, divisionId]
       );
       const userId = Number((userResult as { insertId: number }).insertId);
       const [accountResult] = await conn.execute(
         `INSERT INTO system_users
            (user_id, password_hash, is_active, role_id, session_version, is_daily_operation_pic)
          VALUES (?, ?, ?, ?, 1, 0)`,
-        [userId, passwordHash, isActive ? 1 : 0, roleId],
+        [userId, passwordHash, isActive ? 1 : 0, roleId]
       );
       return {
         id: Number((accountResult as { insertId: number }).insertId),
@@ -260,20 +222,14 @@ export async function POST(request: NextRequest) {
       generateTemp
         ? { ok: true, id: created.id, userId: created.userId, temporaryPassword: passwordToSet }
         : { ok: true, id: created.id, userId: created.userId },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     const errno = (error as { errno?: number }).errno;
     if (errno === 1062) {
-      return NextResponse.json(
-        { error: "Employee ID already exists." },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: "Employee ID already exists." }, { status: 409 });
     }
     console.error("POST /api/settings/accounts failed", error);
-    return NextResponse.json(
-      { error: "Failed to create account." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create account." }, { status: 500 });
   }
 }

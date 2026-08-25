@@ -11,9 +11,6 @@ export async function GET() {
     return NextResponse.json(masters);
   } catch (error) {
     console.error("GET /masters failed", error);
-    return NextResponse.json(
-      { error: "Failed to load master data." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load master data." }, { status: 500 });
   }
 }

@@ -10,10 +10,6 @@ export const metadata = pageMetadata({
 
 export default function MasterSubcategoriesPage() {
   return (
-    <MasterManager
-      titleKey="masterSubcategories"
-      endpoint="/subcategories"
-      relation="category"
-    />
+    <MasterManager titleKey="masterSubcategories" endpoint="/subcategories" relation="category" />
   );
 }

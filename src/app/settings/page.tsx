@@ -8,8 +8,7 @@ import { useLang } from "@/lib/i18n";
 export default function SettingsIndexPage() {
   const router = useRouter();
   const { t } = useLang();
-  const { canManageRoles, canManageAccounts, canAccessSettings } =
-    useRoleAccess();
+  const { canManageRoles, canManageAccounts, canAccessSettings } = useRoleAccess();
 
   useEffect(() => {
     if (canManageRoles) {

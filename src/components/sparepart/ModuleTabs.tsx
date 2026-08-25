@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ModuleTabNav } from "@/components/ui/ModuleTabNav";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
@@ -42,29 +42,11 @@ export function ModuleTabs() {
       href: "/sparepart/locations",
       visible: canManageSparepartLocations,
     },
-  ].filter((tab) => tab.visible);
+  ]
+    .filter((tab) => tab.visible)
+    .map(({ label, href }) => ({ label, href }));
 
   if (pathname === "/sparepart" || tabs.length === 0) return null;
 
-  return (
-    <div className="mb-5 flex flex-wrap gap-1 border-b border-border-subtle">
-      {tabs.map((tab) => {
-        const isActive = pathname.startsWith(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={[
-              "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-              isActive
-                ? "border-accent text-text"
-                : "border-transparent text-text-muted hover:text-text",
-            ].join(" ")}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </div>
-  );
+  return <ModuleTabNav tabs={tabs} />;
 }

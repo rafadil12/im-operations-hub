@@ -14,10 +14,7 @@ export function createLoginAttemptStore(): LoginRateLimitStore {
   return new Map();
 }
 
-export function loginClientKey(
-  ip: string | null | undefined,
-  login: string,
-): string {
+export function loginClientKey(ip: string | null | undefined, login: string): string {
   const safeIp = (ip ?? "unknown").trim() || "unknown";
   return `${safeIp}|${login.trim().toLowerCase()}`;
 }
@@ -30,7 +27,7 @@ export function loginIpKey(ip: string | null | undefined): string {
 export function pruneExpiredLoginAttempts(
   store: LoginRateLimitStore,
   now = Date.now(),
-  windowMs = LOGIN_WINDOW_MS,
+  windowMs = LOGIN_WINDOW_MS
 ): void {
   for (const [key, bucket] of store) {
     if (now - bucket.firstAt > windowMs) {
@@ -39,9 +36,7 @@ export function pruneExpiredLoginAttempts(
   }
   if (store.size <= LOGIN_STORE_MAX_KEYS) return;
   // Drop oldest buckets first when the store is too large.
-  const entries = [...store.entries()].sort(
-    (a, b) => a[1].firstAt - b[1].firstAt,
-  );
+  const entries = [...store.entries()].sort((a, b) => a[1].firstAt - b[1].firstAt);
   const overflow = store.size - LOGIN_STORE_MAX_KEYS;
   for (let i = 0; i < overflow; i++) {
     const key = entries[i]?.[0];
@@ -54,7 +49,7 @@ export function isLoginRateLimited(
   key: string,
   now = Date.now(),
   windowMs = LOGIN_WINDOW_MS,
-  maxFailures = LOGIN_MAX_FAILURES,
+  maxFailures = LOGIN_MAX_FAILURES
 ): boolean {
   const bucket = store.get(key);
   if (!bucket) return false;
@@ -69,7 +64,7 @@ export function recordLoginFailure(
   store: LoginRateLimitStore,
   key: string,
   now = Date.now(),
-  windowMs = LOGIN_WINDOW_MS,
+  windowMs = LOGIN_WINDOW_MS
 ): void {
   pruneExpiredLoginAttempts(store, now, windowMs);
   const bucket = store.get(key);
@@ -80,16 +75,13 @@ export function recordLoginFailure(
   bucket.count += 1;
 }
 
-export function clearLoginFailures(
-  store: LoginRateLimitStore,
-  key: string,
-): void {
+export function clearLoginFailures(store: LoginRateLimitStore, key: string): void {
   store.delete(key);
 }
 
 export function clearLoginFailuresForIp(
   store: LoginRateLimitStore,
-  ip: string | null | undefined,
+  ip: string | null | undefined
 ): void {
   const safeIp = (ip ?? "unknown").trim() || "unknown";
   const prefix = `${safeIp}|`;

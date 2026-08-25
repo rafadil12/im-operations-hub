@@ -1,4 +1,4 @@
-import type { StatItem } from "@/data/overview-mock";
+import type { StatItem } from "@/data/overview";
 
 const toneClass: Record<NonNullable<StatItem["tone"]>, string> = {
   default: "text-text",

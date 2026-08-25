@@ -151,10 +151,7 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
           {
             id: "sparepart-documents",
             label: { source: "nav", key: "sparepartDocuments" },
-            codes: [
-              PERMISSIONS.sparepartDocumentRead,
-              PERMISSIONS.sparepartDocumentReverse,
-            ],
+            codes: [PERMISSIONS.sparepartDocumentRead, PERMISSIONS.sparepartDocumentReverse],
           },
           {
             id: "sparepart-materials",
@@ -216,7 +213,7 @@ function collectCodes(def: PermissionTreeDef): string[] {
 
 function buildNode(
   def: PermissionTreeDef,
-  byCode: Map<string, PermissionRow>,
+  byCode: Map<string, PermissionRow>
 ): PermissionTreeNode | null {
   const permissions = (def.codes ?? [])
     .map((code) => byCode.get(code))
@@ -237,14 +234,12 @@ function buildNode(
 }
 
 /** Map API permissions into the sidebar tree; leftovers go under Other. */
-export function groupPermissions(
-  permissions: PermissionRow[],
-): PermissionTreeNode[] {
+export function groupPermissions(permissions: PermissionRow[]): PermissionTreeNode[] {
   const byCode = new Map(permissions.map((p) => [p.code, p]));
   const claimed = new Set(PERMISSION_TREE.flatMap(collectCodes));
 
   const nodes = PERMISSION_TREE.map((def) => buildNode(def, byCode)).filter(
-    (n): n is PermissionTreeNode => n !== null,
+    (n): n is PermissionTreeNode => n !== null
   );
 
   const other = permissions.filter((p) => !claimed.has(p.code));

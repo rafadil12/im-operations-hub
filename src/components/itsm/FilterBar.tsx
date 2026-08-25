@@ -20,10 +20,7 @@ type Props = {
 const ctrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent w-full";
 
-export function FilterBar({
-  initial,
-  onApply,
-}: Props) {
+export function FilterBar({ initial, onApply }: Props) {
   const { t } = useLang();
 
   const [draft, setDraft] = useState<Filters>(initial);
@@ -42,11 +39,8 @@ export function FilterBar({
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
-
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.fields.from}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.fields.from}</label>
         <input
           type="date"
           className={ctrl}
@@ -56,9 +50,7 @@ export function FilterBar({
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.fields.to}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.fields.to}</label>
         <input
           type="date"
           className={ctrl}
@@ -68,9 +60,7 @@ export function FilterBar({
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.itsm.requestId}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.itsm.requestId}</label>
         <input
           type="text"
           className={ctrl}
@@ -82,9 +72,7 @@ export function FilterBar({
       </div>
 
       <div className="min-w-60 flex-1">
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.itsm.subject}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.itsm.subject}</label>
         <input
           type="text"
           className={ctrl}
@@ -96,9 +84,7 @@ export function FilterBar({
       </div>
 
       <div>
-        <label className="mb-1 block text-[10px] uppercase text-text-dim">
-          {t.itsm.requester}
-        </label>
+        <label className="mb-1 block text-[10px] uppercase text-text-dim">{t.itsm.requester}</label>
         <input
           type="text"
           className={ctrl}
@@ -130,7 +116,6 @@ export function FilterBar({
       >
         {t.common.apply}
       </button>
-
     </div>
   );
 }

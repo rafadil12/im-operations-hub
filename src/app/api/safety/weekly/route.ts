@@ -2,91 +2,17 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
-import {
-  accountHasPermission,
-  PERMISSIONS,
-  requireAnyPermission,
-} from "@/lib/auth";
+import { accountHasPermission, PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
-
-function getSafetyUploadDir(): string {
-  const dir = process.env.SAFETY_UPLOAD_DIR;
-
-  if (!dir) {
-    throw new Error(
-      "SAFETY_UPLOAD_DIR environment variable is not configured.",
-    );
-  }
-
-  return dir;
-}
+import { getExtension, getSafetyUploadDir, sanitizeFileName } from "@/lib/safety/upload";
+import { jsonError, normalizeWeeklyActivityType } from "@/lib/safety/apiHelpers";
+import {
+  isWeeklyActivityType,
+  type WeeklyDatabaseFile,
+  type WeeklyDatabaseRow,
+} from "@/lib/safety/weeklyConstants";
 
 export const runtime = "nodejs";
-
-const WEEKLY_ACTIVITY_TYPES = [
-  "training",
-  "routine_meeting",
-  "hse_tuesday",
-  "ert",
-  "five_s",
-  "potential_hazard",
-] as const;
-
-type WeeklyActivityType =
-  (typeof WEEKLY_ACTIVITY_TYPES)[number];
-
-type WeeklyDatabaseRow = {
-  id: number;
-  year: number;
-  month: number;
-  period_type: "weekly";
-  week: number;
-  activity_type: string;
-  status:
-    | "completed"
-    | "not_submitted"
-    | "not_applicable"
-    | "case_found";
-  submission_date: string | null;
-  pic: string | null;
-  pic_en: string | null;
-  pic_cn: string | null;
-  location: string | null;
-  description: string | null;
-  description_en: string | null;
-  description_cn: string | null;
-  file_name: string | null;
-  file_url: string | null;
-};
-
-type WeeklyDatabaseFile = {
-  id: number;
-  submission_id: number;
-  original_name: string;
-  stored_name: string;
-  file_url: string;
-  mime_type: string;
-  file_size: number;
-  file_group: string;
-};
-
-function isWeeklyActivityType(
-  value: string,
-): value is WeeklyActivityType {
-  return WEEKLY_ACTIVITY_TYPES.includes(
-    value as WeeklyActivityType,
-  );
-}
-
-function sanitizeFileName(name: string) {
-  return name
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_+/g, "_");
-}
-
-function getExtension(name: string) {
-  return path.extname(name).toLowerCase();
-}
 
 export async function GET(request: Request) {
   const gate = await requireAnyPermission([
@@ -99,47 +25,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const now = new Date();
 
-    const year = Number(
-      searchParams.get("year") ??
-        now.getFullYear(),
-    );
+    const year = Number(searchParams.get("year") ?? now.getFullYear());
 
-    const month = Number(
-      searchParams.get("month") ??
-        now.getMonth() + 1,
-    );
+    const month = Number(searchParams.get("month") ?? now.getMonth() + 1);
 
-    if (
-      !Number.isInteger(year) ||
-      year < 2000 ||
-      year > 2100
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid year.",
-        },
-        { status: 400 },
-      );
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return jsonError("Invalid year.");
     }
 
-    if (
-      !Number.isInteger(month) ||
-      month < 1 ||
-      month > 12
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid month.",
-        },
-        { status: 400 },
-      );
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      return jsonError("Invalid month.");
     }
 
-    const rows =
-      await query<WeeklyDatabaseRow[]>(
-        `
+    const rows = await query<WeeklyDatabaseRow[]>(
+      `
           SELECT
             id,
             year,
@@ -164,12 +63,10 @@ export async function GET(request: Request) {
             AND period_type = 'weekly'
           ORDER BY week ASC, id ASC
         `,
-        [year, month],
-      );
-
-    const ids = rows.map((row) =>
-      Number(row.id),
+      [year, month]
     );
+
+    const ids = rows.map((row) => Number(row.id));
 
     const files =
       ids.length > 0
@@ -185,23 +82,17 @@ export async function GET(request: Request) {
                 file_size,
                 file_group
               FROM safety_submission_files
-              WHERE submission_id IN (${ids
-                .map(() => "?")
-                .join(",")})
+              WHERE submission_id IN (${ids.map(() => "?").join(",")})
               ORDER BY
                 submission_id ASC,
                 sort_order ASC,
                 id ASC
             `,
-            ids,
+            ids
           )
         : [];
 
-    const filesBySubmission =
-      new Map<
-        number,
-        WeeklyDatabaseFile[]
-      >();
+    const filesBySubmission = new Map<number, WeeklyDatabaseFile[]>();
 
     for (const file of files) {
       const submissionId = Number(
@@ -209,28 +100,19 @@ export async function GET(request: Request) {
           file as WeeklyDatabaseFile & {
             submission_id: number;
           }
-        ).submission_id,
+        ).submission_id
       );
 
-      const current =
-        filesBySubmission.get(
-          submissionId,
-        ) ?? [];
+      const current = filesBySubmission.get(submissionId) ?? [];
 
       current.push(file);
 
-      filesBySubmission.set(
-        submissionId,
-        current,
-      );
+      filesBySubmission.set(submissionId, current);
     }
 
     const data = rows.map((row) => ({
       ...row,
-      files:
-        filesBySubmission.get(
-          Number(row.id),
-        ) ?? [],
+      files: filesBySubmission.get(Number(row.id)) ?? [],
     }));
 
     return NextResponse.json({
@@ -240,23 +122,8 @@ export async function GET(request: Request) {
       data,
     });
   } catch (error) {
-    console.error(
-      "SAFETY WEEKLY GET ERROR:",
-      error,
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Failed to load weekly safety data.",
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
-      },
-      { status: 500 },
-    );
+    console.error("GET /api/safety/weekly ERROR:", error);
+    return jsonError("Failed to load weekly safety data.", 500);
   }
 }
 
@@ -268,216 +135,60 @@ export async function POST(request: Request) {
   if (gate instanceof NextResponse) return gate;
 
   try {
-    const formData =
-      await request.formData();
+    const formData = await request.formData();
 
-    const rawActivityType = String(
-      formData.get("activityType") ?? "",
-    ).trim();
+    const rawActivityType = String(formData.get("activityType") ?? "").trim();
 
-    // Frontend and database names are normalized here
-    // so either "routine-meeting",
-    // "routine_meeting", or "routineMeeting"
-    // will be accepted.
-    const normalizeActivityType = (
-      value: string,
-    ): string => {
-      const key = value
-        .trim()
-        .toLowerCase()
-        .replace(/[-\s]/g, "_");
+    const activityType = normalizeWeeklyActivityType(rawActivityType);
 
-      const aliases: Record<
-        string,
-        string
-      > = {
-        training:
-          "training",
-
-        routine_meeting:
-          "routine_meeting",
-
-        routinemeeting:
-          "routine_meeting",
-
-        hse_tuesday:
-          "hse_tuesday",
-
-        hsetuesday:
-          "hse_tuesday",
-
-        ert:
-          "ert",
-
-        five_s:
-          "five_s",
-
-        fives:
-          "five_s",
-
-        "5s":
-          "five_s",
-
-        potential_hazard:
-          "potential_hazard",
-
-        potentialhazard:
-          "potential_hazard",
-
-        // Backward-compatible old names.
-        hazard:
-          "potential_hazard",
-
-        cleaning:
-          "five_s",
-      };
-
-      return aliases[key] ?? key;
-    };
-
-    const activityType =
-      normalizeActivityType(
-        rawActivityType,
-      );
-
-    if (
-      !isWeeklyActivityType(
-        activityType,
-      )
-    ) {
+    if (!isWeeklyActivityType(activityType)) {
       console.error(
-        "Invalid weekly activityType received:",
+        "POST /api/safety/weekly: invalid activityType:",
         rawActivityType,
         "normalized:",
-        activityType,
+        activityType
       );
 
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Invalid weekly activityType.",
-          received:
-            rawActivityType,
-          normalized:
-            activityType,
-          allowedActivityTypes:
-            WEEKLY_ACTIVITY_TYPES,
-        },
-        { status: 400 },
-      );
+      return jsonError("Invalid weekly activityType.");
     }
 
-    const year = Number(
-      formData.get("year") ??
-        new Date().getFullYear(),
-    );
+    const year = Number(formData.get("year") ?? new Date().getFullYear());
 
-    const month = Number(
-      formData.get("month") ??
-        new Date().getMonth() + 1,
-    );
+    const month = Number(formData.get("month") ?? new Date().getMonth() + 1);
 
-    const week = Number(
-      formData.get("week") ?? 0,
-    );
+    const week = Number(formData.get("week") ?? 0);
 
-    const submissionDate =
-      String(
-        formData.get(
-          "submissionDate",
-        ) ?? "",
-      ).trim() || null;
+    const submissionDate = String(formData.get("submissionDate") ?? "").trim() || null;
 
-    const pic =
-      String(
-        formData.get("pic") ?? "",
-      ).trim() || null;
+    const pic = String(formData.get("pic") ?? "").trim() || null;
 
-    const picEn =
-      String(
-        formData.get("pic_en") ?? "",
-      ).trim() || null;
+    const picEn = String(formData.get("pic_en") ?? "").trim() || null;
 
-    const picCn =
-      String(
-        formData.get("pic_cn") ?? "",
-      ).trim() || null;
+    const picCn = String(formData.get("pic_cn") ?? "").trim() || null;
 
-    const location =
-      String(
-        formData.get("location") ?? "",
-      ).trim() || null;
+    const location = String(formData.get("location") ?? "").trim() || null;
 
-    const descriptionEn =
-      String(
-        formData.get(
-          "description_en",
-        ) ?? "",
-      ).trim() || null;
+    const descriptionEn = String(formData.get("description_en") ?? "").trim() || null;
 
-    const descriptionCn =
-      String(
-        formData.get(
-          "description_cn",
-        ) ?? "",
-      ).trim() || null;
+    const descriptionCn = String(formData.get("description_cn") ?? "").trim() || null;
 
     // Legacy fallback: keep description populated with English.
-    const description =
-      descriptionEn;
+    const description = descriptionEn;
 
     const files = formData
       .getAll("files")
-      .filter(
-        (
-          value,
-        ): value is File =>
-          value instanceof File &&
-          value.size > 0,
-      );
+      .filter((value): value is File => value instanceof File && value.size > 0);
 
-    if (
-      !Number.isInteger(year) ||
-      year < 2000 ||
-      year > 2100
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid year.",
-        },
-        { status: 400 },
-      );
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return jsonError("Invalid year.");
     }
 
-    if (
-      !Number.isInteger(month) ||
-      month < 1 ||
-      month > 12
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid month.",
-        },
-        { status: 400 },
-      );
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      return jsonError("Invalid month.");
     }
 
-    if (
-      !Number.isInteger(week) ||
-      week < 1 ||
-      week > 4
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "week must be between 1 and 4.",
-        },
-        { status: 400 },
-      );
+    if (!Number.isInteger(week) || week < 1 || week > 4) {
+      return jsonError("week must be between 1 and 4.");
     }
 
     /*
@@ -489,15 +200,14 @@ export async function POST(request: Request) {
      * - file baru ada  -> replace file lama
      * - file baru tidak ada -> pertahankan file lama
      */
-    const existing =
-      await query<
-        Array<{
-          id: number;
-          file_name: string | null;
-          file_url: string | null;
-        }>
-      >(
-        `
+    const existing = await query<
+      Array<{
+        id: number;
+        file_name: string | null;
+        file_url: string | null;
+      }>
+    >(
+      `
           SELECT
             id,
             file_name,
@@ -510,18 +220,11 @@ export async function POST(request: Request) {
             AND activity_type = ?
           LIMIT 1
         `,
-        [
-          year,
-          month,
-          week,
-          activityType,
-        ],
-      );
+      [year, month, week, activityType]
+    );
 
     const needed =
-      existing.length > 0
-        ? PERMISSIONS.safetySubmissionUpdate
-        : PERMISSIONS.safetySubmissionCreate;
+      existing.length > 0 ? PERMISSIONS.safetySubmissionUpdate : PERMISSIONS.safetySubmissionCreate;
     if (!accountHasPermission(gate.account, needed)) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
@@ -534,34 +237,15 @@ export async function POST(request: Request) {
      * Kalau file lama sudah ada,
      * tidak wajib upload ulang.
      */
-    if (
-      files.length === 0 &&
-      existing.length === 0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "At least one photo/file is required for this weekly activity.",
-        },
-        { status: 400 },
-      );
+    if (files.length === 0 && existing.length === 0) {
+      return jsonError("At least one photo/file is required for this weekly activity.");
     }
 
-    const MAX_FILE_SIZE =
-      100 * 1024 * 1024;
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
     for (const file of files) {
-      if (
-        file.size > MAX_FILE_SIZE
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `File "${file.name}" exceeds the 100 MB limit.`,
-          },
-          { status: 400 },
-        );
+      if (file.size > MAX_FILE_SIZE) {
+        return jsonError(`File "${file.name}" exceeds the 100 MB limit.`);
       }
     }
 
@@ -573,7 +257,7 @@ export async function POST(request: Request) {
       getSafetyUploadDir(),
       String(year),
       String(month).padStart(2, "0"),
-      `week-${week}`,
+      `week-${week}`
     );
 
     const savedFiles: Array<{
@@ -585,40 +269,19 @@ export async function POST(request: Request) {
     }> = [];
 
     if (files.length > 0) {
-      await mkdir(
-        uploadDirectory,
-        { recursive: true },
-      );
+      await mkdir(uploadDirectory, { recursive: true });
 
-      for (
-        const file of files
-      ) {
-        const safeName =
-          sanitizeFileName(
-            file.name,
-          );
+      for (const file of files) {
+        const safeName = sanitizeFileName(file.name);
 
-        const storedName =
-          `${randomUUID()}${getExtension(
-            safeName,
-          )}`;
+        const storedName = `${randomUUID()}${getExtension(safeName)}`;
 
-        const filePath =
-          path.join(
-            uploadDirectory,
-            storedName,
-          );
+        const filePath = path.join(uploadDirectory, storedName);
 
-        await writeFile(
-          filePath,
-          Buffer.from(
-            await file.arrayBuffer(),
-          ),
-        );
+        await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
         savedFiles.push({
-          originalName:
-            file.name,
+          originalName: file.name,
 
           storedName,
 
@@ -629,26 +292,19 @@ export async function POST(request: Request) {
            * Browser mengaksesnya melalui:
            * /api/safety/files/...
            */
-          url:
-            `/api/safety/files/${year}/${String(
-              month,
-            ).padStart(
-              2,
-              "0",
-            )}/week-${week}/${storedName}`,
+          url: `/api/safety/files/${year}/${String(month).padStart(
+            2,
+            "0"
+          )}/week-${week}/${storedName}`,
 
-          type:
-            file.type ||
-            "application/octet-stream",
+          type: file.type || "application/octet-stream",
 
-          size:
-            file.size,
+          size: file.size,
         });
       }
     }
 
-    const firstFile =
-      savedFiles[0] ?? null;
+    const firstFile = savedFiles[0] ?? null;
 
     let submissionId: number;
 
@@ -664,10 +320,7 @@ export async function POST(request: Request) {
        * ============================
        */
 
-      submissionId =
-        Number(
-          existing[0].id,
-        );
+      submissionId = Number(existing[0].id);
 
       /*
        * Kalau tidak ada file baru,
@@ -676,17 +329,9 @@ export async function POST(request: Request) {
        * Kalau ada file baru,
        * gunakan file baru.
        */
-      const finalFileName =
-        firstFile?.originalName ??
-        existing[0]
-          .file_name ??
-        null;
+      const finalFileName = firstFile?.originalName ?? existing[0].file_name ?? null;
 
-      const finalFileUrl =
-        firstFile?.url ??
-        existing[0]
-          .file_url ??
-        null;
+      const finalFileUrl = firstFile?.url ?? existing[0].file_url ?? null;
 
       await execute(
         `
@@ -718,7 +363,7 @@ export async function POST(request: Request) {
           finalFileName,
           finalFileUrl,
           submissionId,
-        ],
+        ]
       );
 
       /*
@@ -733,7 +378,7 @@ export async function POST(request: Request) {
               safety_submission_files
             WHERE submission_id = ?
           `,
-          [submissionId],
+          [submissionId]
         );
       }
     } else {
@@ -743,9 +388,8 @@ export async function POST(request: Request) {
        * ============================
        */
 
-      const result =
-        await execute(
-          `
+      const result = await execute(
+        `
             INSERT INTO
               safety_submissions
             (
@@ -786,31 +430,26 @@ export async function POST(request: Request) {
               ?
             )
           `,
-          [
-            year,
-            month,
-            week,
-            activityType,
-            status,
-            submissionDate,
-            pic,
-            picEn,
-            picCn,
-            location,
-            description,
-            descriptionEn,
-            descriptionCn,
-            firstFile?.originalName ??
-              null,
-            firstFile?.url ??
-              null,
-          ],
-        );
+        [
+          year,
+          month,
+          week,
+          activityType,
+          status,
+          submissionDate,
+          pic,
+          picEn,
+          picCn,
+          location,
+          description,
+          descriptionEn,
+          descriptionCn,
+          firstFile?.originalName ?? null,
+          firstFile?.url ?? null,
+        ]
+      );
 
-      submissionId =
-        Number(
-          result.insertId,
-        );
+      submissionId = Number(result.insertId);
     }
 
     /*
@@ -823,22 +462,10 @@ export async function POST(request: Request) {
      *
      * File lama tetap berada di database.
      */
-    const fileGroup =
-      String(
-        formData.get(
-          "fileGroup",
-        ) ??
-          "general",
-      ).trim() || "general";
+    const fileGroup = String(formData.get("fileGroup") ?? "general").trim() || "general";
 
-    for (
-      let index = 0;
-      index <
-      savedFiles.length;
-      index += 1
-    ) {
-      const file =
-        savedFiles[index];
+    for (let index = 0; index < savedFiles.length; index += 1) {
+      const file = savedFiles[index];
 
       await execute(
         `
@@ -875,14 +502,13 @@ export async function POST(request: Request) {
           file.size,
           fileGroup,
           index,
-        ],
+        ]
       );
     }
 
     return NextResponse.json({
       success: true,
-      message:
-        "Weekly safety activity saved successfully.",
+      message: "Weekly safety activity saved successfully.",
       submission: {
         id: submissionId,
         year,
@@ -895,22 +521,7 @@ export async function POST(request: Request) {
       files: savedFiles,
     });
   } catch (error) {
-    console.error(
-      "SAFETY WEEKLY POST ERROR:",
-      error,
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Failed to save weekly safety activity.",
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
-      },
-      { status: 500 },
-    );
+    console.error("POST /api/safety/weekly ERROR:", error);
+    return jsonError("Failed to save weekly safety activity.", 500);
   }
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
-import { buildMatDocListFilters } from "@/lib/sparepartDocumentFilters";
+import { buildMatDocListFilters } from "@/lib/sparepart/documentFilters";
 import type { SparepartMatDoc } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -24,15 +24,12 @@ export async function GET(request: NextRequest) {
        ${where}
        GROUP BY d.id
        ORDER BY d.posting_date DESC, d.id DESC`,
-      params,
+      params
     );
 
     return NextResponse.json({ rows });
   } catch (error) {
     console.error("GET /sparepart/documents failed", error);
-    return NextResponse.json(
-      { error: "Failed to load material documents." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load material documents." }, { status: 500 });
   }
 }

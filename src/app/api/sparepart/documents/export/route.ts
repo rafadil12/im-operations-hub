@@ -3,10 +3,7 @@ import ExcelJS from "exceljs";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
-import {
-  buildMatDocListFilters,
-  movementTypeLabel,
-} from "@/lib/sparepartDocumentFilters";
+import { buildMatDocListFilters, movementTypeLabel } from "@/lib/sparepart/documentFilters";
 
 export const runtime = "nodejs";
 
@@ -70,7 +67,7 @@ export async function GET(request: NextRequest) {
          ON loc_to.id = li.to_storage_location_id
        ${where}
        ORDER BY d.posting_date DESC, d.id DESC, li.line_no ASC`,
-      params,
+      params
     );
 
     const workbook = new ExcelJS.Workbook();
@@ -118,18 +115,13 @@ export async function GET(request: NextRequest) {
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition":
-          'attachment; filename="sparepart-transaction-history.xlsx"',
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="sparepart-transaction-history.xlsx"',
         "Cache-Control": "no-store",
       },
     });
   } catch (error) {
     console.error("GET /sparepart/documents/export failed", error);
-    return NextResponse.json(
-      { error: "Failed to export documents." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to export documents." }, { status: 500 });
   }
 }

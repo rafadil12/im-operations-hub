@@ -9,11 +9,5 @@ export const metadata = pageMetadata({
 });
 
 export default function MasterCategoriesPage() {
-  return (
-    <MasterManager
-      titleKey="masterCategories"
-      endpoint="/categories"
-      relation="division"
-    />
-  );
+  return <MasterManager titleKey="masterCategories" endpoint="/categories" relation="division" />;
 }

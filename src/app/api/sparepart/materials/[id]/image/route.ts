@@ -6,7 +6,7 @@ import {
   SparepartImageError,
   deleteMaterialImages,
   saveMaterialImage,
-} from "@/lib/sparepartImages";
+} from "@/lib/sparepart/images";
 import type { SparepartItem } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -19,7 +19,7 @@ async function loadItem(itemId: number): Promise<SparepartItem | null> {
      FROM sparepart_items i
      WHERE i.id = ? AND i.deleted_at IS NULL
      LIMIT 1`,
-    [itemId],
+    [itemId]
   );
   return rows[0] ?? null;
 }
@@ -50,10 +50,10 @@ export async function POST(request: NextRequest, context: Ctx) {
     }
 
     const { imageUrl } = await saveMaterialImage(item.code, file);
-    await execute(
-      `UPDATE sparepart_items SET image_url = ? WHERE id = ? AND deleted_at IS NULL`,
-      [imageUrl, itemId],
-    );
+    await execute(`UPDATE sparepart_items SET image_url = ? WHERE id = ? AND deleted_at IS NULL`, [
+      imageUrl,
+      itemId,
+    ]);
 
     return NextResponse.json({ ok: true, image_url: imageUrl });
   } catch (error) {
@@ -61,10 +61,7 @@ export async function POST(request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("POST /sparepart/materials/[id]/image failed", error);
-    return NextResponse.json(
-      { error: "Failed to upload image." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to upload image." }, { status: 500 });
   }
 }
 
@@ -87,7 +84,7 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     await deleteMaterialImages(item.code);
     await execute(
       `UPDATE sparepart_items SET image_url = NULL WHERE id = ? AND deleted_at IS NULL`,
-      [itemId],
+      [itemId]
     );
 
     return NextResponse.json({ ok: true });
@@ -96,9 +93,6 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("DELETE /sparepart/materials/[id]/image failed", error);
-    return NextResponse.json(
-      { error: "Failed to remove image." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to remove image." }, { status: 500 });
   }
 }

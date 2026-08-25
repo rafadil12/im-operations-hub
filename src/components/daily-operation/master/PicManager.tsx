@@ -20,8 +20,7 @@ type PicRow = {
 const inputCls =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent";
 const labelCls = "mb-1 block text-xs font-medium text-text-muted";
-const th =
-  "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
+const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
 const td = "px-3 py-2 text-xs text-text-muted";
 
 function picLabel(row: PicRow, lang: "en" | "cn"): string {
@@ -137,9 +136,7 @@ export function PicManager() {
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-text">
-            {t.dailyOp.picTitle}
-          </h1>
+          <h1 className="text-lg font-semibold text-text">{t.dailyOp.picTitle}</h1>
           <p className="text-sm text-text-muted">{t.dailyOp.picDesc}</p>
         </div>
         <button
@@ -186,9 +183,7 @@ export function PicManager() {
                     key={row.id}
                     className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
                   >
-                    <td className={`${td} text-text`}>
-                      {row.employeeNo ?? "-"}
-                    </td>
+                    <td className={`${td} text-text`}>{row.employeeNo ?? "-"}</td>
                     <td className={td}>
                       {lang === "cn"
                         ? row.nameCn || row.nameEn || "-"
@@ -197,7 +192,7 @@ export function PicManager() {
                     <td className={td}>
                       {localizedName(
                         divisions.find((d) => d.id === row.divisionId),
-                        lang,
+                        lang
                       )}
                     </td>
                     <td className={td}>
@@ -256,11 +251,7 @@ export function PicManager() {
                   <select
                     className={inputCls}
                     value={userId ?? ""}
-                    onChange={(e) =>
-                      onPickAccount(
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
+                    onChange={(e) => onPickAccount(e.target.value ? Number(e.target.value) : null)}
                   >
                     <option value="">{t.common.none}</option>
                     {candidates.map((row) => (
@@ -278,11 +269,7 @@ export function PicManager() {
                   <select
                     className={inputCls}
                     value={divisionId ?? ""}
-                    onChange={(e) =>
-                      setDivisionId(
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
+                    onChange={(e) => setDivisionId(e.target.value ? Number(e.target.value) : null)}
                   >
                     <option value="">{t.common.none}</option>
                     {divisions.map((d) => (

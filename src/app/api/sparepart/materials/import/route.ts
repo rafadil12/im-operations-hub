@@ -8,17 +8,15 @@ import {
   parseSparepartItemsWorkbook,
   type ImportRowError,
   type ParsedImportItem,
-} from "@/lib/sparepartImport";
-import { DEFAULT_SPAREPART_CATEGORY_CODE, normalizeCategoryCode } from "@/lib/sparepartCategories";
-import { DEFAULT_UOM_CODE, normalizeUomCode } from "@/lib/sparepartUoms";
+} from "@/lib/sparepart/import";
+import { DEFAULT_SPAREPART_CATEGORY_CODE, normalizeCategoryCode } from "@/lib/sparepart/categories";
+import { DEFAULT_UOM_CODE, normalizeUomCode } from "@/lib/sparepart/uoms";
 import type { SparepartCategory, SparepartUom } from "@/lib/types";
 import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-function buildCategoryIdByCode(
-  categories: SparepartCategory[],
-): Map<string, number> {
+function buildCategoryIdByCode(categories: SparepartCategory[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const row of categories) {
     const id = Number(row.id);
@@ -32,7 +30,7 @@ function buildCategoryIdByCode(
 
 async function loadActiveCategoryIdByCode(): Promise<Map<string, number>> {
   const rows = await query<SparepartCategory[]>(
-    `SELECT id, code FROM sparepart_categories WHERE is_active = 1`,
+    `SELECT id, code FROM sparepart_categories WHERE is_active = 1`
   );
   return buildCategoryIdByCode(rows);
 }
@@ -50,14 +48,12 @@ function buildUomIdByCode(uoms: SparepartUom[]): Map<string, number> {
 }
 
 async function loadActiveUomIdByCode(): Promise<Map<string, number>> {
-  const rows = await query<SparepartUom[]>(
-    `SELECT id, code FROM uoms WHERE is_active = 1`,
-  );
+  const rows = await query<SparepartUom[]>(`SELECT id, code FROM uoms WHERE is_active = 1`);
   return buildUomIdByCode(rows);
 }
 
 async function findActiveDuplicateImportCodes(
-  items: ParsedImportItem[],
+  items: ParsedImportItem[]
 ): Promise<ImportRowError[]> {
   if (items.length === 0) return [];
 
@@ -66,12 +62,10 @@ async function findActiveDuplicateImportCodes(
   const rows = await query<RowDataPacket[]>(
     `SELECT code FROM sparepart_items
      WHERE deleted_at IS NULL AND UPPER(code) IN (${placeholders})`,
-    codesUpper,
+    codesUpper
   );
 
-  const existing = new Set(
-    rows.map((row: RowDataPacket) => String(row.code).toUpperCase()),
-  );
+  const existing = new Set(rows.map((row: RowDataPacket) => String(row.code).toUpperCase()));
   const errors: ImportRowError[] = [];
   for (const item of items) {
     if (existing.has(item.code.toUpperCase())) {
@@ -87,7 +81,7 @@ async function findActiveDuplicateImportCodes(
 
 function findInvalidImportCategories(
   items: ParsedImportItem[],
-  categoryIdByCode: Map<string, number>,
+  categoryIdByCode: Map<string, number>
 ): ImportRowError[] {
   const errors: ImportRowError[] = [];
   for (const item of items) {
@@ -103,7 +97,7 @@ function findInvalidImportCategories(
 
 function findInvalidImportUoms(
   items: ParsedImportItem[],
-  uomIdByCode: Map<string, number>,
+  uomIdByCode: Map<string, number>
 ): ImportRowError[] {
   const errors: ImportRowError[] = [];
   for (const item of items) {
@@ -119,7 +113,7 @@ function findInvalidImportUoms(
 
 function resolveImportCategoryId(
   categoryCode: ParsedImportItem["category_code"],
-  categoryIdByCode: Map<string, number>,
+  categoryIdByCode: Map<string, number>
 ): number {
   const categoryId = categoryIdByCode.get(categoryCode);
   if (categoryId == null) {
@@ -128,10 +122,7 @@ function resolveImportCategoryId(
   return categoryId;
 }
 
-function resolveImportUomId(
-  uomCode: string,
-  uomIdByCode: Map<string, number>,
-): number {
+function resolveImportUomId(uomCode: string, uomIdByCode: Map<string, number>): number {
   const uomId = uomIdByCode.get(uomCode);
   if (uomId == null) {
     throw new Error(`UoM "${uomCode}" is not available.`);
@@ -153,7 +144,7 @@ export async function POST(request: NextRequest) {
           error: "Please upload an Excel (.xlsx) file.",
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -163,7 +154,7 @@ export async function POST(request: NextRequest) {
           error: `File is too large. Maximum size is ${Math.round(IMPORT_MAX_BYTES / (1024 * 1024))}MB.`,
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -173,17 +164,14 @@ export async function POST(request: NextRequest) {
           error: "Only .xlsx files are supported.",
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const buffer = await file.arrayBuffer();
     const parsed = await parseSparepartItemsWorkbook(buffer);
     if (!parsed.ok) {
-      return NextResponse.json(
-        { error: parsed.error, errors: parsed.errors },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: parsed.error, errors: parsed.errors }, { status: 400 });
     }
 
     const categoryIdByCode = await loadActiveCategoryIdByCode();
@@ -193,7 +181,7 @@ export async function POST(request: NextRequest) {
           error: "IT category is missing. Run database migrations.",
           errors: [] as ImportRowError[],
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -204,28 +192,21 @@ export async function POST(request: NextRequest) {
           error: "PCS UoM is missing. Run database migrations.",
           errors: [] as ImportRowError[],
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
     const duplicateErrors = await findActiveDuplicateImportCodes(parsed.items);
-    const categoryErrors = findInvalidImportCategories(
-      parsed.items,
-      categoryIdByCode,
-    );
+    const categoryErrors = findInvalidImportCategories(parsed.items, categoryIdByCode);
     const uomErrors = findInvalidImportUoms(parsed.items, uomIdByCode);
-    const validationErrors = [
-      ...duplicateErrors,
-      ...categoryErrors,
-      ...uomErrors,
-    ];
+    const validationErrors = [...duplicateErrors, ...categoryErrors, ...uomErrors];
     if (validationErrors.length > 0) {
       return NextResponse.json(
         {
           error: "Import validation failed. No records were saved.",
           errors: validationErrors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -233,10 +214,7 @@ export async function POST(request: NextRequest) {
       let count = 0;
 
       for (const item of parsed.items) {
-        const categoryId = resolveImportCategoryId(
-          item.category_code,
-          categoryIdByCode,
-        );
+        const categoryId = resolveImportCategoryId(item.category_code, categoryIdByCode);
         const uomId = resolveImportUomId(item.uom_code, uomIdByCode);
         await conn.query(
           `INSERT INTO sparepart_items
@@ -265,12 +243,12 @@ export async function POST(request: NextRequest) {
             item.min_stock,
             categoryId,
             uomId,
-          ],
+          ]
         );
 
         const [rows] = await conn.query<RowDataPacket[]>(
           `SELECT id FROM sparepart_items WHERE code = ? LIMIT 1`,
-          [item.code],
+          [item.code]
         );
         if (rows[0]?.id) count += 1;
       }
@@ -288,7 +266,7 @@ export async function POST(request: NextRequest) {
         error: message,
         errors: [] as ImportRowError[],
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

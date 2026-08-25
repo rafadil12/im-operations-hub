@@ -19,11 +19,7 @@ export {
   PROTECTED_ROLE_NAME,
   type RoleAccess,
 } from "./access";
-export {
-  generateTemporaryPassword,
-  hashPassword,
-  verifyPassword,
-} from "./password";
+export { generateTemporaryPassword, hashPassword, verifyPassword } from "./password";
 export {
   SESSION_COOKIE,
   createSessionToken,
@@ -72,9 +68,7 @@ export type AuthGate = {
   account: AuthAccountPublic | null;
 };
 
-export async function requirePermission(
-  code: string,
-): Promise<AuthGate | NextResponse> {
+export async function requirePermission(code: string): Promise<AuthGate | NextResponse> {
   const session = await readSession();
   if (!session) {
     if (guestHasPermission(code)) {
@@ -95,9 +89,7 @@ export async function requirePermission(
   return { session, account };
 }
 
-export async function requireAnyPermission(
-  codes: string[],
-): Promise<AuthGate | NextResponse> {
+export async function requireAnyPermission(codes: string[]): Promise<AuthGate | NextResponse> {
   const session = await readSession();
   if (!session) {
     if (codes.some((code) => guestHasPermission(code))) {
@@ -124,17 +116,12 @@ export async function requireAdmin(): Promise<
 > {
   const result = await requireSession();
   if (result instanceof NextResponse) return result;
-  if (
-    result.account.roleName !== "admin" &&
-    result.account.roleName !== "superadmin"
-  ) {
+  if (result.account.roleName !== "admin" && result.account.roleName !== "superadmin") {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
   return result;
 }
 
 export function isAdminAccount(account: AuthAccountPublic | null): boolean {
-  return (
-    account?.roleName === "admin" || account?.roleName === "superadmin"
-  );
+  return account?.roleName === "admin" || account?.roleName === "superadmin";
 }

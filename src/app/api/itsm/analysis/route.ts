@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { formatDateOnly } from "@/lib/dateRange";
 import { query } from "@/lib/db";
-import { isServiceRequestValue } from "@/lib/itsmServiceRequest";
+import { isServiceRequestValue } from "@/lib/itsm/serviceRequest";
 
 type TotalRow = {
   total: number;
@@ -59,10 +59,7 @@ export async function GET(request: NextRequest) {
     const group = sp.get("group");
 
     if (!start || !end) {
-      return NextResponse.json(
-        { error: "Start date and end date are required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Start date and end date are required." }, { status: 400 });
     }
     const createdDateSql = `
       STR_TO_DATE(created_date, '%d/%m/%Y %h:%i %p')
@@ -74,7 +71,6 @@ export async function GET(request: NextRequest) {
     `;
 
     const params: unknown[] = [start, end];
-    
 
     if (group && group !== "All") {
       filter += ` AND group_name = ?`;
@@ -85,10 +81,7 @@ export async function GET(request: NextRequest) {
     const endDate = new Date(`${end}T00:00:00`);
 
     const diffDays =
-      Math.floor(
-        (endDate.getTime() - startDate.getTime()) /
-          (1000 * 60 * 60 * 24),
-      ) + 1;
+      Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     const groupByMonth = diffDays > 90;
 
@@ -99,10 +92,7 @@ export async function GET(request: NextRequest) {
     const previousEnd = new Date(endDate);
     previousEnd.setDate(previousEnd.getDate() - diffDays);
 
-    const previousParams: unknown[] = [
-      formatDateOnly(previousStart),
-      formatDateOnly(previousEnd),
-    ];
+    const previousParams: unknown[] = [formatDateOnly(previousStart), formatDateOnly(previousEnd)];
 
     if (group && group !== "All") {
       previousParams.push(group);
@@ -119,8 +109,6 @@ export async function GET(request: NextRequest) {
       previousTrendRows,
       requestTypeRows,
       activeUsersRows,
-    
-
     ] = await Promise.all([
       // 1. TOTAL TICKETS
       query<TotalRow[]>(
@@ -129,7 +117,7 @@ export async function GET(request: NextRequest) {
         FROM itsm_requests
         WHERE ${filter}
         `,
-        params,
+        params
       ),
 
       // 2. STATUS DISTRIBUTION
@@ -143,7 +131,7 @@ export async function GET(request: NextRequest) {
         GROUP BY status
         ORDER BY count DESC
         `,
-        params,
+        params
       ),
 
       // 3. GROUP DISTRIBUTION
@@ -160,7 +148,7 @@ export async function GET(request: NextRequest) {
         GROUP BY group_name
         ORDER BY count DESC
         `,
-        params,
+        params
       ),
 
       // 4. TECHNICIAN RANKING
@@ -178,7 +166,7 @@ export async function GET(request: NextRequest) {
         ORDER BY count DESC
         LIMIT 10
         `,
-        params,
+        params
       ),
       // 5. REQUESTER RANKING
       query<RequesterRow[]>(
@@ -194,7 +182,7 @@ export async function GET(request: NextRequest) {
         GROUP BY requester
         ORDER BY count DESC
         `,
-        params,
+        params
       ),
 
       // 5. PRIORITY DISTRIBUTION
@@ -210,13 +198,13 @@ export async function GET(request: NextRequest) {
         GROUP BY priority
         ORDER BY count DESC
         `,
-        params,
+        params
       ),
 
       // 6. TICKET TREND
       query<TrendRow[]>(
-      groupByMonth
-        ? `
+        groupByMonth
+          ? `
           SELECT
             DATE_FORMAT(${createdDateSql}, '%Y-%m') AS date,
             COUNT(*) AS count
@@ -225,7 +213,7 @@ export async function GET(request: NextRequest) {
           GROUP BY DATE_FORMAT(${createdDateSql}, '%Y-%m')
           ORDER BY date ASC
         `
-        : `
+          : `
           SELECT
             DATE(${createdDateSql}) AS date,
             COUNT(*) AS count
@@ -234,11 +222,11 @@ export async function GET(request: NextRequest) {
           GROUP BY DATE(${createdDateSql})
           ORDER BY date ASC
         `,
-      params,
-    ),
-    query<TrendRow[]>(
-      groupByMonth
-        ? `
+        params
+      ),
+      query<TrendRow[]>(
+        groupByMonth
+          ? `
           SELECT
             DATE_FORMAT(${createdDateSql}, '%Y-%m') AS date,
             COUNT(*) AS count
@@ -250,7 +238,7 @@ export async function GET(request: NextRequest) {
           GROUP BY DATE_FORMAT(${createdDateSql}, '%Y-%m')
           ORDER BY date ASC
         `
-        : `
+          : `
           SELECT
             DATE(${createdDateSql}) AS date,
             COUNT(*) AS count
@@ -262,8 +250,8 @@ export async function GET(request: NextRequest) {
           GROUP BY DATE(${createdDateSql})
           ORDER BY date ASC
         `,
-      previousParams,
-    ),
+        previousParams
+      ),
 
       // 7. INCIDENT / SERVICE REQUEST
       query<RequestTypeRow[]>(
@@ -275,7 +263,7 @@ export async function GET(request: NextRequest) {
         WHERE ${filter}
         GROUP BY is_service_request
         `,
-        params,
+        params
       ),
       // 8. ACTIVE USERS
       query<ActiveUsersRow[]>(
@@ -288,7 +276,7 @@ export async function GET(request: NextRequest) {
           AND TRIM(requester) <> ''
           AND TRIM(requester) <> '-'
         `,
-        params,
+        params
       ),
     ]);
 
@@ -303,9 +291,7 @@ export async function GET(request: NextRequest) {
       ...toNamedCount(row.status),
       count: Number(row.count),
     }));
-    const activeUsers = Number(
-      activeUsersRows[0]?.active_users ?? 0
-    );
+    const activeUsers = Number(activeUsersRows[0]?.active_users ?? 0);
 
     const statusLabel = (item: { name_en: string | null; name_cn: string | null }) =>
       (item.name_en ?? item.name_cn ?? "").trim();
@@ -333,10 +319,7 @@ export async function GET(request: NextRequest) {
       })
       .reduce((sum, item) => sum + item.count, 0);
 
-    const openTickets = Math.max(
-      0,
-      total - closedTickets - cancelledTickets,
-    );
+    const openTickets = Math.max(0, total - closedTickets - cancelledTickets);
 
     const byGroup = groupRows.map((row) => ({
       ...toNamedCount(row.group_name),
@@ -368,26 +351,21 @@ export async function GET(request: NextRequest) {
     }));
 
     const byRequestType = requestTypeRows.map((row) => ({
-      name_en: isServiceRequestValue(row.is_service_request)
-        ? "Service Request"
-        : "Incident",
-      name_cn: isServiceRequestValue(row.is_service_request)
-        ? "服务请求"
-        : "事件",
+      name_en: isServiceRequestValue(row.is_service_request) ? "Service Request" : "Incident",
+      name_cn: isServiceRequestValue(row.is_service_request) ? "服务请求" : "事件",
       count: Number(row.count),
     }));
     /*
      * Average ticket per day
      */
-    const avgTicketsPerDay =
-      Math.round((total / days) * 10) / 10;
+    const avgTicketsPerDay = Math.round((total / days) * 10) / 10;
 
     return NextResponse.json({
       result: {
         total,
         openTickets,
         closedTickets,
-        activeUsers,        
+        activeUsers,
         avgTicketsPerDay,
 
         byStatus,
@@ -400,7 +378,6 @@ export async function GET(request: NextRequest) {
           previous: previousTrend,
         },
         byRequestType,
-        
       },
 
       range: {
@@ -417,7 +394,7 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 500,
-      },
+      }
     );
   }
 }

@@ -5,17 +5,11 @@ declare global {
 }
 
 function createPool(): mysql.Pool {
-  const {
-    DB_HOST,
-    DB_PORT,
-    DB_USER,
-    DB_PASSWORD,
-    DB_NAME,
-  } = process.env;
+  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME } = process.env;
 
   if (!DB_HOST || !DB_USER || !DB_NAME) {
     throw new Error(
-      "Database env vars missing. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME in .env.local",
+      "Database env vars missing. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME in .env.local"
     );
   }
 
@@ -42,22 +36,19 @@ if (process.env.NODE_ENV !== "production") {
 
 export async function query<T = mysql.RowDataPacket[]>(
   sql: string,
-  params?: unknown[],
+  params?: unknown[]
 ): Promise<T> {
   const [rows] = await pool.query(sql, params);
   return rows as T;
 }
 
-export async function execute(
-  sql: string,
-  params?: unknown[],
-): Promise<mysql.ResultSetHeader> {
+export async function execute(sql: string, params?: unknown[]): Promise<mysql.ResultSetHeader> {
   const [result] = await pool.query(sql, params);
   return result as mysql.ResultSetHeader;
 }
 
 export async function withTransaction<T>(
-  fn: (conn: mysql.PoolConnection) => Promise<T>,
+  fn: (conn: mysql.PoolConnection) => Promise<T>
 ): Promise<T> {
   const conn = await pool.getConnection();
   try {

@@ -21,10 +21,7 @@ export type SparepartItemFormExtras = {
 type Props = {
   initial: SparepartItem | null;
   onClose: () => void;
-  onSubmit: (
-    input: SparepartItemInput,
-    extras: SparepartItemFormExtras,
-  ) => Promise<void>;
+  onSubmit: (input: SparepartItemInput, extras: SparepartItemFormExtras) => Promise<void>;
 };
 
 export function ItemForm({ initial, onClose, onSubmit }: Props) {
@@ -39,15 +36,11 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const [model, setModel] = useState(initial?.model ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [categoryId, setCategoryId] = useState(
-    initial?.category_id ? String(initial.category_id) : "",
+    initial?.category_id ? String(initial.category_id) : ""
   );
-  const [uomId, setUomId] = useState(
-    initial?.uom_id ? String(initial.uom_id) : "",
-  );
+  const [uomId, setUomId] = useState(initial?.uom_id ? String(initial.uom_id) : "");
   const [minStock, setMinStock] = useState(String(initial?.min_stock ?? 0));
-  const [isActive, setIsActive] = useState(
-    initial ? Boolean(initial.is_active) : true,
-  );
+  const [isActive, setIsActive] = useState(initial ? Boolean(initial.is_active) : true);
   const [categories, setCategories] = useState<SparepartCategory[]>([]);
   const [uoms, setUoms] = useState<SparepartUom[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -75,8 +68,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           if (it) setCategoryId(String(it.id));
         }
         if (!initial?.uom_id) {
-          const pcs =
-            uomData.rows.find((row) => row.code === "PCS") ?? uomData.rows[0];
+          const pcs = uomData.rows.find((row) => row.code === "PCS") ?? uomData.rows[0];
           if (pcs) setUomId(String(pcs.id));
         }
       })
@@ -137,7 +129,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           min_stock: parsedMin,
           is_active: isActive,
         },
-        { file, removeImage },
+        { file, removeImage }
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : t.toast.saveFailed);
@@ -205,19 +197,11 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
             <div className="hidden sm:block" aria-hidden />
             <div>
               <label className={label}>{t.sparepart.nameEn}</label>
-              <input
-                className={field}
-                value={nameEn}
-                onChange={(e) => setNameEn(e.target.value)}
-              />
+              <input className={field} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
             </div>
             <div>
               <label className={label}>{t.sparepart.nameCn}</label>
-              <input
-                className={field}
-                value={nameCn}
-                onChange={(e) => setNameCn(e.target.value)}
-              />
+              <input className={field} value={nameCn} onChange={(e) => setNameCn(e.target.value)} />
             </div>
             <div>
               <label className={label}>{t.sparepart.brandEn}</label>
@@ -237,11 +221,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
             </div>
             <div className="sm:col-span-2">
               <label className={label}>{t.sparepart.model}</label>
-              <input
-                className={field}
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-              />
+              <input className={field} value={model} onChange={(e) => setModel(e.target.value)} />
             </div>
             <div>
               <label className={label}>{t.sparepart.category} *</label>
@@ -316,11 +296,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                     title={t.sparepart.image}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- local object URL or API image */}
-                    <img
-                      src={previewSrc}
-                      alt=""
-                      className="size-full object-contain"
-                    />
+                    <img src={previewSrc} alt="" className="size-full object-contain" />
                   </button>
                 ) : (
                   <label
@@ -330,9 +306,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                     }`}
                   >
                     <span className="text-2xl leading-none">+</span>
-                    <span className="mt-1 text-[11px] font-medium">
-                      {t.sparepart.imageUpload}
-                    </span>
+                    <span className="mt-1 text-[11px] font-medium">{t.sparepart.imageUpload}</span>
                   </label>
                 )}
                 <input
@@ -361,9 +335,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                 </button>
               ) : null}
               {removeImage && initial?.image_url && !file ? (
-                <p className="mt-1 text-xs text-text-muted">
-                  {t.sparepart.imageWillRemove}
-                </p>
+                <p className="mt-1 text-xs text-text-muted">{t.sparepart.imageWillRemove}</p>
               ) : null}
             </div>
           </div>

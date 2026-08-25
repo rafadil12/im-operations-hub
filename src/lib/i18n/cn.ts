@@ -293,11 +293,9 @@ const cn: Dict = {
     manageDesc: "跟踪和管理 IT 服务工单",
 
     analysisTitle: "ITSM 数据分析",
-    analysisDesc:
-      "查看 ITSM 工单趋势、状态、技术员及支持组分析",
+    analysisDesc: "查看 ITSM 工单趋势、状态、技术员及支持组分析",
 
-    masterDesc:
-      "管理支持组、分类、子分类及其他配置",
+    masterDesc: "管理支持组、分类、子分类及其他配置",
 
     requestId: "请求编号",
     subject: "主题",
@@ -338,7 +336,7 @@ const cn: Dict = {
     nonServiceRequestTickets: "非服务请求工单",
 
     tickets: "单",
-    
+
     highestSubmittedTickets: "提交工单最多",
     noRequesterData: "暂无申请人数据。",
     rank: "排名",

@@ -36,22 +36,16 @@ export default function RecentTickets({ rows }: Props) {
     <div className="min-w-0 rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-text">
-            {t.itsm.recentTickets}
-          </h2>
+          <h2 className="text-lg font-semibold text-text">{t.itsm.recentTickets}</h2>
 
-          <p className="text-sm text-text-muted">
-            {t.itsm.latestCreatedItsmRequests}
-          </p>
+          <p className="text-sm text-text-muted">{t.itsm.latestCreatedItsmRequests}</p>
         </div>
 
         <Clock3 className="h-5 w-5 shrink-0 text-blue-500" />
       </div>
 
       {visibleRows.length === 0 ? (
-        <div className="p-8 text-center text-sm text-text-muted">
-          {t.itsm.noRecentTickets}
-        </div>
+        <div className="p-8 text-center text-sm text-text-muted">{t.itsm.noRecentTickets}</div>
       ) : (
         <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-sm">
@@ -64,21 +58,13 @@ export default function RecentTickets({ rows }: Props) {
 
             <thead className="bg-bg/40">
               <tr className="border-b border-border-subtle">
-                <th className="px-3 py-3 text-left font-semibold">
-                  {t.itsm.requestId}
-                </th>
+                <th className="px-3 py-3 text-left font-semibold">{t.itsm.requestId}</th>
 
-                <th className="px-3 py-3 text-left font-semibold">
-                  {t.itsm.subject}
-                </th>
+                <th className="px-3 py-3 text-left font-semibold">{t.itsm.subject}</th>
 
-                <th className="px-3 py-3 text-left font-semibold">
-                  {t.itsm.technician}
-                </th>
+                <th className="px-3 py-3 text-left font-semibold">{t.itsm.technician}</th>
 
-                <th className="px-3 py-3 text-left font-semibold">
-                  {t.itsm.status}
-                </th>
+                <th className="px-3 py-3 text-left font-semibold">{t.itsm.status}</th>
               </tr>
             </thead>
 

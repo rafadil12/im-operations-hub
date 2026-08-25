@@ -35,13 +35,9 @@ export default function TopRequester({ rows }: Props) {
     <div className="rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
         <div>
-          <h2 className="text-lg font-semibold text-text">
-            {t.itsm.topRequester}
-          </h2>
+          <h2 className="text-lg font-semibold text-text">{t.itsm.topRequester}</h2>
 
-          <p className="text-sm text-text-muted">
-            {t.itsm.highestSubmittedTickets}
-          </p>
+          <p className="text-sm text-text-muted">{t.itsm.highestSubmittedTickets}</p>
         </div>
 
         <Trophy className="h-5 w-5 text-amber-500" />
@@ -49,9 +45,7 @@ export default function TopRequester({ rows }: Props) {
 
       <div className="divide-y divide-border-subtle overflow-hidden">
         {visibleRows.length === 0 ? (
-          <div className="p-6 text-center text-sm text-text-muted">
-            {t.itsm.noRequesterData}
-          </div>
+          <div className="p-6 text-center text-sm text-text-muted">{t.itsm.noRequesterData}</div>
         ) : (
           visibleRows.map((item, index) => (
             <div
@@ -64,9 +58,7 @@ export default function TopRequester({ rows }: Props) {
                 </div>
 
                 <div>
-                  <div className="font-medium text-text">
-                    {item.requester}
-                  </div>
+                  <div className="font-medium text-text">{item.requester}</div>
 
                   <div className="text-xs text-text-muted">
                     {t.itsm.rank} #{((startIndex + index) % rows.length) + 1}
@@ -75,13 +67,9 @@ export default function TopRequester({ rows }: Props) {
               </div>
 
               <div className="text-right">
-                <div className="text-lg font-bold text-text">
-                  {item.totalTickets}
-                </div>
+                <div className="text-lg font-bold text-text">{item.totalTickets}</div>
 
-                <div className="text-xs text-text-muted">
-                  {t.itsm.tickets}
-                </div>
+                <div className="text-xs text-text-muted">{t.itsm.tickets}</div>
               </div>
             </div>
           ))

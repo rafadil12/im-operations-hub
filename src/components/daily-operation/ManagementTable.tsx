@@ -1,6 +1,7 @@
 "use client";
 
 import { localizedField, useLang } from "@/lib/i18n";
+import { fillTemplate } from "@/lib/i18n/fillTemplate";
 import { formatDisplay } from "@/lib/datetime";
 import type { MesDataRow } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
@@ -21,16 +22,6 @@ type Props = {
 
 const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
 const td = "px-3 py-2 align-top text-xs text-text-muted";
-
-function fillTemplate(
-  template: string,
-  values: Record<string, string | number>,
-): string {
-  return Object.entries(values).reduce(
-    (text, [key, value]) => text.replaceAll(`{${key}}`, String(value)),
-    template,
-  );
-}
 
 export function ManagementTable({
   rows,
@@ -115,12 +106,8 @@ export function ManagementTable({
                     toneKey={row.status_en}
                   />
                 </td>
-                <td className={`${td} whitespace-nowrap`}>
-                  {formatDisplay(row.start_time)}
-                </td>
-                <td className={`${td} whitespace-nowrap`}>
-                  {formatDisplay(row.end_time)}
-                </td>
+                <td className={`${td} whitespace-nowrap`}>{formatDisplay(row.start_time)}</td>
+                <td className={`${td} whitespace-nowrap`}>{formatDisplay(row.end_time)}</td>
                 <td className={`${td} whitespace-nowrap`}>
                   {onEdit || onDelete ? (
                     <div className="flex gap-1.5">
@@ -169,15 +156,11 @@ export function ManagementTable({
               ))}
             </select>
           </label>
-          <span>
-            {fillTemplate(t.common.showingRange, { from, to, total: totalCount })}
-          </span>
+          <span>{fillTemplate(t.common.showingRange, { from, to, total: totalCount })}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span>
-            {fillTemplate(t.common.pageOf, { page, total: totalPages })}
-          </span>
+          <span>{fillTemplate(t.common.pageOf, { page, total: totalPages })}</span>
           <button
             type="button"
             disabled={!canPrev}

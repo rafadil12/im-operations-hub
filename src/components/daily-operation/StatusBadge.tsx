@@ -12,13 +12,7 @@ function toneFromKey(toneKey: string | null | undefined): string {
   return "border-border bg-surface text-text-muted";
 }
 
-export function StatusBadge({
-  label,
-  toneKey,
-}: {
-  label: string | null;
-  toneKey?: string | null;
-}) {
+export function StatusBadge({ label, toneKey }: { label: string | null; toneKey?: string | null }) {
   if (!label || label === "-") {
     return <span className="text-text-dim">-</span>;
   }

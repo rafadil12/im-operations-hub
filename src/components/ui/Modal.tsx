@@ -36,7 +36,11 @@ export function Modal({
   size = "md",
   closeDisabled = false,
 }: ModalProps) {
-  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -99,6 +103,6 @@ export function Modal({
         ) : null}
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }

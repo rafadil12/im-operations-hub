@@ -7,8 +7,7 @@ export const SITE_DESCRIPTION =
   "IM One is the intelligent operations platform for factory teams: daily operation records, ITSM, analytics and master data in one place.";
 
 /** Fallback keeps metadataBase valid in dev so relative canonical/OG URLs resolve. */
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /** Route served by app/opengraph-image.tsx. */
 export const OG_IMAGE = {

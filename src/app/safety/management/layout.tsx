@@ -11,10 +11,6 @@ export const metadata = pageMetadata({
   path: "/safety/management",
 });
 
-export default function ManagementLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function ManagementLayout({ children }: { children: ReactNode }) {
   return children;
 }

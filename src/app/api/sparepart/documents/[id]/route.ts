@@ -21,14 +21,11 @@ export async function GET(_request: NextRequest, context: Ctx) {
        FROM sparepart_mat_docs
        WHERE id = ?
        LIMIT 1`,
-      [docId],
+      [docId]
     );
     const header = headers[0];
     if (!header) {
-      return NextResponse.json(
-        { error: "Material document not found." },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Material document not found." }, { status: 404 });
     }
 
     const lines = await query<SparepartMatDocLine[]>(
@@ -63,12 +60,12 @@ export async function GET(_request: NextRequest, context: Ctx) {
          ON loc_to.id = li.to_storage_location_id
        WHERE li.doc_id = ?
        ORDER BY li.line_no ASC`,
-      [docId],
+      [docId]
     );
 
     const alreadyReversed = await query<{ id: number }[]>(
       `SELECT id FROM sparepart_mat_docs WHERE reversal_of_doc_id = ? LIMIT 1`,
-      [docId],
+      [docId]
     );
 
     return NextResponse.json({
@@ -80,9 +77,6 @@ export async function GET(_request: NextRequest, context: Ctx) {
     });
   } catch (error) {
     console.error("GET /sparepart/documents/[id] failed", error);
-    return NextResponse.json(
-      { error: "Failed to load material document." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load material document." }, { status: 500 });
   }
 }

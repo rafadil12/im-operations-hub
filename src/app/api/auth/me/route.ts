@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  clearSessionCookie,
-  getAccountPublic,
-  readSession,
-} from "@/lib/auth";
+import { clearSessionCookie, getAccountPublic, readSession } from "@/lib/auth";
 
 export async function GET() {
   try {

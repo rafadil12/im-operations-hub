@@ -19,3 +19,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - Multi-loc overrides are hardcoded in the script (IT00004 → Server Room only; IT00056/57/58 → Gudang Internal; IT00104 → split Server Room + Meja IT).
   - Documents are attributed to seeded **Super Admin** (`employee_no=SUPERADMIN`).
 - Run migrations: `node --env-file=.env.local db/run-migrations.mjs`
+
+## Safety module
+
+- Shared logic lives under `src/lib/safety/` (types, mappers, copy, evidence, overview metrics, API helpers).
+- UI: `src/components/safety/overview/` (dashboard) and `src/components/safety/management/` (submissions).
+- Routes: `/safety` (overview), `/safety/management` (weekly/monthly activity uploads).

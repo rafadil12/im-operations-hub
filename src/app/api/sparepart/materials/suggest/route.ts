@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
-import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
+import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepart/categories";
 import type { SparepartItem } from "@/lib/types";
 
 const SELECT_COLS = ITEM_CATEGORY_SELECT;
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const rawLimit = Number(sp.get("limit") || DEFAULT_LIMIT);
     const limit = Math.min(
       Math.max(Number.isFinite(rawLimit) ? rawLimit : DEFAULT_LIMIT, 1),
-      MAX_LIMIT,
+      MAX_LIMIT
     );
 
     if (exactCode) {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
          FROM ${ITEM_CATEGORY_FROM}
          WHERE i.deleted_at IS NULL AND i.code = ?
          LIMIT 5`,
-        [exactCode],
+        [exactCode]
       );
       return NextResponse.json({ rows });
     }
@@ -72,15 +72,12 @@ export async function GET(request: NextRequest) {
          END,
          i.code ASC
        LIMIT ?`,
-      [like, like, like, like, like, like, needle, prefix, prefix, prefix, limit],
+      [like, like, like, like, like, like, needle, prefix, prefix, prefix, limit]
     );
 
     return NextResponse.json({ rows });
   } catch (error) {
     console.error("GET /sparepart/materials/suggest failed", error);
-    return NextResponse.json(
-      { error: "Failed to suggest materials." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to suggest materials." }, { status: 500 });
   }
 }

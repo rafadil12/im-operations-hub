@@ -25,11 +25,7 @@ const cards = [
 
 export function DailyOperationLandingCards() {
   const { t } = useLang();
-  const {
-    canViewDailyRecords,
-    canViewDailyAnalysis,
-    canManageConfiguration,
-  } = useRoleAccess();
+  const { canViewDailyRecords, canViewDailyAnalysis, canManageConfiguration } = useRoleAccess();
 
   const visibleCards = useMemo(() => {
     return cards.filter((card) => {
@@ -64,9 +60,7 @@ export function DailyOperationLandingCards() {
           </span>
           <h2 className="text-sm font-semibold text-text">{titleFor(card.key)}</h2>
           <p className="mt-1 text-xs text-text-muted">{descFor(card.key)}</p>
-          <span className="mt-4 text-xs font-medium text-accent group-hover:underline">
-            Open →
-          </span>
+          <span className="mt-4 text-xs font-medium text-accent group-hover:underline">Open →</span>
         </Link>
       ))}
     </div>

@@ -21,10 +21,7 @@ function resolveLabel(t: Dict, label: PermissionTreeLabel): string {
   return t.settings[label.key];
 }
 
-function selectionState(
-  ids: number[],
-  selected: Set<number>,
-): "all" | "some" | "none" {
+function selectionState(ids: number[], selected: Set<number>): "all" | "some" | "none" {
   if (ids.length === 0) return "none";
   let count = 0;
   for (const id of ids) {
@@ -118,10 +115,7 @@ function TreeNodeRow({
         >
           {hasNested ? <Chevron open={isOpen} /> : <span className="inline-block size-4" />}
         </button>
-        <GroupCheckbox
-          state={state}
-          onToggle={() => onToggleIds(ids, state !== "all")}
-        />
+        <GroupCheckbox state={state} onToggle={() => onToggleIds(ids, state !== "all")} />
         <span className="font-semibold text-text">{resolve(node.label)}</span>
         <span className="ml-auto shrink-0 text-[10px] text-text-dim">
           {ids.filter((id) => selected.has(id)).length}/{ids.length}
@@ -143,9 +137,7 @@ function TreeNodeRow({
                 onChange={() => onToggleIds([p.id], !selected.has(p.id))}
               />
               <span>
-                <span className="font-medium text-text">
-                  {p.description?.trim() || p.code}
-                </span>
+                <span className="font-medium text-text">{p.description?.trim() || p.code}</span>
                 {p.description ? (
                   <span className="mt-0.5 block text-text-dim">{p.code}</span>
                 ) : null}
@@ -170,11 +162,7 @@ function TreeNodeRow({
   );
 }
 
-export function PermissionTreePicker({
-  permissions,
-  selectedIds,
-  onChange,
-}: Props) {
+export function PermissionTreePicker({ permissions, selectedIds, onChange }: Props) {
   const { t } = useLang();
   const tree = useMemo(() => groupPermissions(permissions), [permissions]);
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -201,9 +189,7 @@ export function PermissionTreePicker({
   };
 
   if (tree.length === 0) {
-    return (
-      <p className="px-2 py-3 text-xs text-text-muted">{t.common.noData}</p>
-    );
+    return <p className="px-2 py-3 text-xs text-text-muted">{t.common.noData}</p>;
   }
 
   return (

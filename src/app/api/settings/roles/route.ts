@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import {
-  PERMISSIONS,
-  requireAnyPermission,
-  requirePermission,
-} from "@/lib/auth";
+import { PERMISSIONS, requireAnyPermission, requirePermission } from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
 
 type RoleRow = RowDataPacket & {
@@ -22,11 +18,9 @@ export async function GET() {
   if (gate instanceof NextResponse) return gate;
 
   try {
-    const roles = await query<RoleRow[]>(
-      "SELECT id, name, description FROM roles ORDER BY id ASC",
-    );
+    const roles = await query<RoleRow[]>("SELECT id, name, description FROM roles ORDER BY id ASC");
     const links = await query<RowDataPacket[]>(
-      "SELECT role_id, permission_id FROM role_permissions",
+      "SELECT role_id, permission_id FROM role_permissions"
     );
     const byRole = new Map<number, number[]>();
     for (const link of links) {
@@ -69,21 +63,21 @@ export async function POST(request: NextRequest) {
     if (!/^[a-z][a-z0-9_]*$/.test(name)) {
       return NextResponse.json(
         { error: "Role name must be lowercase letters, numbers, or underscores." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const roleId = await withTransaction(async (conn) => {
-      const [result] = await conn.execute(
-        "INSERT INTO roles (name, description) VALUES (?, ?)",
-        [name, description],
-      );
+      const [result] = await conn.execute("INSERT INTO roles (name, description) VALUES (?, ?)", [
+        name,
+        description,
+      ]);
       const insertId = Number((result as { insertId: number }).insertId);
       for (const permissionId of permissionIds) {
-        await conn.execute(
-          "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-          [insertId, permissionId],
-        );
+        await conn.execute("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)", [
+          insertId,
+          permissionId,
+        ]);
       }
       return insertId;
     });

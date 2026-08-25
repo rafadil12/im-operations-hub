@@ -19,7 +19,7 @@ export async function GET() {
       `SELECT id, code, name_en, name_cn, sort_order, is_active, created_at, updated_at
        FROM uoms
        WHERE is_active = 1
-       ORDER BY sort_order ASC, code ASC`,
+       ORDER BY sort_order ASC, code ASC`
     );
     return NextResponse.json({ rows });
   } catch (error) {

@@ -36,22 +36,16 @@ export default function OldestTickets({ rows }: Props) {
     <div className="min-w-0 rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-text">
-            {t.itsm.oldestOpenTickets}
-          </h2>
+          <h2 className="text-lg font-semibold text-text">{t.itsm.oldestOpenTickets}</h2>
 
-          <p className="text-sm text-text-muted">
-            {t.itsm.longestPendingRequests}
-          </p>
+          <p className="text-sm text-text-muted">{t.itsm.longestPendingRequests}</p>
         </div>
 
         <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
       </div>
 
       {visibleRows.length === 0 ? (
-        <div className="p-8 text-center text-sm text-text-muted">
-          {t.itsm.noOverdueTickets}
-        </div>
+        <div className="p-8 text-center text-sm text-text-muted">{t.itsm.noOverdueTickets}</div>
       ) : (
         <div className="min-w-0 overflow-hidden">
           <table className="w-full table-fixed text-sm">
@@ -64,21 +58,13 @@ export default function OldestTickets({ rows }: Props) {
 
             <thead className="bg-bg/40">
               <tr className="border-b border-border-subtle">
-                <th className="px-3 py-3 text-left font-semibold">
-                  {t.itsm.requestId}
-                </th>
+                <th className="px-3 py-3 text-left font-semibold">{t.itsm.requestId}</th>
 
-                <th className="px-3 py-3 text-left font-semibold">
-                  {t.itsm.subject}
-                </th>
+                <th className="px-3 py-3 text-left font-semibold">{t.itsm.subject}</th>
 
-                <th className="px-3 py-3 text-left font-semibold">
-                  {t.itsm.technician}
-                </th>
+                <th className="px-3 py-3 text-left font-semibold">{t.itsm.technician}</th>
 
-                <th className="px-3 py-3 text-center font-semibold">
-                  {t.itsm.days}
-                </th>
+                <th className="px-3 py-3 text-center font-semibold">{t.itsm.days}</th>
               </tr>
             </thead>
 

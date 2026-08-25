@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { buildItsmExport } from "@/lib/itsmExport";
+import { buildItsmExport } from "@/lib/itsm/export";
 import type { ItsmRequest } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -21,10 +21,7 @@ export async function GET(request: NextRequest) {
     const endRaw = sp.get("end");
 
     if (!startRaw || !endRaw) {
-      return NextResponse.json(
-        { error: "Start and end date are required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Start and end date are required." }, { status: 400 });
     }
 
     // Strict date-only form for SQL params and Content-Disposition filename.
@@ -34,7 +31,7 @@ export async function GET(request: NextRequest) {
     if (!DATE_ONLY.test(start) || !DATE_ONLY.test(end)) {
       return NextResponse.json(
         { error: "Start and end must be YYYY-MM-DD dates." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -127,8 +124,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "no-store",
       },
@@ -142,7 +138,7 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 500,
-      },
+      }
     );
   }
 }
