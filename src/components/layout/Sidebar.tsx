@@ -124,13 +124,18 @@ const navItems: NavItem[] = [
       },
     ],
   },
-  {
-    id: "organization",
-    labelKey: "organization",
-    icon: "organization",
-    disabled: true,
-    children: comingSoonChildren,
-  },
+ {
+  id: "organization",
+  labelKey: "organization",
+  icon: "organization",
+  children: [
+    {
+      id: "management",
+      labelKey: "moduleManagement",
+      href: "/organization/employees",
+    },
+  ],
+},
   {
     id: "report",
     labelKey: "report",
