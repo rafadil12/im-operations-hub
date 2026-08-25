@@ -80,7 +80,8 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
               aria-label={t.dashboard.close}
               className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
             >
-              âœ?            </button>
+              Ã—
+            </button>
           </div>
         </div>
 
