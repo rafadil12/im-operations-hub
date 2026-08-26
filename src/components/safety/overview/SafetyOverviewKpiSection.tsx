@@ -47,7 +47,7 @@ export function SafetyOverviewKpiSection({
         title={safetyText("hazardFinding", safetyLanguage)}
         value={`${hazardFinding} / 4`}
         subtitle={safetyText("thisMonth", safetyLanguage)}
-        icon="鈿狅笍"
+        icon="⚠️"
         tone="warning"
       />
 
