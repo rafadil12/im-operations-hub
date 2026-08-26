@@ -7,7 +7,6 @@ export const metadata = pageMetadata({
   description:
     "Cross-module dashboard of IM One: live KPI cards for Daily Operation, ITSM, Safety, Sparepart and factory modules in a single view.",
   path: "/",
-  absoluteTitle: true,
 });
 
 export default function Home() {

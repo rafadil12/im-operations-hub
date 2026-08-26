@@ -3,8 +3,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
   title: "Management · ITSM",
-  description:
-    "Create, edit and track ITSM requests with filters for date range, requester, technician, status and priority.",
+  description: "Track and manage IT service tickets.",
   path: "/itsm/management",
 });
 
