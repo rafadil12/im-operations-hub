@@ -2,11 +2,15 @@ const BASES = {
   daily: "/api/daily-operation",
   itsm: "/api/itsm",
   sparepart: "/api/sparepart",
+  organization: "/api/organization",
 } as const;
 
 type ModuleType = keyof typeof BASES;
 
-/** API failure that remains an Error so `instanceof Error` callers keep working. */
+/**
+ * API failure that remains an Error so `instanceof Error`
+ * callers keep working.
+ */
 export class ApiError extends Error {
   status: number;
 
@@ -18,7 +22,10 @@ export class ApiError extends Error {
 }
 
 export function getApiErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    return error.message;
+  }
+
   if (
     typeof error === "object" &&
     error !== null &&
@@ -27,6 +34,7 @@ export function getApiErrorMessage(error: unknown): string {
   ) {
     return (error as { message: string }).message;
   }
+
   return "Request failed.";
 }
 
@@ -74,7 +82,10 @@ export async function apiGetAbs<T>(path: string, init?: { signal?: AbortSignal }
   return handle<T>(res);
 }
 
-/** Absolute-path mutation (e.g. `/api/settings/...`). */
+/**
+ * Absolute-path mutation
+ * (e.g. `/api/settings/...`).
+ */
 export async function apiSendAbs<T>(
   path: string,
   method: "POST" | "PUT" | "DELETE",

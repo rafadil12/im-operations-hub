@@ -120,8 +120,13 @@ export const navItems: NavItem[] = [
     id: "organization",
     labelKey: "organization",
     icon: "organization",
-    disabled: true,
-    children: comingSoonChildren,
+    children: [
+      {
+        id: "management",
+        labelKey: "moduleManagement",
+        href: "/organization/employees",
+      },
+    ],
   },
   {
     id: "report",
