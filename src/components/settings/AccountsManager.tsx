@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { isProtectedAccountEmployeeNo, isProtectedRoleName } from "@/lib/auth/access";
 import { useLang } from "@/lib/i18n";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SettingsTabs } from "./SettingsTabs";
 import { AccountFormModal } from "./accounts/AccountFormModal";
 import { AccountsTable } from "./accounts/AccountsTable";
@@ -19,6 +20,8 @@ export function AccountsManager() {
   const [formError, setFormError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState<AccountRow | null>(null);
+  const [deleteRow, setDeleteRow] = useState<AccountRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [employeeNo, setEmployeeNo] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [nameCn, setNameCn] = useState("");
@@ -221,6 +224,22 @@ export function AccountsManager() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteRow) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await apiSendAbs(`/api/settings/accounts/${deleteRow.id}`, "DELETE");
+      setDeleteRow(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t.common.error);
+      setDeleteRow(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const displayName = (row: AccountRow) => {
     if (lang === "cn") return row.nameCn || row.nameEn || row.employeeNo || "-";
     return row.nameEn || row.nameCn || row.employeeNo || "-";
@@ -257,7 +276,13 @@ export function AccountsManager() {
           {t.common.loading}
         </div>
       ) : (
-        <AccountsTable rows={rows} t={t} displayName={displayName} onEdit={openEdit} />
+        <AccountsTable
+          rows={rows}
+          t={t}
+          displayName={displayName}
+          onEdit={openEdit}
+          onDelete={setDeleteRow}
+        />
       )}
 
       {modalOpen ? (
@@ -290,6 +315,16 @@ export function AccountsManager() {
           displayName={displayName}
           onClose={closeForm}
           onSubmit={(generate) => void (addOpen ? submitAdd(generate) : submitEdit(generate))}
+        />
+      ) : null}
+
+      {deleteRow ? (
+        <ConfirmDialog
+          title={t.confirmDelete.title}
+          message={t.settings.deleteAccountConfirm}
+          busy={deleting}
+          onCancel={() => setDeleteRow(null)}
+          onConfirm={() => void confirmDelete()}
         />
       ) : null}
     </div>

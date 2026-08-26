@@ -38,7 +38,7 @@ export {
   changePassword,
   resetPassword,
 } from "./accounts";
-export type { ChangePasswordResult } from "./accounts";
+export type { AuthenticateLoginResult, ChangePasswordResult } from "./accounts";
 export { MIN_PASSWORD_LENGTH } from "./constants";
 
 async function unauthorized(): Promise<NextResponse> {

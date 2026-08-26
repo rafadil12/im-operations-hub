@@ -67,9 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = (await res.json().catch(() => ({}))) as {
         account?: AuthAccountPublic;
         error?: string;
+        code?: string;
       };
       if (!res.ok || !data.account) {
-        throw new Error(data.error || "Login failed.");
+        throw new Error(data.error || "Login failed.", { cause: data.code });
       }
       setAccount(data.account);
     },

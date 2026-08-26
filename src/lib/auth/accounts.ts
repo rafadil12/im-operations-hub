@@ -6,6 +6,10 @@ import { hashPassword, verifyPassword } from "./password";
 export type ChangePasswordResult =
   { ok: true } | { ok: false; code: "not_found" | "wrong_current" };
 
+export type AuthenticateLoginResult =
+  | { ok: true; account: AuthAccountPublic }
+  | { ok: false; code: "invalid_credentials" | "inactive" };
+
 type AccountRow = RowDataPacket & {
   system_user_id: number;
   user_id: number;
@@ -101,20 +105,30 @@ export async function getAccountPublic(systemUserId: number): Promise<AuthAccoun
 export async function authenticateLogin(
   login: string,
   password: string
-): Promise<AuthAccountPublic | null> {
+): Promise<AuthenticateLoginResult> {
   const employeeNo = login.trim();
-  if (!employeeNo || !password) return null;
+  if (!employeeNo || !password) {
+    return { ok: false, code: "invalid_credentials" };
+  }
 
   const row = await findAccountByEmployeeNo(employeeNo);
-  if (!row || !row.is_active) return null;
+  if (!row) {
+    return { ok: false, code: "invalid_credentials" };
+  }
 
   const ok = await verifyPassword(password, row.password_hash);
-  if (!ok) return null;
+  if (!ok) {
+    return { ok: false, code: "invalid_credentials" };
+  }
+
+  if (!row.is_active) {
+    return { ok: false, code: "inactive" };
+  }
 
   await execute("UPDATE system_users SET last_login_at = NOW() WHERE id = ?", [row.system_user_id]);
 
   const permissions = await loadPermissionsForRole(row.role_id);
-  return toPublic(row, permissions);
+  return { ok: true, account: toPublic(row, permissions) };
 }
 
 export async function changePassword(

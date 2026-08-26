@@ -63,13 +63,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const account = await authenticateLogin(login, password);
-    if (!account) {
+    const result = await authenticateLogin(login, password);
+    if (!result.ok) {
+      if (result.code === "inactive") {
+        return NextResponse.json(
+          {
+            error: "This account is inactive. Contact an administrator.",
+            code: "inactive",
+          },
+          { status: 403 }
+        );
+      }
       recordLoginFailure(loginAttempts, key);
       recordLoginFailure(loginAttempts, ipKey);
-      return NextResponse.json({ error: "Invalid employee ID or password." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid employee ID or password.", code: "invalid_credentials" },
+        { status: 401 }
+      );
     }
 
+    const account = result.account;
     clearLoginFailures(loginAttempts, key);
 
     const maxAgeSeconds = remember ? MAX_AGE_SECONDS : 60 * 60 * 12;

@@ -557,13 +557,13 @@ function getLabels(
       "Safety Performance Score",
 
     overallWeight:
-      "Overall Completion Ă 50%",
+      "Overall Completion x 50%",
 
     closureWeight:
-      "Finding Closure Ă 30%",
+      "Finding Closure x 30%",
 
     trainingWeight:
-      "Training Completion Ă 20%",
+      "Training Completion x 20%",
   };
 }
 

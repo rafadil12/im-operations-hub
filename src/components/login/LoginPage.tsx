@@ -158,7 +158,11 @@ export function LoginPage() {
       router.push("/");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed.");
+      if (err instanceof Error && err.cause === "inactive") {
+        setError(t.auth.accountInactive);
+      } else {
+        setError(err instanceof Error ? err.message : "Login failed.");
+      }
     } finally {
       setSubmitting(false);
     }

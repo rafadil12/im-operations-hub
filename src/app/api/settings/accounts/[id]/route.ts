@@ -12,7 +12,7 @@ import {
   requirePermission,
   resetPassword,
 } from "@/lib/auth";
-import { execute, query } from "@/lib/db";
+import { execute, query, withTransaction } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -248,5 +248,104 @@ export async function PUT(request: NextRequest, context: Ctx) {
   } catch (error) {
     console.error("PUT /api/settings/accounts/[id] failed", error);
     return NextResponse.json({ error: "Failed to update account." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: NextRequest, context: Ctx) {
+  const gate = await requirePermission(PERMISSIONS.adminAccountsManage);
+  if (gate instanceof NextResponse) return gate;
+  if (!gate.session || !gate.account) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  try {
+    const { id: idParam } = await context.params;
+    const id = Number(idParam);
+    if (!id) {
+      return NextResponse.json({ error: "Invalid account id." }, { status: 400 });
+    }
+
+    const current = await query<RowDataPacket[]>(
+      `SELECT su.id, su.user_id, su.is_active, r.name AS role_name, u.employee_no
+       FROM system_users su
+       LEFT JOIN roles r ON r.id = su.role_id
+       LEFT JOIN users u ON u.id = su.user_id
+       WHERE su.id = ?
+       LIMIT 1`,
+      [id]
+    );
+    if (!current[0]) {
+      return NextResponse.json({ error: "Account not found." }, { status: 404 });
+    }
+
+    const employeeNo = current[0].employee_no as string | null;
+    const userId = Number(current[0].user_id);
+    const roleName = current[0].role_name as string | null;
+
+    if (isProtectedAccountEmployeeNo(employeeNo)) {
+      return NextResponse.json(
+        { error: "The Super Admin account cannot be deleted." },
+        { status: 400 }
+      );
+    }
+
+    if (id === gate.session.systemUserId) {
+      return NextResponse.json({ error: "You cannot delete your own account." }, { status: 403 });
+    }
+
+    if (roleName === "admin" && Number(current[0].is_active) === 1) {
+      const adminCount = await query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS c
+         FROM system_users su
+         INNER JOIN roles r ON r.id = su.role_id
+         WHERE r.name = 'admin' AND su.is_active = 1`
+      );
+      if (Number(adminCount[0]?.c ?? 0) <= 1) {
+        return NextResponse.json(
+          { error: "Cannot delete the last active admin." },
+          { status: 409 }
+        );
+      }
+    }
+
+    const mesRefs = await query<RowDataPacket[]>(
+      "SELECT COUNT(*) AS c FROM mes_record WHERE user_id = ?",
+      [userId]
+    );
+    if (Number(mesRefs[0]?.c ?? 0) > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete: this account is still referenced by daily operation records. Deactivate it instead.",
+        },
+        { status: 409 }
+      );
+    }
+
+    await withTransaction(async (conn) => {
+      await conn.execute(
+        `UPDATE sparepart_mat_docs
+         SET created_by_system_user_id = NULL
+         WHERE created_by_system_user_id = ?`,
+        [id]
+      );
+      await conn.execute("DELETE FROM system_users WHERE id = ?", [id]);
+      await conn.execute("DELETE FROM users WHERE id = ?", [userId]);
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const errno = (error as { errno?: number }).errno;
+    if (errno === 1451) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete: this account is still referenced by other records. Deactivate it instead.",
+        },
+        { status: 409 }
+      );
+    }
+    console.error("DELETE /api/settings/accounts/[id] failed", error);
+    return NextResponse.json({ error: "Failed to delete account." }, { status: 500 });
   }
 }
