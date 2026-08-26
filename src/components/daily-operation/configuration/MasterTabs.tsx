@@ -7,11 +7,11 @@ export function MasterTabs() {
   const { t } = useLang();
 
   const tabs = [
-    { label: t.nav.masterUsers, href: "/daily-operation/master/users" },
-    { label: t.nav.masterCategories, href: "/daily-operation/master/categories" },
+    { label: t.nav.masterUsers, href: "/daily-operation/configuration/users" },
+    { label: t.nav.masterCategories, href: "/daily-operation/configuration/categories" },
     {
       label: t.nav.masterSubcategories,
-      href: "/daily-operation/master/subcategories",
+      href: "/daily-operation/configuration/subcategories",
     },
   ];
 

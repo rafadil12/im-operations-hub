@@ -118,7 +118,7 @@ export type ModuleCardData = {
   recentRows?: TrainingRow[];
 };
 
-const EMPTY = "—";
+const EMPTY = "â";
 
 export const dashboardModules: ModuleCardData[] = [
   {
@@ -159,7 +159,7 @@ export const dashboardModules: ModuleCardData[] = [
     title: "DAILY OPERATION DASHBOARD",
     icon: "calendar",
     accentColor: "#22c55e",
-    href: "/daily-operation/analysis",
+    href: "/daily-operation/insights",
     layout: "default",
     stats: [
       { label: "Total Task", value: EMPTY, tone: "accent" },

@@ -15,9 +15,9 @@ export function isChildActive(pathname: string, child: NavChild): boolean {
     return pathname === child.href;
   }
 
-  // Daily Operation Master
-  if (child.href === "/daily-operation/master/users") {
-    return pathname.startsWith("/daily-operation/master");
+  // Daily Operation Configuration
+  if (child.href === "/daily-operation/configuration/users") {
+    return pathname.startsWith("/daily-operation/configuration");
   }
 
   // Settings

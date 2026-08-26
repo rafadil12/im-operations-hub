@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { useLang } from "@/lib/i18n";
-import { captureChartImage, useChartColors } from "./analysisChartUtils";
+import { captureChartImage, useChartColors } from "./insightsChartUtils";
 
 export function ChartCard({
   title,

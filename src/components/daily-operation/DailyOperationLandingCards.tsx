@@ -7,19 +7,19 @@ import { useLang } from "@/lib/i18n";
 
 const cards = [
   {
-    href: "/daily-operation/management",
-    key: "management" as const,
-    icon: "▤",
+    href: "/daily-operation/activities",
+    key: "activities" as const,
+    icon: "\u25A4",
   },
   {
-    href: "/daily-operation/analysis",
-    key: "analysis" as const,
-    icon: "◔",
+    href: "/daily-operation/insights",
+    key: "insights" as const,
+    icon: "\u25D4",
   },
   {
-    href: "/daily-operation/master/users",
-    key: "master" as const,
-    icon: "◎",
+    href: "/daily-operation/configuration/users",
+    key: "configuration" as const,
+    icon: "\u25CE",
   },
 ];
 
@@ -29,21 +29,21 @@ export function DailyOperationLandingCards() {
 
   const visibleCards = useMemo(() => {
     return cards.filter((card) => {
-      if (card.key === "management") return canViewDailyRecords;
-      if (card.key === "analysis") return canViewDailyAnalysis;
-      if (card.key === "master") return canManageConfiguration;
+      if (card.key === "activities") return canViewDailyRecords;
+      if (card.key === "insights") return canViewDailyAnalysis;
+      if (card.key === "configuration") return canManageConfiguration;
       return false;
     });
   }, [canViewDailyRecords, canViewDailyAnalysis, canManageConfiguration]);
 
   const titleFor = (key: (typeof cards)[number]["key"]) => {
-    if (key === "management") return t.dailyOp.manageTitle;
-    if (key === "analysis") return t.dailyOp.analysisTitle;
+    if (key === "activities") return t.nav.management;
+    if (key === "insights") return t.nav.analysis;
     return t.nav.master;
   };
   const descFor = (key: (typeof cards)[number]["key"]) => {
-    if (key === "management") return t.dailyOp.manageDesc;
-    if (key === "analysis") return t.dailyOp.analysisDesc;
+    if (key === "activities") return t.dailyOp.manageDesc;
+    if (key === "insights") return t.dailyOp.analysisDesc;
     return t.dailyOp.masterDesc;
   };
 
@@ -60,7 +60,9 @@ export function DailyOperationLandingCards() {
           </span>
           <h2 className="text-sm font-semibold text-text">{titleFor(card.key)}</h2>
           <p className="mt-1 text-xs text-text-muted">{descFor(card.key)}</p>
-          <span className="mt-4 text-xs font-medium text-accent group-hover:underline">Open →</span>
+          <span className="mt-4 text-xs font-medium text-accent group-hover:underline">
+            Open {"\u2192"}
+          </span>
         </Link>
       ))}
     </div>

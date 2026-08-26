@@ -29,9 +29,9 @@ import {
   tooltipStyleFor,
   useChartColors,
   type Slice,
-} from "./analysisChartUtils";
+} from "./insightsChartUtils";
 
-export function AnalysisCharts({ result }: { result: AnalysisResult }) {
+export function InsightsCharts({ result }: { result: AnalysisResult }) {
   const { lang, t } = useLang();
   const colors = useChartColors();
   const byDivision = result.byDivision ?? [];

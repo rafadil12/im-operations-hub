@@ -23,7 +23,7 @@ type Props = {
 const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
 const td = "px-3 py-2 align-top text-xs text-text-muted";
 
-export function ManagementTable({
+export function ActivitiesTable({
   rows,
   totalCount,
   page,

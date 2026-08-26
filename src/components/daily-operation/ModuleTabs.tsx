@@ -13,19 +13,19 @@ export function ModuleTabs() {
     const all = [
       {
         label: t.nav.management,
-        href: "/daily-operation/management",
+        href: "/daily-operation/activities",
         show: canViewDailyRecords,
       },
       {
         label: t.nav.analysis,
-        href: "/daily-operation/analysis",
+        href: "/daily-operation/insights",
         show: canViewDailyAnalysis,
       },
       {
         label: t.nav.master,
-        href: "/daily-operation/master/users",
+        href: "/daily-operation/configuration/users",
         show: canManageConfiguration,
-        isActive: (pathname: string) => pathname.startsWith("/daily-operation/master"),
+        isActive: (pathname: string) => pathname.startsWith("/daily-operation/configuration"),
       },
     ];
     return all

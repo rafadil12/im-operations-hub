@@ -46,17 +46,17 @@ export const navItems: NavItem[] = [
       {
         id: "activities",
         labelKey: "management",
-        href: "/daily-operation/management",
+        href: "/daily-operation/activities",
       },
       {
         id: "insights",
         labelKey: "analysis",
-        href: "/daily-operation/analysis",
+        href: "/daily-operation/insights",
       },
       {
         id: "configuration",
         labelKey: "master",
-        href: "/daily-operation/master/users",
+        href: "/daily-operation/configuration/users",
       },
     ],
   },

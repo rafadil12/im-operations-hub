@@ -1,5 +1,5 @@
 import { pageMetadata } from "@/lib/seo";
-import { MasterManager } from "@/components/daily-operation/master/MasterManager";
+import { MasterManager } from "@/components/daily-operation/configuration/MasterManager";
 
 export const metadata = pageMetadata({
   title: "Subcategories · Master Data",

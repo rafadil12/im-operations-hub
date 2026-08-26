@@ -12,7 +12,7 @@ IM One is an internal tool: every route sends `noindex, nofollow` and `/robots.t
 | --- | --- | --- |
 | Overview | Live | `/` |
 | ITSM | Live | `/itsm`, `/itsm/management`, `/itsm/analysis` |
-| Daily Operation | Live | `/daily-operation/management`, `/daily-operation/analysis`, `/daily-operation/master/*` |
+| Daily Operation | Live | `/daily-operation/activities`, `/daily-operation/insights`, `/daily-operation/configuration/*` |
 | Sparepart | Live | `/sparepart`, `/sparepart/stock`, `/sparepart/post`, `/sparepart/documents`, `/sparepart/materials`, `/sparepart/locations` |
 | Settings | Live | `/settings/roles`, `/settings/accounts` |
 | Safety | Live | `/safety`, `/safety/management` |

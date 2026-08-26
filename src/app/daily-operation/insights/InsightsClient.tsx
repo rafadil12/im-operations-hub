@@ -5,7 +5,7 @@ import { apiGet } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import { type AnalysisResult, namedStatusCount } from "@/lib/types";
-import { AnalysisCharts } from "@/components/daily-operation/analysis/AnalysisCharts";
+import { InsightsCharts } from "@/components/daily-operation/insights/InsightsCharts";
 
 const week = getOperationalWeek();
 const defaultRange = { start: week.start.slice(0, 10), end: week.end.slice(0, 10) };
@@ -169,7 +169,7 @@ export default function AnalysisPage() {
             onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
           />
 
-          <span className="text-xs text-text-dim">–</span>
+          <span className="text-xs text-text-dim">{"\u2192"}</span>
 
           <input
             type="date"
@@ -208,7 +208,7 @@ export default function AnalysisPage() {
               </div>
             ))}
           </div>
-          <AnalysisCharts result={result} />
+          <InsightsCharts result={result} />
         </>
       )}
     </div>

@@ -6,7 +6,7 @@ import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
 import { FilterBar, type Filters } from "@/components/daily-operation/FilterBar";
-import { ManagementTable, type PageSize } from "@/components/daily-operation/ManagementTable";
+import { ActivitiesTable, type PageSize } from "@/components/daily-operation/ActivitiesTable";
 import { ImportMesDataModal } from "@/components/daily-operation/ImportMesDataModal";
 import { MesDataForm } from "@/components/daily-operation/MesDataForm";
 import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
@@ -299,7 +299,7 @@ export default function ManagementPage() {
           {t.common.loading}
         </div>
       ) : (
-        <ManagementTable
+        <ActivitiesTable
           rows={pagedRows}
           totalCount={rows.length}
           page={currentPage}

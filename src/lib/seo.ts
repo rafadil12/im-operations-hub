@@ -4,7 +4,7 @@ export const SITE_NAME = "IM One";
 export const SITE_TAGLINE = "Intelligent Operations, One Platform";
 export const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
 export const SITE_DESCRIPTION =
-  "IM One is the intelligent operations platform for factory teams: daily operation records, ITSM, analytics and master data in one place.";
+  "IM One is the intelligent operations platform for factory teams: Daily Operation, ITSM, Safety, Sparepart, analytics and master data in one place.";
 
 /** Fallback keeps metadataBase valid in dev so relative canonical/OG URLs resolve. */
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

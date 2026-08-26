@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { ChartValueTooltip } from "./ChartValueTooltip";
-import { useChartColors, type Slice } from "./analysisChartUtils";
+import { useChartColors, type Slice } from "./insightsChartUtils";
 
 type PieLabelLayout = {
   index: number;

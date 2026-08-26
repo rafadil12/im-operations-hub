@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChartColors } from "@/lib/theme";
-import { tooltipStyleFor } from "./analysisChartUtils";
+import { tooltipStyleFor } from "./insightsChartUtils";
 
 export function ChartValueTooltip({
   active,

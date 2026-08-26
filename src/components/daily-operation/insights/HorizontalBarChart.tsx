@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { ChartValueTooltip } from "./ChartValueTooltip";
-import { useChartColors, type BarRow } from "./analysisChartUtils";
+import { useChartColors, type BarRow } from "./insightsChartUtils";
 
 export function HorizontalBarChart({
   data,
