@@ -25,3 +25,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Shared logic lives under `src/lib/safety/` (types, mappers, copy, evidence, overview metrics, API helpers).
 - UI: `src/components/safety/overview/` (dashboard) and `src/components/safety/management/` (submissions).
 - Routes: `/safety` (overview), `/safety/management` (weekly/monthly activity uploads).
+
+## Training module
+
+- Categories (phase 1): `mes`, `intelligent`, `it` — Safety training stays in the Safety module.
+- Tables: `training_sessions`, `training_session_participants`, `training_participants`.
+- Shared logic: `src/lib/training/`. UI: `src/components/training/{overview,activities}/`.
+- Routes: `/training` (overview), `/training/activities` (CRUD).
+- Uploads: set `TRAINING_UPLOAD_DIR` in `.env.local` (served via `/api/training/files/...`).
+- Import Excel (`培训记录_Training+Notes.xlsx`, sheets MES/INTELLIGENT/IT only):
+  `node --env-file=.env.local db/import-training-notes.mjs` (add `--force` to truncate + re-import).
+- Run migrations: `node --env-file=.env.local db/run-migrations.mjs`

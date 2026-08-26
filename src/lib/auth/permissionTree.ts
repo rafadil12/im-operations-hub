@@ -16,6 +16,7 @@ export type PermissionTreeLabel =
         | "itsm"
         | "dailyOperation"
         | "safety"
+        | "training"
         | "sparepart"
         | "settings"
         | "management"
@@ -121,6 +122,27 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
           PERMISSIONS.safetySubmissionCreate,
           PERMISSIONS.safetySubmissionUpdate,
           PERMISSIONS.safetySubmissionDelete,
+        ],
+      },
+    ],
+  },
+  {
+    id: "training",
+    label: { source: "nav", key: "training" },
+    children: [
+      {
+        id: "training-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.trainingOverviewView],
+      },
+      {
+        id: "training-activities",
+        label: { source: "nav", key: "management" },
+        codes: [
+          PERMISSIONS.trainingSessionRead,
+          PERMISSIONS.trainingSessionCreate,
+          PERMISSIONS.trainingSessionUpdate,
+          PERMISSIONS.trainingSessionDelete,
         ],
       },
     ],

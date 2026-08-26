@@ -938,5 +938,14 @@ if (!(await columnExists("system_users", "is_daily_operation_pic"))) {
   console.log("system_users.is_daily_operation_pic already exists.");
 }
 
+// ---------------------------------------------------------------------------
+// 022: Training module tables + permissions
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "022_training_module.sql",
+  readMigrationSql,
+  "Applied training module (sessions, participants, permissions).",
+);
+
 await conn.end();
 console.log("Migrations complete.");

@@ -28,6 +28,10 @@ export function Sidebar() {
     canViewSafetySubmissions,
     canCreateSafetySubmission,
     canUpdateSafetySubmission,
+    canViewTrainingOverview,
+    canViewTrainingSessions,
+    canCreateTrainingSession,
+    canUpdateTrainingSession,
     canViewSparepartOverview,
     canViewSparepartStock,
     canViewSparepartDocuments,
@@ -60,6 +64,14 @@ export function Sidebar() {
         }
         if (item.id === "safety") {
           return canViewSafetyOverview || canViewSafetySubmissions;
+        }
+        if (item.id === "training") {
+          return (
+            canViewTrainingOverview ||
+            canViewTrainingSessions ||
+            canCreateTrainingSession ||
+            canUpdateTrainingSession
+          );
         }
         if (item.id === "sparepart") {
           return (
@@ -120,6 +132,22 @@ export function Sidebar() {
             }),
           };
         }
+        if (item.id === "training" && item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.id === "overview") return canViewTrainingOverview;
+              if (child.id === "activities") {
+                return (
+                  canViewTrainingSessions ||
+                  canCreateTrainingSession ||
+                  canUpdateTrainingSession
+                );
+              }
+              return true;
+            }),
+          };
+        }
         if (item.id === "sparepart" && item.children) {
           const sparepartAccess = {
             canViewSparepartStock,
@@ -173,6 +201,10 @@ export function Sidebar() {
     canViewOverview,
     canViewSafetyOverview,
     canViewSafetySubmissions,
+    canViewTrainingOverview,
+    canViewTrainingSessions,
+    canCreateTrainingSession,
+    canUpdateTrainingSession,
     canViewSparepartDocuments,
     canViewSparepartMaterials,
     canViewSparepartOverview,

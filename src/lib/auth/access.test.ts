@@ -48,6 +48,8 @@ describe("guestHasPermission", () => {
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyAnalysisView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetyOverviewView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetySubmissionRead);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.trainingOverviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.trainingSessionRead);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartOverviewView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartStockView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartDocumentRead);
@@ -194,6 +196,19 @@ describe("getRoleAccess", () => {
     expect(access.canDeleteSafetySubmission).toBe(false);
   });
 
+  it("gates training modules independently", () => {
+    const access = getRoleAccess(
+      account({
+        permissions: [PERMISSIONS.trainingOverviewView, PERMISSIONS.trainingSessionCreate],
+      })
+    );
+    expect(access.canViewTrainingOverview).toBe(true);
+    expect(access.canViewTrainingSessions).toBe(false);
+    expect(access.canCreateTrainingSession).toBe(true);
+    expect(access.canUpdateTrainingSession).toBe(false);
+    expect(access.canDeleteTrainingSession).toBe(false);
+  });
+
   it("exposes overview.view as canViewOverview", () => {
     const access = getRoleAccess(account({ permissions: [PERMISSIONS.overviewView] }));
     expect(access.canViewOverview).toBe(true);
@@ -231,7 +246,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 37 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(37);
+  it("has exactly 42 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(42);
   });
 });

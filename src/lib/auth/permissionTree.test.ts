@@ -68,6 +68,23 @@ describe("PERMISSION_TREE", () => {
     ]);
   });
 
+  it("places training overview and activities under Training", () => {
+    const training = findNode(PERMISSION_TREE, "training");
+    expect(training?.children?.map((c) => c.id)).toEqual([
+      "training-overview",
+      "training-activities",
+    ]);
+    expect(findNode(PERMISSION_TREE, "training-overview")?.codes).toEqual([
+      PERMISSIONS.trainingOverviewView,
+    ]);
+    expect(findNode(PERMISSION_TREE, "training-activities")?.codes).toEqual([
+      PERMISSIONS.trainingSessionRead,
+      PERMISSIONS.trainingSessionCreate,
+      PERMISSIONS.trainingSessionUpdate,
+      PERMISSIONS.trainingSessionDelete,
+    ]);
+  });
+
   it("uses Daily Operation sidebar labels", () => {
     expect(findNode(PERMISSION_TREE, "daily-management")?.label).toEqual({
       source: "nav",

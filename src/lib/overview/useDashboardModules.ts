@@ -12,6 +12,8 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { mapItsmToOverview } from "@/lib/itsm/mapToOverview";
 import { mapSparepartToOverview } from "@/lib/sparepart/mapToOverview";
 import { mapSafetyToOverview, type SafetyRow } from "@/lib/safety/mapToOverview";
+import { mapTrainingToOverview } from "@/lib/training/mapToOverview";
+import type { TrainingOverviewMetrics } from "@/lib/training/types";
 import type { AnalysisResponse, SafetyApiResponse } from "@/lib/overview/types";
 
 export function useDashboardModules() {
@@ -23,6 +25,8 @@ export function useDashboardModules() {
     canViewSparepartStock,
     canViewSafetyOverview,
     canViewSafetySubmissions,
+    canViewTrainingOverview,
+    canViewTrainingSessions,
   } = useRoleAccess();
 
   const [modules, setModules] = useState<ModuleCardData[]>(dashboardModules);
@@ -38,7 +42,14 @@ export function useDashboardModules() {
 
     (async () => {
       try {
-        const [dailyData, itsmData, sparepartData, safetyWeeklyData, safetyMonthlyData] =
+        const [
+          dailyData,
+          itsmData,
+          sparepartData,
+          safetyWeeklyData,
+          safetyMonthlyData,
+          trainingData,
+        ] =
           await Promise.all([
             canViewDailyAnalysis
               ? apiGet<AnalysisResponse>(`/analysis?start=${start}&end=${end}`, "daily")
@@ -98,6 +109,25 @@ export function useDashboardModules() {
                   })
                   .catch(() => null)
               : Promise.resolve(null),
+
+            canViewTrainingOverview || canViewTrainingSessions
+              ? fetch(
+                  `/api/training/overview?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
+                  { method: "GET", cache: "no-store" }
+                )
+                  .then(async (response) => {
+                    const result = (await response.json()) as {
+                      success?: boolean;
+                      data?: TrainingOverviewMetrics;
+                      error?: string;
+                    };
+                    if (!response.ok || !result.data) {
+                      throw new Error(result.error ?? "Failed to load training overview.");
+                    }
+                    return result.data;
+                  })
+                  .catch(() => null)
+              : Promise.resolve(null),
           ]);
 
         if (cancelled) return;
@@ -132,6 +162,9 @@ export function useDashboardModules() {
                 return mapSafetyToOverview(weeklyRows, monthlyRows, lang === "cn" ? "cn" : "en");
               }
 
+              case "training":
+                return trainingData ? mapTrainingToOverview(mod, trainingData) : mod;
+
               default:
                 return mod;
             }
@@ -152,6 +185,8 @@ export function useDashboardModules() {
     canViewSafetyOverview,
     canViewSafetySubmissions,
     canViewSparepartStock,
+    canViewTrainingOverview,
+    canViewTrainingSessions,
     lang,
   ]);
 

@@ -1,0 +1,1 @@
+export { TrainingActivitiesClient } from "./TrainingActivitiesClient";

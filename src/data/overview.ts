@@ -1,9 +1,9 @@
 /**
  * Dashboard module card types + shell definitions.
  *
- * Live modules (itsm, daily-operation, safety, sparepart) use empty skeletons
- * that are overwritten by API data in `useDashboardModules`.
- * Coming-soon modules (organization, report, training) keep placeholder UI until live.
+ * Live modules (itsm, daily-operation, safety, sparepart, training) use empty
+ * skeletons that are overwritten by API data in `useDashboardModules`.
+ * Coming-soon modules (organization, report) keep placeholder UI until live.
  */
 
 export type ModuleId =
@@ -323,14 +323,14 @@ export const dashboardModules: ModuleCardData[] = [
     title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",
-    href: "/",
+    href: "/training",
     layout: "training",
     colSpan: 3,
     stats: [
-      { label: "Total Training", value: "18", tone: "accent" },
-      { label: "Participants", value: "246", tone: "accent" },
-      { label: "Completion Rate", value: "86%", trend: "+4%", tone: "success" },
-      { label: "Average Score", value: "88.2", tone: "success" },
+      { label: "Total Training", value: "—", tone: "accent" },
+      { label: "Participants", value: "—", tone: "accent" },
+      { label: "Unique Participants", value: "—", tone: "success" },
+      { label: "Attachment Rate", value: "—", tone: "success" },
     ],
     chart: {
       title: "Training Trend",
@@ -339,57 +339,20 @@ export const dashboardModules: ModuleCardData[] = [
         { label: "Sessions", color: "#6366f1" },
         { label: "Participants", color: "#22c55e" },
       ],
-      series: [
-        { date: "2026-07-01", current: 3, previous: 42 },
-        { date: "2026-07-08", current: 4, previous: 55 },
-        { date: "2026-07-15", current: 2, previous: 38 },
-        { date: "2026-07-22", current: 5, previous: 61 },
-        { date: "2026-07-29", current: 3, previous: 48 },
-        { date: "2026-08-05", current: 4, previous: 52 },
-      ],
+      series: [],
     },
     secondaryChart: {
       title: "Training by Category",
       type: "donut",
       legend: [
-        { label: "Safety", color: "#ef4444" },
-        { label: "Technical", color: "#6366f1" },
-        { label: "Soft Skill", color: "#22c55e" },
-        { label: "Compliance", color: "#eab308" },
+        { label: "MES", color: "#6366f1" },
+        { label: "Intelligent", color: "#22c55e" },
+        { label: "IT", color: "#38bdf8" },
       ],
-      segments: [30, 35, 20, 15],
-      centerValue: "18",
+      segments: [0, 0, 0],
+      centerValue: "0",
       centerLabel: "Sessions",
     },
-    recentRows: [
-      {
-        name: "ISO 27001 Awareness",
-        date: "2026-08-01",
-        participants: 32,
-        completion: "94%",
-        avgScore: "91",
-      },
-      {
-        name: "MES Operator Basic",
-        date: "2026-07-28",
-        participants: 28,
-        completion: "88%",
-        avgScore: "85",
-      },
-      {
-        name: "Network Troubleshooting",
-        date: "2026-07-22",
-        participants: 18,
-        completion: "100%",
-        avgScore: "92",
-      },
-      {
-        name: "Workplace Safety Refresh",
-        date: "2026-07-15",
-        participants: 40,
-        completion: "82%",
-        avgScore: "87",
-      },
-    ],
+    recentRows: [],
   },
 ];

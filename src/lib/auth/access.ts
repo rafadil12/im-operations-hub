@@ -24,6 +24,11 @@ export const PERMISSIONS = {
   safetySubmissionCreate: "safety.submission.create",
   safetySubmissionUpdate: "safety.submission.update",
   safetySubmissionDelete: "safety.submission.delete",
+  trainingOverviewView: "training.overview.view",
+  trainingSessionRead: "training.session.read",
+  trainingSessionCreate: "training.session.create",
+  trainingSessionUpdate: "training.session.update",
+  trainingSessionDelete: "training.session.delete",
   sparepartOverviewView: "sparepart.overview.view",
   sparepartStockView: "sparepart.stock.view",
   sparepartDocumentRead: "sparepart.document.read",
@@ -72,6 +77,8 @@ export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
   PERMISSIONS.dailyAnalysisView,
   PERMISSIONS.safetyOverviewView,
   PERMISSIONS.safetySubmissionRead,
+  PERMISSIONS.trainingOverviewView,
+  PERMISSIONS.trainingSessionRead,
   PERMISSIONS.sparepartOverviewView,
   PERMISSIONS.sparepartStockView,
   PERMISSIONS.sparepartDocumentRead,
@@ -102,6 +109,11 @@ export type RoleAccess = {
   canCreateSafetySubmission: boolean;
   canUpdateSafetySubmission: boolean;
   canDeleteSafetySubmission: boolean;
+  canViewTrainingOverview: boolean;
+  canViewTrainingSessions: boolean;
+  canCreateTrainingSession: boolean;
+  canUpdateTrainingSession: boolean;
+  canDeleteTrainingSession: boolean;
   canViewSparepartOverview: boolean;
   canViewSparepartStock: boolean;
   canViewSparepartDocuments: boolean;
@@ -190,6 +202,11 @@ export function getRoleAccess(account: AuthAccountPublic | null | undefined): Ro
     canCreateSafetySubmission: hasPermission(account, PERMISSIONS.safetySubmissionCreate),
     canUpdateSafetySubmission: hasPermission(account, PERMISSIONS.safetySubmissionUpdate),
     canDeleteSafetySubmission: hasPermission(account, PERMISSIONS.safetySubmissionDelete),
+    canViewTrainingOverview: hasPermission(account, PERMISSIONS.trainingOverviewView),
+    canViewTrainingSessions: hasPermission(account, PERMISSIONS.trainingSessionRead),
+    canCreateTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionCreate),
+    canUpdateTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionUpdate),
+    canDeleteTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionDelete),
     canViewSparepartOverview: hasPermission(account, PERMISSIONS.sparepartOverviewView),
     canViewSparepartStock: hasPermission(account, PERMISSIONS.sparepartStockView),
     canViewSparepartDocuments: hasPermission(account, PERMISSIONS.sparepartDocumentRead),

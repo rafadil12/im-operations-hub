@@ -476,6 +476,8 @@ const en = {
 
     totalTraining: "Total Training",
     participants: "Participants",
+    uniqueParticipants: "Unique Participants",
+    attachmentRate: "Attachment Rate",
     completionRate: "Completion Rate",
     averageScore: "Average Score",
     trainingTrend: "Training Trend",
@@ -483,6 +485,9 @@ const en = {
     sessions: "Sessions",
     safetyCat: "Safety",
     technical: "Technical",
+    mesCat: "MES",
+    intelligentCat: "Intelligent",
+    itCat: "IT",
     softSkill: "Soft Skill",
     compliance: "Compliance",
     recentTraining: "Recent Training",
@@ -491,6 +496,8 @@ const en = {
     participant: "Participant",
     completion: "Completion",
     avgScore: "Avg Score",
+    attachment: "Attachment",
+    category: "Category",
 
     ticketByGroup: "Ticket by Group (This Month)",
     ticketByDepartment: "Ticket by Department (This Month)",

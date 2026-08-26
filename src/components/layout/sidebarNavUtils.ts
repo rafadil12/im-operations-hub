@@ -11,7 +11,7 @@ export function isChildActive(pathname: string, child: NavChild): boolean {
   // Contoh:
   // /safety         -> aktif hanya di /safety
   // /safety/management -> tidak membuat /safety ikut aktif
-  if (child.href === "/itsm" || child.href === "/sparepart" || child.href === "/safety") {
+  if (child.href === "/itsm" || child.href === "/sparepart" || child.href === "/safety" || child.href === "/training") {
     return pathname === child.href;
   }
 
