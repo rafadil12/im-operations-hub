@@ -75,13 +75,14 @@ export function TrainingActivitiesClient() {
   const canUpdate = access.canUpdateTrainingSession;
   const canDelete = access.canDeleteTrainingSession;
 
-  const load = async () => {
+  const load = async (opts?: { q?: string }) => {
     setLoading(true);
     setError(null);
     try {
+      const search = (opts?.q !== undefined ? opts.q : q).trim();
       const qs = new URLSearchParams();
       if (divisionFilter !== "all") qs.set("divisionId", String(divisionFilter));
-      if (q.trim()) qs.set("q", q.trim());
+      if (search) qs.set("q", search);
 
       const [sessionsRes, masterRes] = await Promise.all([
         apiGetAbs<{
@@ -239,21 +240,6 @@ export function TrainingActivitiesClient() {
     }
   };
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return sessions;
-    return sessions.filter(
-      (row) =>
-        row.topicEn.toLowerCase().includes(term) ||
-        row.topicCn.toLowerCase().includes(term) ||
-        row.participants.some(
-          (person) =>
-            person.nameEn.toLowerCase().includes(term) ||
-            person.nameCn.toLowerCase().includes(term)
-        )
-    );
-  }, [sessions, q]);
-
   const participantOptions = useMemo(() => {
     const map = new Map<string, TrainingParticipantName>();
     for (const person of [...master, ...form.participants]) {
@@ -262,14 +248,14 @@ export function TrainingActivitiesClient() {
     return [...map.values()].sort((a, b) => a.nameEn.localeCompare(b.nameEn));
   }, [master, form.participants]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pagedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, currentPage, pageSize]);
-  const from = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const to = Math.min(currentPage * pageSize, filtered.length);
+    return sessions.slice(start, start + pageSize);
+  }, [sessions, currentPage, pageSize]);
+  const from = sessions.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const to = Math.min(currentPage * pageSize, sessions.length);
 
   return (
     <div>
@@ -278,25 +264,15 @@ export function TrainingActivitiesClient() {
           <h1 className="text-lg font-semibold text-text">{trainingText("activitiesTitle", language)}</h1>
           <p className="text-sm text-text-muted">{trainingText("activitiesDesc", language)}</p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        {canCreate ? (
           <button
             type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+            onClick={openCreate}
+            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
           >
-            {loading ? t.common.loading : "Refresh"}
+            + {trainingText("addSession", language)}
           </button>
-          {canCreate ? (
-            <button
-              type="button"
-              onClick={openCreate}
-              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-            >
-              + {trainingText("addSession", language)}
-            </button>
-          ) : null}
-        </div>
+        ) : null}
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
@@ -329,9 +305,13 @@ export function TrainingActivitiesClient() {
             className={`${ctrl} w-full`}
             placeholder={trainingText("search", language)}
             value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setPage(1);
+                void load({ q: e.currentTarget.value });
+              }
             }}
           />
         </div>
@@ -347,7 +327,7 @@ export function TrainingActivitiesClient() {
         <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
           {t.common.loading}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : sessions.length === 0 ? (
         <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
           {trainingText("noSessions", language)}
         </div>
@@ -471,7 +451,7 @@ export function TrainingActivitiesClient() {
                 {t.common.showingRange
                   .replace("{from}", String(from))
                   .replace("{to}", String(to))
-                  .replace("{total}", String(filtered.length))}
+                  .replace("{total}", String(sessions.length))}
               </span>
             </div>
 
