@@ -388,7 +388,7 @@ export function TrainingActivitiesClient() {
                           href={row.attachment.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded border border-border px-2 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text"
+                          className="inline-flex rounded-md bg-accent px-2.5 py-1 text-[11px] font-medium text-white hover:opacity-90"
                         >
                           {trainingText("viewFile", language)}
                         </a>
