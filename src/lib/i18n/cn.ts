@@ -470,7 +470,7 @@ const cn: Dict = {
     completionRate: "完成率",
     averageScore: "平均分",
     trainingTrend: "培训趋势",
-    trainingByCategory: "培训类别",
+    trainingByCategory: "按部门培训",
     sessions: "场次",
     safetyCat: "安全",
     technical: "技术",

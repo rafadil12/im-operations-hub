@@ -330,7 +330,7 @@ export const dashboardModules: ModuleCardData[] = [
       { label: "Total Training", value: "—", tone: "accent" },
       { label: "Participants", value: "—", tone: "accent" },
       { label: "Unique Participants", value: "—", tone: "success" },
-      { label: "Attachment Rate", value: "—", tone: "success" },
+      { label: "Total Topics", value: "—", tone: "accent" },
     ],
     chart: {
       title: "Training Trend",
@@ -342,7 +342,7 @@ export const dashboardModules: ModuleCardData[] = [
       series: [],
     },
     secondaryChart: {
-      title: "Training by Category",
+      title: "Training by Divisions",
       type: "donut",
       legend: [
         { label: "MES", color: "#6366f1" },

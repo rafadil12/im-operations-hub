@@ -481,7 +481,7 @@ const en = {
     completionRate: "Completion Rate",
     averageScore: "Average Score",
     trainingTrend: "Training Trend",
-    trainingByCategory: "Training by Category",
+    trainingByCategory: "Training by Divisions",
     sessions: "Sessions",
     safetyCat: "Safety",
     technical: "Technical",

@@ -35,15 +35,20 @@ function Kpi({
   title,
   value,
   subtitle,
+  tone = "accent",
 }: {
   title: string;
   value: string;
   subtitle?: string;
+  tone?: "accent" | "success" | "default";
 }) {
+  const valueClass =
+    tone === "success" ? "text-success" : tone === "default" ? "text-text" : "text-accent";
+
   return (
     <div className="rounded-xl border border-border-subtle bg-surface p-4">
       <p className="text-[10px] uppercase tracking-wide text-text-dim">{title}</p>
-      <p className="mt-3 text-2xl font-semibold text-text">{value}</p>
+      <p className={`mt-3 text-2xl font-semibold ${valueClass}`}>{value}</p>
       {subtitle ? <p className="mt-1 text-[11px] text-text-muted">{subtitle}</p> : null}
     </div>
   );
@@ -143,6 +148,7 @@ export function TrainingOverview() {
             <Kpi
               title={trainingText("uniqueParticipants", language)}
               value={String(metrics.uniqueParticipants)}
+              tone="success"
             />
             <Kpi
               title={trainingText("totalTopics", language)}

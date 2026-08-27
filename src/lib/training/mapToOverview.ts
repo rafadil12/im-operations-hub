@@ -9,7 +9,8 @@ export function mapTrainingToOverview(
   const mes = metrics.byCategory.find((c) => c.category === "mes")?.sessions ?? 0;
   const intelligent = metrics.byCategory.find((c) => c.category === "intelligent")?.sessions ?? 0;
   const it = metrics.byCategory.find((c) => c.category === "it")?.sessions ?? 0;
-  const maxCat = Math.max(mes, intelligent, it, 1);
+  const total = mes + intelligent + it;
+  const pct = (value: number) => (total > 0 ? Math.round((value / total) * 1000) / 10 : 0);
 
   return {
     ...module,
@@ -38,14 +39,14 @@ export function mapTrainingToOverview(
       })),
     },
     secondaryChart: {
-      title: "Training by Category",
+      title: "Training by Divisions",
       type: "donut",
       legend: [
         { label: "MES", color: CATEGORY_COLORS.mes },
         { label: "Intelligent", color: CATEGORY_COLORS.intelligent },
         { label: "IT", color: CATEGORY_COLORS.it },
       ],
-      segments: [mes / maxCat, intelligent / maxCat, it / maxCat],
+      segments: [pct(mes), pct(intelligent), pct(it)],
       centerValue: String(metrics.totalSessions),
       centerLabel: "Sessions",
     },

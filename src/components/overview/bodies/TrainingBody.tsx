@@ -10,14 +10,14 @@ export function TrainingBody({ data, expanded }: { data: ModuleCardData; expande
   const t = getDict(lang);
 
   return (
-    <div className="grid flex-1 gap-4 lg:grid-cols-3">
-      <div className="space-y-4 lg:col-span-1">
-        <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
+    <div className="flex flex-1 flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-10">
+        <section className="rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-7">
           <ChartSection data={data} expanded={expanded} />
         </section>
 
         {data.secondaryChart ? (
-          <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
+          <section className="rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-3">
             <h4 className="mb-3 text-xs font-medium text-text-muted">
               {data.secondaryChart.title}
             </h4>
@@ -27,12 +27,15 @@ export function TrainingBody({ data, expanded }: { data: ModuleCardData; expande
               segments={data.secondaryChart.segments}
               centerValue={data.secondaryChart.centerValue}
               centerLabel={data.secondaryChart.centerLabel}
+              layout={expanded ? "column" : "row"}
+              size={expanded ? "lg" : "md"}
+              align="center"
             />
           </section>
         ) : null}
       </div>
 
-      <section className="rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-2">
+      <section className="w-full rounded-lg border border-border-subtle bg-bg/30 p-3">
         <h4 className="mb-3 text-xs font-medium text-text-muted">{t.dashboard.recentTraining}</h4>
 
         <div className="overflow-x-auto">
