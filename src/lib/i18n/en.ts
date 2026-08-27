@@ -308,6 +308,8 @@ const en = {
     dueDate: "Due Date",
     createdDate: "Created Date",
     group: "Group",
+    site: "Site",
+    serviceRequest: "Service Request",
     vsLastMonth: "vs last month",
     totalTickets: "TOTAL TICKETS",
     allTickets: "All Tickets",

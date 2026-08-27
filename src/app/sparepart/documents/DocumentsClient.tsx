@@ -101,6 +101,7 @@ export default function MaterialDocumentsPage() {
     setExporting(true);
     try {
       const params = new URLSearchParams();
+      params.set("lang", lang);
       if (q) params.set("q", q);
       if (movementType) params.set("movementType", movementType);
       if (location) params.set("location", location);

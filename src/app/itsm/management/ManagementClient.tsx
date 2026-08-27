@@ -30,7 +30,7 @@ const DEFAULT_PAGE_SIZE: PageSize = 10;
 type ListResponse = { rows: ItsmRequest[] };
 
 export default function ManagementPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { success: toastSuccess } = useToast();
   const { canImportItsmRequest, canExportItsmRequest } = useRoleAccess();
   const [rows, setRows] = useState<ItsmRequest[]>([]);
@@ -126,6 +126,7 @@ export default function ManagementPage() {
                 type="button"
                 onClick={() => {
                   window.location.href = `/api/itsm/itsm-request/export?${new URLSearchParams({
+                    lang,
                     start: filters.start,
                     end: filters.end,
                     requestId: filters.requestId,

@@ -3,7 +3,7 @@ import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
 import { buildActivitiesExport } from "@/lib/daily-operation/mesRecordImport";
-import type { MesDataRow } from "@/lib/types";
+import type { Lang, MesDataRow } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -29,12 +29,17 @@ const LIST_SQL = `
     AND m.start_time BETWEEN ? AND ?
 `;
 
+function parseLang(raw: string | null): Lang {
+  return raw === "cn" ? "cn" : "en";
+}
+
 export async function GET(request: NextRequest) {
   const gate = await requirePermission(PERMISSIONS.dailyRecordExport);
   if (gate instanceof NextResponse) return gate;
 
   try {
     const sp = request.nextUrl.searchParams;
+    const lang = parseLang(sp.get("lang"));
     const { start, end } = resolveRange(sp.get("start"), sp.get("end"));
 
     const conditions: string[] = [];
@@ -73,7 +78,7 @@ export async function GET(request: NextRequest) {
       " ORDER BY m.start_time DESC";
 
     const rows = await query<MesDataRow[]>(sql, params);
-    const buffer = await buildActivitiesExport(rows);
+    const buffer = await buildActivitiesExport(rows, lang);
 
     const startLabel = start.slice(0, 10);
     const endLabel = end.slice(0, 10);

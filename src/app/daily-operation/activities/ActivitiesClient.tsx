@@ -29,7 +29,7 @@ const DEFAULT_PAGE_SIZE: PageSize = 10;
 type ListResponse = { rows: MesDataRow[] };
 
 export default function ManagementPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
   const {
     canImportDailyRecord,
@@ -187,6 +187,7 @@ export default function ManagementPage() {
     setExporting(true);
     try {
       const params = new URLSearchParams();
+      params.set("lang", lang);
       params.set("start", filters.start);
       params.set("end", filters.end);
       if (filters.divisionId) params.set("divisionId", filters.divisionId);

@@ -120,7 +120,7 @@ export default function StockOverviewPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const res = await fetch("/api/sparepart/materials/export", {
+      const res = await fetch(`/api/sparepart/materials/export?lang=${lang}`, {
         cache: "no-store",
       });
       if (!res.ok) throw new Error(t.toast.exportFailed);

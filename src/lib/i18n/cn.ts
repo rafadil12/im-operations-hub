@@ -307,6 +307,8 @@ const cn: Dict = {
     dueDate: "截止时间",
     createdDate: "创建时间",
     group: "支持组",
+    site: "站点",
+    serviceRequest: "服务请求",
     vsLastMonth: "较上月",
     totalTickets: "工单总数",
     allTickets: "全部工单",
