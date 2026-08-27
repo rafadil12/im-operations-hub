@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { dashboardModules, type ModuleCardData } from "@/data/overview";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiGet } from "@/lib/apiClient";
-import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
+import { formatDateOnly, getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { mapAnalysisToOverview } from "@/lib/daily-operation/mapToOverview";
 import { useLang } from "@/lib/i18n";
 import type { ItsmAnalysisResponse, SparepartAnalysisResponse } from "@/lib/types";
@@ -112,7 +112,12 @@ export function useDashboardModules() {
 
             canViewTrainingOverview || canViewTrainingSessions
               ? fetch(
-                  `/api/training/overview?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
+                  (() => {
+                    const now = new Date();
+                    const start = formatDateOnly(new Date(now.getFullYear(), 0, 1));
+                    const end = formatDateOnly(now);
+                    return `/api/training/overview?start=${start}&end=${end}`;
+                  })(),
                   { method: "GET", cache: "no-store" }
                 )
                   .then(async (response) => {

@@ -466,7 +466,7 @@ const cn: Dict = {
     totalTraining: "培训总数",
     participants: "参与人次",
     uniqueParticipants: "参与人数",
-    attachmentRate: "附件完整率",
+    totalTopics: "主题总数",
     completionRate: "完成率",
     averageScore: "平均分",
     trainingTrend: "培训趋势",

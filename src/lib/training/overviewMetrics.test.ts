@@ -33,28 +33,67 @@ const sample: TrainingSession[] = [
 ];
 
 describe("computeTrainingOverviewMetrics", () => {
-  it("filters by month and computes KPIs", () => {
+  it("filters by date range and computes KPIs", () => {
     const metrics = computeTrainingOverviewMetrics({
       sessions: sample,
-      year: 2026,
-      month: 7,
+      startDate: "2026-07-01",
+      endDate: "2026-07-31",
     });
 
     expect(metrics.totalSessions).toBe(2);
     expect(metrics.totalParticipants).toBe(3);
     expect(metrics.uniqueParticipants).toBe(2);
-    expect(metrics.attachmentRate).toBe(50);
+    expect(metrics.totalTopics).toBe(2);
+    expect(metrics.byCategory.find((c) => c.category === "mes")?.topics).toBe(1);
     expect(metrics.byCategory.find((c) => c.category === "mes")?.sessions).toBe(1);
     expect(metrics.topParticipants[0]).toEqual({ name: "FADIL", sessions: 2 });
   });
 
-  it("supports year-wide view when month is null", () => {
+  it("builds monthly trend when range spans multiple months", () => {
     const metrics = computeTrainingOverviewMetrics({
       sessions: sample,
-      year: 2026,
-      month: null,
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
     });
     expect(metrics.totalSessions).toBe(3);
-    expect(metrics.monthlyTrend.find((m) => m.month === "2026-07")?.sessions).toBe(2);
+    expect(metrics.trendGranularity).toBe("month");
+    expect(metrics.monthlyTrend).toEqual([
+      {
+        period: "2026-06",
+        label: "Jun",
+        sessions: 1,
+        participants: 3,
+      },
+      {
+        period: "2026-07",
+        label: "Jul",
+        sessions: 2,
+        participants: 3,
+      },
+    ]);
+  });
+
+  it("builds daily trend when range is within one month", () => {
+    const metrics = computeTrainingOverviewMetrics({
+      sessions: sample,
+      startDate: "2026-07-01",
+      endDate: "2026-07-31",
+    });
+
+    expect(metrics.trendGranularity).toBe("day");
+    expect(metrics.monthlyTrend).toEqual([
+      {
+        period: "2026-07-15",
+        label: "15",
+        sessions: 1,
+        participants: 1,
+      },
+      {
+        period: "2026-07-20",
+        label: "20",
+        sessions: 1,
+        participants: 2,
+      },
+    ]);
   });
 });

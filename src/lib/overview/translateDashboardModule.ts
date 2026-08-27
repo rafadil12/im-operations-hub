@@ -204,7 +204,7 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
             t.dashboard.totalTraining,
             t.dashboard.participants,
             t.dashboard.uniqueParticipants,
-            t.dashboard.attachmentRate,
+            t.dashboard.totalTopics,
           ][index] ?? stat.label,
       })),
       chart: {

@@ -48,21 +48,25 @@ export type TrainingSession = {
   updatedAt?: string;
 };
 
+export type TrainingTrendRow = {
+  period: string;
+  label: string;
+  sessions: number;
+  participants: number;
+};
+
 export type TrainingOverviewMetrics = {
-  year: number;
-  month: number;
+  startDate: string;
+  endDate: string;
   totalSessions: number;
   totalParticipants: number;
   uniqueParticipants: number;
+  totalTopics: number;
   attachmentRate: number;
   sessionsWithAttachment: number;
-  byCategory: { category: TrainingCategory; sessions: number; participants: number }[];
-  monthlyTrend: { month: string; sessions: number; participants: number }[];
+  byCategory: { category: TrainingCategory; sessions: number; participants: number; topics: number }[];
+  monthlyTrend: TrainingTrendRow[];
+  trendGranularity: "day" | "month";
   topParticipants: { name: string; sessions: number }[];
-  attachmentByCategory: {
-    category: TrainingCategory;
-    withAttachment: number;
-    withoutAttachment: number;
-  }[];
   recentSessions: TrainingSession[];
 };

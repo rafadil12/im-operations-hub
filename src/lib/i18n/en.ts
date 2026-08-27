@@ -477,7 +477,7 @@ const en = {
     totalTraining: "Total Training",
     participants: "Participants",
     uniqueParticipants: "Unique Participants",
-    attachmentRate: "Attachment Rate",
+    totalTopics: "Total Topics",
     completionRate: "Completion Rate",
     averageScore: "Average Score",
     trainingTrend: "Training Trend",

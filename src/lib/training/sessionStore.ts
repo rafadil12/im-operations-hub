@@ -13,6 +13,8 @@ import type {
 export async function loadTrainingSessions(filters: {
   year?: number;
   month?: number;
+  startDate?: string;
+  endDate?: string;
   category?: TrainingCategory;
   q?: string;
   id?: number;
@@ -23,6 +25,16 @@ export async function loadTrainingSessions(filters: {
   if (filters.id != null) {
     where.push("id = ?");
     params.push(filters.id);
+  }
+
+  if (filters.startDate) {
+    where.push("session_date >= ?");
+    params.push(filters.startDate.slice(0, 10));
+  }
+
+  if (filters.endDate) {
+    where.push("session_date <= ?");
+    params.push(filters.endDate.slice(0, 10));
   }
 
   if (filters.year) {

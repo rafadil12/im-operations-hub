@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
+import { formatDateOnly, resolveRange, toDateInput } from "@/lib/dateRange";
 import { jsonError } from "@/lib/training/apiHelpers";
 import { computeTrainingOverviewMetrics } from "@/lib/training/overviewMetrics";
 import { loadTrainingSessions } from "@/lib/training/sessionStore";
@@ -16,20 +17,25 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const now = new Date();
-    const year = Number(searchParams.get("year") ?? now.getFullYear());
-    const monthRaw = searchParams.get("month");
-    const month = monthRaw == null || monthRaw === "" ? null : Number(monthRaw);
+    const fallbackStart = formatDateOnly(new Date(now.getFullYear(), 0, 1));
+    const fallbackEnd = formatDateOnly(now);
 
-    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
-      return jsonError("Invalid year.");
+    const startRaw = searchParams.get("start") ?? fallbackStart;
+    const endRaw = searchParams.get("end") ?? fallbackEnd;
+    const range = resolveRange(startRaw, endRaw);
+    const startDate = toDateInput(range.start);
+    const endDate = toDateInput(range.end);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return jsonError("Invalid date range.");
     }
 
-    if (month != null && (!Number.isInteger(month) || month < 1 || month > 12)) {
-      return jsonError("Invalid month.");
+    if (startDate > endDate) {
+      return jsonError("Start date must be on or before end date.");
     }
 
-    const sessions = await loadTrainingSessions({ year });
-    const metrics = computeTrainingOverviewMetrics({ sessions, year, month });
+    const sessions = await loadTrainingSessions({ startDate, endDate });
+    const metrics = computeTrainingOverviewMetrics({ sessions, startDate, endDate });
 
     return NextResponse.json({ success: true, data: metrics });
   } catch (error) {

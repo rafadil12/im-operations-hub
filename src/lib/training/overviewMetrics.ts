@@ -1,7 +1,7 @@
 import type {
-  TrainingCategory,
   TrainingOverviewMetrics,
   TrainingSession,
+  TrainingTrendRow,
 } from "./types";
 import { TRAINING_CATEGORIES } from "./types";
 
@@ -9,18 +9,70 @@ function monthKey(date: string): string {
   return date.slice(0, 7);
 }
 
+const MONTH_LABELS_EN = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+function formatMonthLabel(period: string): string {
+  const month = Number(period.slice(5, 7));
+  if (!Number.isInteger(month) || month < 1 || month > 12) return period.slice(5);
+  return MONTH_LABELS_EN[month - 1];
+}
+
+function formatDayLabel(period: string): string {
+  const day = Number(period.slice(8, 10));
+  return Number.isInteger(day) ? String(day).padStart(2, "0") : period.slice(8);
+}
+
+function buildTrendRows(
+  rows: TrainingSession[],
+  granularity: "day" | "month"
+): TrainingTrendRow[] {
+  const trendMap = new Map<string, { sessions: number; participants: number }>();
+
+  for (const session of rows) {
+    const key = granularity === "day" ? session.sessionDate : monthKey(session.sessionDate);
+    const current = trendMap.get(key) ?? { sessions: 0, participants: 0 };
+    current.sessions += 1;
+    current.participants += session.participantCount;
+    trendMap.set(key, current);
+  }
+
+  return [...trendMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, value]) => ({
+      period,
+      label: granularity === "day" ? formatDayLabel(period) : formatMonthLabel(period),
+      sessions: value.sessions,
+      participants: value.participants,
+    }));
+}
+
+function inRange(date: string, startDate: string, endDate: string): boolean {
+  return date >= startDate && date <= endDate;
+}
+
 export function computeTrainingOverviewMetrics(input: {
   sessions: TrainingSession[];
-  year: number;
-  month: number | null;
+  startDate: string;
+  endDate: string;
 }): TrainingOverviewMetrics {
-  const { sessions, year, month } = input;
-
-  const inYear = sessions.filter((s) => s.sessionDate.startsWith(String(year)));
-  const periodSessions =
-    month == null
-      ? inYear
-      : inYear.filter((s) => Number(s.sessionDate.slice(5, 7)) === month);
+  const startDate = input.startDate.slice(0, 10);
+  const endDate = input.endDate.slice(0, 10);
+  const periodSessions = input.sessions.filter((s) =>
+    inRange(s.sessionDate.slice(0, 10), startDate, endDate)
+  );
 
   const totalSessions = periodSessions.length;
   const totalParticipants = periodSessions.reduce((sum, s) => sum + s.participantCount, 0);
@@ -32,37 +84,35 @@ export function computeTrainingOverviewMetrics(input: {
     }
   }
 
+  const topics = new Set<string>();
+  for (const session of periodSessions) {
+    const topic = session.topic.trim();
+    if (topic) topics.add(topic.toUpperCase());
+  }
+  const totalTopics = topics.size;
+
   const sessionsWithAttachment = periodSessions.filter((s) => Boolean(s.attachment)).length;
   const attachmentRate =
     totalSessions > 0 ? Math.round((sessionsWithAttachment / totalSessions) * 100) : 0;
 
   const byCategory = TRAINING_CATEGORIES.map((category) => {
     const rows = periodSessions.filter((s) => s.category === category);
+    const topicSet = new Set<string>();
+    for (const session of rows) {
+      const topic = session.topic.trim();
+      if (topic) topicSet.add(topic.toUpperCase());
+    }
     return {
       category,
       sessions: rows.length,
       participants: rows.reduce((sum, s) => sum + s.participantCount, 0),
+      topics: topicSet.size,
     };
   });
 
-  const trendMap = new Map<string, { sessions: number; participants: number }>();
-  for (let m = 1; m <= 12; m++) {
-    const key = `${year}-${String(m).padStart(2, "0")}`;
-    trendMap.set(key, { sessions: 0, participants: 0 });
-  }
-  for (const session of inYear) {
-    const key = monthKey(session.sessionDate);
-    const current = trendMap.get(key);
-    if (!current) continue;
-    current.sessions += 1;
-    current.participants += session.participantCount;
-  }
-
-  const monthlyTrend = [...trendMap.entries()].map(([monthLabel, value]) => ({
-    month: monthLabel,
-    sessions: value.sessions,
-    participants: value.participants,
-  }));
+  const sameMonth = monthKey(startDate) === monthKey(endDate);
+  const trendGranularity = sameMonth ? "day" : "month";
+  const monthlyTrend = buildTrendRows(periodSessions, trendGranularity);
 
   const personMap = new Map<string, number>();
   for (const session of periodSessions) {
@@ -78,32 +128,23 @@ export function computeTrainingOverviewMetrics(input: {
     .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name))
     .slice(0, 10);
 
-  const attachmentByCategory = TRAINING_CATEGORIES.map((category: TrainingCategory) => {
-    const rows = periodSessions.filter((s) => s.category === category);
-    const withAttachment = rows.filter((s) => Boolean(s.attachment)).length;
-    return {
-      category,
-      withAttachment,
-      withoutAttachment: rows.length - withAttachment,
-    };
-  });
-
   const recentSessions = [...periodSessions]
     .sort((a, b) => b.sessionDate.localeCompare(a.sessionDate) || b.id - a.id)
     .slice(0, 8);
 
   return {
-    year,
-    month: month ?? 0,
+    startDate,
+    endDate,
     totalSessions,
     totalParticipants,
     uniqueParticipants: unique.size,
+    totalTopics,
     attachmentRate,
     sessionsWithAttachment,
     byCategory,
     monthlyTrend,
+    trendGranularity,
     topParticipants,
-    attachmentByCategory,
     recentSessions,
   };
 }

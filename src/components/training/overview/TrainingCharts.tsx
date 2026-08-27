@@ -5,6 +5,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -28,16 +29,21 @@ export function TrainingTrendChart({
 }: {
   data: TrainingOverviewMetrics["monthlyTrend"];
   language: TrainingLanguage;
+  granularity: TrainingOverviewMetrics["trendGranularity"];
 }) {
   const axis = useAxisColor();
-  const chartData = data.map((row) => ({
-    ...row,
-    label: row.month.slice(5),
-  }));
+
+  if (!data.length) {
+    return (
+      <p className="py-12 text-center text-sm text-text-muted">
+        {trainingText("trendNoData", language)}
+      </p>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+      <LineChart data={data} margin={{ top: 20, right: 16, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #e2e8f0)" />
         <XAxis dataKey="label" stroke={axis} fontSize={11} />
         <YAxis stroke={axis} fontSize={11} allowDecimals={false} />
@@ -49,16 +55,36 @@ export function TrainingTrendChart({
           name={trainingText("sessions", language)}
           stroke="#6366f1"
           strokeWidth={2}
-          dot={false}
-        />
+          dot={{ r: 3, fill: "#6366f1", strokeWidth: 0 }}
+          activeDot={{ r: 4 }}
+        >
+          <LabelList
+            dataKey="sessions"
+            position="top"
+            offset={8}
+            fill="#6366f1"
+            fontSize={10}
+            fontWeight={600}
+          />
+        </Line>
         <Line
           type="monotone"
           dataKey="participants"
           name={trainingText("participants", language)}
           stroke="#22c55e"
           strokeWidth={2}
-          dot={false}
-        />
+          dot={{ r: 3, fill: "#22c55e", strokeWidth: 0 }}
+          activeDot={{ r: 4 }}
+        >
+          <LabelList
+            dataKey="participants"
+            position="bottom"
+            offset={8}
+            fill="#22c55e"
+            fontSize={10}
+            fontWeight={600}
+          />
+        </Line>
       </LineChart>
     </ResponsiveContainer>
   );
@@ -84,7 +110,7 @@ export function TrainingCategoryDonut({
   return (
     <div className="relative">
       <ResponsiveContainer width="100%" height={260}>
-        <PieChart>
+        <PieChart margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
           <Pie
             data={chartData}
             dataKey="value"
@@ -92,6 +118,50 @@ export function TrainingCategoryDonut({
             innerRadius={58}
             outerRadius={88}
             paddingAngle={2}
+            labelLine={false}
+            label={({ cx, cy, midAngle, outerRadius, value, percent, payload }) => {
+              if (cx == null || cy == null || midAngle == null || outerRadius == null) return null;
+
+              const RADIAN = Math.PI / 180;
+              const sin = Math.sin(-midAngle * RADIAN);
+              const cos = Math.cos(-midAngle * RADIAN);
+              const color =
+                (payload as { color?: string } | undefined)?.color ??
+                "var(--color-text, #0f172a)";
+
+              // Elbow connector: diagonal from slice edge, then horizontal to the label.
+              const sx = cx + outerRadius * cos;
+              const sy = cy + outerRadius * sin;
+              const mx = cx + (outerRadius + 12) * cos;
+              const my = cy + (outerRadius + 12) * sin;
+              const ex = cx + (cos >= 0 ? 1 : -1) * (outerRadius + 26);
+              const ey = my;
+              const textX = ex + (cos >= 0 ? 1 : -1) * 8;
+              const pct = Math.round((percent ?? 0) * 100);
+
+              return (
+                <g style={{ pointerEvents: "none" }}>
+                  <path
+                    d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+                    stroke={color}
+                    fill="none"
+                    strokeWidth={1}
+                  />
+                  <circle cx={ex} cy={ey} r={2.5} fill={color} stroke="none" />
+                  <text
+                    x={textX}
+                    y={ey}
+                    fill={color}
+                    textAnchor={cos >= 0 ? "start" : "end"}
+                    dominantBaseline="central"
+                    fontSize={11}
+                    fontWeight={600}
+                  >
+                    {`${value} (${pct}%)`}
+                  </text>
+                </g>
+              );
+            }}
           >
             {chartData.map((row) => (
               <Cell key={row.name} fill={row.color} />
@@ -109,15 +179,30 @@ export function TrainingCategoryDonut({
   );
 }
 
+const TOP_PARTICIPANT_COLORS = [
+  "#3B82F6",
+  "#10B981",
+  "#F59E0B",
+  "#8B5CF6",
+  "#EC4899",
+  "#EF4444",
+  "#06B6D4",
+  "#84CC16",
+  "#F97316",
+  "#6366F1",
+];
+
 export function TrainingTopParticipantsChart({
   data,
+  language,
 }: {
   data: TrainingOverviewMetrics["topParticipants"];
+  language: TrainingLanguage;
 }) {
   const axis = useAxisColor();
   const chartData = data.map((row) => ({
     label: row.name,
-    count: row.sessions,
+    sessions: row.sessions,
   }));
 
   return (
@@ -127,46 +212,56 @@ export function TrainingTopParticipantsChart({
         <XAxis type="number" stroke={axis} fontSize={11} allowDecimals={false} />
         <YAxis type="category" dataKey="label" stroke={axis} fontSize={10} width={88} />
         <Tooltip />
-        <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} />
+        <Bar
+          dataKey="sessions"
+          name={trainingText("sessions", language)}
+          radius={[0, 4, 4, 0]}
+        >
+          {chartData.map((row, index) => (
+            <Cell
+              key={row.label}
+              fill={TOP_PARTICIPANT_COLORS[index % TOP_PARTICIPANT_COLORS.length]}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-export function TrainingAttachmentChart({
+export function TrainingTopicsByDivisionChart({
   data,
   language,
 }: {
-  data: TrainingOverviewMetrics["attachmentByCategory"];
+  data: TrainingOverviewMetrics["byCategory"];
   language: TrainingLanguage;
 }) {
   const axis = useAxisColor();
   const chartData = data.map((row) => ({
     category: categoryLabel(row.category, language),
-    withAttachment: row.withAttachment,
-    withoutAttachment: row.withoutAttachment,
+    topics: row.topics,
+    color: CATEGORY_COLORS[row.category],
   }));
 
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+      <BarChart data={chartData} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #e2e8f0)" />
         <XAxis dataKey="category" stroke={axis} fontSize={11} />
         <YAxis stroke={axis} fontSize={11} allowDecimals={false} />
         <Tooltip />
-        <Legend />
-        <Bar
-          dataKey="withAttachment"
-          name={trainingText("withAttachment", language)}
-          stackId="a"
-          fill="#22c55e"
-        />
-        <Bar
-          dataKey="withoutAttachment"
-          name={trainingText("withoutAttachment", language)}
-          stackId="a"
-          fill="#f59e0b"
-        />
+        <Bar dataKey="topics" name={trainingText("topics", language)} radius={[4, 4, 0, 0]}>
+          {chartData.map((row) => (
+            <Cell key={row.category} fill={row.color} />
+          ))}
+          <LabelList
+            dataKey="topics"
+            position="top"
+            fill="var(--color-text, #0f172a)"
+            fontSize={10}
+            fontWeight={600}
+          />
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

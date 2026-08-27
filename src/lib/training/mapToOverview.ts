@@ -19,9 +19,9 @@ export function mapTrainingToOverview(
       { label: "Participants", value: String(metrics.totalParticipants), tone: "accent" },
       { label: "Unique Participants", value: String(metrics.uniqueParticipants), tone: "success" },
       {
-        label: "Attachment Rate",
-        value: `${metrics.attachmentRate}%`,
-        tone: metrics.attachmentRate >= 80 ? "success" : "warning",
+        label: "Total Topics",
+        value: String(metrics.totalTopics),
+        tone: "accent",
       },
     ],
     chart: {
@@ -32,7 +32,7 @@ export function mapTrainingToOverview(
         { label: "Participants", color: "#22c55e" },
       ],
       series: metrics.monthlyTrend.map((row) => ({
-        date: `${row.month}-01`,
+        date: row.period.length === 7 ? `${row.period}-01` : row.period,
         current: row.sessions,
         previous: row.participants,
       })),

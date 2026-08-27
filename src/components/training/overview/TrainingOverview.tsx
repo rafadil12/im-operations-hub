@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
+import { formatDateOnly } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import {
   CATEGORY_COLORS,
@@ -11,13 +12,24 @@ import {
   type TrainingOverviewMetrics,
 } from "@/lib/training";
 import {
-  TrainingAttachmentChart,
   TrainingCategoryDonut,
+  TrainingTopicsByDivisionChart,
   TrainingTopParticipantsChart,
   TrainingTrendChart,
 } from "./TrainingCharts";
 
-const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const dateCtrl =
+  "cursor-pointer rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+
+function getDefaultRange() {
+  const now = new Date();
+  return {
+    start: formatDateOnly(new Date(now.getFullYear(), 0, 1)),
+    end: formatDateOnly(now),
+  };
+}
+
+const defaultRange = getDefaultRange();
 
 function Kpi({
   title,
@@ -38,11 +50,10 @@ function Kpi({
 }
 
 export function TrainingOverview() {
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const language = lang as TrainingLanguage;
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState<number | "all">(now.getMonth() + 1);
+  const [range, setRange] = useState(defaultRange);
+  const [draftRange, setDraftRange] = useState(defaultRange);
   const [metrics, setMetrics] = useState<TrainingOverviewMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +63,10 @@ export function TrainingOverview() {
     setLoading(true);
     setError(null);
 
-    const qs = new URLSearchParams({ year: String(year) });
-    if (month !== "all") qs.set("month", String(month));
+    const qs = new URLSearchParams({
+      start: range.start,
+      end: range.end,
+    });
 
     apiGetAbs<{ success: boolean; data: TrainingOverviewMetrics; error?: string }>(
       `/api/training/overview?${qs.toString()}`,
@@ -73,9 +86,7 @@ export function TrainingOverview() {
       });
 
     return () => ac.abort();
-  }, [year, month, language]);
-
-  const years = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2];
+  }, [range, language]);
 
   return (
     <div className="space-y-5">
@@ -85,40 +96,27 @@ export function TrainingOverview() {
           <p className="mt-1 text-sm text-text-muted">{trainingText("overviewDesc", language)}</p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <label className="text-xs text-text-muted">
-            {trainingText("year", language)}
-            <select
-              className="ml-2 rounded-md border border-border-subtle bg-bg px-2 py-1.5 text-sm text-text"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="text-xs text-text-muted">
-            {trainingText("month", language)}
-            <select
-              className="ml-2 rounded-md border border-border-subtle bg-bg px-2 py-1.5 text-sm text-text"
-              value={month}
-              onChange={(e) => {
-                const value = e.target.value;
-                setMonth(value === "all" ? "all" : Number(value));
-              }}
-            >
-              <option value="all">All</option>
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>
-                  {String(m).padStart(2, "0")}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="date"
+            className={dateCtrl}
+            value={draftRange.start}
+            onChange={(e) => setDraftRange({ ...draftRange, start: e.target.value })}
+          />
+          <span className="text-xs text-text-dim">–</span>
+          <input
+            type="date"
+            className={dateCtrl}
+            value={draftRange.end}
+            onChange={(e) => setDraftRange({ ...draftRange, end: e.target.value })}
+          />
+          <button
+            type="button"
+            onClick={() => setRange(draftRange)}
+            className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          >
+            {t.common.apply}
+          </button>
         </div>
       </div>
 
@@ -147,18 +145,28 @@ export function TrainingOverview() {
               value={String(metrics.uniqueParticipants)}
             />
             <Kpi
-              title={trainingText("attachmentRate", language)}
-              value={`${metrics.attachmentRate}%`}
-              subtitle={`${metrics.sessionsWithAttachment}/${metrics.totalSessions}`}
+              title={trainingText("totalTopics", language)}
+              value={String(metrics.totalTopics)}
             />
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
             <section className="rounded-xl border border-border-subtle bg-surface p-4">
-              <h2 className="mb-3 text-sm font-medium text-text">
-                {trainingText("sessionsTrend", language)}
-              </h2>
-              <TrainingTrendChart data={metrics.monthlyTrend} language={language} />
+              <div className="mb-3">
+                <h2 className="text-sm font-medium text-text">
+                  {trainingText("sessionsTrend", language)}
+                </h2>
+                <p className="mt-1 text-xs text-text-dim">
+                  {metrics.trendGranularity === "day"
+                    ? trainingText("sessionsTrendDailyHint", language)
+                    : trainingText("sessionsTrendMonthlyHint", language)}
+                </p>
+              </div>
+              <TrainingTrendChart
+                data={metrics.monthlyTrend}
+                language={language}
+                granularity={metrics.trendGranularity}
+              />
             </section>
 
             <section className="rounded-xl border border-border-subtle bg-surface p-4">
@@ -173,7 +181,7 @@ export function TrainingOverview() {
                 {trainingText("topParticipants", language)}
               </h2>
               {metrics.topParticipants.length ? (
-                <TrainingTopParticipantsChart data={metrics.topParticipants} />
+                <TrainingTopParticipantsChart data={metrics.topParticipants} language={language} />
               ) : (
                 <p className="py-10 text-center text-sm text-text-muted">
                   {trainingText("noSessions", language)}
@@ -183,9 +191,9 @@ export function TrainingOverview() {
 
             <section className="rounded-xl border border-border-subtle bg-surface p-4">
               <h2 className="mb-3 text-sm font-medium text-text">
-                {trainingText("attachmentByCategory", language)}
+                {trainingText("topicsByDivision", language)}
               </h2>
-              <TrainingAttachmentChart data={metrics.attachmentByCategory} language={language} />
+              <TrainingTopicsByDivisionChart data={metrics.byCategory} language={language} />
             </section>
           </div>
 
