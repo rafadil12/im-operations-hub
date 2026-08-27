@@ -1,6 +1,7 @@
 /**
  * Import training sessions from 培训记录_Training+Notes.xlsx
  * Sheets: MES, INTELLIGENT, IT (SAFETY skipped).
+ * Resolves sheet → divisions.id; topic/participant names stored bilingual (same text both sides).
  * Attachments are not copied (Excel links only) — upload later in Activities.
  *
  * Usage:
@@ -16,10 +17,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const force = process.argv.includes("--force");
 
-const SHEET_CATEGORY = {
-  MES: "mes",
-  INTELLIGENT: "intelligent",
-  IT: "it",
+/** Sheet name → divisions.name_en match */
+const SHEET_DIVISION_EN = {
+  MES: "MES",
+  INTELLIGENT: "Intelligent Logistics",
+  IT: "IT",
 };
 
 function cellText(value) {
@@ -62,7 +64,7 @@ function parseParticipants(raw) {
         .filter(Boolean)
         .map((name) => name.toUpperCase())
     ),
-  ];
+  ].map((name) => ({ nameEn: name, nameCn: name }));
 }
 
 async function main() {
@@ -104,6 +106,21 @@ async function main() {
       return;
     }
 
+    const [divisionRows] = await conn.query(
+      "SELECT id, name_en FROM divisions ORDER BY id"
+    );
+    const divisionIdByEn = new Map(
+      divisionRows.map((row) => [String(row.name_en ?? "").trim(), Number(row.id)])
+    );
+
+    for (const nameEn of Object.values(SHEET_DIVISION_EN)) {
+      if (!divisionIdByEn.has(nameEn)) {
+        throw new Error(
+          `Division "${nameEn}" not found in divisions table. Seed divisions first.`
+        );
+      }
+    }
+
     if (force) {
       await conn.query("SET FOREIGN_KEY_CHECKS=0");
       await conn.query("TRUNCATE TABLE training_session_participants");
@@ -123,11 +140,13 @@ async function main() {
         if (!name || name === "PESERTA") continue;
         await conn.query(
           `
-            INSERT INTO training_participants (name, is_active)
-            VALUES (?, 1)
-            ON DUPLICATE KEY UPDATE is_active = 1
+            INSERT INTO training_participants (name_en, name_cn, is_active)
+            VALUES (?, ?, 1)
+            ON DUPLICATE KEY UPDATE
+              name_cn = VALUES(name_cn),
+              is_active = 1
           `,
-          [name]
+          [name, name]
         );
       }
     }
@@ -135,12 +154,14 @@ async function main() {
     let imported = 0;
     let skipped = 0;
 
-    for (const [sheetName, category] of Object.entries(SHEET_CATEGORY)) {
+    for (const [sheetName, divisionNameEn] of Object.entries(SHEET_DIVISION_EN)) {
       const ws = wb.getWorksheet(sheetName);
       if (!ws) {
         console.warn(`Sheet missing: ${sheetName}`);
         continue;
       }
+
+      const divisionId = divisionIdByEn.get(divisionNameEn);
 
       for (let r = 2; r <= ws.rowCount; r++) {
         const row = ws.getRow(r);
@@ -162,37 +183,41 @@ async function main() {
           `
             INSERT INTO training_sessions (
               session_date,
-              category,
-              topic,
+              division_id,
+              topic_en,
+              topic_cn,
               participant_count
-            ) VALUES (?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
           `,
-          [sessionDate, category, topic, participantCount]
+          [sessionDate, divisionId, topic, topic, participantCount]
         );
 
         const sessionId = Number(result.insertId);
-        for (const name of participants) {
+        for (const person of participants) {
           await conn.query(
             `
-              INSERT INTO training_session_participants (session_id, participant_name)
-              VALUES (?, ?)
+              INSERT INTO training_session_participants (
+                session_id, participant_name_en, participant_name_cn
+              ) VALUES (?, ?, ?)
             `,
-            [sessionId, name]
+            [sessionId, person.nameEn, person.nameCn]
           );
           await conn.query(
             `
-              INSERT INTO training_participants (name, is_active)
-              VALUES (?, 1)
-              ON DUPLICATE KEY UPDATE is_active = 1
+              INSERT INTO training_participants (name_en, name_cn, is_active)
+              VALUES (?, ?, 1)
+              ON DUPLICATE KEY UPDATE
+                name_cn = VALUES(name_cn),
+                is_active = 1
             `,
-            [name]
+            [person.nameEn, person.nameCn]
           );
         }
 
         imported += 1;
       }
 
-      console.log(`Imported sheet ${sheetName} (${category}).`);
+      console.log(`Imported sheet ${sheetName} → division ${divisionNameEn}.`);
     }
 
     console.log(`Done. Imported ${imported} sessions, skipped ${skipped} empty rows.`);
@@ -201,7 +226,7 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
+main().catch((err) => {
+  console.error(err);
   process.exit(1);
 });

@@ -1,15 +1,13 @@
 import type { ModuleCardData } from "@/data/overview";
-import { CATEGORY_COLORS } from "@/lib/training/copy";
+import { divisionColor } from "@/lib/training/copy";
 import type { TrainingOverviewMetrics } from "@/lib/training/types";
 
 export function mapTrainingToOverview(
   module: ModuleCardData,
   metrics: TrainingOverviewMetrics
 ): ModuleCardData {
-  const mes = metrics.byCategory.find((c) => c.category === "mes")?.sessions ?? 0;
-  const intelligent = metrics.byCategory.find((c) => c.category === "intelligent")?.sessions ?? 0;
-  const it = metrics.byCategory.find((c) => c.category === "it")?.sessions ?? 0;
-  const total = mes + intelligent + it;
+  const byDivision = metrics.byDivision;
+  const total = byDivision.reduce((sum, row) => sum + row.sessions, 0);
   const pct = (value: number) => (total > 0 ? Math.round((value / total) * 1000) / 10 : 0);
 
   return {
@@ -41,21 +39,20 @@ export function mapTrainingToOverview(
     secondaryChart: {
       title: "Training by Divisions",
       type: "donut",
-      legend: [
-        { label: "MES", color: CATEGORY_COLORS.mes },
-        { label: "Intelligent", color: CATEGORY_COLORS.intelligent },
-        { label: "IT", color: CATEGORY_COLORS.it },
-      ],
-      segments: [pct(mes), pct(intelligent), pct(it)],
+      legend: byDivision.map((row) => ({
+        label: row.nameEn || row.nameCn || `Division ${row.divisionId}`,
+        color: divisionColor(row.nameEn),
+      })),
+      segments: byDivision.map((row) => pct(row.sessions)),
       centerValue: String(metrics.totalSessions),
       centerLabel: "Sessions",
     },
     recentRows: metrics.recentSessions.slice(0, 4).map((row) => ({
-      name: row.topic,
+      name: row.topicEn || row.topicCn,
       date: row.sessionDate,
       participants: row.participantCount,
       completion: row.attachment ? "File" : "—",
-      avgScore: row.category.toUpperCase(),
+      avgScore: row.divisionNameEn || row.divisionNameCn || "—",
     })),
   };
 }

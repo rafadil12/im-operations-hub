@@ -3,7 +3,7 @@ import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import { formatDateOnly, resolveRange, toDateInput } from "@/lib/dateRange";
 import { jsonError } from "@/lib/training/apiHelpers";
 import { computeTrainingOverviewMetrics } from "@/lib/training/overviewMetrics";
-import { loadTrainingSessions } from "@/lib/training/sessionStore";
+import { loadTrainingDivisions, loadTrainingSessions } from "@/lib/training/sessionStore";
 
 export const runtime = "nodejs";
 
@@ -34,8 +34,16 @@ export async function GET(request: Request) {
       return jsonError("Start date must be on or before end date.");
     }
 
-    const sessions = await loadTrainingSessions({ startDate, endDate });
-    const metrics = computeTrainingOverviewMetrics({ sessions, startDate, endDate });
+    const [sessions, divisions] = await Promise.all([
+      loadTrainingSessions({ startDate, endDate }),
+      loadTrainingDivisions(),
+    ]);
+    const metrics = computeTrainingOverviewMetrics({
+      sessions,
+      divisions,
+      startDate,
+      endDate,
+    });
 
     return NextResponse.json({ success: true, data: metrics });
   } catch (error) {

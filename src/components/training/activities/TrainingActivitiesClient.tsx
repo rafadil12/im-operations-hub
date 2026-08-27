@@ -6,30 +6,31 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
-import { useLang } from "@/lib/i18n";
+import { localizedField, localizedName, useLang } from "@/lib/i18n";
 import {
-  CATEGORY_COLORS,
-  TRAINING_CATEGORIES,
-  categoryLabel,
+  divisionColor,
   trainingText,
-  type TrainingCategory,
+  type TrainingDivision,
   type TrainingLanguage,
+  type TrainingParticipantName,
   type TrainingSession,
 } from "@/lib/training";
 
 type FormState = {
   sessionDate: string;
-  category: TrainingCategory;
-  topic: string;
-  participants: string[];
+  divisionId: number | "";
+  topicEn: string;
+  topicCn: string;
+  participants: TrainingParticipantName[];
   file: File | null;
   removeAttachment: boolean;
 };
 
-const emptyForm = (): FormState => ({
+const emptyForm = (defaultDivisionId: number | "" = ""): FormState => ({
   sessionDate: new Date().toISOString().slice(0, 10),
-  category: "mes",
-  topic: "",
+  divisionId: defaultDivisionId,
+  topicEn: "",
+  topicCn: "",
   participants: [],
   file: null,
   removeAttachment: false,
@@ -42,6 +43,10 @@ const ctrl =
 const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
 const td = "px-3 py-2 align-top text-xs text-text-muted";
 
+function participantKey(person: TrainingParticipantName): string {
+  return person.nameEn.trim().toUpperCase();
+}
+
 export function TrainingActivitiesClient() {
   const { lang, t } = useLang();
   const language = lang as TrainingLanguage;
@@ -49,17 +54,20 @@ export function TrainingActivitiesClient() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
-  const [master, setMaster] = useState<string[]>([]);
+  const [divisions, setDivisions] = useState<TrainingDivision[]>([]);
+  const [master, setMaster] = useState<TrainingParticipantName[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState<TrainingCategory | "all">("all");
+  const [divisionFilter, setDivisionFilter] = useState<number | "all">("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TrainingSession | null>(null);
   const [deleteRow, setDeleteRow] = useState<TrainingSession | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const [newNameEn, setNewNameEn] = useState("");
+  const [newNameCn, setNewNameCn] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -72,23 +80,34 @@ export function TrainingActivitiesClient() {
     setError(null);
     try {
       const qs = new URLSearchParams();
-      if (category !== "all") qs.set("category", category);
+      if (divisionFilter !== "all") qs.set("divisionId", String(divisionFilter));
       if (q.trim()) qs.set("q", q.trim());
 
       const [sessionsRes, masterRes] = await Promise.all([
-        apiGetAbs<{ success: boolean; data: TrainingSession[]; error?: string }>(
-          `/api/training/sessions${qs.toString() ? `?${qs}` : ""}`
-        ),
-        apiGetAbs<{ success: boolean; data: { name: string }[]; error?: string }>(
-          "/api/training/participants"
-        ),
+        apiGetAbs<{
+          success: boolean;
+          data: TrainingSession[];
+          divisions?: TrainingDivision[];
+          error?: string;
+        }>(`/api/training/sessions${qs.toString() ? `?${qs}` : ""}`),
+        apiGetAbs<{
+          success: boolean;
+          data: { nameEn: string; nameCn: string }[];
+          error?: string;
+        }>("/api/training/participants"),
       ]);
 
       if (!sessionsRes.success) throw new Error(sessionsRes.error ?? "Failed");
       if (!masterRes.success) throw new Error(masterRes.error ?? "Failed");
 
       setSessions(sessionsRes.data ?? []);
-      setMaster((masterRes.data ?? []).map((row) => row.name));
+      setDivisions(sessionsRes.divisions ?? []);
+      setMaster(
+        (masterRes.data ?? []).map((row) => ({
+          nameEn: row.nameEn,
+          nameCn: row.nameCn,
+        }))
+      );
     } catch (err) {
       setError(getApiErrorMessage(err) || trainingText("errorLoad", language));
     } finally {
@@ -99,20 +118,25 @@ export function TrainingActivitiesClient() {
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on filter change
-  }, [category]);
+  }, [divisionFilter]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm());
+    setNewNameEn("");
+    setNewNameCn("");
+    setForm(emptyForm(divisions[0]?.id ?? ""));
     setModalOpen(true);
   };
 
   const openEdit = (session: TrainingSession) => {
     setEditing(session);
+    setNewNameEn("");
+    setNewNameCn("");
     setForm({
       sessionDate: session.sessionDate,
-      category: session.category,
-      topic: session.topic,
+      divisionId: session.divisionId,
+      topicEn: session.topicEn,
+      topicCn: session.topicCn,
       participants: [...session.participants],
       file: null,
       removeAttachment: false,
@@ -125,20 +149,44 @@ export function TrainingActivitiesClient() {
     setEditing(null);
   };
 
-  const toggleParticipant = (name: string) => {
+  const toggleParticipant = (person: TrainingParticipantName) => {
+    const key = participantKey(person);
     setForm((prev) => {
-      const exists = prev.participants.includes(name);
+      const exists = prev.participants.some((item) => participantKey(item) === key);
       return {
         ...prev,
         participants: exists
-          ? prev.participants.filter((item) => item !== name)
-          : [...prev.participants, name],
+          ? prev.participants.filter((item) => participantKey(item) !== key)
+          : [...prev.participants, person],
       };
     });
   };
 
+  const addParticipant = () => {
+    const nameEn = newNameEn.trim().toUpperCase();
+    const nameCn = newNameCn.trim();
+    if (!nameEn || !nameCn) {
+      toastError(trainingText("requiredParticipantNames", language));
+      return;
+    }
+    setForm((prev) => {
+      const key = nameEn;
+      if (prev.participants.some((item) => participantKey(item) === key)) return prev;
+      return {
+        ...prev,
+        participants: [...prev.participants, { nameEn, nameCn }],
+      };
+    });
+    setNewNameEn("");
+    setNewNameCn("");
+  };
+
   const save = async () => {
-    if (!form.sessionDate || !form.category || !form.topic.trim()) {
+    if (
+      !form.sessionDate ||
+      !form.divisionId ||
+      !(form.topicEn.trim() || form.topicCn.trim())
+    ) {
       toastError(trainingText("requiredFields", language));
       return;
     }
@@ -147,9 +195,10 @@ export function TrainingActivitiesClient() {
     try {
       const body = new FormData();
       body.set("sessionDate", form.sessionDate);
-      body.set("category", form.category);
-      body.set("topic", form.topic.trim());
-      body.set("participants", form.participants.join(","));
+      body.set("divisionId", String(form.divisionId));
+      body.set("topicEn", form.topicEn.trim());
+      body.set("topicCn", form.topicCn.trim());
+      body.set("participants", JSON.stringify(form.participants));
       if (form.file) body.set("file", form.file);
       if (editing && form.removeAttachment) body.set("removeAttachment", "1");
 
@@ -195,14 +244,22 @@ export function TrainingActivitiesClient() {
     if (!term) return sessions;
     return sessions.filter(
       (row) =>
-        row.topic.toLowerCase().includes(term) ||
-        row.participants.some((name) => name.toLowerCase().includes(term))
+        row.topicEn.toLowerCase().includes(term) ||
+        row.topicCn.toLowerCase().includes(term) ||
+        row.participants.some(
+          (person) =>
+            person.nameEn.toLowerCase().includes(term) ||
+            person.nameCn.toLowerCase().includes(term)
+        )
     );
   }, [sessions, q]);
 
   const participantOptions = useMemo(() => {
-    const set = new Set([...master, ...form.participants]);
-    return [...set].sort((a, b) => a.localeCompare(b));
+    const map = new Map<string, TrainingParticipantName>();
+    for (const person of [...master, ...form.participants]) {
+      map.set(participantKey(person), person);
+    }
+    return [...map.values()].sort((a, b) => a.nameEn.localeCompare(b.nameEn));
   }, [master, form.participants]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -245,20 +302,21 @@ export function TrainingActivitiesClient() {
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
         <div>
           <label className="mb-1 block text-[10px] uppercase text-text-dim">
-            {trainingText("filterCategory", language)}
+            {trainingText("filterDivision", language)}
           </label>
           <select
-            value={category}
+            value={divisionFilter === "all" ? "all" : String(divisionFilter)}
             onChange={(e) => {
-              setCategory(e.target.value as TrainingCategory | "all");
+              const value = e.target.value;
+              setDivisionFilter(value === "all" ? "all" : Number(value));
               setPage(1);
             }}
             className={ctrl}
           >
-            <option value="all">{trainingText("allCategories", language)}</option>
-            {TRAINING_CATEGORIES.map((item) => (
-              <option key={item} value={item}>
-                {categoryLabel(item, language)}
+            <option value="all">{trainingText("allDivisions", language)}</option>
+            {divisions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {localizedName({ name_en: item.nameEn, name_cn: item.nameCn }, lang)}
               </option>
             ))}
           </select>
@@ -301,7 +359,7 @@ export function TrainingActivitiesClient() {
                 <tr>
                   <th className={th}>{trainingText("date", language)}</th>
                   <th className={th}>{trainingText("topic", language)}</th>
-                  <th className={th}>{trainingText("category", language)}</th>
+                  <th className={th}>{trainingText("division", language)}</th>
                   <th className={th}>{trainingText("participants", language)}</th>
                   <th className={th}>{trainingText("count", language)}</th>
                   <th className={th}>{trainingText("attachment", language)}</th>
@@ -316,18 +374,32 @@ export function TrainingActivitiesClient() {
                   >
                     <td className={`${td} whitespace-nowrap`}>{row.sessionDate}</td>
                     <td className={`${td} max-w-sm`}>
-                      <span className="line-clamp-2 font-medium text-text">{row.topic}</span>
+                      <span className="line-clamp-2 font-medium text-text">
+                        {localizedField(row.topicEn, row.topicCn, lang)}
+                      </span>
                     </td>
                     <td className={`${td} whitespace-nowrap`}>
                       <span
                         className="inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium text-white"
-                        style={{ backgroundColor: CATEGORY_COLORS[row.category] }}
+                        style={{ backgroundColor: divisionColor(row.divisionNameEn) }}
                       >
-                        {categoryLabel(row.category, language)}
+                        {localizedName(
+                          { name_en: row.divisionNameEn, name_cn: row.divisionNameCn },
+                          lang
+                        )}
                       </span>
                     </td>
                     <td className={`${td} max-w-sm`}>
-                      <span className="line-clamp-2">{row.participants.join(", ") || "—"}</span>
+                      <span className="line-clamp-2">
+                        {row.participants
+                          .map((person) =>
+                            localizedName(
+                              { name_en: person.nameEn, name_cn: person.nameCn },
+                              lang
+                            )
+                          )
+                          .join(", ") || "—"}
+                      </span>
                     </td>
                     <td className={`${td} whitespace-nowrap text-text`}>{row.participantCount}</td>
                     <td className={`${td} whitespace-nowrap`}>
@@ -395,11 +467,20 @@ export function TrainingActivitiesClient() {
                   ))}
                 </select>
               </label>
-              <span>{t.common.showingRange.replace("{from}", String(from)).replace("{to}", String(to)).replace("{total}", String(filtered.length))}</span>
+              <span>
+                {t.common.showingRange
+                  .replace("{from}", String(from))
+                  .replace("{to}", String(to))
+                  .replace("{total}", String(filtered.length))}
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span>{t.common.pageOf.replace("{page}", String(currentPage)).replace("{total}", String(totalPages))}</span>
+              <span>
+                {t.common.pageOf
+                  .replace("{page}", String(currentPage))
+                  .replace("{total}", String(totalPages))}
+              </span>
               <button
                 type="button"
                 disabled={currentPage <= 1}
@@ -471,30 +552,42 @@ export function TrainingActivitiesClient() {
             </label>
 
             <label className="block text-xs text-text-muted">
-              {trainingText("category", language)}
+              {trainingText("division", language)}
               <select
-                value={form.category}
+                value={form.divisionId === "" ? "" : String(form.divisionId)}
                 onChange={(e) =>
                   setForm((prev) => ({
                     ...prev,
-                    category: e.target.value as TrainingCategory,
+                    divisionId: e.target.value ? Number(e.target.value) : "",
                   }))
                 }
                 className={`mt-1 w-full ${ctrl}`}
               >
-                {TRAINING_CATEGORIES.map((item) => (
-                  <option key={item} value={item}>
-                    {categoryLabel(item, language)}
+                <option value="" disabled>
+                  —
+                </option>
+                {divisions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {localizedName({ name_en: item.nameEn, name_cn: item.nameCn }, lang)}
                   </option>
                 ))}
               </select>
             </label>
 
-            <label className="block text-xs text-text-muted md:col-span-2">
-              {trainingText("topic", language)}
+            <label className="block text-xs text-text-muted">
+              {trainingText("topicEn", language)}
               <input
-                value={form.topic}
-                onChange={(e) => setForm((prev) => ({ ...prev, topic: e.target.value }))}
+                value={form.topicEn}
+                onChange={(e) => setForm((prev) => ({ ...prev, topicEn: e.target.value }))}
+                className={`mt-1 w-full ${ctrl}`}
+              />
+            </label>
+
+            <label className="block text-xs text-text-muted">
+              {trainingText("topicCn", language)}
+              <input
+                value={form.topicCn}
+                onChange={(e) => setForm((prev) => ({ ...prev, topicCn: e.target.value }))}
                 className={`mt-1 w-full ${ctrl}`}
               />
             </label>
@@ -508,35 +601,57 @@ export function TrainingActivitiesClient() {
                   {participantOptions.length === 0 ? (
                     <p className="text-xs text-text-dim">—</p>
                   ) : (
-                    participantOptions.map((name) => (
-                      <label key={name} className="flex items-center gap-2 text-sm text-text">
-                        <input
-                          type="checkbox"
-                          checked={form.participants.includes(name)}
-                          onChange={() => toggleParticipant(name)}
-                        />
-                        {name}
-                      </label>
-                    ))
+                    participantOptions.map((person) => {
+                      const key = participantKey(person);
+                      return (
+                        <label key={key} className="flex items-center gap-2 text-sm text-text">
+                          <input
+                            type="checkbox"
+                            checked={form.participants.some((item) => participantKey(item) === key)}
+                            onChange={() => toggleParticipant(person)}
+                          />
+                          {localizedName(
+                            { name_en: person.nameEn, name_cn: person.nameCn },
+                            lang
+                          )}
+                        </label>
+                      );
+                    })
                   )}
                 </div>
-                <input
-                  placeholder="Add name then press Enter"
-                  className={`mt-3 w-full ${ctrl}`}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    const value = (e.target as HTMLInputElement).value.trim().toUpperCase();
-                    if (!value) return;
-                    setForm((prev) => ({
-                      ...prev,
-                      participants: prev.participants.includes(value)
-                        ? prev.participants
-                        : [...prev.participants, value],
-                    }));
-                    (e.target as HTMLInputElement).value = "";
-                  }}
-                />
+                <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <input
+                    placeholder={trainingText("nameEn", language)}
+                    className={ctrl}
+                    value={newNameEn}
+                    onChange={(e) => setNewNameEn(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addParticipant();
+                      }
+                    }}
+                  />
+                  <input
+                    placeholder={trainingText("nameCn", language)}
+                    className={ctrl}
+                    value={newNameCn}
+                    onChange={(e) => setNewNameCn(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addParticipant();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addParticipant}
+                    className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+                  >
+                    {trainingText("addParticipant", language)}
+                  </button>
+                </div>
               </div>
             </div>
 

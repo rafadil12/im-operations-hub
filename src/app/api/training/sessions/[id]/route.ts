@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission, requirePermission } from "@/lib/auth";
 import { execute } from "@/lib/db";
 import {
+  hasTopicText,
   isValidDateString,
   jsonError,
-  normalizeCategory,
+  parseDivisionId,
   parseParticipantNames,
 } from "@/lib/training/apiHelpers";
 import { saveTrainingUploadedFile } from "@/lib/training/upload";
 import {
+  assertDivisionExists,
   loadTrainingSessions,
   replaceSessionParticipants,
 } from "@/lib/training/sessionStore";
@@ -53,16 +55,22 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const form = await request.formData();
     const sessionDate = String(form.get("sessionDate") ?? existing.sessionDate).trim();
-    const category = normalizeCategory(form.get("category") ?? existing.category);
-    const topic = String(form.get("topic") ?? existing.topic).trim();
+    const divisionId =
+      parseDivisionId(form.get("divisionId")) ?? existing.divisionId;
+    const topicEn = String(form.get("topicEn") ?? existing.topicEn).trim();
+    const topicCn = String(form.get("topicCn") ?? existing.topicCn).trim();
     const participants = form.has("participants")
       ? parseParticipantNames(form.get("participants"))
       : existing.participants;
     const removeAttachment = String(form.get("removeAttachment") ?? "") === "1";
     const file = form.get("file");
 
-    if (!isValidDateString(sessionDate) || !category || !topic) {
-      return jsonError("Date, category, and topic are required.");
+    if (!isValidDateString(sessionDate) || !divisionId || !hasTopicText(topicEn, topicCn)) {
+      return jsonError("Date, division, and at least one topic language are required.");
+    }
+
+    if (!(await assertDivisionExists(divisionId))) {
+      return jsonError("Invalid division.");
     }
 
     let attachmentOriginal = existing.attachment?.originalName ?? null;
@@ -73,7 +81,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     let attachmentMime = existing.attachment?.mimeType ?? null;
     let attachmentSize = existing.attachment?.size ?? null;
 
-    // Prefer DB stored name if present via reload of raw fields — keep URL as source of truth.
     if (removeAttachment) {
       attachmentOriginal = null;
       attachmentStored = null;
@@ -91,13 +98,17 @@ export async function PATCH(request: Request, context: RouteContext) {
       attachmentSize = uploaded.size;
     }
 
+    const resolvedTopicEn = topicEn || topicCn;
+    const resolvedTopicCn = topicCn || topicEn;
+
     await execute(
       `
         UPDATE training_sessions
         SET
           session_date = ?,
-          category = ?,
-          topic = ?,
+          division_id = ?,
+          topic_en = ?,
+          topic_cn = ?,
           participant_count = ?,
           attachment_original_name = ?,
           attachment_stored_name = ?,
@@ -108,8 +119,9 @@ export async function PATCH(request: Request, context: RouteContext) {
       `,
       [
         sessionDate,
-        category,
-        topic,
+        divisionId,
+        resolvedTopicEn,
+        resolvedTopicCn,
         participants.length,
         attachmentOriginal,
         attachmentStored,

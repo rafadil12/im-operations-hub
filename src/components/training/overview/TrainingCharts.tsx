@@ -16,7 +16,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CATEGORY_COLORS, categoryLabel, trainingText } from "@/lib/training/copy";
+import { localizedName } from "@/lib/i18n";
+import { divisionColor, trainingText } from "@/lib/training/copy";
 import type { TrainingLanguage, TrainingOverviewMetrics } from "@/lib/training/types";
 
 function useAxisColor() {
@@ -94,15 +95,15 @@ export function TrainingCategoryDonut({
   data,
   language,
 }: {
-  data: TrainingOverviewMetrics["byCategory"];
+  data: TrainingOverviewMetrics["byDivision"];
   language: TrainingLanguage;
 }) {
   const chartData = data
     .filter((row) => row.sessions > 0)
     .map((row) => ({
-      name: categoryLabel(row.category, language),
+      name: localizedName({ name_en: row.nameEn, name_cn: row.nameCn }, language),
       value: row.sessions,
-      color: CATEGORY_COLORS[row.category],
+      color: divisionColor(row.nameEn),
     }));
 
   const total = chartData.reduce((sum, row) => sum + row.value, 0);
@@ -129,7 +130,6 @@ export function TrainingCategoryDonut({
                 (payload as { color?: string } | undefined)?.color ??
                 "var(--color-text, #0f172a)";
 
-              // Elbow connector: diagonal from slice edge, then horizontal to the label.
               const sx = cx + outerRadius * cos;
               const sy = cy + outerRadius * sin;
               const mx = cx + (outerRadius + 12) * cos;
@@ -201,7 +201,7 @@ export function TrainingTopParticipantsChart({
 }) {
   const axis = useAxisColor();
   const chartData = data.map((row) => ({
-    label: row.name,
+    label: localizedName({ name_en: row.nameEn, name_cn: row.nameCn }, language),
     sessions: row.sessions,
   }));
 
@@ -233,26 +233,26 @@ export function TrainingTopicsByDivisionChart({
   data,
   language,
 }: {
-  data: TrainingOverviewMetrics["byCategory"];
+  data: TrainingOverviewMetrics["byDivision"];
   language: TrainingLanguage;
 }) {
   const axis = useAxisColor();
   const chartData = data.map((row) => ({
-    category: categoryLabel(row.category, language),
+    division: localizedName({ name_en: row.nameEn, name_cn: row.nameCn }, language),
     topics: row.topics,
-    color: CATEGORY_COLORS[row.category],
+    color: divisionColor(row.nameEn),
   }));
 
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={chartData} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #e2e8f0)" />
-        <XAxis dataKey="category" stroke={axis} fontSize={11} />
+        <XAxis dataKey="division" stroke={axis} fontSize={11} />
         <YAxis stroke={axis} fontSize={11} allowDecimals={false} />
         <Tooltip />
         <Bar dataKey="topics" name={trainingText("topics", language)} radius={[4, 4, 0, 0]}>
           {chartData.map((row) => (
-            <Cell key={row.category} fill={row.color} />
+            <Cell key={row.division} fill={row.color} />
           ))}
           <LabelList
             dataKey="topics"

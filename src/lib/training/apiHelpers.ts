@@ -1,67 +1,78 @@
 import { NextResponse } from "next/server";
-import {
-  TRAINING_CATEGORIES,
-  type TrainingCategory,
-  type TrainingSession,
-  type TrainingSessionParticipantRow,
-  type TrainingSessionRow,
+import type {
+  TrainingParticipantName,
+  TrainingSession,
+  TrainingSessionParticipantRow,
+  TrainingSessionRow,
 } from "./types";
 
 export function jsonError(message: string, status = 400) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
-export function isTrainingCategory(value: string): value is TrainingCategory {
-  return (TRAINING_CATEGORIES as readonly string[]).includes(value);
-}
-
-export function normalizeCategory(value: unknown): TrainingCategory | null {
-  const raw = String(value ?? "")
+export function normalizeParticipantName(value: unknown): string {
+  return String(value ?? "")
     .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-
-  if (raw === "mes") return "mes";
-  if (raw === "intelligent" || raw === "agv" || raw === "il") return "intelligent";
-  if (raw === "it") return "it";
-  return null;
+    .toUpperCase();
 }
 
-export function parseParticipantNames(raw: unknown): string[] {
+export function parseParticipantNames(raw: unknown): TrainingParticipantName[] {
+  const seen = new Set<string>();
+  const out: TrainingParticipantName[] = [];
+
+  const push = (nameEnRaw: unknown, nameCnRaw: unknown) => {
+    const nameEn = normalizeParticipantName(nameEnRaw);
+    const nameCn = String(nameCnRaw ?? "").trim() || nameEn;
+    if (!nameEn) return;
+    if (seen.has(nameEn)) return;
+    seen.add(nameEn);
+    out.push({ nameEn, nameCn });
+  };
+
   if (Array.isArray(raw)) {
-    return [
-      ...new Set(
-        raw
-          .map((item) => String(item ?? "").trim())
-          .filter(Boolean)
-          .map((name) => name.toUpperCase())
-      ),
-    ];
+    for (const item of raw) {
+      if (typeof item === "string") {
+        push(item, item);
+        continue;
+      }
+      if (item && typeof item === "object") {
+        const row = item as Record<string, unknown>;
+        push(row.nameEn ?? row.name_en ?? row.name, row.nameCn ?? row.name_cn ?? row.nameEn ?? row.name);
+      }
+    }
+    return out;
   }
 
   const text = String(raw ?? "").trim();
   if (!text) return [];
 
-  return [
-    ...new Set(
-      text
-        .split(/[,，;/|]+/)
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .map((name) => name.toUpperCase())
-    ),
-  ];
+  // Prefer JSON payload from the UI.
+  if (text.startsWith("[") || text.startsWith("{")) {
+    try {
+      return parseParticipantNames(JSON.parse(text) as unknown);
+    } catch {
+      // fall through to comma-separated legacy format
+    }
+  }
+
+  for (const part of text.split(/[,，;/|]+/)) {
+    push(part, part);
+  }
+  return out;
 }
 
 export function mapSessionRow(
   row: TrainingSessionRow,
-  participants: string[] = []
+  participants: TrainingParticipantName[] = []
 ): TrainingSession {
   return {
     id: Number(row.id),
     sessionDate: String(row.session_date).slice(0, 10),
-    category: row.category,
-    topic: row.topic,
+    divisionId: Number(row.division_id),
+    divisionNameEn: String(row.division_name_en ?? ""),
+    divisionNameCn: String(row.division_name_cn ?? ""),
+    topicEn: row.topic_en ?? "",
+    topicCn: row.topic_cn ?? "",
     participantCount: Number(row.participant_count) || participants.length,
     participants,
     attachment:
@@ -80,12 +91,15 @@ export function mapSessionRow(
 
 export function groupParticipantsBySession(
   rows: TrainingSessionParticipantRow[]
-): Map<number, string[]> {
-  const map = new Map<number, string[]>();
+): Map<number, TrainingParticipantName[]> {
+  const map = new Map<number, TrainingParticipantName[]>();
   for (const row of rows) {
     const sessionId = Number(row.session_id);
     const current = map.get(sessionId) ?? [];
-    current.push(row.participant_name);
+    current.push({
+      nameEn: row.participant_name_en,
+      nameCn: row.participant_name_cn,
+    });
     map.set(sessionId, current);
   }
   return map;
@@ -95,4 +109,14 @@ export function isValidDateString(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function parseDivisionId(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
+export function hasTopicText(topicEn: string, topicCn: string): boolean {
+  return Boolean(topicEn.trim() || topicCn.trim());
 }

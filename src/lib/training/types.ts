@@ -1,14 +1,24 @@
 export type TrainingLanguage = "en" | "cn";
 
-export const TRAINING_CATEGORIES = ["mes", "intelligent", "it"] as const;
+export type TrainingDivision = {
+  id: number;
+  nameEn: string;
+  nameCn: string;
+};
 
-export type TrainingCategory = (typeof TRAINING_CATEGORIES)[number];
+export type TrainingParticipantName = {
+  nameEn: string;
+  nameCn: string;
+};
 
 export type TrainingSessionRow = {
   id: number;
   session_date: string;
-  category: TrainingCategory;
-  topic: string;
+  division_id: number;
+  division_name_en?: string | null;
+  division_name_cn?: string | null;
+  topic_en: string;
+  topic_cn: string;
   participant_count: number;
   attachment_original_name: string | null;
   attachment_stored_name: string | null;
@@ -22,22 +32,27 @@ export type TrainingSessionRow = {
 export type TrainingSessionParticipantRow = {
   id: number;
   session_id: number;
-  participant_name: string;
+  participant_name_en: string;
+  participant_name_cn: string;
 };
 
 export type TrainingParticipantMasterRow = {
   id: number;
-  name: string;
+  name_en: string;
+  name_cn: string;
   is_active: number;
 };
 
 export type TrainingSession = {
   id: number;
   sessionDate: string;
-  category: TrainingCategory;
-  topic: string;
+  divisionId: number;
+  divisionNameEn: string;
+  divisionNameCn: string;
+  topicEn: string;
+  topicCn: string;
   participantCount: number;
-  participants: string[];
+  participants: TrainingParticipantName[];
   attachment: {
     originalName: string;
     url: string;
@@ -64,9 +79,16 @@ export type TrainingOverviewMetrics = {
   totalTopics: number;
   attachmentRate: number;
   sessionsWithAttachment: number;
-  byCategory: { category: TrainingCategory; sessions: number; participants: number; topics: number }[];
+  byDivision: {
+    divisionId: number;
+    nameEn: string;
+    nameCn: string;
+    sessions: number;
+    participants: number;
+    topics: number;
+  }[];
   monthlyTrend: TrainingTrendRow[];
   trendGranularity: "day" | "month";
-  topParticipants: { name: string; sessions: number }[];
+  topParticipants: { nameEn: string; nameCn: string; sessions: number }[];
   recentSessions: TrainingSession[];
 };

@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { formatDateOnly } from "@/lib/dateRange";
-import { useLang } from "@/lib/i18n";
+import { localizedField, localizedName, useLang } from "@/lib/i18n";
 import {
-  CATEGORY_COLORS,
-  categoryLabel,
+  divisionColor,
   trainingText,
   type TrainingLanguage,
   type TrainingOverviewMetrics,
@@ -179,7 +178,7 @@ export function TrainingOverview() {
               <h2 className="mb-3 text-sm font-medium text-text">
                 {trainingText("byCategory", language)}
               </h2>
-              <TrainingCategoryDonut data={metrics.byCategory} language={language} />
+              <TrainingCategoryDonut data={metrics.byDivision} language={language} />
             </section>
 
             <section className="rounded-xl border border-border-subtle bg-surface p-4">
@@ -199,7 +198,7 @@ export function TrainingOverview() {
               <h2 className="mb-3 text-sm font-medium text-text">
                 {trainingText("topicsByDivision", language)}
               </h2>
-              <TrainingTopicsByDivisionChart data={metrics.byCategory} language={language} />
+              <TrainingTopicsByDivisionChart data={metrics.byDivision} language={language} />
             </section>
           </div>
 
@@ -213,7 +212,7 @@ export function TrainingOverview() {
                   <tr className="border-b border-border-subtle text-xs text-text-dim">
                     <th className="pb-2 pr-3 font-medium">{trainingText("date", language)}</th>
                     <th className="pb-2 pr-3 font-medium">{trainingText("topic", language)}</th>
-                    <th className="pb-2 pr-3 font-medium">{trainingText("category", language)}</th>
+                    <th className="pb-2 pr-3 font-medium">{trainingText("division", language)}</th>
                     <th className="pb-2 pr-3 font-medium">{trainingText("count", language)}</th>
                     <th className="pb-2 font-medium">{trainingText("attachment", language)}</th>
                   </tr>
@@ -229,13 +228,18 @@ export function TrainingOverview() {
                     metrics.recentSessions.map((row) => (
                       <tr key={row.id} className="border-b border-border-subtle/60">
                         <td className="py-2.5 pr-3 text-text-muted">{row.sessionDate}</td>
-                        <td className="py-2.5 pr-3 font-medium text-text">{row.topic}</td>
+                        <td className="py-2.5 pr-3 font-medium text-text">
+                          {localizedField(row.topicEn, row.topicCn, lang)}
+                        </td>
                         <td className="py-2.5 pr-3">
                           <span
                             className="inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium text-white"
-                            style={{ backgroundColor: CATEGORY_COLORS[row.category] }}
+                            style={{ backgroundColor: divisionColor(row.divisionNameEn) }}
                           >
-                            {categoryLabel(row.category, language)}
+                            {localizedName(
+                              { name_en: row.divisionNameEn, name_cn: row.divisionNameCn },
+                              lang
+                            )}
                           </span>
                         </td>
                         <td className="py-2.5 pr-3">{row.participantCount}</td>

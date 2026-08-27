@@ -46,7 +46,7 @@ export function TrainingBody({ data, expanded }: { data: ModuleCardData; expande
                 <th className="pb-2 pr-2 font-medium">{t.dashboard.date}</th>
                 <th className="pb-2 pr-2 font-medium">{t.dashboard.participant}</th>
                 <th className="pb-2 pr-2 font-medium">{t.dashboard.attachment}</th>
-                <th className="pb-2 font-medium">{t.dashboard.category}</th>
+                <th className="pb-2 font-medium">{t.fields.division}</th>
               </tr>
             </thead>
 

@@ -947,5 +947,208 @@ await applySqlFile(
   "Applied training module (sessions, participants, permissions).",
 );
 
+// ---------------------------------------------------------------------------
+// 023: Training divisions FK + bilingual topic/participant names
+// ---------------------------------------------------------------------------
+if (await tableExists("training_sessions")) {
+  // division_id
+  if (!(await columnExists("training_sessions", "division_id"))) {
+    await conn.query(
+      `ALTER TABLE \`training_sessions\`
+       ADD COLUMN \`division_id\` INT NULL AFTER \`session_date\``,
+    );
+    console.log("Added training_sessions.division_id.");
+  } else {
+    console.log("training_sessions.division_id already exists.");
+  }
+
+  if (await columnExists("training_sessions", "category")) {
+    await conn.query(`
+      UPDATE \`training_sessions\` ts
+      JOIN \`divisions\` d ON (
+        (ts.category = 'mes' AND d.name_en = 'MES')
+        OR (ts.category = 'intelligent' AND d.name_en = 'Intelligent Logistics')
+        OR (ts.category = 'it' AND d.name_en = 'IT')
+      )
+      SET ts.division_id = d.id
+      WHERE ts.division_id IS NULL
+    `);
+    await conn.query(`
+      UPDATE \`training_sessions\`
+      SET \`division_id\` = (SELECT MIN(id) FROM \`divisions\`)
+      WHERE \`division_id\` IS NULL
+    `);
+    console.log("Backfilled training_sessions.division_id from category.");
+  }
+
+  if (await columnNullable("training_sessions", "division_id")) {
+    await conn.query(
+      `ALTER TABLE \`training_sessions\` MODIFY COLUMN \`division_id\` INT NOT NULL`,
+    );
+    console.log("training_sessions.division_id set NOT NULL.");
+  }
+
+  if (!(await indexExists("training_sessions", "idx_training_sessions_division"))) {
+    await conn.query(
+      `ALTER TABLE \`training_sessions\` ADD KEY \`idx_training_sessions_division\` (\`division_id\`)`,
+    );
+  }
+  if (!(await indexExists("training_sessions", "idx_training_sessions_date_division"))) {
+    await conn.query(
+      `ALTER TABLE \`training_sessions\` ADD KEY \`idx_training_sessions_date_division\` (\`session_date\`, \`division_id\`)`,
+    );
+  }
+  await tryAddConstraint(
+    `ALTER TABLE \`training_sessions\`
+     ADD CONSTRAINT \`fk_training_sessions_division\`
+       FOREIGN KEY (\`division_id\`) REFERENCES \`divisions\` (\`id\`)`,
+    "fk_training_sessions_division",
+  );
+
+  if (await indexExists("training_sessions", "idx_training_sessions_category")) {
+    await conn.query(
+      `ALTER TABLE \`training_sessions\` DROP INDEX \`idx_training_sessions_category\``,
+    );
+  }
+  if (await indexExists("training_sessions", "idx_training_sessions_date_category")) {
+    await conn.query(
+      `ALTER TABLE \`training_sessions\` DROP INDEX \`idx_training_sessions_date_category\``,
+    );
+  }
+  if (await columnExists("training_sessions", "category")) {
+    await conn.query(`ALTER TABLE \`training_sessions\` DROP COLUMN \`category\``);
+    console.log("Dropped training_sessions.category.");
+  }
+
+  // bilingual topic
+  if (!(await columnExists("training_sessions", "topic_en"))) {
+    await conn.query(
+      `ALTER TABLE \`training_sessions\`
+       ADD COLUMN \`topic_en\` VARCHAR(500) NULL AFTER \`division_id\`,
+       ADD COLUMN \`topic_cn\` VARCHAR(500) NULL AFTER \`topic_en\``,
+    );
+    console.log("Added training_sessions.topic_en/topic_cn.");
+  } else {
+    console.log("training_sessions.topic_en already exists.");
+  }
+
+  if (await columnExists("training_sessions", "topic")) {
+    await conn.query(`
+      UPDATE \`training_sessions\`
+      SET
+        \`topic_en\` = COALESCE(\`topic_en\`, \`topic\`),
+        \`topic_cn\` = COALESCE(\`topic_cn\`, \`topic\`)
+    `);
+    await conn.query(`
+      ALTER TABLE \`training_sessions\`
+       MODIFY COLUMN \`topic_en\` VARCHAR(500) NOT NULL,
+       MODIFY COLUMN \`topic_cn\` VARCHAR(500) NOT NULL
+    `);
+    await conn.query(`ALTER TABLE \`training_sessions\` DROP COLUMN \`topic\``);
+    console.log("Migrated training_sessions.topic → topic_en/topic_cn.");
+  }
+
+  // bilingual participant master
+  if (await tableExists("training_participants")) {
+    if (!(await columnExists("training_participants", "name_en"))) {
+      await conn.query(
+        `ALTER TABLE \`training_participants\`
+         ADD COLUMN \`name_en\` VARCHAR(100) NULL AFTER \`id\`,
+         ADD COLUMN \`name_cn\` VARCHAR(100) NULL AFTER \`name_en\``,
+      );
+      console.log("Added training_participants.name_en/name_cn.");
+    }
+
+    if (await columnExists("training_participants", "name")) {
+      await conn.query(`
+        UPDATE \`training_participants\`
+        SET
+          \`name_en\` = COALESCE(\`name_en\`, \`name\`),
+          \`name_cn\` = COALESCE(\`name_cn\`, \`name\`)
+      `);
+      if (await indexExists("training_participants", "uk_training_participants_name")) {
+        await conn.query(
+          `ALTER TABLE \`training_participants\` DROP INDEX \`uk_training_participants_name\``,
+        );
+      }
+      await conn.query(`
+        ALTER TABLE \`training_participants\`
+         MODIFY COLUMN \`name_en\` VARCHAR(100) NOT NULL,
+         MODIFY COLUMN \`name_cn\` VARCHAR(100) NOT NULL
+      `);
+      if (!(await indexExists("training_participants", "uk_training_participants_name_en"))) {
+        await conn.query(
+          `ALTER TABLE \`training_participants\`
+           ADD UNIQUE KEY \`uk_training_participants_name_en\` (\`name_en\`)`,
+        );
+      }
+      await conn.query(`ALTER TABLE \`training_participants\` DROP COLUMN \`name\``);
+      console.log("Migrated training_participants.name → name_en/name_cn.");
+    }
+  }
+
+  // bilingual session participants snapshot
+  if (await tableExists("training_session_participants")) {
+    if (!(await columnExists("training_session_participants", "participant_name_en"))) {
+      await conn.query(
+        `ALTER TABLE \`training_session_participants\`
+         ADD COLUMN \`participant_name_en\` VARCHAR(100) NULL AFTER \`session_id\`,
+         ADD COLUMN \`participant_name_cn\` VARCHAR(100) NULL AFTER \`participant_name_en\``,
+      );
+      console.log("Added training_session_participants bilingual names.");
+    }
+
+    if (await columnExists("training_session_participants", "participant_name")) {
+      await conn.query(`
+        UPDATE \`training_session_participants\`
+        SET
+          \`participant_name_en\` = COALESCE(\`participant_name_en\`, \`participant_name\`),
+          \`participant_name_cn\` = COALESCE(\`participant_name_cn\`, \`participant_name\`)
+      `);
+      if (await indexExists("training_session_participants", "idx_tsp_name")) {
+        await conn.query(
+          `ALTER TABLE \`training_session_participants\` DROP INDEX \`idx_tsp_name\``,
+        );
+      }
+      await conn.query(`
+        ALTER TABLE \`training_session_participants\`
+         MODIFY COLUMN \`participant_name_en\` VARCHAR(100) NOT NULL,
+         MODIFY COLUMN \`participant_name_cn\` VARCHAR(100) NOT NULL
+      `);
+      if (!(await indexExists("training_session_participants", "idx_tsp_name_en"))) {
+        await conn.query(
+          `ALTER TABLE \`training_session_participants\`
+           ADD KEY \`idx_tsp_name_en\` (\`participant_name_en\`)`,
+        );
+      }
+      await conn.query(
+        `ALTER TABLE \`training_session_participants\` DROP COLUMN \`participant_name\``,
+      );
+      console.log("Migrated training_session_participants.participant_name → EN/CN.");
+    }
+
+    // Keep junction CN in sync with master when snapshot still mirrors EN.
+    const [syncResult] = await conn.query(`
+      UPDATE \`training_session_participants\` tsp
+      JOIN \`training_participants\` tp ON tp.name_en = tsp.participant_name_en
+      SET tsp.participant_name_cn = tp.name_cn
+      WHERE tp.name_cn IS NOT NULL
+        AND TRIM(tp.name_cn) <> ''
+        AND (
+          tsp.participant_name_cn IS NULL
+          OR TRIM(tsp.participant_name_cn) = ''
+          OR tsp.participant_name_cn = tsp.participant_name_en
+        )
+        AND tp.name_cn <> tsp.participant_name_en
+    `);
+    const synced = /** @type {{ affectedRows?: number }} */ (syncResult).affectedRows ?? 0;
+    if (synced > 0) {
+      console.log(`Synced ${synced} training_session_participants.name_cn from master.`);
+    }
+  }
+} else {
+  console.log("training_sessions missing; skipped 023 training bilingual migration.");
+}
+
 await conn.end();
 console.log("Migrations complete.");

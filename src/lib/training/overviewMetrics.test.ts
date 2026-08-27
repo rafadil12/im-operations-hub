@@ -1,33 +1,55 @@
 import { describe, expect, it } from "vitest";
 import { computeTrainingOverviewMetrics } from "./overviewMetrics";
-import type { TrainingSession } from "./types";
+import type { TrainingDivision, TrainingSession } from "./types";
+
+const divisions: TrainingDivision[] = [
+  { id: 2, nameEn: "MES", nameCn: "MES" },
+  { id: 1, nameEn: "Intelligent Logistics", nameCn: "智能物流" },
+  { id: 3, nameEn: "IT", nameCn: "IT" },
+];
 
 const sample: TrainingSession[] = [
   {
     id: 1,
     sessionDate: "2026-07-15",
-    category: "mes",
-    topic: "SQL",
+    divisionId: 2,
+    divisionNameEn: "MES",
+    divisionNameCn: "MES",
+    topicEn: "SQL",
+    topicCn: "SQL",
     participantCount: 1,
-    participants: ["FADIL"],
+    participants: [{ nameEn: "FADIL", nameCn: "FADIL" }],
     attachment: { originalName: "a.pdf", url: "/x", mimeType: "application/pdf", size: 1 },
   },
   {
     id: 2,
     sessionDate: "2026-07-20",
-    category: "it",
-    topic: "Network",
+    divisionId: 3,
+    divisionNameEn: "IT",
+    divisionNameCn: "IT",
+    topicEn: "Network",
+    topicCn: "网络",
     participantCount: 2,
-    participants: ["IQBAL", "FADIL"],
+    participants: [
+      { nameEn: "IQBAL", nameCn: "IQBAL" },
+      { nameEn: "FADIL", nameCn: "FADIL" },
+    ],
     attachment: null,
   },
   {
     id: 3,
     sessionDate: "2026-06-01",
-    category: "intelligent",
-    topic: "AGV",
+    divisionId: 1,
+    divisionNameEn: "Intelligent Logistics",
+    divisionNameCn: "智能物流",
+    topicEn: "AGV",
+    topicCn: "AGV",
     participantCount: 3,
-    participants: ["JOSE", "RUHUT", "AULIA"],
+    participants: [
+      { nameEn: "JOSE", nameCn: "JOSE" },
+      { nameEn: "RUHUT", nameCn: "RUHUT" },
+      { nameEn: "AULIA", nameCn: "AULIA" },
+    ],
     attachment: { originalName: "b.pdf", url: "/y", mimeType: "application/pdf", size: 1 },
   },
 ];
@@ -36,6 +58,7 @@ describe("computeTrainingOverviewMetrics", () => {
   it("filters by date range and computes KPIs", () => {
     const metrics = computeTrainingOverviewMetrics({
       sessions: sample,
+      divisions,
       startDate: "2026-07-01",
       endDate: "2026-07-31",
     });
@@ -44,14 +67,19 @@ describe("computeTrainingOverviewMetrics", () => {
     expect(metrics.totalParticipants).toBe(3);
     expect(metrics.uniqueParticipants).toBe(2);
     expect(metrics.totalTopics).toBe(2);
-    expect(metrics.byCategory.find((c) => c.category === "mes")?.topics).toBe(1);
-    expect(metrics.byCategory.find((c) => c.category === "mes")?.sessions).toBe(1);
-    expect(metrics.topParticipants[0]).toEqual({ name: "FADIL", sessions: 2 });
+    expect(metrics.byDivision.find((c) => c.nameEn === "MES")?.topics).toBe(1);
+    expect(metrics.byDivision.find((c) => c.nameEn === "MES")?.sessions).toBe(1);
+    expect(metrics.topParticipants[0]).toEqual({
+      nameEn: "FADIL",
+      nameCn: "FADIL",
+      sessions: 2,
+    });
   });
 
   it("builds monthly trend when range spans multiple months", () => {
     const metrics = computeTrainingOverviewMetrics({
       sessions: sample,
+      divisions,
       startDate: "2026-01-01",
       endDate: "2026-12-31",
     });
@@ -76,6 +104,7 @@ describe("computeTrainingOverviewMetrics", () => {
   it("builds daily trend when range is within one month", () => {
     const metrics = computeTrainingOverviewMetrics({
       sessions: sample,
+      divisions,
       startDate: "2026-07-01",
       endDate: "2026-07-31",
     });

@@ -1,9 +1,9 @@
 import type {
+  TrainingDivision,
   TrainingOverviewMetrics,
   TrainingSession,
   TrainingTrendRow,
 } from "./types";
-import { TRAINING_CATEGORIES } from "./types";
 
 function monthKey(date: string): string {
   return date.slice(0, 7);
@@ -63,8 +63,13 @@ function inRange(date: string, startDate: string, endDate: string): boolean {
   return date >= startDate && date <= endDate;
 }
 
+function topicKey(topicEn: string, topicCn: string): string {
+  return `${topicEn.trim()}|${topicCn.trim()}`.toUpperCase();
+}
+
 export function computeTrainingOverviewMetrics(input: {
   sessions: TrainingSession[];
+  divisions: TrainingDivision[];
   startDate: string;
   endDate: string;
 }): TrainingOverviewMetrics {
@@ -79,15 +84,15 @@ export function computeTrainingOverviewMetrics(input: {
 
   const unique = new Set<string>();
   for (const session of periodSessions) {
-    for (const name of session.participants) {
-      unique.add(name.trim().toUpperCase());
+    for (const person of session.participants) {
+      unique.add(person.nameEn.trim().toUpperCase());
     }
   }
 
   const topics = new Set<string>();
   for (const session of periodSessions) {
-    const topic = session.topic.trim();
-    if (topic) topics.add(topic.toUpperCase());
+    const key = topicKey(session.topicEn, session.topicCn);
+    if (key !== "|") topics.add(key);
   }
   const totalTopics = topics.size;
 
@@ -95,15 +100,17 @@ export function computeTrainingOverviewMetrics(input: {
   const attachmentRate =
     totalSessions > 0 ? Math.round((sessionsWithAttachment / totalSessions) * 100) : 0;
 
-  const byCategory = TRAINING_CATEGORIES.map((category) => {
-    const rows = periodSessions.filter((s) => s.category === category);
+  const byDivision = input.divisions.map((division) => {
+    const rows = periodSessions.filter((s) => s.divisionId === division.id);
     const topicSet = new Set<string>();
     for (const session of rows) {
-      const topic = session.topic.trim();
-      if (topic) topicSet.add(topic.toUpperCase());
+      const key = topicKey(session.topicEn, session.topicCn);
+      if (key !== "|") topicSet.add(key);
     }
     return {
-      category,
+      divisionId: division.id,
+      nameEn: division.nameEn,
+      nameCn: division.nameCn,
       sessions: rows.length,
       participants: rows.reduce((sum, s) => sum + s.participantCount, 0),
       topics: topicSet.size,
@@ -114,18 +121,33 @@ export function computeTrainingOverviewMetrics(input: {
   const trendGranularity = sameMonth ? "day" : "month";
   const monthlyTrend = buildTrendRows(periodSessions, trendGranularity);
 
-  const personMap = new Map<string, number>();
+  const personMap = new Map<string, { nameEn: string; nameCn: string; sessions: number }>();
   for (const session of periodSessions) {
-    for (const name of session.participants) {
-      const key = name.trim().toUpperCase();
+    for (const person of session.participants) {
+      const key = person.nameEn.trim().toUpperCase();
       if (!key) continue;
-      personMap.set(key, (personMap.get(key) ?? 0) + 1);
+      const nameCn = person.nameCn?.trim() || person.nameEn;
+      const current = personMap.get(key);
+      if (current) {
+        current.sessions += 1;
+        // Prefer a real CN label over an EN-only snapshot copy.
+        if (nameCn && nameCn !== person.nameEn) {
+          current.nameCn = nameCn;
+        } else if (!current.nameCn) {
+          current.nameCn = nameCn;
+        }
+      } else {
+        personMap.set(key, {
+          nameEn: person.nameEn,
+          nameCn,
+          sessions: 1,
+        });
+      }
     }
   }
 
-  const topParticipants = [...personMap.entries()]
-    .map(([name, sessionsCount]) => ({ name, sessions: sessionsCount }))
-    .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name))
+  const topParticipants = [...personMap.values()]
+    .sort((a, b) => b.sessions - a.sessions || a.nameEn.localeCompare(b.nameEn))
     .slice(0, 10);
 
   const recentSessions = [...periodSessions]
@@ -141,7 +163,7 @@ export function computeTrainingOverviewMetrics(input: {
     totalTopics,
     attachmentRate,
     sessionsWithAttachment,
-    byCategory,
+    byDivision,
     monthlyTrend,
     trendGranularity,
     topParticipants,
