@@ -88,6 +88,15 @@ function parseDate(
   return valueString || null;
 }
 
+function parseOptionalText(value: unknown): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const text = String(value).trim();
+  return text || null;
+}
+
 /* =========================================================
    GET
    /api/organization/employees
@@ -405,231 +414,190 @@ export async function POST(
   }
 
   try {
-    const body =
-      await request.json();
+    const body = await request.json();
 
-    const userId = Number(
-      body.user_id,
-    );
+    const employeeId = parseOptionalText(body.employee_id);
+    const name = parseOptionalText(body.name);
+    const nameCn = parseOptionalText(body.name_cn);
+    const department = parseOptionalText(body.department);
 
-    if (
-      !Number.isInteger(userId) ||
-      userId <= 0
-    ) {
+    if (!employeeId) {
       return NextResponse.json(
-        {
-          error:
-            "Valid user_id is required.",
-        },
-        {
-          status: 400,
-        },
+        { error: "Employee ID is required." },
+        { status: 400 },
       );
     }
 
-    const positionId =
-      parseOptionalInt(
-        body.position_id,
+    if (!name) {
+      return NextResponse.json(
+        { error: "Full Name is required." },
+        { status: 400 },
       );
+    }
 
-    const managerId =
-      parseOptionalInt(
-        body.manager_id,
+    if (!department) {
+      return NextResponse.json(
+        { error: "Department is required." },
+        { status: 400 },
       );
+    }
 
-    const employmentType =
-      body.employment_type ||
-      "Permanent";
+    const positionId = parseOptionalInt(body.position_id);
+    const managerId = parseOptionalInt(body.manager_id);
+    const employmentType = body.employment_type || "Permanent";
+    const employmentStatus = body.employment_status || "Active";
+    const joinDate = parseDate(body.join_date);
+    const workLocation = parseOptionalText(body.work_location);
+    const teamName = parseOptionalText(body.team_name);
 
-    const employmentStatus =
-      body.employment_status ||
-      "Active";
-
-    const joinDate =
-      parseDate(
-        body.join_date,
-      );
-
-    const workLocation =
-      body.work_location
-        ?.toString()
-        .trim() || null;
-
-    const teamName =
-      body.team_name
-        ?.toString()
-        .trim() || null;
-
-    /* -------------------------------------------------------
-       CHECK USER
-    ------------------------------------------------------- */
-
-    const users =
-      await query<
-        {
-          id: number;
-          employee_no: string;
-        }[]
-      >(
-        `
-        SELECT
-          id,
-          employee_no
-
-        FROM users
-
-        WHERE id = ?
-
-        LIMIT 1
-        `,
-        [userId],
-      );
+    const users = await query<
+      {
+        id: number;
+        employee_no: string;
+        name_en: string | null;
+        name_cn: string | null;
+        division_id: number | null;
+      }[]
+    >(
+      `
+      SELECT
+        id,
+        employee_no,
+        name_en,
+        name_cn,
+        division_id
+      FROM users
+      WHERE employee_no = ?
+      LIMIT 1
+      `,
+      [employeeId],
+    );
 
     if (!users.length) {
       return NextResponse.json(
         {
-          error:
-            "User not found.",
+          error: `Employee ID "${employeeId}" was not found in users.`,
         },
-        {
-          status: 404,
-        },
+        { status: 404 },
       );
     }
 
-    /* -------------------------------------------------------
-       SUPERADMIN CHECK
-    ------------------------------------------------------- */
+    const userId = users[0].id;
 
-    if (
-      users[0].employee_no ===
-      "SUPERADMIN"
-    ) {
+    if (users[0].employee_no === "SUPERADMIN") {
       return NextResponse.json(
-        {
-          error:
-            "SUPERADMIN is not an employee.",
-        },
-        {
-          status: 400,
-        },
+        { error: "SUPERADMIN is not an employee." },
+        { status: 400 },
       );
     }
 
-    /* -------------------------------------------------------
-       SELF MANAGER CHECK
-    ------------------------------------------------------- */
-
-    if (
-      managerId === userId
-    ) {
+    if (managerId === userId) {
       return NextResponse.json(
-        {
-          error:
-            "Employee cannot be their own manager.",
-        },
-        {
-          status: 400,
-        },
+        { error: "Employee cannot be their own manager." },
+        { status: 400 },
       );
     }
 
-    /* -------------------------------------------------------
-       CHECK EXISTING ORGANIZATION DATA
-    ------------------------------------------------------- */
+    const divisionRows = await query<
+      {
+        id: number;
+        name_en: string;
+        name_cn: string | null;
+      }[]
+    >(
+      `
+      SELECT
+        id,
+        name_en,
+        name_cn
+      FROM divisions
+      WHERE
+        LOWER(TRIM(name_en)) = LOWER(TRIM(?))
+        OR LOWER(TRIM(COALESCE(name_cn, ''))) = LOWER(TRIM(?))
+      LIMIT 1
+      `,
+      [department, department],
+    );
 
-    const existing =
-      await query<
-        {
-          id: number;
-        }[]
-      >(
-        `
-        SELECT
-          id
-
-        FROM employee_organization
-
-        WHERE user_id = ?
-
-        LIMIT 1
-        `,
-        [userId],
+    if (!divisionRows.length) {
+      return NextResponse.json(
+        { error: `Department "${department}" was not found.` },
+        { status: 400 },
       );
+    }
+
+    const divisionId = divisionRows[0].id;
+
+    const existing = await query<{ id: number }[]>(
+      `
+      SELECT id
+      FROM employee_organization
+      WHERE user_id = ?
+      LIMIT 1
+      `,
+      [userId],
+    );
 
     if (existing.length) {
       return NextResponse.json(
         {
-          error:
-            "Organization data already exists for this employee.",
+          error: "Organization data already exists for this employee.",
         },
-        {
-          status: 409,
-        },
+        { status: 409 },
       );
     }
 
-    /* -------------------------------------------------------
-       INSERT
-    ------------------------------------------------------- */
-
-    const result =
-      await withTransaction(
-        async (conn) => {
-          const [
-            insertResult,
-          ] = await conn.execute(
-            `
-            INSERT INTO employee_organization (
-              user_id,
-              position_id,
-              manager_id,
-              employment_type,
-              employment_status,
-              join_date,
-              work_location,
-              team_name
-            )
-
-            VALUES (
-              ?,
-              ?,
-              ?,
-              ?,
-              ?,
-              ?,
-              ?,
-              ?
-            )
-            `,
-            [
-              userId,
-              positionId,
-              managerId,
-              employmentType,
-              employmentStatus,
-              joinDate,
-              workLocation,
-              teamName,
-            ],
-          );
-
-          return insertResult;
-        },
+    const result = await withTransaction(async (conn) => {
+      await conn.execute(
+        `
+        UPDATE users
+        SET
+          name_en = ?,
+          name_cn = ?,
+          division_id = ?
+        WHERE id = ?
+        `,
+        [name, nameCn, divisionId, userId],
       );
+
+      const [insertResult] = await conn.execute(
+        `
+        INSERT INTO employee_organization (
+          user_id,
+          position_id,
+          manager_id,
+          employment_type,
+          employment_status,
+          join_date,
+          work_location,
+          team_name
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          userId,
+          positionId,
+          managerId,
+          employmentType,
+          employmentStatus,
+          joinDate,
+          workLocation,
+          teamName,
+        ],
+      );
+
+      return insertResult;
+    });
 
     return NextResponse.json(
       {
         ok: true,
-
-        id:
-          "insertId" in result
-            ? result.insertId
-            : null,
+        action: "created",
+        user_id: userId,
+        employee_id: employeeId,
+        id: "insertId" in result ? result.insertId : null,
       },
-      {
-        status: 201,
-      },
+      { status: 201 },
     );
   } catch (error) {
     console.error(
@@ -640,11 +608,11 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Failed to create employee organization data.",
+          error instanceof Error
+            ? error.message
+            : "Failed to create employee organization data.",
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }

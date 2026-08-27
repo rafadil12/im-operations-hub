@@ -134,6 +134,11 @@ const navItems: NavItem[] = [
       labelKey: "moduleManagement",
       href: "/organization/employees",
     },
+    {
+      id: "shift",
+      labelKey: "shift",
+      href: "/organization/shift",
+    },
   ],
 },
   {

@@ -64,6 +64,7 @@ const en = {
     settings: "Settings",
     settingsRoles: "Roles",
     settingsAccounts: "Accounts",
+    shift: "Shift",
     comingSoon: "Coming soon",
     soon: "Soon",
     expandSidebar: "Expand sidebar",
