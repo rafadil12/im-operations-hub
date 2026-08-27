@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
+import { ExportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
@@ -70,10 +71,12 @@ export function TrainingActivitiesClient() {
   const [newNameCn, setNewNameCn] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const canCreate = access.canCreateTrainingSession;
   const canUpdate = access.canUpdateTrainingSession;
   const canDelete = access.canDeleteTrainingSession;
+  const canExport = access.canViewTrainingSessions;
 
   const load = async (opts?: { q?: string }) => {
     setLoading(true);
@@ -148,6 +151,35 @@ export function TrainingActivitiesClient() {
   const closeModal = () => {
     setModalOpen(false);
     setEditing(null);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const qs = new URLSearchParams();
+      qs.set("lang", language);
+      if (divisionFilter !== "all") qs.set("divisionId", String(divisionFilter));
+      const search = q.trim();
+      if (search) qs.set("q", search);
+
+      const res = await fetch(`/api/training/sessions/export?${qs}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(t.toast.exportFailed);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "training-sessions.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : t.toast.exportFailed);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const toggleParticipant = (person: TrainingParticipantName) => {
@@ -264,15 +296,28 @@ export function TrainingActivitiesClient() {
           <h1 className="text-lg font-semibold text-text">{trainingText("activitiesTitle", language)}</h1>
           <p className="text-sm text-text-muted">{trainingText("activitiesDesc", language)}</p>
         </div>
-        {canCreate ? (
-          <button
-            type="button"
-            onClick={openCreate}
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-          >
-            + {trainingText("addSession", language)}
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {canExport ? (
+            <button
+              type="button"
+              onClick={() => void handleExport()}
+              disabled={exporting || loading}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+            >
+              <ExportIcon className="size-3.5" />
+              {exporting ? t.common.exporting : t.common.export}
+            </button>
+          ) : null}
+          {canCreate ? (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+            >
+              + {trainingText("addSession", language)}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
