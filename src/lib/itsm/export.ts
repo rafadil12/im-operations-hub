@@ -1,23 +1,29 @@
 import ExcelJS from "exceljs";
-import type { ItsmRequest } from "@/lib/types";
+import { getDict } from "@/lib/i18n";
+import type { ItsmRequest, Lang } from "@/lib/types";
 
-export async function buildItsmExport(rows: ItsmRequest[]): Promise<Buffer> {
+export async function buildItsmExport(
+  rows: ItsmRequest[],
+  lang: Lang = "en"
+): Promise<Buffer> {
+  const dict = getDict(lang);
+  const t = dict.itsm;
+
   const workbook = new ExcelJS.Workbook();
-
   const sheet = workbook.addWorksheet("ITSM");
 
   sheet.columns = [
-    { header: "Request ID", key: "request_id", width: 16 },
-    { header: "Subject", key: "subject", width: 50 },
-    { header: "Requester", key: "requester", width: 25 },
-    { header: "Technician", key: "technician", width: 25 },
-    { header: "Due Date", key: "due_by_date", width: 22 },
-    { header: "Status", key: "status", width: 18 },
-    { header: "Created Date", key: "created_date", width: 22 },
-    { header: "Site", key: "site", width: 20 },
-    { header: "Priority", key: "priority", width: 18 },
-    { header: "Group", key: "group_name", width: 30 },
-    { header: "Service Request", key: "is_service_request", width: 18 },
+    { header: t.requestId, key: "request_id", width: 16 },
+    { header: t.subject, key: "subject", width: 50 },
+    { header: t.requester, key: "requester", width: 25 },
+    { header: t.technician, key: "technician", width: 25 },
+    { header: t.dueDate, key: "due_by_date", width: 22 },
+    { header: t.status, key: "status", width: 18 },
+    { header: t.createdDate, key: "created_date", width: 22 },
+    { header: t.site, key: "site", width: 20 },
+    { header: t.priority, key: "priority", width: 18 },
+    { header: t.group, key: "group_name", width: 30 },
+    { header: t.serviceRequest, key: "is_service_request", width: 18 },
   ];
 
   sheet.getRow(1).font = { bold: true };
@@ -34,7 +40,7 @@ export async function buildItsmExport(rows: ItsmRequest[]): Promise<Buffer> {
       site: row.site ?? "",
       priority: row.priority ?? "",
       group_name: row.group_name ?? "",
-      is_service_request: row.is_service_request ? "Yes" : "No",
+      is_service_request: row.is_service_request ? dict.common.yes : dict.common.no,
     });
   });
 

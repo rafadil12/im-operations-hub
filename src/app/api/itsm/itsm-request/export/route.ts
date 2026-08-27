@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { buildItsmExport } from "@/lib/itsm/export";
-import type { ItsmRequest } from "@/lib/types";
+import type { ItsmRequest, Lang } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -10,12 +10,17 @@ const CREATED_DATE_SQL = `
   STR_TO_DATE(created_date, '%d/%m/%Y %h:%i %p')
 `;
 
+function parseLang(raw: string | null): Lang {
+  return raw === "cn" ? "cn" : "en";
+}
+
 export async function GET(request: NextRequest) {
   const gate = await requirePermission(PERMISSIONS.itsmRequestExport);
   if (gate instanceof NextResponse) return gate;
 
   try {
     const sp = request.nextUrl.searchParams;
+    const lang = parseLang(sp.get("lang"));
 
     const startRaw = sp.get("start");
     const endRaw = sp.get("end");
@@ -117,7 +122,7 @@ export async function GET(request: NextRequest) {
 
     const rows = await query<ItsmRequest[]>(sql, params);
 
-    const buffer = await buildItsmExport(rows);
+    const buffer = await buildItsmExport(rows, lang);
 
     const filename = `itsm-export_${start}_${end}.xlsx`;
 

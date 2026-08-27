@@ -1,7 +1,8 @@
 import ExcelJS from "exceljs";
 import { categoriesForDivision, subcategoriesForCategory, usersForDivision } from "@/lib/cascade";
+import { getDict, localizedField, localizedName } from "@/lib/i18n";
 import { validateMesRecord, type MesValidationErrorKey } from "./mesRecordValidation";
-import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
+import type { Lang, Masters, MesDataInput, MesDataRow } from "@/lib/types";
 
 export const IMPORT_MAX_ROWS = 500;
 export const IMPORT_MAX_BYTES = 2 * 1024 * 1024;
@@ -225,42 +226,49 @@ function formatExportDateTime(value: string | null | undefined): string {
   return trimmed.length >= 16 ? trimmed.slice(0, 16) : trimmed;
 }
 
-function exportMasterName(
-  nameEn: string | null | undefined,
-  nameCn: string | null | undefined
-): string {
-  return nameEn?.trim() || nameCn?.trim() || "";
-}
+/** Build an Activities workbook from filtered rows (localized headers + per-field EN fallback). */
+export async function buildActivitiesExport(
+  rows: MesDataRow[],
+  lang: Lang = "en"
+): Promise<Buffer> {
+  const dict = getDict(lang);
+  const f = dict.fields;
 
-/** Build an Activities workbook from filtered rows (same columns as template/import). */
-export async function buildActivitiesExport(rows: MesDataRow[]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "IM Operations Hub";
   workbook.created = new Date();
 
-  const sheet = workbook.addWorksheet("Activities");
-  sheet.columns = ACTIVITY_HEADERS.map((header) => ({
-    header,
-    key: header,
-    width: Math.max(14, header.length + 2),
-  }));
+  const sheet = workbook.addWorksheet(lang === "cn" ? "日常活动" : "Activities");
+  sheet.columns = [
+    { header: f.pic, key: "pic", width: 18 },
+    { header: f.division, key: "division", width: 20 },
+    { header: f.category, key: "category", width: 18 },
+    { header: f.subcategory, key: "subcategory", width: 18 },
+    { header: f.description, key: "description", width: 40 },
+    { header: f.solution, key: "solution", width: 40 },
+    { header: f.type, key: "type", width: 14 },
+    { header: f.status, key: "status", width: 14 },
+    { header: f.startTime, key: "start_time", width: 18 },
+    { header: f.endTime, key: "end_time", width: 18 },
+  ];
   sheet.getRow(1).font = { bold: true };
 
   for (const row of rows) {
-    sheet.addRow([
-      exportMasterName(row.pic_en, row.pic_cn),
-      exportMasterName(row.division_en, row.division_cn),
-      exportMasterName(row.category_en, row.category_cn),
-      exportMasterName(row.subcategory_en, row.subcategory_cn),
-      row.description_cn ?? "",
-      row.description_en ?? "",
-      row.solution_cn ?? "",
-      row.solution_en ?? "",
-      exportMasterName(row.type_en, row.type_cn),
-      exportMasterName(row.status_en, row.status_cn),
-      formatExportDateTime(row.start_time),
-      formatExportDateTime(row.end_time),
-    ]);
+    sheet.addRow({
+      pic: localizedName({ name_en: row.pic_en, name_cn: row.pic_cn }, lang),
+      division: localizedName({ name_en: row.division_en, name_cn: row.division_cn }, lang),
+      category: localizedName({ name_en: row.category_en, name_cn: row.category_cn }, lang),
+      subcategory: localizedName(
+        { name_en: row.subcategory_en, name_cn: row.subcategory_cn },
+        lang
+      ),
+      description: localizedField(row.description_en, row.description_cn, lang),
+      solution: localizedField(row.solution_en, row.solution_cn, lang),
+      type: localizedName({ name_en: row.type_en, name_cn: row.type_cn }, lang),
+      status: localizedName({ name_en: row.status_en, name_cn: row.status_cn }, lang),
+      start_time: formatExportDateTime(row.start_time),
+      end_time: formatExportDateTime(row.end_time),
+    });
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

@@ -76,9 +76,28 @@ type DonutChartPlaceholderProps = {
   centerLabel?: string;
   /** Center pie + legend as a block (e.g. Daily Operation / Safety category). */
   align?: "start" | "center";
+  /** Legend beside (row) or under (column) the donut. */
+  layout?: "row" | "column";
+  /** Donut diameter. */
+  size?: "md" | "lg";
 };
 
 const DONUT_ANIM_MS = 2000;
+
+const DONUT_SIZE_CLASS = {
+  md: "size-28",
+  lg: "size-44",
+} as const;
+
+const DONUT_HOLE_CLASS = {
+  md: "inset-3",
+  lg: "inset-4",
+} as const;
+
+const DONUT_VALUE_CLASS = {
+  md: "text-lg",
+  lg: "text-2xl",
+} as const;
 
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
@@ -110,6 +129,8 @@ export function DonutChartPlaceholder({
   centerValue = "78%",
   centerLabel = "Done",
   align = "start",
+  layout = "row",
+  size = "md",
 }: DonutChartPlaceholderProps) {
   const targetSegments = resolveSegments(legend, segments);
   const segmentsKey = targetSegments.join("|");
@@ -145,33 +166,48 @@ export function DonutChartPlaceholder({
     return () => cancelAnimationFrame(frame);
   }, [segmentsKey]);
 
-  const centered = align === "center";
+  const centered = align === "center" || layout === "column";
+  const isColumn = layout === "column";
 
   return (
-    <div className={["flex items-center gap-5", centered ? "justify-center" : ""].join(" ")}>
+    <div
+      className={[
+        "flex gap-5",
+        isColumn ? "flex-col items-center" : "items-center",
+        centered ? "justify-center" : "",
+      ].join(" ")}
+    >
       <div
-        className="relative size-28 shrink-0 rounded-full"
+        className={["relative shrink-0 rounded-full", DONUT_SIZE_CLASS[size]].join(" ")}
         style={{
           background: buildConicGradient(legend, animatedSegments),
         }}
         role="img"
         aria-label="Task status donut chart"
       >
-        <div className="absolute inset-3 rounded-full bg-surface" />
+        <div className={["absolute rounded-full bg-surface", DONUT_HOLE_CLASS[size]].join(" ")} />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-lg font-semibold text-text">{centerValue}</p>
+            <p className={["font-semibold text-text", DONUT_VALUE_CLASS[size]].join(" ")}>
+              {centerValue}
+            </p>
             <p className="text-[10px] text-text-dim">{centerLabel}</p>
           </div>
         </div>
       </div>
-      <ul className="space-y-2">
+      <ul
+        className={[
+          isColumn ? "flex flex-wrap justify-center gap-x-4 gap-y-2" : "space-y-2",
+        ].join(" ")}
+      >
         {legend.map((item, index) => (
           <li key={item.label} className="flex items-center gap-2 text-xs text-text-muted">
             <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
             <span>
               {item.label}
-              {targetSegments[index] != null ? ` — ${targetSegments[index]}%` : ""}
+              {targetSegments[index] != null
+                ? ` — ${Number(targetSegments[index].toFixed(1))}%`
+                : ""}
             </span>
           </li>
         ))}

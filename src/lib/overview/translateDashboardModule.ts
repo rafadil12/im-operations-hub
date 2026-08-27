@@ -203,8 +203,8 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
           [
             t.dashboard.totalTraining,
             t.dashboard.participants,
-            t.dashboard.completionRate,
-            t.dashboard.averageScore,
+            t.dashboard.uniqueParticipants,
+            t.dashboard.totalTopics,
           ][index] ?? stat.label,
       })),
       chart: {
@@ -222,12 +222,8 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
             legend: module.secondaryChart.legend.map((item, index) => ({
               ...item,
               label:
-                [
-                  t.dashboard.safetyCat,
-                  t.dashboard.technical,
-                  t.dashboard.softSkill,
-                  t.dashboard.compliance,
-                ][index] ?? item.label,
+                [t.dashboard.mesCat, t.dashboard.intelligentCat, t.dashboard.itCat][index] ??
+                item.label,
             })),
             centerLabel: t.dashboard.sessions,
           }

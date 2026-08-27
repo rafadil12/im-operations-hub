@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import ExcelJS from "exceljs";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
-import ExcelJS from "exceljs";
 import { query } from "@/lib/db";
-import type { SparepartItem } from "@/lib/types";
+import { getDict, localizedField, localizedName } from "@/lib/i18n";
+import type { Lang, SparepartItem } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -20,11 +21,18 @@ type BalanceExportRow = {
   qty: number;
 };
 
-export async function GET() {
+function parseLang(raw: string | null): Lang {
+  return raw === "cn" ? "cn" : "en";
+}
+
+export async function GET(request: NextRequest) {
   const gate = await requirePermission(PERMISSIONS.sparepartMaterialsExport);
   if (gate instanceof NextResponse) return gate;
 
   try {
+    const lang = parseLang(request.nextUrl.searchParams.get("lang"));
+    const t = getDict(lang).sparepart;
+
     const rows = await query<
       (Pick<
         SparepartItem,
@@ -63,28 +71,24 @@ export async function GET() {
     );
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet("Items");
+    const sheet = workbook.addWorksheet(t.materialsTitle);
     sheet.columns = [
-      { header: "Code", key: "code", width: 14 },
-      { header: "Name EN", key: "name_en", width: 32 },
-      { header: "Name CN", key: "name_cn", width: 32 },
-      { header: "Brand EN", key: "brand_en", width: 16 },
-      { header: "Brand CN", key: "brand_cn", width: 16 },
-      { header: "Model", key: "model", width: 28 },
-      { header: "Category", key: "category", width: 12 },
-      { header: "Min Stock", key: "min_stock", width: 12 },
-      { header: "UoM", key: "uom", width: 10 },
-      { header: "Current Stock", key: "stock_current", width: 14 },
-      { header: "Notes", key: "notes", width: 24 },
+      { header: t.alertColCode, key: "code", width: 14 },
+      { header: t.name, key: "name", width: 32 },
+      { header: t.brand, key: "brand", width: 16 },
+      { header: t.model, key: "model", width: 28 },
+      { header: t.category, key: "category", width: 12 },
+      { header: t.minStock, key: "min_stock", width: 12 },
+      { header: t.uom, key: "uom", width: 10 },
+      { header: t.stockCurrent, key: "stock_current", width: 14 },
+      { header: t.notes, key: "notes", width: 24 },
     ];
 
     for (const row of rows) {
       sheet.addRow({
         code: row.code,
-        name_en: row.name_en ?? "",
-        name_cn: row.name_cn ?? "",
-        brand_en: row.brand_en ?? "",
-        brand_cn: row.brand_cn ?? "",
+        name: localizedField(row.name_en, row.name_cn, lang),
+        brand: localizedField(row.brand_en, row.brand_cn, lang),
         model: row.model ?? "",
         category: row.category_code,
         min_stock: row.min_stock,
@@ -95,30 +99,27 @@ export async function GET() {
     }
     sheet.getRow(1).font = { bold: true };
 
-    const byLoc = workbook.addWorksheet("Stock by Location");
+    const byLoc = workbook.addWorksheet(t.stockByLocation);
     byLoc.columns = [
-      { header: "Code", key: "code", width: 14 },
-      { header: "Name EN", key: "name_en", width: 32 },
-      { header: "Name CN", key: "name_cn", width: 32 },
-      { header: "Brand EN", key: "brand_en", width: 16 },
-      { header: "Brand CN", key: "brand_cn", width: 16 },
-      { header: "Model", key: "model", width: 28 },
-      { header: "Location Code", key: "location_code", width: 16 },
-      { header: "Location Name EN", key: "location_name_en", width: 20 },
-      { header: "Location Name CN", key: "location_name_cn", width: 20 },
-      { header: "Qty", key: "qty", width: 10 },
+      { header: t.alertColCode, key: "code", width: 14 },
+      { header: t.name, key: "name", width: 32 },
+      { header: t.brand, key: "brand", width: 16 },
+      { header: t.model, key: "model", width: 28 },
+      { header: t.locationCode, key: "location_code", width: 16 },
+      { header: t.locationName, key: "location_name", width: 20 },
+      { header: t.qty, key: "qty", width: 10 },
     ];
     for (const row of balanceRows) {
       byLoc.addRow({
         code: row.code,
-        name_en: row.name_en ?? "",
-        name_cn: row.name_cn ?? "",
-        brand_en: row.brand_en ?? "",
-        brand_cn: row.brand_cn ?? "",
+        name: localizedField(row.name_en, row.name_cn, lang),
+        brand: localizedField(row.brand_en, row.brand_cn, lang),
         model: row.model ?? "",
         location_code: row.location_code,
-        location_name_en: row.location_name_en,
-        location_name_cn: row.location_name_cn,
+        location_name: localizedName(
+          { name_en: row.location_name_en, name_cn: row.location_name_cn },
+          lang
+        ),
         qty: row.qty,
       });
     }
