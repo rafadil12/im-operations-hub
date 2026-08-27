@@ -40,8 +40,8 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 const ctrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
-const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
-const td = "px-3 py-2 align-top text-xs text-text-muted";
+const th = "px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-dim";
+const td = "px-3 py-2 align-middle text-xs text-text-muted";
 
 function participantKey(person: TrainingParticipantName): string {
   return person.nameEn.trim().toUpperCase();
@@ -357,13 +357,13 @@ export function TrainingActivitiesClient() {
             <table className="w-full border-collapse">
               <thead className="border-b border-border-subtle bg-bg/40">
                 <tr>
-                  <th className={th}>{trainingText("date", language)}</th>
-                  <th className={th}>{trainingText("topic", language)}</th>
-                  <th className={th}>{trainingText("division", language)}</th>
-                  <th className={th}>{trainingText("participants", language)}</th>
-                  <th className={th}>{trainingText("count", language)}</th>
-                  <th className={th}>{trainingText("attachment", language)}</th>
-                  <th className={th}>{t.common.actions}</th>
+                  <th className={`${th} text-left`}>{trainingText("date", language)}</th>
+                  <th className={`${th} text-left`}>{trainingText("topic", language)}</th>
+                  <th className={`${th} text-center`}>{trainingText("division", language)}</th>
+                  <th className={`${th} text-center`}>{trainingText("participants", language)}</th>  
+                  <th className={`${th} text-center`}>{trainingText("count", language)}</th>
+                  <th className={`${th} text-center`}>{trainingText("attachment", language)}</th>
+                  <th className={`${th} text-center`}>{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -378,7 +378,7 @@ export function TrainingActivitiesClient() {
                         {localizedField(row.topicEn, row.topicCn, lang)}
                       </span>
                     </td>
-                    <td className={`${td} whitespace-nowrap`}>
+                    <td className={`${td} whitespace-nowrap text-center`}>
                       <span
                         className="inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium text-white"
                         style={{ backgroundColor: divisionColor(row.divisionNameEn) }}
@@ -389,7 +389,7 @@ export function TrainingActivitiesClient() {
                         )}
                       </span>
                     </td>
-                    <td className={`${td} max-w-sm`}>
+                    <td className={`${td} max-w-sm text-center`}>
                       <span className="line-clamp-2">
                         {row.participants
                           .map((person) =>
@@ -401,8 +401,8 @@ export function TrainingActivitiesClient() {
                           .join(", ") || "—"}
                       </span>
                     </td>
-                    <td className={`${td} whitespace-nowrap text-text`}>{row.participantCount}</td>
-                    <td className={`${td} whitespace-nowrap`}>
+                    <td className={`${td} whitespace-nowrap text-text text-center`}>{row.participantCount}</td>
+                    <td className={`${td} whitespace-nowrap text-center`}>
                       {row.attachment ? (
                         <a
                           href={row.attachment.url}
@@ -416,9 +416,9 @@ export function TrainingActivitiesClient() {
                         <span className="text-text-dim">{trainingText("noFile", language)}</span>
                       )}
                     </td>
-                    <td className={`${td} whitespace-nowrap`}>
+                    <td className={`${td} whitespace-nowrap text-center`}>
                       {canUpdate || canDelete ? (
-                        <div className="flex gap-1.5">
+                        <div className="flex gap-1.5 justify-center">
                           {canUpdate ? (
                             <button
                               type="button"
