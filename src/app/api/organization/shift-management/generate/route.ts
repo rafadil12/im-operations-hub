@@ -3,8 +3,8 @@ import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-type ShiftCode = "D/S" | "N/S";
-type ScheduleType = "D" | "N" | "OFF";
+type ShiftCode = "D/S" | "N/S" | "1" | "4";
+type ScheduleType = "D" | "N" | "1" | "4" | "OFF";
 
 type EmployeeRow = {
   employee_organization_id: number;
@@ -852,8 +852,16 @@ async function buildSchedule(
         const employeeNo = employee.employee_no;
 
         if (excluded.has(employeeNo)) {
-          values[employeeNo][index] =
-            state[employeeNo] === 'N/S' ? 'N' : 'D';
+          const assignedShift =
+            assignmentByEmployee.get(employeeNo)?.shift_code;
+
+          if (assignedShift === '1' || assignedShift === '4') {
+            values[employeeNo][index] = assignedShift;
+          } else {
+            values[employeeNo][index] =
+              state[employeeNo] === 'N/S' ? 'N' : 'D';
+          }
+
           continue;
         }
 
@@ -1420,10 +1428,56 @@ export async function POST(request: NextRequest) {
 
       const daysInMonth = getDaysInMonth(year, month);
 
+      /*
+       * Manual Calendar schedules (1 / 4) are authoritative.
+       *
+       * The Calendar writes these values into shift_schedules.
+       * Generate must NEVER overwrite them with generated D/N/OFF.
+       *
+       * Because shift_schedules has a UNIQUE(employee_no, schedule_date)
+       * key, we keep the existing row and simply skip it during generation.
+       */
+      const manualScheduleRows = await query<{
+        employee_no: string;
+        schedule_date: string;
+        schedule_type: "1" | "4";
+      }[]>(
+        `
+          SELECT
+            employee_no,
+            schedule_date,
+            schedule_type
+          FROM shift_schedules
+          WHERE schedule_date >= ?
+            AND schedule_date < DATE_ADD(?, INTERVAL 1 MONTH)
+            AND schedule_type IN ('1', '4')
+        `,
+        [monthStart, monthStart],
+      );
+
+      const manualScheduleMap = new Set<string>();
+
+      for (const row of manualScheduleRows) {
+        manualScheduleMap.add(
+          `${row.employee_no}|${String(row.schedule_date).slice(0, 10)}`,
+        );
+      }
+
       for (const employee of employees) {
         const values = valuesByEmployee[employee.employee_no] ?? [];
 
         for (let day = 1; day <= daysInMonth; day += 1) {
+          const scheduleDate = dateKey(year, month, day);
+          const manualKey =
+            `${employee.employee_no}|${scheduleDate}`;
+
+          /*
+           * Do not overwrite Calendar-manual 1 / 4.
+           */
+          if (manualScheduleMap.has(manualKey)) {
+            continue;
+          }
+
           const scheduleType = values[day - 1] ?? "OFF";
           const shiftCode: ShiftCode | null =
             scheduleType === "D"
@@ -1450,7 +1504,7 @@ export async function POST(request: NextRequest) {
             `,
             [
               employee.employee_no,
-              dateKey(year, month, day),
+              scheduleDate,
               shiftCode,
               scheduleType,
               rule.id,

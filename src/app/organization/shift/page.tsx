@@ -4,8 +4,20 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useLang } from "@/lib/i18n";
 
-type ShiftCode = "D/S" | "N/S";
-type ScheduleType = "D" | "N" | "OFF";
+type ShiftCode = "D/S" | "N/S" | "1" | "4";
+
+type ShiftMaster = {
+  id: number;
+  shift_code: ShiftCode;
+  shift_name_en: string | null;
+  shift_name_cn: string | null;
+  start_time: string;
+  end_time: string;
+  shift_category: string;
+  is_active: number | boolean;
+};
+
+type ScheduleType = "D" | "N" | "1" | "4" | "OFF";
 type OrganizationLanguage = "en" | "cn";
 type ActiveTab = "overview" | "master" | "rotation" | "schedule" | "calendar";
 
@@ -88,6 +100,14 @@ type PersonalOffDay = {
   employeeId: string;
   date: string;
   fixed: boolean;
+  databaseId?: number;
+};
+
+type CalendarWorkSchedule = {
+  id: string;
+  employeeId: string;
+  date: string;
+  scheduleType: "1" | "4";
   databaseId?: number;
 };
 
@@ -223,17 +243,34 @@ function text(key: keyof typeof SHIFT_TEXT, language: OrganizationLanguage) {
   return SHIFT_TEXT[key][language === "cn" ? 1 : 0];
 }
 
-function shiftName(shift: ShiftCode, language: OrganizationLanguage) {
-  return shift === "D/S"
-    ? language === "cn"
+function shiftName(
+  shift: ShiftCode,
+  language: OrganizationLanguage,
+) {
+  if (shift === "1") {
+    return "08:00–17:00";
+  }
+
+  if (shift === "4") {
+    return language === "cn"
+      ? "4小时"
+      : "4 Hours";
+  }
+
+  if (shift === "D/S") {
+    return language === "cn"
       ? "白班"
-      : "Day Shift"
-    : language === "cn"
-      ? "夜班"
-      : "Night Shift";
+      : "Day Shift";
+  }
+
+  return language === "cn"
+    ? "夜班"
+    : "Night Shift";
 }
 
 function scheduleName(value: ScheduleType, language: OrganizationLanguage) {
+  if (value === "1") return language === "cn" ? "08:00–17:00" : "08:00–17:00";
+  if (value === "4") return language === "cn" ? "4小时" : "4 Hours";
   if (value === "D") return language === "cn" ? "白班" : "Day";
   if (value === "N") return language === "cn" ? "夜班" : "Night";
   return language === "cn" ? "休息" : "OFF";
@@ -411,7 +448,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white ${className}`}>
+    <div className={`rounded-xl border border-border-subtle bg-surface ${className}`}>
       {children}
     </div>
   );
@@ -426,8 +463,8 @@ function SectionTitle({
 }) {
   return (
     <div className="mb-4">
-      <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-      {subtitle && <p className="mt-1 text-[10px] text-slate-500">{subtitle}</p>}
+      <h2 className="text-sm font-semibold text-text">{title}</h2>
+      {subtitle && <p className="mt-1 text-[10px] text-text-dim">{subtitle}</p>}
     </div>
   );
 }
@@ -444,10 +481,10 @@ function StatusBadge({
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
         active
           ? "border-emerald-600 bg-emerald-100 text-emerald-900"
-          : "border-slate-400 bg-slate-100 text-slate-800"
+          : "border-border bg-surface-hover text-text"
       }`}
     >
-      <span className={`size-1.5 rounded-full ${active ? "bg-emerald-600" : "bg-slate-500"}`} />
+      <span className={`size-1.5 rounded-full ${active ? "bg-emerald-600" : "bg-surface-hover0"}`} />
       {active ? text("active", language) : text("inactive", language)}
     </span>
   );
@@ -462,7 +499,7 @@ function ShiftBadge({
 }) {
   if (!shift) {
     return (
-      <span className="inline-flex min-w-[92px] items-center justify-center rounded-md border border-slate-300 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
+      <span className="inline-flex min-w-[92px] items-center justify-center rounded-md border border-border bg-surface-hover px-2.5 py-1 text-[10px] font-semibold text-text-muted">
         —
       </span>
     );
@@ -491,11 +528,15 @@ function ScheduleBadge({
   language: OrganizationLanguage;
 }) {
   const className =
-    value === "D"
-      ? "border-sky-600 bg-sky-100 text-sky-900"
-      : value === "N"
-        ? "border-violet-600 bg-violet-100 text-violet-900"
-        : "border-slate-500 bg-slate-100 text-slate-900";
+    value === "1"
+      ? "border-emerald-600 bg-emerald-100 text-emerald-900"
+      : value === "4"
+        ? "border-amber-600 bg-amber-100 text-amber-900"
+        : value === "D"
+          ? "border-sky-600 bg-sky-100 text-sky-900"
+          : value === "N"
+            ? "border-violet-600 bg-violet-100 text-violet-900"
+            : "border-slate-500 bg-surface-hover text-text";
 
   return (
     <span
@@ -525,17 +566,20 @@ function MyOffCalendar({
   organizationEmployees,
   personalOffDays,
   onPersonalOffDaysChange,
+  onScheduleChanged,
 }: {
   language: OrganizationLanguage;
   organizationEmployees: OrganizationEmployee[];
   personalOffDays: PersonalOffDay[];
   onPersonalOffDaysChange: (days: PersonalOffDay[]) => void;
+  onScheduleChanged?: () => void;
 }) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [workSchedules, setWorkSchedules] = useState<CalendarWorkSchedule[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -588,6 +632,61 @@ function MyOffCalendar({
     { month: "long", year: "numeric" },
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCalendarWorkSchedules() {
+      if (!currentEmployeeId) {
+        setWorkSchedules([]);
+        return;
+      }
+
+      try {
+        const payload = await fetchJson<{
+          data?: Array<{
+            id: number;
+            employee_no: string;
+            schedule_date: string;
+            schedule_type: ScheduleType;
+          }>;
+        }>(
+          `${API_BASE}/schedules?year=${year}&month=${month + 1}&employeeNo=${encodeURIComponent(
+            currentEmployeeId,
+          )}`,
+        );
+
+        if (cancelled) return;
+
+        const rows = (payload.data ?? [])
+          .filter(
+            (row) =>
+              (row.schedule_type === "1" || row.schedule_type === "4") &&
+              row.employee_no === currentEmployeeId,
+          )
+          .map<CalendarWorkSchedule>((row) => ({
+            id: String(row.id),
+            employeeId: row.employee_no,
+            date: String(row.schedule_date).slice(0, 10),
+            scheduleType: row.schedule_type as "1" | "4",
+            databaseId: row.id,
+          }));
+
+        setWorkSchedules(rows);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load calendar work schedules", error);
+          setWorkSchedules([]);
+        }
+      }
+    }
+
+    void loadCalendarWorkSchedules();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentEmployeeId, year, month]);
+
   const today = new Date();
   const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -599,6 +698,16 @@ function MyOffCalendar({
   const myDayMap = useMemo(
     () => new Map(myDays.map((item) => [item.date, item])),
     [myDays],
+  );
+
+  const workScheduleMap = useMemo(
+    () =>
+      new Map(
+        workSchedules
+          .filter((item) => item.employeeId === currentEmployeeId)
+          .map((item) => [item.date, item]),
+      ),
+    [workSchedules, currentEmployeeId],
   );
 
   const otherOffsByDate = useMemo(() => {
@@ -644,33 +753,127 @@ function MyOffCalendar({
     year > currentCalendarYear ||
     (year === currentCalendarYear && selectedCalendarMonth > currentCalendarMonth);
 
+  async function saveWorkSchedule(date: string, scheduleType: "1" | "4") {
+    if (!currentEmployeeId) return false;
+
+    try {
+      await fetchJson(`${API_BASE}/schedules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeNo: currentEmployeeId,
+          date,
+          scheduleType,
+        }),
+      });
+
+      setWorkSchedules((current) => {
+        const next = current.filter(
+          (item) => !(item.employeeId === currentEmployeeId && item.date === date),
+        );
+        return [
+          ...next,
+          {
+            id: `${currentEmployeeId}-${date}`,
+            employeeId: currentEmployeeId,
+            date,
+            scheduleType,
+          },
+        ];
+      });
+
+      onScheduleChanged?.();
+      return true;
+    } catch (error) {
+      console.error("Failed to save work schedule", error);
+      setMessage(error instanceof Error ? error.message : "Failed to save work schedule.");
+      return false;
+    }
+  }
+
+  async function deleteWorkSchedule(date: string) {
+    if (!currentEmployeeId) return false;
+
+    try {
+      await fetchJson(`${API_BASE}/schedules`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeNo: currentEmployeeId,
+          date,
+        }),
+      });
+
+      setWorkSchedules((current) =>
+        current.filter(
+          (item) => !(item.employeeId === currentEmployeeId && item.date === date),
+        ),
+      );
+
+      onScheduleChanged?.();
+      return true;
+    } catch (error) {
+      console.error("Failed to delete work schedule", error);
+      setMessage(error instanceof Error ? error.message : "Failed to delete work schedule.");
+      return false;
+    }
+  }
+
   async function toggleDate(day: number) {
-    // OFF can only be selected for a future month.
-    // Current and past months are read-only.
     if (!isFutureOffMonth || !currentEmployeeId || saving) return;
 
     const key = dateKey(year, month, day);
-    const existing = myDayMap.get(key);
+    const existingWork = workScheduleMap.get(key);
+    const existingOff = myDayMap.get(key);
 
-    if (existing?.fixed) return;
-
-    const next = existing
-      ? personalOffDays.filter((item) => item.id !== existing.id)
-      : [
-          ...personalOffDays,
-          {
-            id: `${currentEmployeeId}-${key}`,
-            employeeId: currentEmployeeId,
-            date: key,
-            fixed: false,
-          },
-        ];
-
-    onPersonalOffDaysChange(next);
+    setSaving(true);
     setMessage(null);
 
-    if (existing && !existing.fixed) {
-      try {
+    try {
+      // 1 -> 4
+      if (existingWork?.scheduleType === "1") {
+        await saveWorkSchedule(key, "4");
+        return;
+      }
+
+      // 4 -> OFF
+      if (existingWork?.scheduleType === "4") {
+        await deleteWorkSchedule(key);
+
+        const payload = await fetchJson<{ data?: OffDayApiRow[] }>(`${API_BASE}/off-days`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employeeNo: currentEmployeeId,
+            dates: [key],
+            fixed: false,
+          }),
+        });
+
+        const offRow = (payload.data ?? []).find(
+          (row) => String(row.off_date).slice(0, 10) === key,
+        );
+
+        if (offRow) {
+          onPersonalOffDaysChange([
+            ...personalOffDays.filter((item) => item.id !== String(offRow.id) && item.date !== key),
+            {
+              id: String(offRow.id),
+              employeeId: offRow.employee_no,
+              date: key,
+              fixed: toBoolean(offRow.is_fixed),
+              databaseId: offRow.id,
+            },
+          ]);
+        }
+
+        return;
+      }
+
+      // OFF -> clear
+      if (existingOff) {
+        if (existingOff.fixed) return;
+
         await fetchJson(`${API_BASE}/off-days`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -679,10 +882,20 @@ function MyOffCalendar({
             date: key,
           }),
         });
-      } catch (error) {
-        console.error("Failed to remove selected OFF", error);
-        setMessage(error instanceof Error ? error.message : "Failed to remove OFF day.");
+
+        onPersonalOffDaysChange(
+          personalOffDays.filter((item) => item.id !== existingOff.id),
+        );
+        return;
       }
+
+      // clear -> 1
+      await saveWorkSchedule(key, "1");
+    } catch (error) {
+      console.error("Failed to change calendar schedule", error);
+      setMessage(error instanceof Error ? error.message : "Failed to change calendar schedule.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -770,24 +983,24 @@ function MyOffCalendar({
     : currentEmployeeId || "—";
 
   return (
-    <div className="mt-2 border-t border-slate-200 pt-6">
+    <div className="mt-2 border-t border-border-subtle pt-6">
       <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl border-2 border-sky-500 bg-sky-100 text-lg font-bold text-sky-700">
             ◎
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">{text("myOffCalendar", language)}</h1>
-            <p className="mt-1 text-xs text-slate-600">{text("offCalendarSubtitle", language)}</p>
+            <h1 className="text-xl font-bold text-text">{language === "cn" ? "Work Schedule Calendar" : "Work Schedule"}</h1>
+            <p className="mt-1 text-xs text-text-muted">{language === "cn" ? "Choose 1, 4, or OFF for each future date." : "Choose 1, 4, or OFF for each future date."}</p>
           </div>
         </div>
       </div>
 
       <Card className="mt-5 overflow-hidden">
-        <div className="border-b-2 border-slate-200 bg-slate-50 p-4">
+        <div className="border-b-2 border-border-subtle bg-surface-hover p-4">
           <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-dim">
                 {text("currentAccount", language)}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -798,13 +1011,17 @@ function MyOffCalendar({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-              <span className="inline-flex items-center gap-2 rounded-full border-2 border-sky-500 bg-sky-100 px-3 py-1.5 text-sky-800">
-                <span className="size-2.5 rounded-full bg-sky-600" />
-                {text("selectedOff", language)}
+              <span className="inline-flex items-center gap-2 rounded-full border-2 border-emerald-500 bg-emerald-100 px-3 py-1.5 text-emerald-900">
+                <span className="size-2.5 rounded-full bg-emerald-600" />
+                1 — 08:00–17:00
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border-2 border-amber-500 bg-amber-100 px-3 py-1.5 text-amber-900">
                 <span className="size-2.5 rounded-full bg-amber-600" />
-                {text("fixedOff", language)}
+                4 — 4 Hours
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-surface-hover px-3 py-1.5 text-text">
+                <span className="size-2.5 rounded-full bg-surface-hover0" />
+                OFF
               </span>
             </div>
           </div>
@@ -822,14 +1039,14 @@ function MyOffCalendar({
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border-2 border-slate-300 bg-white text-lg font-bold text-slate-800 transition hover:border-sky-500 hover:bg-sky-50"
+                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-sky-500 hover:bg-sky-50"
               >
                 ←
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date())}
-                className="cursor-pointer rounded-lg border-2 border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 transition hover:border-sky-500 hover:bg-sky-50"
+                className="cursor-pointer rounded-lg border-2 border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:border-sky-500 hover:bg-sky-50"
               >
                 {text("today", language)}
               </button>
@@ -839,7 +1056,7 @@ function MyOffCalendar({
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border-2 border-slate-300 bg-white text-lg font-bold text-slate-800 transition hover:border-sky-500 hover:bg-sky-50"
+                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-sky-500 hover:bg-sky-50"
               >
                 →
               </button>
@@ -866,19 +1083,19 @@ function MyOffCalendar({
           </div>
 
           {message && (
-            <div className="mb-4 rounded-lg border-2 border-slate-300 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800">
+            <div className="mb-4 rounded-lg border-2 border-border bg-surface-hover px-4 py-3 text-xs font-semibold text-text">
               {message}
             </div>
           )}
 
-          <div className="grid grid-cols-7 overflow-hidden rounded-xl border-2 border-slate-300 bg-white">
+          <div className="grid grid-cols-7 overflow-hidden rounded-xl border-2 border-border bg-surface">
             {(language === "cn"
               ? ["一", "二", "三", "四", "五", "六", "日"]
               : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             ).map((label) => (
               <div
                 key={label}
-                className="border-b-2 border-r border-slate-300 bg-slate-100 px-2 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-slate-800"
+                className="border-b-2 border-r border-border bg-surface-hover px-2 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-text"
               >
                 {label}
               </div>
@@ -889,17 +1106,19 @@ function MyOffCalendar({
                 return (
                   <div
                     key={`empty-${index}`}
-                    className="min-h-28 border-r border-b border-slate-200 bg-slate-50"
+                    className="min-h-28 border-r border-b border-border-subtle bg-surface-hover"
                   />
                 );
               }
 
               const key = dateKey(year, month, day);
               const off = myDayMap.get(key);
+              const work = workScheduleMap.get(key);
               const otherOffs = otherOffsByDate.get(key) ?? [];
               const isToday = key === todayKey;
               const isFixed = Boolean(off?.fixed);
-              const isSelected = Boolean(off && !off.fixed);
+              const status = work?.scheduleType ?? (off ? "OFF" : null);
+              const isSelected = Boolean(status);
 
               return (
                 <button
@@ -907,12 +1126,12 @@ function MyOffCalendar({
                   type="button"
                   onClick={() => void toggleDate(day)}
                   disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || isFixed || saving}
-                  className={`relative min-h-28 border-r border-b border-slate-200 p-3 text-left align-top transition ${
+                  className={`relative min-h-28 border-r border-b border-border-subtle p-3 text-left align-top transition ${
                     isFixed
                       ? "bg-amber-100 hover:bg-amber-200"
                       : isSelected
                         ? "bg-sky-100 hover:bg-sky-200"
-                        : "bg-white hover:bg-slate-50"
+                        : "bg-surface hover:bg-surface-hover"
                   } ${isToday ? "z-10 bg-red-50 ring-4 ring-inset ring-red-500" : ""} ${
                     !isFutureOffMonth || isFixed || saving
                       ? "cursor-not-allowed"
@@ -928,27 +1147,37 @@ function MyOffCalendar({
                             ? "text-amber-900"
                             : isSelected
                               ? "text-sky-800"
-                              : "text-slate-800"
+                              : "text-text"
                       }`}
                     >
                       {day}
                     </span>
                     {isToday && (
-                      <span className="rounded-full border-2 border-red-500 bg-white px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-red-700">
+                      <span className="rounded-full border-2 border-red-500 bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-red-700">
                         {text("today", language)}
                       </span>
                     )}
                   </div>
 
-                  {isFixed && (
-                    <div className="mt-5 rounded-lg border-2 border-amber-600 bg-amber-200 px-2 py-2 text-center text-xs font-extrabold text-amber-950">
-                      {text("off", language)} 🔒
+                  {status === "1" && (
+                    <div className="mt-5 rounded-lg border-2 border-emerald-600 bg-emerald-200 px-2 py-2 text-center text-xs font-extrabold text-emerald-950">
+                      1 — 08:00–17:00
                     </div>
                   )}
 
-                  {isSelected && (
-                    <div className="mt-5 rounded-lg border-2 border-sky-600 bg-sky-200 px-2 py-2 text-center text-xs font-extrabold text-sky-950">
-                      {text("off", language)}
+                  {status === "4" && (
+                    <div className="mt-5 rounded-lg border-2 border-amber-600 bg-amber-200 px-2 py-2 text-center text-xs font-extrabold text-amber-950">
+                      4 — 4 Hours
+                    </div>
+                  )}
+
+                  {status === "OFF" && (
+                    <div className={`mt-5 rounded-lg border-2 px-2 py-2 text-center text-xs font-extrabold ${
+                      isFixed
+                        ? "border-amber-600 bg-amber-200 text-amber-950"
+                        : "border-slate-500 bg-surface-hover text-text"
+                    }`}>
+                      OFF{isFixed ? " 🔒" : ""}
                     </div>
                   )}
 
@@ -970,10 +1199,10 @@ function MyOffCalendar({
             })}
           </div>
 
-          <div className="mt-4 rounded-lg border-2 border-sky-200 bg-sky-50 px-4 py-3 text-xs text-slate-700">
+          <div className="mt-4 rounded-lg border-2 border-sky-200 bg-sky-50 px-4 py-3 text-xs text-text-muted">
             {language === "cn"
-              ? "只能为未来月份选择个人休息日；当前月和过去月份为只读。其他员工的 OFF 会以红色小字显示。保存并锁定后，已锁定日期将自动同步到排班表。"
-              : "You can select personal OFF days only for future months. The current and past months are read-only. Other employees' OFF days are shown in small red text. After Save & Fix, locked OFF dates are synced to Schedule."}
+              ? "未来月份点击日期可循环选择 1 → 4 → OFF → 清空；1=08:00–17:00，4=4小时（08:00–12:00或12:00–17:00）。"
+              : "For future months, click a date to cycle 1 → 4 → OFF → clear; 1=08:00–17:00, 4=4 hours (08:00–12:00 or 12:00–17:00)."}
           </div>
         </div>
       </Card>
@@ -988,6 +1217,7 @@ function ShiftManagementView() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
   const [organizationEmployees, setOrganizationEmployees] = useState<OrganizationEmployee[]>([]);
   const [shiftAssignments, setShiftAssignments] = useState<Record<string, ShiftAssignment>>({});
+  const [shiftMasters, setShiftMasters] = useState<ShiftMaster[]>([]);
   const [personalOffDays, setPersonalOffDays] = useState<PersonalOffDay[]>([]);
   const [rotationRules, setRotationRules] = useState<RotationRule[]>([]);
   const [rotationDbMembers, setRotationDbMembers] = useState<RotationMemberApiRow[]>([]);
@@ -1009,6 +1239,33 @@ function ShiftManagementView() {
     PAIR_B: { first: "", second: "" },
   });
   const [savingPairs, setSavingPairs] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadShiftMasters() {
+      try {
+        const payload = await fetchJson<{
+          success?: boolean;
+          data?: ShiftMaster[];
+        }>(`${API_BASE}/master`);
+
+        if (!cancelled) {
+          setShiftMasters(payload.data ?? []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load shift masters", error);
+        }
+      }
+    }
+
+    void loadShiftMasters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -1624,7 +1881,7 @@ function ShiftManagementView() {
 
   return (
     <AppShell title={text("title", language)}>
-      <div className="min-h-full space-y-5 bg-white p-5 text-slate-900">
+      <div className="min-h-full space-y-5 bg-surface p-5 text-text">
         <style>{`
           button:not(:disabled),
           select:not(:disabled) { cursor: pointer; }
@@ -1643,8 +1900,8 @@ function ShiftManagementView() {
               ⇄
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-slate-900">{text("title", language)}</h1>
-              <p className="mt-0.5 text-[10px] text-slate-500">
+              <h1 className="text-lg font-semibold text-text">{text("title", language)}</h1>
+              <p className="mt-0.5 text-[10px] text-text-dim">
                 {language === "cn"
                   ? "Smart Logistic 半月轮班管理"
                   : "Smart Logistic semi-monthly shift rotation"}
@@ -1680,7 +1937,7 @@ function ShiftManagementView() {
           </div>
         </div>
 
-        <div className="flex overflow-x-auto rounded-xl border-2 border-slate-200 bg-slate-50 p-1">
+        <div className="flex overflow-x-auto rounded-xl border-2 border-border-subtle bg-surface-hover p-1">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -1689,7 +1946,7 @@ function ShiftManagementView() {
               className={`whitespace-nowrap rounded-lg px-4 py-2 text-[10px] font-bold transition ${
                 activeTab === tab.key
                   ? "bg-sky-600 text-white"
-                  : "text-slate-600 hover:bg-white hover:text-slate-900"
+                  : "text-text-muted hover:bg-surface hover:text-text"
               }`}
             >
               {tab.label}
@@ -1701,24 +1958,24 @@ function ShiftManagementView() {
           <div className="space-y-5">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <Card className="p-4">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{text("dayShift", language)}</p>
+                <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("dayShift", language)}</p>
                 <p className="mt-2 text-xl font-bold text-sky-800">D/S</p>
-                <p className="mt-1 text-[10px] text-slate-500">08:00 – 20:00</p>
+                <p className="mt-1 text-[10px] text-text-dim">08:00 – 20:00</p>
               </Card>
               <Card className="p-4">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{text("nightShift", language)}</p>
+                <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("nightShift", language)}</p>
                 <p className="mt-2 text-xl font-bold text-violet-800">N/S</p>
-                <p className="mt-1 text-[10px] text-slate-500">20:00 – 08:00</p>
+                <p className="mt-1 text-[10px] text-text-dim">20:00 – 08:00</p>
               </Card>
               <Card className="p-4">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{text("rotationType", language)}</p>
-                <p className="mt-2 text-xl font-bold text-slate-900">15 / 16</p>
-                <p className="mt-1 text-[10px] text-slate-500">{text("every15th16th", language)}</p>
+                <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("rotationType", language)}</p>
+                <p className="mt-2 text-xl font-bold text-text">15 / 16</p>
+                <p className="mt-1 text-[10px] text-text-dim">{text("every15th16th", language)}</p>
               </Card>
               <Card className="p-4">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{text("transitionRule", language)}</p>
+                <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("transitionRule", language)}</p>
                 <p className="mt-2 text-xl font-bold text-amber-900">OFF 1</p>
-                <p className="mt-1 text-[10px] text-slate-500">{text("scheduleRule", language)}</p>
+                <p className="mt-1 text-[10px] text-text-dim">{text("scheduleRule", language)}</p>
               </Card>
             </div>
 
@@ -1733,11 +1990,11 @@ function ShiftManagementView() {
               />
 
               {loadingEmployees || loadingShiftData ? (
-                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-4 text-xs font-semibold text-slate-600">
+                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
                   {text("loading", language)}
                 </div>
               ) : filteredMembers.length === 0 ? (
-                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-4 text-xs font-semibold text-slate-600">
+                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
                   {text("noData", language)}
                 </div>
               ) : (
@@ -1748,15 +2005,15 @@ function ShiftManagementView() {
                       className={`rounded-lg border-2 p-3 ${
                         member.excluded
                           ? "border-amber-300 bg-amber-50"
-                          : "border-slate-200 bg-white"
+                          : "border-border-subtle bg-surface"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-bold text-slate-900">
+                          <p className="text-xs font-bold text-text">
                             {language === "cn" ? member.nameCn || member.name : member.name}
                           </p>
-                          <p className="mt-0.5 text-[10px] text-slate-500">{member.employeeId}</p>
+                          <p className="mt-0.5 text-[10px] text-text-dim">{member.employeeId}</p>
                         </div>
                         {member.excluded ? (
                           <span className="rounded-md border-2 border-amber-400 bg-amber-100 px-2 py-1 text-[9px] font-bold text-amber-900">
@@ -1782,13 +2039,13 @@ function ShiftManagementView() {
                 }
               />
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] text-slate-500">{text("periodOne", language)}</p>
-                  <p className="mt-2 text-sm font-bold text-slate-900">01 – 14</p>
+                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4">
+                  <p className="text-[10px] text-text-dim">{text("periodOne", language)}</p>
+                  <p className="mt-2 text-sm font-bold text-text">01 – 14</p>
                 </div>
-                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] text-slate-500">{text("periodTwo", language)}</p>
-                  <p className="mt-2 text-sm font-bold text-slate-900">15 – 16 / 17 – {daysInMonth}</p>
+                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4">
+                  <p className="text-[10px] text-text-dim">{text("periodTwo", language)}</p>
+                  <p className="mt-2 text-sm font-bold text-text">15 – 16 / 17 – {daysInMonth}</p>
                 </div>
                 <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
                   <p className="text-[10px] text-amber-800">{text("transitionRule", language)}</p>
@@ -1801,7 +2058,7 @@ function ShiftManagementView() {
 
         {activeTab === "master" && (
           <Card className="overflow-hidden">
-            <div className="border-b-2 border-slate-200 p-4">
+            <div className="border-b-2 border-border-subtle p-4">
               <SectionTitle
                 title={text("shiftMaster", language)}
                 subtitle={language === "cn" ? "当前系统使用两个12小时班次" : "The system currently uses two 12-hour shifts"}
@@ -1810,24 +2067,24 @@ function ShiftManagementView() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
                 <thead>
-                  <tr className="border-b-2 border-slate-200 bg-slate-50">
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("code", language)}</th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("dayShift", language)}</th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("time", language)}</th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("status", language)}</th>
+                  <tr className="border-b-2 border-border-subtle bg-surface-hover">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("code", language)}</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("dayShift", language)}</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("time", language)}</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("status", language)}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-200">
+                  <tr className="border-b border-border-subtle">
                     <td className="px-4 py-4 text-xs font-bold text-sky-800">D/S</td>
-                    <td className="px-4 py-4 text-xs text-slate-800">{text("dayShift", language)}</td>
-                    <td className="px-4 py-4 text-xs text-slate-600">08:00 – 20:00</td>
+                    <td className="px-4 py-4 text-xs text-text">{text("dayShift", language)}</td>
+                    <td className="px-4 py-4 text-xs text-text-muted">08:00 – 20:00</td>
                     <td className="px-4 py-4"><StatusBadge active language={language} /></td>
                   </tr>
                   <tr>
                     <td className="px-4 py-4 text-xs font-bold text-violet-800">N/S</td>
-                    <td className="px-4 py-4 text-xs text-slate-800">{text("nightShift", language)}</td>
-                    <td className="px-4 py-4 text-xs text-slate-600">20:00 – 08:00</td>
+                    <td className="px-4 py-4 text-xs text-text">{text("nightShift", language)}</td>
+                    <td className="px-4 py-4 text-xs text-text-muted">20:00 – 08:00</td>
                     <td className="px-4 py-4"><StatusBadge active language={language} /></td>
                   </tr>
                 </tbody>
@@ -1844,21 +2101,21 @@ function ShiftManagementView() {
                 subtitle={language === "cn" ? "数据库中的 Smart Logistic 轮班规则" : "Smart Logistic rotation rules stored in MySQL"}
               />
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[10px] text-slate-500">{text("rotationType", language)}</p>
-                  <p className="mt-2 text-xs font-bold text-slate-900">{text("semiMonthly", language)}</p>
+                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-3">
+                  <p className="text-[10px] text-text-dim">{text("rotationType", language)}</p>
+                  <p className="mt-2 text-xs font-bold text-text">{text("semiMonthly", language)}</p>
                 </div>
-                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[10px] text-slate-500">{text("changeDate", language)}</p>
-                  <p className="mt-2 text-xs font-bold text-slate-900">{text("every15th16th", language)}</p>
+                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-3">
+                  <p className="text-[10px] text-text-dim">{text("changeDate", language)}</p>
+                  <p className="mt-2 text-xs font-bold text-text">{text("every15th16th", language)}</p>
                 </div>
                 <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
                   <p className="text-[10px] text-amber-800">{text("transitionRule", language)}</p>
                   <p className="mt-2 text-xs font-bold text-amber-950">{text("oneDayOff", language)}</p>
                 </div>
-                <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[10px] text-slate-500">{text("rotationPeriod", language)}</p>
-                  <p className="mt-2 text-xs font-bold text-slate-900">01–14 / 15–16 / 17–End</p>
+                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-3">
+                  <p className="text-[10px] text-text-dim">{text("rotationPeriod", language)}</p>
+                  <p className="mt-2 text-xs font-bold text-text">01–14 / 15–16 / 17–End</p>
                 </div>
               </div>
             </Card>
@@ -1900,14 +2157,14 @@ function ShiftManagementView() {
                   return (
                     <div
                       key={group}
-                      className="rounded-xl border-2 border-slate-200 bg-slate-50 p-4"
+                      className="rounded-xl border-2 border-border-subtle bg-surface-hover p-4"
                     >
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-bold text-slate-900">
+                          <p className="text-sm font-bold text-text">
                             {group === "PAIR_A" ? text("pairA", language) : text("pairB", language)}
                           </p>
-                          <p className="mt-1 text-[10px] text-slate-500">
+                          <p className="mt-1 text-[10px] text-text-dim">
                             {group === "PAIR_A"
                               ? `Rotation day: ${rotationRules[0]?.first_rotation_day ?? "—"}`
                               : `Rotation day: ${rotationRules[0]?.second_rotation_day ?? "—"}`}
@@ -1920,7 +2177,7 @@ function ShiftManagementView() {
 
                       <div className="grid gap-3 md:grid-cols-2">
                         <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-muted">
                             {text("employeeOne", language)}
                           </span>
                           <select
@@ -1929,7 +2186,7 @@ function ShiftManagementView() {
                               updatePairSelection(group, "first", event.target.value)
                             }
                             disabled={savingPairs || loadingEmployees || loadingShiftData}
-                            className="cursor-pointer w-full rounded-md border-2 border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900"
+                            className="cursor-pointer w-full rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
                           >
                             <option value="">{text("selectEmployee", language)}</option>
                             {optionsFor("first", selection.first).map((member) => (
@@ -1941,7 +2198,7 @@ function ShiftManagementView() {
                         </label>
 
                         <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-muted">
                             {text("employeeTwo", language)}
                           </span>
                           <select
@@ -1950,7 +2207,7 @@ function ShiftManagementView() {
                               updatePairSelection(group, "second", event.target.value)
                             }
                             disabled={savingPairs || loadingEmployees || loadingShiftData}
-                            className="cursor-pointer w-full rounded-md border-2 border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900"
+                            className="cursor-pointer w-full rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
                           >
                             <option value="">{text("selectEmployee", language)}</option>
                             {optionsFor("second", selection.second).map((member) => (
@@ -1985,7 +2242,7 @@ function ShiftManagementView() {
             </Card>
 
             <Card className="overflow-hidden">
-              <div className="border-b-2 border-slate-200 p-4">
+              <div className="border-b-2 border-border-subtle p-4">
                 <SectionTitle
                   title={text("members", language)}
                   subtitle={
@@ -1999,22 +2256,22 @@ function ShiftManagementView() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[950px]">
                   <thead>
-                    <tr className="border-b-2 border-slate-200 bg-slate-50">
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("employee", language)}</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("department", language)}</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("shiftMaster", language)}</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("status", language)}</th>
-                      <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-600">{text("action", language)}</th>
+                    <tr className="border-b-2 border-border-subtle bg-surface-hover">
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("employee", language)}</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("department", language)}</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("shiftMaster", language)}</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("status", language)}</th>
+                      <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("action", language)}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredMembers.map((member) => (
-                      <tr key={member.id} className="border-b border-slate-200 last:border-0">
+                      <tr key={member.id} className="border-b border-border-subtle last:border-0">
                         <td className="px-4 py-3">
-                          <p className="text-xs font-bold text-slate-900">{language === "cn" ? member.nameCn || member.name : member.name}</p>
-                          <p className="mt-0.5 text-[10px] text-slate-500">{member.employeeId}</p>
+                          <p className="text-xs font-bold text-text">{language === "cn" ? member.nameCn || member.name : member.name}</p>
+                          <p className="mt-0.5 text-[10px] text-text-dim">{member.employeeId}</p>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">{language === "cn" ? member.departmentCn || member.department : member.department}</td>
+                        <td className="px-4 py-3 text-xs text-text-muted">{language === "cn" ? member.departmentCn || member.department : member.department}</td>
                         <td className="px-4 py-3">
                           <ShiftBadge shift={member.shift} language={language} />
                         </td>
@@ -2039,11 +2296,25 @@ function ShiftManagementView() {
                                 })
                               }
                               disabled={savingEmployee === member.employeeId}
-                              className="cursor-pointer rounded-md border-2 border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-900"
+                              className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-text"
                             >
                               <option value="">— Not Assigned —</option>
-                              <option value="D/S">D/S</option>
-                              <option value="N/S">N/S</option>
+                              {shiftMasters
+                                .filter((master) => master.is_active === 1 || master.is_active === true)
+                                .map((master) => (
+                                  <option
+                                    key={master.id}
+                                    value={master.shift_code}
+                                  >
+                                    {master.shift_code} —{" "}
+                                    {language === "cn"
+                                      ? master.shift_name_cn || master.shift_name_en || master.shift_code
+                                      : master.shift_name_en || master.shift_code}
+                                    {" ("}
+                                    {master.start_time}–{master.end_time}
+                                    {")"}
+                                  </option>
+                                ))}
                             </select>
                             <button
                               type="button"
@@ -2053,7 +2324,7 @@ function ShiftManagementView() {
                                   excluded: !member.excluded,
                                 })
                               }
-                              className="cursor-pointer rounded-md border-2 border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 hover:border-sky-500 hover:text-sky-800 disabled:opacity-50"
+                              className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted hover:border-sky-500 hover:text-sky-800 disabled:opacity-50"
                             >
                               {member.excluded ? text("rotation", language) : text("fixed", language)}
                             </button>
@@ -2071,7 +2342,7 @@ function ShiftManagementView() {
 
         {activeTab === "schedule" && (
           <Card className="overflow-hidden">
-            <div className="border-b-2 border-slate-200 p-4">
+            <div className="border-b-2 border-border-subtle p-4">
               <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
                 <div>
                   <SectionTitle
@@ -2087,13 +2358,19 @@ function ShiftManagementView() {
                     }
                   />
                   <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-emerald-500 bg-emerald-100 px-2 py-1 text-[9px] font-bold text-emerald-900">
+                      1 = 08:00–17:00
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-amber-500 bg-amber-100 px-2 py-1 text-[9px] font-bold text-amber-900">
+                      4 = 4 Hours
+                    </span>
                     <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-sky-500 bg-sky-100 px-2 py-1 text-[9px] font-bold text-sky-900">
                       D = {text("day", language)}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-violet-500 bg-violet-100 px-2 py-1 text-[9px] font-bold text-violet-900">
                       N = {text("night", language)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-slate-500 bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-900">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-slate-500 bg-surface-hover px-2 py-1 text-[9px] font-bold text-text">
                       O = {text("off", language)}
                     </span>
                   </div>
@@ -2103,14 +2380,14 @@ function ShiftManagementView() {
                   <button
                     type="button"
                     onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                    className="cursor-pointer rounded-md border-2 border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 hover:border-sky-500 hover:text-sky-800"
+                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-sky-500 hover:text-sky-800"
                   >
                     ←
                   </button>
                   <button
                     type="button"
                     onClick={() => setCurrentDate(new Date())}
-                    className="cursor-pointer rounded-md border-2 border-slate-300 bg-white px-3 py-2 text-[10px] font-bold text-slate-700 hover:border-sky-500 hover:text-sky-800"
+                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-[10px] font-bold text-text-muted hover:border-sky-500 hover:text-sky-800"
                   >
                     {text("today", language)}
                   </button>
@@ -2120,7 +2397,7 @@ function ShiftManagementView() {
                   <button
                     type="button"
                     onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                    className="cursor-pointer rounded-md border-2 border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 hover:border-sky-500 hover:text-sky-800"
+                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-sky-500 hover:text-sky-800"
                   >
                     →
                   </button>
@@ -2132,12 +2409,12 @@ function ShiftManagementView() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={text("search", language)}
-                  className="cursor-text rounded-md border-2 border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-sky-500"
+                  className="cursor-text rounded-md border-2 border-border bg-surface px-3 py-2 text-xs text-text outline-none focus:border-sky-500"
                 />
                 <select
                   value={departmentFilter}
                   onChange={(event) => setDepartmentFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border-2 border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-sky-500"
+                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-sky-500"
                 >
                   <option value="all">{text("allDepartments", language)}</option>
                   {departments.map((department) => (
@@ -2149,7 +2426,7 @@ function ShiftManagementView() {
                 <select
                   value={shiftFilter}
                   onChange={(event) => setShiftFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border-2 border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-sky-500"
+                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-sky-500"
                 >
                   <option value="all">{text("allShifts", language)}</option>
                   <option value="D/S">D/S — {text("day", language)}</option>
@@ -2161,8 +2438,8 @@ function ShiftManagementView() {
             <div className="overflow-x-auto">
               <table className="w-max min-w-full border-collapse">
                 <thead>
-                  <tr className="border-b-2 border-slate-200 bg-slate-50">
-                    <th className="sticky left-0 z-20 min-w-56 border-r-2 border-slate-200 bg-slate-50 px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                  <tr className="border-b-2 border-border-subtle bg-surface-hover">
+                    <th className="sticky left-0 z-20 min-w-56 border-r-2 border-border-subtle bg-surface-hover px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">
                       {text("employee", language)}
                     </th>
                     {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
@@ -2176,7 +2453,7 @@ function ShiftManagementView() {
                               ? "bg-red-100 text-red-900"
                               : isRotationDay
                                 ? "border-b-2 border-amber-500 bg-amber-100 text-amber-900"
-                                : "text-slate-600"
+                                : "text-text-muted"
                           }`}
                         >
                           <div>{pad(day)}</div>
@@ -2190,7 +2467,7 @@ function ShiftManagementView() {
                 <tbody>
                   {loadingEmployees || loadingShiftData ? (
                     <tr>
-                      <td colSpan={daysInMonth + 1} className="px-4 py-10 text-center text-xs font-semibold text-slate-500">
+                      <td colSpan={daysInMonth + 1} className="px-4 py-10 text-center text-xs font-semibold text-text-dim">
                         {text("loading", language)}
                       </td>
                     </tr>
@@ -2198,8 +2475,8 @@ function ShiftManagementView() {
                     const member = filteredMembers.find((item) => item.employeeId === row.employeeId);
                     return Boolean(member);
                   }).map((row) => (
-                    <tr key={row.employeeId} className="border-b border-slate-200 last:border-0">
-                      <td className="sticky left-0 z-10 border-r-2 border-slate-200 bg-white px-4 py-3">
+                    <tr key={row.employeeId} className="border-b border-border-subtle last:border-0">
+                      <td className="sticky left-0 z-10 border-r-2 border-border-subtle bg-surface px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-100 text-[9px] font-bold text-sky-800">
                             {row.name
@@ -2210,8 +2487,8 @@ function ShiftManagementView() {
                               .toUpperCase()}
                           </div>
                           <div>
-                            <p className="whitespace-nowrap text-xs font-bold text-slate-900">{language === "cn" ? row.nameCn || row.name : row.name}</p>
-                            <p className="mt-0.5 whitespace-nowrap text-[9px] text-slate-500">{row.employeeId}</p>
+                            <p className="whitespace-nowrap text-xs font-bold text-text">{language === "cn" ? row.nameCn || row.name : row.name}</p>
+                            <p className="mt-0.5 whitespace-nowrap text-[9px] text-text-dim">{row.employeeId}</p>
                             {row.fixed && (
                               <span className="mt-1 inline-flex rounded border-2 border-amber-400 bg-amber-100 px-1.5 py-0.5 text-[8px] font-bold text-amber-900">
                                 {text("fixed", language)}
@@ -2245,12 +2522,12 @@ function ShiftManagementView() {
               </table>
             </div>
 
-            <div className="flex flex-col gap-2 border-t-2 border-slate-200 px-4 py-3 text-[9px] text-slate-600 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-2 border-t-2 border-border-subtle px-4 py-3 text-[9px] text-text-muted md:flex-row md:items-center md:justify-between">
               <span>
                 {text("transitionRule", language)}: <span className="font-bold text-amber-900">N/S → OFF → D/S</span>
               </span>
               <span>
-                {text("changeDate", language)}: <span className="font-bold text-slate-900">{text("every15th16th", language)}</span>
+                {text("changeDate", language)}: <span className="font-bold text-text">{text("every15th16th", language)}</span>
               </span>
             </div>
           </Card>
@@ -2262,6 +2539,7 @@ function ShiftManagementView() {
             organizationEmployees={organizationEmployees}
             personalOffDays={personalOffDays}
             onPersonalOffDaysChange={setPersonalOffDays}
+            onScheduleChanged={() => void loadGeneratedSchedules(true)}
           />
         )}
       </div>

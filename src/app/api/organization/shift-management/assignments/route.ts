@@ -93,15 +93,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (shift !== "D/S" && shift !== "N/S") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "shift must be D/S or N/S.",
-        },
-        { status: 400 },
-      );
-    }
+   if (
+  shift !== "D/S" &&
+  shift !== "N/S" &&
+  shift !== "1" &&
+  shift !== "4"
+) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Invalid shift code.",
+    },
+    { status: 400 },
+  );
+}
 
     const employeeOrganizationId =
       await resolveEmployeeOrganizationId(employeeNo);
