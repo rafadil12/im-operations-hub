@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Activities · Training",
+  title: "Session · Training",
   description: "Manage training sessions for MES, Intelligent, and IT.",
-  path: "/training/activities",
+  path: "/training/session",
 });
 
-export default function TrainingActivitiesLayout({ children }: { children: ReactNode }) {
+export default function TrainingSessionLayout({ children }: { children: ReactNode }) {
   return children;
 }

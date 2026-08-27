@@ -63,6 +63,7 @@ const cn: Dict = {
     organization: "组织管理",
     report: "报表",
     training: "培训",
+    session: "场次",
     settings: "设置",
     settingsRoles: "角色",
     settingsAccounts: "账号",

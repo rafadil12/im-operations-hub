@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
         destination: "/daily-operation/configuration/:path*",
         permanent: true,
       },
+      {
+        source: "/training/activities",
+        destination: "/training/session",
+        permanent: true,
+      },
     ];
   },
 };

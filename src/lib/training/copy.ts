@@ -8,8 +8,8 @@ const TRAINING_TEXT = {
     "Sessions, participation, and division coverage across MES, Intelligent, and IT",
     "MES、智能物流与 IT 培训场次与参与度总览",
   ] as TextPair,
-  activitiesTitle: ["Training Activities", "培训活动"] as TextPair,
-  activitiesDesc: [
+  sessionTitle: ["Training Sessions", "培训场次"] as TextPair,
+  sessionDesc: [
     "Record training sessions, participants, and materials",
     "记录培训场次、参与人员与培训资料",
   ] as TextPair,

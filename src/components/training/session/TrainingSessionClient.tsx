@@ -48,7 +48,7 @@ function participantKey(person: TrainingParticipantName): string {
   return person.nameEn.trim().toUpperCase();
 }
 
-export function TrainingActivitiesClient() {
+export function TrainingSessionClient() {
   const { lang, t } = useLang();
   const language = lang as TrainingLanguage;
   const access = useRoleAccess();
@@ -293,8 +293,8 @@ export function TrainingActivitiesClient() {
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-text">{trainingText("activitiesTitle", language)}</h1>
-          <p className="text-sm text-text-muted">{trainingText("activitiesDesc", language)}</p>
+          <h1 className="text-lg font-semibold text-text">{trainingText("sessionTitle", language)}</h1>
+          <p className="text-sm text-text-muted">{trainingText("sessionDesc", language)}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {canExport ? (

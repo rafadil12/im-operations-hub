@@ -61,6 +61,7 @@ const en = {
     organization: "Organization",
     report: "Report",
     training: "Training",
+    session: "Session",
     settings: "Settings",
     settingsRoles: "Roles",
     settingsAccounts: "Accounts",

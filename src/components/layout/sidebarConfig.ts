@@ -141,7 +141,7 @@ export const navItems: NavItem[] = [
     icon: "training",
     children: [
       { id: "overview", labelKey: "overview", href: "/training" },
-      { id: "activities", labelKey: "management", href: "/training/activities" },
+      { id: "session", labelKey: "session", href: "/training/session" },
     ],
   },
   {

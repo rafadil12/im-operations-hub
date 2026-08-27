@@ -2,7 +2,7 @@
  * Import training sessions from 培训记录_Training+Notes.xlsx
  * Sheets: MES, INTELLIGENT, IT (SAFETY skipped).
  * Resolves sheet → divisions.id; topic/participant names stored bilingual (same text both sides).
- * Attachments are not copied (Excel links only) — upload later in Activities.
+ * Attachments are not copied (Excel links only) — upload later in Session.
  *
  * Usage:
  *   node --env-file=.env.local db/import-training-notes.mjs

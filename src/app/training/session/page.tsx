@@ -1,9 +1,9 @@
 "use client";
 
 import { TrainingGate } from "@/components/training/TrainingGate";
-import { TrainingActivitiesClient } from "@/components/training/activities";
+import { TrainingSessionClient } from "@/components/training/session";
 
-export default function TrainingActivitiesPage() {
+export default function TrainingSessionPage() {
   return (
     <TrainingGate
       allow={(a) =>
@@ -12,7 +12,7 @@ export default function TrainingActivitiesPage() {
         a.canUpdateTrainingSession
       }
     >
-      <TrainingActivitiesClient />
+      <TrainingSessionClient />
     </TrainingGate>
   );
 }
