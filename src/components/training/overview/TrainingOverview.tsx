@@ -212,9 +212,9 @@ export function TrainingOverview() {
                   <tr className="border-b border-border-subtle text-xs text-text-dim">
                     <th className="pb-2 pr-3 font-medium">{trainingText("date", language)}</th>
                     <th className="pb-2 pr-3 font-medium">{trainingText("topic", language)}</th>
-                    <th className="pb-2 pr-3 font-medium">{trainingText("division", language)}</th>
-                    <th className="pb-2 pr-3 font-medium">{trainingText("count", language)}</th>
-                    <th className="pb-2 font-medium">{trainingText("attachment", language)}</th>
+                    <th className="pb-2 pr-3 text-center font-medium">{trainingText("division", language)}</th>
+                    <th className="pb-2 pr-3 text-center font-medium">{trainingText("count", language)}</th>
+                    <th className="pb-2 text-center font-medium">{trainingText("attachment", language)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -231,7 +231,7 @@ export function TrainingOverview() {
                         <td className="py-2.5 pr-3 font-medium text-text">
                           {localizedField(row.topicEn, row.topicCn, lang)}
                         </td>
-                        <td className="py-2.5 pr-3">
+                        <td className="py-2.5 pr-3 text-center">
                           <span
                             className="inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium text-white"
                             style={{ backgroundColor: divisionColor(row.divisionNameEn) }}
@@ -242,8 +242,8 @@ export function TrainingOverview() {
                             )}
                           </span>
                         </td>
-                        <td className="py-2.5 pr-3">{row.participantCount}</td>
-                        <td className="py-2.5">
+                        <td className="py-2.5 pr-3 text-center">{row.participantCount}</td>
+                        <td className="py-2.5 text-center">
                           {row.attachment ? (
                             <a
                               href={row.attachment.url}
