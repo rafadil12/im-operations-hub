@@ -1,5 +1,6 @@
 import { isValidCnText, isValidEnText } from "@/lib/daily-operation/mesRecordValidation";
-import { reportText, type ReportLanguage, type ReportTextKey } from "./copy";
+import { reportText, type ReportTextKey } from "./copy";
+import type { ReportLanguage } from "./types";
 import type { ReportWeekLineDraft } from "./weekFormDraft";
 
 export type WeekBilingualField =

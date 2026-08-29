@@ -16,10 +16,69 @@ import {
   type ReportWeek,
 } from "@/lib/report";
 import { completionBarColor } from "@/lib/report/completionColor";
+import { Modal } from "@/components/ui/Modal";
 import { ReportWeekFormModal } from "./ReportWeekFormModal";
 
 const filterCtrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+
+const reportTh =
+  "sticky top-0 z-20 border border-border-subtle bg-surface px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
+const reportTd = "border border-border-subtle px-4 py-4 align-top";
+const reportTdGroup = "border border-border-subtle bg-bg/10 px-4 py-4 align-middle";
+
+type ActiveTab = number | "summary";
+
+type SummaryAreaLineGroup = {
+  areaId: number;
+  lines: ReportLine[];
+};
+
+type WeekLineGroup = {
+  year: number;
+  weekNumber: number;
+  areaGroups: SummaryAreaLineGroup[];
+  totalLines: number;
+};
+
+function groupLinesByWeek(lines: ReportLine[], areas: ReportArea[]): WeekLineGroup[] {
+  const areaOrder = new Map(areas.map((area, index) => [area.id, index]));
+  const map = new Map<string, Map<number, ReportLine[]>>();
+
+  for (const line of lines) {
+    if (line.weekNumber == null || line.year == null) continue;
+    const weekKey = `${line.year}-${line.weekNumber}`;
+    if (!map.has(weekKey)) map.set(weekKey, new Map());
+    const areaMap = map.get(weekKey)!;
+    if (!areaMap.has(line.areaId)) areaMap.set(line.areaId, []);
+    areaMap.get(line.areaId)!.push(line);
+  }
+
+  return Array.from(map.entries())
+    .map(([key, areaMap]) => {
+      const [yearStr, weekStr] = key.split("-");
+      const areaGroups: SummaryAreaLineGroup[] = Array.from(areaMap.entries())
+        .map(([areaId, areaLines]) => ({
+          areaId,
+          lines: [...areaLines].sort((a, b) => a.sortOrder - b.sortOrder),
+        }))
+        .sort(
+          (a, b) => (areaOrder.get(a.areaId) ?? 0) - (areaOrder.get(b.areaId) ?? 0)
+        );
+
+      const totalLines = areaGroups.reduce((sum, group) => sum + group.lines.length, 0);
+      return {
+        year: Number(yearStr),
+        weekNumber: Number(weekStr),
+        areaGroups,
+        totalLines,
+      };
+    })
+    .sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.weekNumber - a.weekNumber;
+    });
+}
 
 function SearchIcon() {
   return (
@@ -97,6 +156,131 @@ function CompletionCell({ rate }: { rate: number | null }) {
   );
 }
 
+type SummaryTableProps = {
+  weekGroups: WeekLineGroup[];
+  areaById: Map<number, ReportArea>;
+  language: ReportLanguage;
+  wrapperClassName?: string;
+};
+
+function SummaryTable({
+  weekGroups,
+  areaById,
+  language,
+  wrapperClassName = "overflow-auto",
+}: SummaryTableProps) {
+  return (
+    <div className={wrapperClassName}>
+      <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
+        <thead>
+          <tr>
+            <th className={reportTh}>{reportText("week", language)}</th>
+            <th className={reportTh}>{reportText("area", language)}</th>
+            <th className={reportTh}>{reportText("subItem", language)}</th>
+            <th className={reportTh}>{reportText("target", language)}</th>
+            <th className={`${reportTh} text-center`}>{reportText("rate", language)}</th>
+            <th className={reportTh}>{reportText("summary", language)}</th>
+            <th className={reportTh}>{reportText("plan", language)}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {weekGroups.length === 0 ? (
+            <tr>
+              <td colSpan={7} className={`${reportTd} py-12 text-center text-text-muted`}>
+                {reportText("noLines", language)}
+              </td>
+            </tr>
+          ) : (
+            weekGroups.map((group, groupIndex) => {
+              const isLastWeekGroup = groupIndex === weekGroups.length - 1;
+              let weekRowIndex = 0;
+
+              return group.areaGroups.map((areaGroup) => {
+                const area = areaById.get(areaGroup.areaId);
+                const color = area ? areaColor(area.code) : undefined;
+
+                return areaGroup.lines.map((row, lineIndex) => {
+                  const target = localizedField(row.workTargetEn, row.workTargetCn, language);
+                  const summary = localizedField(row.summaryEn, row.summaryCn, language);
+                  const plan = localizedField(row.planEn, row.planCn, language);
+                  const subItem =
+                    localizedField(row.subItemNameEn, row.subItemNameCn, language) || "—";
+                  const isFirstInWeek = weekRowIndex === 0;
+                  const isFirstInArea = lineIndex === 0;
+                  const isLastInWeek = weekRowIndex === group.totalLines - 1;
+                  const isLastInArea = lineIndex === areaGroup.lines.length - 1;
+                  const weekBottomBorder =
+                    isLastInWeek && !isLastWeekGroup ? "border-b-2 border-b-border" : "";
+                  const areaBottomBorder =
+                    isLastInArea && !isLastInWeek ? "border-b border-b-border-subtle" : "";
+
+                  weekRowIndex += 1;
+
+                  return (
+                    <tr key={row.id} className="align-top">
+                      {isFirstInWeek ? (
+                        <td
+                          rowSpan={group.totalLines}
+                          className={`${reportTdGroup} ${weekBottomBorder}`}
+                        >
+                          <WeekBadge weekNumber={group.weekNumber} year={group.year} />
+                        </td>
+                      ) : null}
+                      {isFirstInArea ? (
+                        <td
+                          rowSpan={areaGroup.lines.length}
+                          className={`${reportTdGroup} ${weekBottomBorder} ${areaBottomBorder}`}
+                        >
+                          {area ? (
+                            <span className="inline-flex items-center gap-2 text-sm font-medium text-text">
+                              <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: color }}
+                                aria-hidden
+                              />
+                              {localizedName(
+                                { name_en: area.nameEn, name_cn: area.nameCn },
+                                language
+                              )}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      ) : null}
+                      <td className={`${reportTd} ${weekBottomBorder}`}>
+                        <span className="text-sm font-medium text-accent">{subItem}</span>
+                      </td>
+                      <td
+                        className={`${reportTd} max-w-xs text-sm leading-relaxed text-text whitespace-pre-line ${weekBottomBorder}`}
+                      >
+                        {target}
+                      </td>
+                      <td className={`${reportTd} ${weekBottomBorder}`}>
+                        <CompletionCell rate={row.weeklyCompletionRate} />
+                      </td>
+                      <td
+                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line ${weekBottomBorder}`}
+                      >
+                        {summary}
+                      </td>
+                      <td
+                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line ${weekBottomBorder}`}
+                      >
+                        {plan || "—"}
+                      </td>
+                    </tr>
+                  );
+                });
+              });
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function ReportManagement() {
   const { lang } = useLang();
   const language = lang as ReportLanguage;
@@ -104,7 +288,7 @@ export function ReportManagement() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [year, setYear] = useState(new Date().getFullYear());
-  const [areaId, setAreaId] = useState<number | "">("");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("summary");
   const [filterWeek, setFilterWeek] = useState<number | "all">("all");
   const [filterSubItem, setFilterSubItem] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
@@ -120,7 +304,10 @@ export function ReportManagement() {
   const [weekFormWeek, setWeekFormWeek] = useState<number | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [reopenConfirm, setReopenConfirm] = useState(false);
+  const [summaryFullscreenOpen, setSummaryFullscreenOpen] = useState(false);
 
+  const isSummary = activeTab === "summary";
+  const areaId = isSummary ? null : activeTab;
   const canCreate = access.canCreateReportLine;
   const canUpdate = access.canUpdateReportLine;
   const canSubmit = access.canSubmitReport;
@@ -144,7 +331,7 @@ export function ReportManagement() {
   }, [year]);
 
   const loadLines = useCallback(async () => {
-    if (!areaId) {
+    if (!areas.length && !isSummary) {
       setLines([]);
       setSubmissionStatus(null);
       setLoading(false);
@@ -154,10 +341,9 @@ export function ReportManagement() {
     setLoading(true);
     setError(null);
     try {
-      const qs = new URLSearchParams({
-        year: String(year),
-        areaId: String(areaId),
-      });
+      const qs = new URLSearchParams({ year: String(year) });
+      if (!isSummary && areaId != null) qs.set("areaId", String(areaId));
+
       const res = await apiGetAbs<{
         success: boolean;
         data: ReportLine[];
@@ -171,7 +357,7 @@ export function ReportManagement() {
       if (res.areas) setAreas(res.areas);
       if (res.subItems) setSubItems(res.subItems);
 
-      if (selectedWeek) {
+      if (!isSummary && selectedWeek && areaId != null) {
         const subRes = await apiGetAbs<{
           success: boolean;
           data: { status: "draft" | "submitted" } | null;
@@ -186,7 +372,7 @@ export function ReportManagement() {
     } finally {
       setLoading(false);
     }
-  }, [year, areaId, selectedWeek, language]);
+  }, [year, areaId, isSummary, selectedWeek, language, areas.length]);
 
   useEffect(() => {
     void loadWeeks();
@@ -206,16 +392,20 @@ export function ReportManagement() {
   }, [loadLines]);
 
   useEffect(() => {
-    if (areaId === "" && areas.length) {
-      setAreaId(areas[0].id);
+    if (
+      activeTab !== "summary" &&
+      areas.length &&
+      !areas.some((area) => area.id === activeTab)
+    ) {
+      setActiveTab(areas[0].id);
     }
-  }, [areas, areaId]);
+  }, [areas, activeTab]);
 
   useEffect(() => {
     setFilterWeek("all");
     setFilterSubItem("all");
     setSearch("");
-  }, [areaId, year]);
+  }, [activeTab, year]);
 
   const weekOptions = useMemo(() => {
     const fromLines = new Set<number>();
@@ -226,6 +416,8 @@ export function ReportManagement() {
     return Array.from(fromLines).sort((a, b) => b - a);
   }, [lines, weeks]);
 
+  const areaById = useMemo(() => new Map(areas.map((area) => [area.id, area])), [areas]);
+
   const filteredLines = useMemo(() => {
     const q = search.trim().toLowerCase();
     return lines.filter((row) => {
@@ -233,7 +425,9 @@ export function ReportManagement() {
       if (filterSubItem !== "all" && row.subItemId !== filterSubItem) return false;
       if (!q) return true;
 
+      const area = areaById.get(row.areaId);
       const haystack = [
+        area ? localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, lang) : "",
         localizedField(row.subItemNameEn, row.subItemNameCn, lang),
         localizedField(row.workTargetEn, row.workTargetCn, lang),
         localizedField(row.summaryEn, row.summaryCn, lang),
@@ -244,7 +438,12 @@ export function ReportManagement() {
 
       return haystack.includes(q);
     });
-  }, [lines, filterWeek, filterSubItem, search, lang]);
+  }, [lines, filterWeek, filterSubItem, search, lang, areaById]);
+
+  const weekGroups = useMemo(
+    () => (isSummary ? groupLinesByWeek(filteredLines, areas) : []),
+    [isSummary, filteredLines, areas]
+  );
 
   const openCreateWeek = () => {
     setWeekFormMode("create");
@@ -347,17 +546,17 @@ export function ReportManagement() {
             {isSubmitted ? reportText("submitted", language) : reportText("draft", language)}
           </span>
         ) : null}
-        {canCreate && !(selectedWeekFilter != null && isSubmitted) ? (
+        {canCreate && !isSummary && !(selectedWeekFilter != null && isSubmitted) ? (
           <button
             type="button"
             onClick={openCreateWeek}
-            disabled={!areaId}
+            disabled={areaId == null}
             className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             {reportText("addReport", language)}
           </button>
         ) : null}
-        {canSubmit && !isSubmitted && selectedWeekFilter != null ? (
+        {canSubmit && !isSummary && !isSubmitted && selectedWeekFilter != null ? (
           <button
             type="button"
             onClick={() => void submitArea()}
@@ -367,7 +566,7 @@ export function ReportManagement() {
             {reportText("submit", language)}
           </button>
         ) : null}
-        {canReopen && isSubmitted && selectedWeekFilter != null ? (
+        {canReopen && !isSummary && isSubmitted && selectedWeekFilter != null ? (
           <button
             type="button"
             onClick={() => setReopenConfirm(true)}
@@ -377,18 +576,44 @@ export function ReportManagement() {
             {reportText("reopen", language)}
           </button>
         ) : null}
+        {isSummary && !loading && !error ? (
+          <button
+            type="button"
+            onClick={() => setSummaryFullscreenOpen(true)}
+            className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+          >
+            {reportText("summaryFullView", language)}
+          </button>
+        ) : null}
       </div>
 
       <div className="overflow-x-auto border-b border-border-subtle">
         <div className="flex min-w-max gap-6">
+          <button
+            type="button"
+            onClick={() => setActiveTab("summary")}
+            className={[
+              "relative flex cursor-pointer items-center gap-2 pb-3 pt-1 text-sm font-medium transition-colors",
+              isSummary ? "text-text" : "text-text-muted hover:text-text",
+            ].join(" ")}
+          >
+            <span className="flex size-2 shrink-0 overflow-hidden rounded-full" aria-hidden>
+              <span className="h-full w-1/2 bg-[#3b82f6]" />
+              <span className="h-full w-1/2 bg-[#22c55e]" />
+            </span>
+            {reportText("summaryTab", language)}
+            {isSummary ? (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent" />
+            ) : null}
+          </button>
           {areas.map((area) => {
-            const active = areaId === area.id;
+            const active = activeTab === area.id;
             const color = areaColor(area.code);
             return (
               <button
                 key={area.id}
                 type="button"
-                onClick={() => setAreaId(area.id)}
+                onClick={() => setActiveTab(area.id)}
                 className={[
                   "relative flex cursor-pointer items-center gap-2 pb-3 pt-1 text-sm font-medium transition-colors",
                   active ? "text-text" : "text-text-muted hover:text-text",
@@ -474,19 +699,27 @@ export function ReportManagement() {
       ) : null}
 
       {!loading && !error ? (
-        <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface">
-          <table className="w-full min-w-[1100px] text-left text-sm">
+        isSummary ? (
+          <SummaryTable
+            weekGroups={weekGroups}
+            areaById={areaById}
+            language={language}
+            wrapperClassName="overflow-auto rounded-xl border border-border-subtle bg-surface max-h-[calc(100dvh-17rem)]"
+          />
+        ) : (
+        <div className="overflow-auto rounded-xl border border-border-subtle bg-surface max-h-[calc(100dvh-17rem)]">
+          <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-border-subtle bg-bg/20 text-[10px] uppercase tracking-wide text-text-dim">
-                <th className="px-4 py-3 font-semibold">{reportText("week", language)}</th>
-                <th className="px-4 py-3 font-semibold">{reportText("subItem", language)}</th>
-                <th className="px-4 py-3 font-semibold">{reportText("target", language)}</th>
-                <th className="px-4 py-3 text-center font-semibold">{reportText("rate", language)}</th>
-                <th className="px-4 py-3 font-semibold">{reportText("summary", language)}</th>
-                <th className="px-4 py-3 font-semibold">{reportText("plan", language)}</th>
-                {(canUpdate || canCreate) && (
-                  <th className="px-4 py-3 text-center font-semibold">{reportText("actions", language)}</th>
-                )}
+              <tr>
+                <th className={reportTh}>{reportText("week", language)}</th>
+                <th className={reportTh}>{reportText("subItem", language)}</th>
+                <th className={reportTh}>{reportText("target", language)}</th>
+                <th className={`${reportTh} text-center`}>{reportText("rate", language)}</th>
+                <th className={reportTh}>{reportText("summary", language)}</th>
+                <th className={reportTh}>{reportText("plan", language)}</th>
+                {(canUpdate || canCreate) ? (
+                  <th className={`${reportTh} text-center`}>{reportText("actions", language)}</th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -494,7 +727,7 @@ export function ReportManagement() {
                 <tr>
                   <td
                     colSpan={canUpdate || canCreate ? 7 : 6}
-                    className="px-4 py-12 text-center text-text-muted"
+                    className={`${reportTd} py-12 text-center text-text-muted`}
                   >
                     {reportText("noLines", language)}
                   </td>
@@ -508,8 +741,8 @@ export function ReportManagement() {
                   const editableWeek = rowCanEditWeek(row);
 
                   return (
-                    <tr key={row.id} className="border-b border-border-subtle/70 align-top">
-                      <td className="px-4 py-4">
+                    <tr key={row.id} className="align-top">
+                      <td className={reportTd}>
                         {row.weekNumber != null && row.year != null ? (
                           <WeekBadge
                             weekNumber={row.weekNumber}
@@ -522,7 +755,7 @@ export function ReportManagement() {
                           "—"
                         )}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className={reportTd}>
                         {editableWeek ? (
                           <button
                             type="button"
@@ -535,20 +768,26 @@ export function ReportManagement() {
                           <span className="text-sm font-medium text-accent">{subItem}</span>
                         )}
                       </td>
-                      <td className="max-w-xs px-4 py-4 text-sm leading-relaxed text-text whitespace-pre-line">
+                      <td
+                        className={`${reportTd} max-w-xs text-sm leading-relaxed text-text whitespace-pre-line`}
+                      >
                         {target}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className={reportTd}>
                         <CompletionCell rate={row.weeklyCompletionRate} />
                       </td>
-                      <td className="max-w-md px-4 py-4 text-sm leading-relaxed text-text-muted whitespace-pre-line">
+                      <td
+                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line`}
+                      >
                         {summary}
                       </td>
-                      <td className="max-w-md px-4 py-4 text-sm leading-relaxed text-text-muted whitespace-pre-line">
+                      <td
+                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line`}
+                      >
                         {plan || "—"}
                       </td>
                       {(canUpdate || canCreate) && (
-                        <td className="px-4 py-4 text-center">
+                        <td className={`${reportTd} text-center`}>
                           {editableWeek ? (
                             <button
                               type="button"
@@ -567,9 +806,31 @@ export function ReportManagement() {
             </tbody>
           </table>
         </div>
+        )
       ) : null}
 
-      {weekFormOpen && areaId !== "" ? (
+      {summaryFullscreenOpen ? (
+        <Modal
+          title={reportText("summaryTab", language)}
+          subtitle={
+            <p className="text-xs text-text-muted">
+              {year}
+              {filterWeek !== "all" ? ` · Week ${filterWeek}` : ` · ${reportText("all", language)}`}
+            </p>
+          }
+          size="full"
+          onClose={() => setSummaryFullscreenOpen(false)}
+        >
+          <SummaryTable
+            weekGroups={weekGroups}
+            areaById={areaById}
+            language={language}
+            wrapperClassName="min-h-0 flex-1 overflow-auto"
+          />
+        </Modal>
+      ) : null}
+
+      {weekFormOpen && areaId != null ? (
         <ReportWeekFormModal
           open={weekFormOpen}
           mode={weekFormMode}

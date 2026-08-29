@@ -13,6 +13,8 @@ const REPORT_TEXT = {
     "Edit weekly report lines by year, week, and area",
     "按年、周、区域编辑周报事项",
   ] as TextPair,
+  summaryTab: ["Summary", "汇总"] as TextPair,
+  summaryFullView: ["Full View", "全屏查看"] as TextPair,
   totalLines: ["Report Lines", "事项总数"] as TextPair,
   avgCompletion: ["Avg Completion", "平均完成度"] as TextPair,
   submittedAreas: ["Submitted", "已提交"] as TextPair,

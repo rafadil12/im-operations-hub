@@ -10,7 +10,7 @@ type ModalProps = {
   children: ReactNode;
   footer?: ReactNode;
   headerActions?: ReactNode;
-  size?: "md" | "lg" | "xl" | "2xl";
+  size?: "md" | "lg" | "xl" | "2xl" | "full";
   /** When true, Escape / overlay / X cannot close the modal. */
   closeDisabled?: boolean;
 };
@@ -20,7 +20,24 @@ const SIZE_CLASS = {
   lg: "max-w-3xl",
   xl: "max-w-5xl",
   "2xl": "max-w-7xl",
+  full: "h-full w-full max-w-none",
 } as const;
+
+const SHELL_CLASS: Record<NonNullable<ModalProps["size"]>, string> = {
+  md: "fixed inset-0 z-[999] flex items-center justify-center p-10",
+  lg: "fixed inset-0 z-[999] flex items-center justify-center p-10",
+  xl: "fixed inset-0 z-[999] flex items-center justify-center p-10",
+  "2xl": "fixed inset-0 z-[999] flex items-center justify-center p-10",
+  full: "fixed inset-0 z-[999] flex p-1.5 sm:p-2",
+};
+
+const PANEL_CLASS: Record<NonNullable<ModalProps["size"]>, string> = {
+  md: "max-h-[92vh] rounded-xl",
+  lg: "max-h-[92vh] rounded-xl",
+  xl: "max-h-[92vh] rounded-xl",
+  "2xl": "max-h-[92vh] rounded-xl",
+  full: "min-h-0 flex-1 rounded-lg",
+};
 
 function subscribe() {
   return () => {};
@@ -58,7 +75,7 @@ export function Modal({
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-10">
+    <div className={SHELL_CLASS[size]}>
       <button
         type="button"
         aria-label="Close overlay"
@@ -72,12 +89,13 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={[
-          "relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]",
+          "relative z-10 flex w-full flex-col overflow-hidden border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]",
+          PANEL_CLASS[size],
           SIZE_CLASS[size],
         ].join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-border-subtle px-4 py-3">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-4 py-3">
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold text-text">{title}</h3>
             {subtitle ? <div className="mt-1">{subtitle}</div> : null}
@@ -95,7 +113,14 @@ export function Modal({
             </button>
           </div>
         </div>
-        <div className="overflow-y-auto p-4">{children}</div>
+        <div
+          className={[
+            "min-h-0 flex-1",
+            size === "full" ? "flex flex-col overflow-hidden p-2" : "overflow-y-auto p-4",
+          ].join(" ")}
+        >
+          {children}
+        </div>
         {footer ? (
           <div className="flex justify-end gap-2 border-t border-border-subtle px-4 py-3">
             {footer}
