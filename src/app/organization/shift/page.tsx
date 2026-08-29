@@ -191,6 +191,7 @@ const SHIFT_TEXT = {
   night: ["Night", "夜班"],
   off: ["OFF", "休息"],
   generate: ["Generate Schedule", "生成排班"],
+  exportExcel: ["Export Excel", "导出 Excel"],
   today: ["Today", "今天"],
   employee: ["Employee", "员工"],
   department: ["Department", "部门"],
@@ -480,11 +481,11 @@ function StatusBadge({
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
         active
-          ? "border-emerald-600 bg-emerald-100 text-emerald-900"
+          ? "border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
           : "border-border bg-surface-hover text-text"
       }`}
     >
-      <span className={`size-1.5 rounded-full ${active ? "bg-emerald-600" : "bg-surface-hover0"}`} />
+      <span className={`size-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-slate-500"}`} />
       {active ? text("active", language) : text("inactive", language)}
     </span>
   );
@@ -511,8 +512,8 @@ function ShiftBadge({
     <span
       className={`inline-flex min-w-[92px] items-center justify-center rounded-md border px-2.5 py-1 text-[10px] font-semibold ${
         isDay
-          ? "border-sky-600 bg-sky-100 text-sky-900"
-          : "border-violet-600 bg-violet-100 text-violet-900"
+          ? "border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-800 dark:text-cyan-300"
+          : "border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-300"
       }`}
     >
       {shift} {shiftName(shift, language)}
@@ -527,16 +528,16 @@ function ScheduleBadge({
   value: ScheduleType;
   language: OrganizationLanguage;
 }) {
-  const className =
-    value === "1"
-      ? "border-emerald-600 bg-emerald-100 text-emerald-900"
-      : value === "4"
-        ? "border-amber-600 bg-amber-100 text-amber-900"
-        : value === "D"
-          ? "border-sky-600 bg-sky-100 text-sky-900"
-          : value === "N"
-            ? "border-violet-600 bg-violet-100 text-violet-900"
-            : "border-slate-500 bg-surface-hover text-text";
+ const className =
+  value === "1"
+    ? "border-emerald-400 bg-emerald-50 text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/10"
+    : value === "4"
+      ? "border-amber-400 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-inset ring-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/10"
+      : value === "D"
+        ? "border-cyan-400 bg-cyan-50 text-cyan-700 shadow-sm ring-1 ring-inset ring-cyan-200 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/10"
+        : value === "N"
+          ? "border-indigo-400 bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-inset ring-indigo-200 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/10"
+          : "border-rose-400 bg-rose-50 text-rose-600 shadow-sm ring-1 ring-inset ring-rose-200 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/10";
 
   return (
     <span
@@ -986,7 +987,7 @@ function MyOffCalendar({
     <div className="mt-2 border-t border-border-subtle pt-6">
       <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
         <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl border-2 border-sky-500 bg-sky-100 text-lg font-bold text-sky-700">
+          <div className="flex size-11 items-center justify-center rounded-xl border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 text-lg font-bold text-cyan-700 dark:text-cyan-300">
             ◎
           </div>
           <div>
@@ -1004,30 +1005,30 @@ function MyOffCalendar({
                 {text("currentAccount", language)}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="rounded-md border-2 border-sky-500 bg-sky-100 px-3 py-1.5 text-sm font-bold text-sky-800">
+                <span className="rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-3 py-1.5 text-sm font-bold text-cyan-800 dark:text-cyan-300">
                   {authLoading ? text("loading", language) : accountLabel}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-              <span className="inline-flex items-center gap-2 rounded-full border-2 border-emerald-500 bg-emerald-100 px-3 py-1.5 text-emerald-900">
-                <span className="size-2.5 rounded-full bg-emerald-600" />
+              <span className="inline-flex items-center gap-2 rounded-full border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-emerald-800 dark:text-emerald-300">
+                <span className="size-2.5 rounded-full bg-emerald-500" />
                 1 — 08:00–17:00
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border-2 border-amber-500 bg-amber-100 px-3 py-1.5 text-amber-900">
-                <span className="size-2.5 rounded-full bg-amber-600" />
+              <span className="inline-flex items-center gap-2 rounded-full border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 text-amber-800 dark:text-amber-300">
+                <span className="size-2.5 rounded-full bg-amber-500" />
                 4 — 4 Hours
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-surface-hover px-3 py-1.5 text-text">
-                <span className="size-2.5 rounded-full bg-surface-hover0" />
+                <span className="size-2.5 rounded-full bg-slate-500" />
                 OFF
               </span>
             </div>
           </div>
 
           {!authLoading && !currentEmployeeId && (
-            <div className="mt-4 rounded-lg border-2 border-red-500 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+            <div className="mt-4 rounded-lg border-2 border-rose-500/70 dark:border-rose-400/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
               {text("accountNotDetected", language)}
             </div>
           )}
@@ -1039,24 +1040,24 @@ function MyOffCalendar({
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-sky-500 hover:bg-sky-50"
+                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
               >
                 ←
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date())}
-                className="cursor-pointer rounded-lg border-2 border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:border-sky-500 hover:bg-sky-50"
+                className="cursor-pointer rounded-lg border-2 border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
               >
                 {text("today", language)}
               </button>
-              <div className="min-w-44 rounded-lg border-2 border-sky-500 bg-sky-50 px-4 py-2.5 text-center text-sm font-bold text-sky-800">
+              <div className="min-w-44 rounded-lg border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-2.5 text-center text-sm font-bold text-cyan-800 dark:text-cyan-300">
                 {monthName}
               </div>
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-sky-500 hover:bg-sky-50"
+                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
               >
                 →
               </button>
@@ -1067,7 +1068,7 @@ function MyOffCalendar({
                 type="button"
                 onClick={resetUnfixed}
                 disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || saving}
-                className="cursor-pointer rounded-lg border-2 border-amber-500 bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="cursor-pointer rounded-lg border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 transition hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {text("resetUnfixed", language)}
               </button>
@@ -1075,7 +1076,7 @@ function MyOffCalendar({
                 type="button"
                 onClick={saveAndFix}
                 disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || saving}
-                className="cursor-pointer rounded-lg border-2 border-emerald-600 bg-emerald-100 px-4 py-2 text-xs font-bold text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="cursor-pointer rounded-lg border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {saving ? text("loading", language) : text("saveAndFix", language)}
               </button>
@@ -1128,56 +1129,67 @@ function MyOffCalendar({
                   disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || isFixed || saving}
                   className={`relative min-h-28 border-r border-b border-border-subtle p-3 text-left align-top transition ${
                     isFixed
-                      ? "bg-amber-100 hover:bg-amber-200"
+                      ? "bg-amber-500/10 hover:bg-amber-500/15 dark:bg-amber-500/10 dark:hover:bg-amber-500/15"
                       : isSelected
-                        ? "bg-sky-100 hover:bg-sky-200"
+                        ? "bg-cyan-500/10 hover:bg-cyan-500/15 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/15"
                         : "bg-surface hover:bg-surface-hover"
-                  } ${isToday ? "z-10 bg-red-50 ring-4 ring-inset ring-red-500" : ""} ${
+                  } ${isToday ? "z-10 bg-cyan-500/10 ring-2 ring-inset ring-cyan-400" : ""} ${
                     !isFutureOffMonth || isFixed || saving
                       ? "cursor-not-allowed"
                       : "cursor-pointer"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span
-                      className={`text-sm font-extrabold ${
-                        isToday
-                          ? "text-red-700"
-                          : isFixed
-                            ? "text-amber-900"
-                            : isSelected
-                              ? "text-sky-800"
-                              : "text-text"
-                      }`}
+                  <span
+                    className={`text-sm font-extrabold ${
+                      isToday
+                        ? "text-cyan-700 dark:text-cyan-300"
+                        : isFixed
+                          ? "text-rose-700 dark:text-rose-300"
+                          : isSelected
+                            ? "text-sky-700 dark:text-sky-300"
+                            : "text-text"
+                    }`}
                     >
                       {day}
                     </span>
                     {isToday && (
-                      <span className="rounded-full border-2 border-red-500 bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-red-700">
+                      <span className="rounded-full border-2 border-cyan-400 bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">
                         {text("today", language)}
                       </span>
                     )}
                   </div>
 
                   {status === "1" && (
-                    <div className="mt-5 rounded-lg border-2 border-emerald-600 bg-emerald-200 px-2 py-2 text-center text-xs font-extrabold text-emerald-950">
-                      1 — 08:00–17:00
+                    <div className="mt-5 flex items-center justify-center gap-2 rounded-lg border border-emerald-500 bg-emerald-100 px-3 py-2.5 text-center text-xs font-extrabold text-slate-950 shadow-sm dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-white">
+                      <span className="size-2 rounded-full bg-emerald-500 dark:bg-emerald-300" />
+                      <span>1 — 08:00–17:00</span>
                     </div>
                   )}
 
                   {status === "4" && (
-                    <div className="mt-5 rounded-lg border-2 border-amber-600 bg-amber-200 px-2 py-2 text-center text-xs font-extrabold text-amber-950">
-                      4 — 4 Hours
+                    <div className="mt-5 flex items-center justify-center gap-2 rounded-lg border border-amber-500 bg-amber-100 px-3 py-2.5 text-center text-xs font-extrabold text-slate-950 shadow-sm dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-white">
+                      <span className="size-2 rounded-full bg-amber-500 dark:bg-amber-300" />
+                      <span>4 — 4 Hours</span>
                     </div>
                   )}
 
                   {status === "OFF" && (
-                    <div className={`mt-5 rounded-lg border-2 px-2 py-2 text-center text-xs font-extrabold ${
-                      isFixed
-                        ? "border-amber-600 bg-amber-200 text-amber-950"
-                        : "border-slate-500 bg-surface-hover text-text"
-                    }`}>
-                      OFF{isFixed ? " 🔒" : ""}
+                    <div
+                      className={`mt-5 flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-center text-xs font-extrabold shadow-sm ${
+                        isFixed
+                          ? "border-rose-500 bg-rose-100 text-slate-950 dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-white"
+                          : "border-rose-400 bg-rose-50 text-slate-950 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-white"
+                      }`}
+                    >
+                      <span
+                        className={`size-2 rounded-full ${
+                          isFixed
+                            ? "bg-rose-500 dark:bg-rose-300"
+                            : "bg-rose-400 dark:bg-rose-300"
+                        }`}
+                      />
+                      <span>OFF{isFixed ? " 🔒" : ""}</span>
                     </div>
                   )}
 
@@ -1186,7 +1198,7 @@ function MyOffCalendar({
                       {otherOffs.map((name) => (
                         <div
                           key={`${key}-${name}`}
-                          className="truncate text-[10px] font-bold text-red-600"
+                          className="truncate text-[10px] font-bold text-rose-600 dark:text-rose-300"
                           title={`${name} ${text("off", language)}`}
                         >
                           {name} {text("off", language)}
@@ -1199,7 +1211,7 @@ function MyOffCalendar({
             })}
           </div>
 
-          <div className="mt-4 rounded-lg border-2 border-sky-200 bg-sky-50 px-4 py-3 text-xs text-text-muted">
+          <div className="mt-4 rounded-lg border-2 border-cyan-200 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-3 text-xs text-text-muted">
             {language === "cn"
               ? "未来月份点击日期可循环选择 1 → 4 → OFF → 清空；1=08:00–17:00，4=4小时（08:00–12:00或12:00–17:00）。"
               : "For future months, click a date to cycle 1 → 4 → OFF → clear; 1=08:00–17:00, 4=4 hours (08:00–12:00 or 12:00–17:00)."}
@@ -1761,6 +1773,7 @@ function ShiftManagementView() {
 
   const [generatedScheduleRows, setGeneratedScheduleRows] = useState<GeneratedScheduleApiRow[]>([]);
   const [loadingGeneratedSchedule, setLoadingGeneratedSchedule] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   async function loadGeneratedSchedules(force = false) {
     if (
@@ -1798,6 +1811,95 @@ function ShiftManagementView() {
   useEffect(() => {
     void loadGeneratedSchedules();
   }, [year, month, organizationEmployees.length, loadingEmployees, loadingShiftData]);
+
+  async function exportScheduleExcel() {
+    if (
+      exportingExcel ||
+      loadingEmployees ||
+      loadingShiftData ||
+      organizationEmployees.length === 0
+    ) {
+      return;
+    }
+
+    setExportingExcel(true);
+    setShiftDataError(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/export?year=${year}&month=${month + 1}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type") ?? "";
+        const raw = await response.text();
+
+        if (contentType.includes("application/json")) {
+          try {
+            const payload = JSON.parse(raw) as { error?: unknown };
+            throw new Error(
+              String(payload.error ?? "Failed to export schedule."),
+            );
+          } catch (parseError) {
+            if (parseError instanceof Error) {
+              throw parseError;
+            }
+            throw new Error("Failed to export schedule.");
+          }
+        }
+
+        throw new Error(
+          `Export failed with status ${response.status}.`,
+        );
+      }
+
+      const blob = await response.blob();
+
+      const disposition =
+        response.headers.get("content-disposition") ?? "";
+
+      let filename = `Emp. Shift_IT_${year}_${pad(month + 1)}.xlsx`;
+
+      const filenameMatch = disposition.match(
+        /filename\*?=(?:UTF-8'')?[\"']?([^\"';]+)[\"']?/i,
+      );
+
+      if (filenameMatch?.[1]) {
+        try {
+          filename = decodeURIComponent(filenameMatch[1]);
+        } catch {
+          filename = filenameMatch[1];
+        }
+      }
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = blobUrl;
+      anchor.download = filename;
+
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 1000);
+    } catch (error) {
+      console.error("Failed to export schedule", error);
+      setShiftDataError(
+        error instanceof Error
+          ? error.message
+          : "Failed to export schedule.",
+      );
+    } finally {
+      setExportingExcel(false);
+    }
+  }
 
   async function generateSchedule() {
     if (loadingEmployees || loadingShiftData || loadingGeneratedSchedule || authLoading) return;
@@ -1889,14 +1991,14 @@ function ShiftManagementView() {
           select:disabled { cursor: not-allowed; }
         `}</style>
         {(employeeLoadError || shiftDataError) && (
-          <div className="rounded-lg border-2 border-red-500 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          <div className="rounded-lg border-2 border-rose-500/70 dark:border-rose-400/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
             {employeeLoadError || shiftDataError}
           </div>
         )}
 
         <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl border-2 border-sky-500 bg-sky-100 text-lg font-bold text-sky-700">
+            <div className="flex size-10 items-center justify-center rounded-xl border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 text-lg font-bold text-cyan-700 dark:text-cyan-300">
               ⇄
             </div>
             <div>
@@ -1913,10 +2015,11 @@ function ShiftManagementView() {
             <button
               type="button"
               onClick={() => setActiveTab("calendar")}
-              className="cursor-pointer rounded-md border-2 border-amber-500 bg-amber-100 px-3 py-2 text-[10px] font-bold text-amber-900 transition hover:bg-amber-200"
+              className="cursor-pointer rounded-md border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-800 dark:text-amber-300 transition hover:bg-amber-100 dark:hover:bg-amber-500/20"
             >
               {text("goOffCalendar", language)}
             </button>
+
             <button
               type="button"
               onClick={() => void generateSchedule()}
@@ -1930,7 +2033,7 @@ function ShiftManagementView() {
                       ? text("monthLocked", language)
                       : text("generate", language)
               }
-              className="cursor-pointer rounded-md border-2 border-sky-500 bg-sky-100 px-3 py-2 text-[10px] font-bold text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
+              className="cursor-pointer rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-3 py-2 text-[10px] font-bold text-cyan-800 dark:text-cyan-300 transition hover:bg-cyan-100 dark:hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {text("generate", language)}
             </button>
@@ -1945,7 +2048,7 @@ function ShiftManagementView() {
               onClick={() => setActiveTab(tab.key)}
               className={`whitespace-nowrap rounded-lg px-4 py-2 text-[10px] font-bold transition ${
                 activeTab === tab.key
-                  ? "bg-sky-600 text-white"
+                  ? "bg-cyan-500 text-white"
                   : "text-text-muted hover:bg-surface hover:text-text"
               }`}
             >
@@ -1959,12 +2062,12 @@ function ShiftManagementView() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <Card className="p-4">
                 <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("dayShift", language)}</p>
-                <p className="mt-2 text-xl font-bold text-sky-800">D/S</p>
+                <p className="mt-2 text-xl font-bold text-cyan-800 dark:text-cyan-300">D/S</p>
                 <p className="mt-1 text-[10px] text-text-dim">08:00 – 20:00</p>
               </Card>
               <Card className="p-4">
                 <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("nightShift", language)}</p>
-                <p className="mt-2 text-xl font-bold text-violet-800">N/S</p>
+                <p className="mt-2 text-xl font-bold text-indigo-800 dark:text-indigo-300">N/S</p>
                 <p className="mt-1 text-[10px] text-text-dim">20:00 – 08:00</p>
               </Card>
               <Card className="p-4">
@@ -1974,7 +2077,7 @@ function ShiftManagementView() {
               </Card>
               <Card className="p-4">
                 <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("transitionRule", language)}</p>
-                <p className="mt-2 text-xl font-bold text-amber-900">OFF 1</p>
+                <p className="mt-2 text-xl font-bold text-amber-800 dark:text-amber-300">OFF 1</p>
                 <p className="mt-1 text-[10px] text-text-dim">{text("scheduleRule", language)}</p>
               </Card>
             </div>
@@ -2004,7 +2107,7 @@ function ShiftManagementView() {
                       key={member.id}
                       className={`rounded-lg border-2 p-3 ${
                         member.excluded
-                          ? "border-amber-300 bg-amber-50"
+                          ? "border-amber-500/50 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10"
                           : "border-border-subtle bg-surface"
                       }`}
                     >
@@ -2016,7 +2119,7 @@ function ShiftManagementView() {
                           <p className="mt-0.5 text-[10px] text-text-dim">{member.employeeId}</p>
                         </div>
                         {member.excluded ? (
-                          <span className="rounded-md border-2 border-amber-400 bg-amber-100 px-2 py-1 text-[9px] font-bold text-amber-900">
+                          <span className="rounded-md border-2 border-amber-500/60 dark:border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-800 dark:text-amber-300">
                             {text("excluded", language)}
                           </span>
                         ) : (
@@ -2047,9 +2150,9 @@ function ShiftManagementView() {
                   <p className="text-[10px] text-text-dim">{text("periodTwo", language)}</p>
                   <p className="mt-2 text-sm font-bold text-text">15 – 16 / 17 – {daysInMonth}</p>
                 </div>
-                <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
-                  <p className="text-[10px] text-amber-800">{text("transitionRule", language)}</p>
-                  <p className="mt-2 text-sm font-bold text-amber-950">N/S → OFF → D/S</p>
+                <div className="rounded-lg border-2 border-amber-500/50 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-4">
+                  <p className="text-[10px] text-amber-700 dark:text-amber-300">{text("transitionRule", language)}</p>
+                  <p className="mt-2 text-sm font-bold text-amber-900 dark:text-amber-200">N/S → OFF → D/S</p>
                 </div>
               </div>
             </Card>
@@ -2076,13 +2179,13 @@ function ShiftManagementView() {
                 </thead>
                 <tbody>
                   <tr className="border-b border-border-subtle">
-                    <td className="px-4 py-4 text-xs font-bold text-sky-800">D/S</td>
+                    <td className="px-4 py-4 text-xs font-bold text-cyan-800 dark:text-cyan-300">D/S</td>
                     <td className="px-4 py-4 text-xs text-text">{text("dayShift", language)}</td>
                     <td className="px-4 py-4 text-xs text-text-muted">08:00 – 20:00</td>
                     <td className="px-4 py-4"><StatusBadge active language={language} /></td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-4 text-xs font-bold text-violet-800">N/S</td>
+                    <td className="px-4 py-4 text-xs font-bold text-indigo-800 dark:text-indigo-300">N/S</td>
                     <td className="px-4 py-4 text-xs text-text">{text("nightShift", language)}</td>
                     <td className="px-4 py-4 text-xs text-text-muted">20:00 – 08:00</td>
                     <td className="px-4 py-4"><StatusBadge active language={language} /></td>
@@ -2109,9 +2212,9 @@ function ShiftManagementView() {
                   <p className="text-[10px] text-text-dim">{text("changeDate", language)}</p>
                   <p className="mt-2 text-xs font-bold text-text">{text("every15th16th", language)}</p>
                 </div>
-                <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
-                  <p className="text-[10px] text-amber-800">{text("transitionRule", language)}</p>
-                  <p className="mt-2 text-xs font-bold text-amber-950">{text("oneDayOff", language)}</p>
+                <div className="rounded-lg border-2 border-amber-500/50 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-3">
+                  <p className="text-[10px] text-amber-700 dark:text-amber-300">{text("transitionRule", language)}</p>
+                  <p className="mt-2 text-xs font-bold text-amber-900 dark:text-amber-200">{text("oneDayOff", language)}</p>
                 </div>
                 <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-3">
                   <p className="text-[10px] text-text-dim">{text("rotationPeriod", language)}</p>
@@ -2170,7 +2273,7 @@ function ShiftManagementView() {
                               : `Rotation day: ${rotationRules[0]?.second_rotation_day ?? "—"}`}
                           </p>
                         </div>
-                        <span className="rounded-md border-2 border-sky-300 bg-sky-100 px-2 py-1 text-[9px] font-bold text-sky-900">
+                        <span className="rounded-md border-2 border-cyan-300 dark:border-cyan-400/50 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-1 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
                           {group}
                         </span>
                       </div>
@@ -2234,7 +2337,7 @@ function ShiftManagementView() {
                     loadingEmployees ||
                     loadingShiftData
                   }
-                  className="cursor-pointer rounded-md border-2 border-sky-500 bg-sky-100 px-4 py-2 text-xs font-bold text-sky-900 hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="cursor-pointer rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-800 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {savingPairs ? text("loading", language) : text("saveRotationPairs", language)}
                 </button>
@@ -2277,11 +2380,11 @@ function ShiftManagementView() {
                         </td>
                         <td className="px-4 py-3">
                           {member.excluded ? (
-                            <span className="inline-flex rounded-md border-2 border-amber-500 bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900">
+                            <span className="inline-flex rounded-md border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold text-amber-800 dark:text-amber-300">
                               {text("fixed", language)}
                             </span>
                           ) : (
-                            <span className="inline-flex rounded-md border-2 border-emerald-600 bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-900">
+                            <span className="inline-flex rounded-md border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
                               {text("rotation", language)}
                             </span>
                           )}
@@ -2324,7 +2427,7 @@ function ShiftManagementView() {
                                   excluded: !member.excluded,
                                 })
                               }
-                              className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted hover:border-sky-500 hover:text-sky-800 disabled:opacity-50"
+                              className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50"
                             >
                               {member.excluded ? text("rotation", language) : text("fixed", language)}
                             </button>
@@ -2343,8 +2446,8 @@ function ShiftManagementView() {
         {activeTab === "schedule" && (
           <Card className="overflow-hidden">
             <div className="border-b-2 border-border-subtle p-4">
-              <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-                <div>
+              <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
+                <div className="min-w-0">
                   <SectionTitle
                     title={text("schedule", language)}
                     subtitle={
@@ -2357,17 +2460,18 @@ function ShiftManagementView() {
                           : "View Smart Logistic monthly schedule"
                     }
                   />
+
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-emerald-500 bg-emerald-100 px-2 py-1 text-[9px] font-bold text-emerald-900">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-[9px] font-bold text-emerald-800 dark:text-emerald-300">
                       1 = 08:00–17:00
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-amber-500 bg-amber-100 px-2 py-1 text-[9px] font-bold text-amber-900">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-800 dark:text-amber-300">
                       4 = 4 Hours
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-sky-500 bg-sky-100 px-2 py-1 text-[9px] font-bold text-sky-900">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-1 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
                       D = {text("day", language)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-violet-500 bg-violet-100 px-2 py-1 text-[9px] font-bold text-violet-900">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 text-[9px] font-bold text-indigo-800 dark:text-indigo-300">
                       N = {text("night", language)}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-slate-500 bg-surface-hover px-2 py-1 text-[9px] font-bold text-text">
@@ -2376,31 +2480,54 @@ function ShiftManagementView() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-col items-stretch gap-2 xl:items-end">
                   <button
                     type="button"
-                    onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-sky-500 hover:text-sky-800"
+                    onClick={() => void exportScheduleExcel()}
+                    disabled={
+                      exportingExcel ||
+                      loadingEmployees ||
+                      loadingShiftData ||
+                      organizationEmployees.length === 0
+                    }
+                    title={
+                      exportingExcel
+                        ? text("loading", language)
+                        : text("exportExcel", language)
+                    }
+                    className="self-end shrink-0 cursor-pointer rounded-md border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    ←
+                    {exportingExcel
+                      ? text("loading", language)
+                      : text("exportExcel", language)}
                   </button>
+
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                      className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300"
+                    >
+                      ←
+                    </button>
                   <button
                     type="button"
                     onClick={() => setCurrentDate(new Date())}
-                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-[10px] font-bold text-text-muted hover:border-sky-500 hover:text-sky-800"
+                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-[10px] font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300"
                   >
                     {text("today", language)}
                   </button>
-                  <div className="min-w-36 rounded-md border-2 border-sky-500 bg-sky-50 px-3 py-2 text-center text-[10px] font-bold text-sky-900">
+                  <div className="min-w-36 rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-3 py-2 text-center text-[10px] font-bold text-cyan-800 dark:text-cyan-300">
                     {monthName}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-sky-500 hover:text-sky-800"
-                  >
-                    →
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                      className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300"
+                    >
+                      →
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2409,12 +2536,12 @@ function ShiftManagementView() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={text("search", language)}
-                  className="cursor-text rounded-md border-2 border-border bg-surface px-3 py-2 text-xs text-text outline-none focus:border-sky-500"
+                  className="cursor-text rounded-md border-2 border-border bg-surface px-3 py-2 text-xs text-text outline-none focus:border-cyan-500 dark:focus:border-cyan-400"
                 />
                 <select
                   value={departmentFilter}
                   onChange={(event) => setDepartmentFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-sky-500"
+                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-cyan-500 dark:focus:border-cyan-400"
                 >
                   <option value="all">{text("allDepartments", language)}</option>
                   {departments.map((department) => (
@@ -2426,7 +2553,7 @@ function ShiftManagementView() {
                 <select
                   value={shiftFilter}
                   onChange={(event) => setShiftFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-sky-500"
+                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-cyan-500 dark:focus:border-cyan-400"
                 >
                   <option value="all">{text("allShifts", language)}</option>
                   <option value="D/S">D/S — {text("day", language)}</option>
@@ -2450,9 +2577,9 @@ function ShiftManagementView() {
                           key={day}
                           className={`min-w-14 px-2 py-3 text-center text-[10px] font-bold ${
                             isToday
-                              ? "bg-red-100 text-red-900"
+                              ? "bg-rose-50 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300"
                               : isRotationDay
-                                ? "border-b-2 border-amber-500 bg-amber-100 text-amber-900"
+                                ? "border-b-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300"
                                 : "text-text-muted"
                           }`}
                         >
@@ -2478,7 +2605,7 @@ function ShiftManagementView() {
                     <tr key={row.employeeId} className="border-b border-border-subtle last:border-0">
                       <td className="sticky left-0 z-10 border-r-2 border-border-subtle bg-surface px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-sky-300 bg-sky-100 text-[9px] font-bold text-sky-800">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-cyan-300 dark:border-cyan-400/50 bg-cyan-50 dark:bg-cyan-500/10 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
                             {row.name
                               .split(" ")
                               .map((part) => part[0])
@@ -2490,7 +2617,7 @@ function ShiftManagementView() {
                             <p className="whitespace-nowrap text-xs font-bold text-text">{language === "cn" ? row.nameCn || row.name : row.name}</p>
                             <p className="mt-0.5 whitespace-nowrap text-[9px] text-text-dim">{row.employeeId}</p>
                             {row.fixed && (
-                              <span className="mt-1 inline-flex rounded border-2 border-amber-400 bg-amber-100 px-1.5 py-0.5 text-[8px] font-bold text-amber-900">
+                              <span className="mt-1 inline-flex rounded border-2 border-amber-500/60 dark:border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-bold text-amber-800 dark:text-amber-300">
                                 {text("fixed", language)}
                               </span>
                             )}
@@ -2506,9 +2633,9 @@ function ShiftManagementView() {
                             key={`${row.employeeId}-${day}`}
                             className={`px-2 py-3 text-center ${
                               isToday
-                                ? "bg-red-50"
+                                ? "bg-rose-50 dark:bg-rose-500/10"
                                 : isRotationDay
-                                  ? "bg-amber-50"
+                                  ? "bg-amber-50 dark:bg-amber-500/10"
                                   : ""
                             }`}
                           >
@@ -2524,7 +2651,7 @@ function ShiftManagementView() {
 
             <div className="flex flex-col gap-2 border-t-2 border-border-subtle px-4 py-3 text-[9px] text-text-muted md:flex-row md:items-center md:justify-between">
               <span>
-                {text("transitionRule", language)}: <span className="font-bold text-amber-900">N/S → OFF → D/S</span>
+                {text("transitionRule", language)}: <span className="font-bold text-amber-800 dark:text-amber-300">N/S → OFF → D/S</span>
               </span>
               <span>
                 {text("changeDate", language)}: <span className="font-bold text-text">{text("every15th16th", language)}</span>

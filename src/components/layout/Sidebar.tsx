@@ -13,6 +13,7 @@ type NavLabelKey = keyof Dict["nav"];
 type NavChild = {
   id: string;
   labelKey: NavLabelKey;
+  label?: [string, string];
   href?: string;
   disabled?: boolean;
   children?: NavChild[];
@@ -21,6 +22,7 @@ type NavChild = {
 type NavItem = {
   id: string;
   labelKey: NavLabelKey;
+  label?: [string, string];
   href?: string;
   icon: NavIconId;
   disabled?: boolean;
@@ -130,6 +132,12 @@ const navItems: NavItem[] = [
   icon: "organization",
   children: [
     {
+      id: "overview",
+      labelKey: "overview",
+      label: ["Summary", "汇总"],
+      href: "/organization/overview",
+    },
+    {
       id: "management",
       labelKey: "moduleManagement",
       href: "/organization/employees",
@@ -138,6 +146,30 @@ const navItems: NavItem[] = [
       id: "shift",
       labelKey: "shift",
       href: "/organization/shift",
+    },
+    {
+      id: "attendance",
+      labelKey: "moduleManagement",
+      label: ["Attendance", "考勤管理"],
+      children: [
+        {
+          id: "overview",
+          labelKey: "overview",
+          href: "/organization/attendance",
+        },
+        {
+          id: "daily",
+          labelKey: "moduleManagement",
+          label: ["Daily Attendance", "每日考勤"],
+          href: "/organization/attendance/daily-attendance",
+        },
+        {
+          id: "leave-permission",
+          labelKey: "moduleManagement",
+          label: ["Leave / Permission", "请假 / 外出"],
+          href: "/organization/attendance/leave",
+        },
+      ],
     },
   ],
 },
@@ -552,7 +584,9 @@ export function Sidebar() {
   ].join(" ");
 
   const renderChild = (child: NavChild, parentId: string) => {
-    const label = t.nav[child.labelKey];
+    const label = child.label
+      ? (t.safety.management === "安全管理" ? child.label[1] : child.label[0])
+      : t.nav[child.labelKey];
     const active = isChildActive(pathname, child);
 
     if (child.children?.length) {
@@ -697,7 +731,9 @@ export function Sidebar() {
       <nav className="sidebar-scroll flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
         {visibleNavItems.map((item) => {
           const active = isParentActive(pathname, item);
-          const label = t.nav[item.labelKey];
+          const label = item.label
+            ? (t.safety.management === "安全管理" ? item.label[1] : item.label[0])
+            : t.nav[item.labelKey];
 
           if (item.children?.length) {
             const menuOpen = openMenus[item.id] ?? active;
