@@ -1459,13 +1459,29 @@ export default function OrganizationManagementPage() {
         <style>{`
           .organization-page {
             --org-cyan: 34 211 238;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            color: rgb(var(--text));
+          }
+
+          .organization-page *,
+          .organization-page button,
+          .organization-page input,
+          .organization-page select,
+          .organization-page textarea {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
           }
 
           .organization-card {
+            border: 1px solid rgb(var(--border));
+            background: rgb(var(--surface));
             transition:
               border-color .25s ease,
               box-shadow .25s ease,
-              transform .25s ease;
+              background-color .25s ease;
           }
 
           .organization-card:hover {
@@ -1474,12 +1490,13 @@ export default function OrganizationManagementPage() {
 
             box-shadow:
               0 12px 32px
-              rgb(8 47 73 / .12);
+              rgb(8 47 73 / .10);
           }
 
           .organization-row {
             transition:
-              background-color .2s ease;
+              background-color .2s ease,
+              border-color .2s ease;
           }
 
           .organization-row:hover {
@@ -1489,22 +1506,35 @@ export default function OrganizationManagementPage() {
 
           .organization-input {
             width: 100%;
+            min-height: 40px;
             border: 1px solid rgb(var(--border));
-            background: rgb(var(--bg));
+            background: rgb(var(--surface));
             color: rgb(var(--text));
             border-radius: 8px;
-            padding: 9px 11px;
+            padding: 10px 12px;
             font-size: 12px;
+            font-weight: 600;
+            line-height: 1.25;
             outline: none;
+            transition:
+              border-color .2s ease,
+              background-color .2s ease,
+              box-shadow .2s ease;
           }
 
           .organization-input:focus {
             border-color:
-              rgb(var(--org-cyan) / .5);
+              rgb(var(--org-cyan) / .55);
+            box-shadow:
+              0 0 0 3px
+              rgb(var(--org-cyan) / .08);
           }
 
           .organization-input::placeholder {
-            color: rgb(var(--text-dim));
+            color:
+              rgb(var(--text-muted));
+            opacity: 1;
+            font-weight: 500;
           }
 
           .organization-input:disabled {
@@ -1512,10 +1542,126 @@ export default function OrganizationManagementPage() {
             cursor: not-allowed;
           }
 
+          .organization-page .text-text {
+            color: rgb(var(--text)) !important;
+          }
+
+          .organization-page .text-text-muted {
+            color: rgb(var(--text-muted)) !important;
+          }
+
+          .organization-page .text-text-dim {
+            color: rgb(var(--text-dim)) !important;
+          }
+
+          .organization-page h1,
+          .organization-page h2,
+          .organization-page h3,
+          .organization-page p,
+          .organization-page span,
+          .organization-page label,
+          .organization-page th,
+          .organization-page td,
+          .organization-page button {
+            text-shadow: none;
+          }
+
+          .organization-page .organization-strong-text {
+            color: rgb(var(--text)) !important;
+            font-weight: 700 !important;
+          }
+
+          .organization-page .organization-muted-text {
+            color: rgb(var(--text-muted)) !important;
+            font-weight: 500 !important;
+          }
+
+          .organization-page .organization-dim-text {
+            color: rgb(var(--text-dim)) !important;
+            font-weight: 500 !important;
+          }
+
+          /* Solid status pills, matching the Attendance style */
+          .organization-page .status-active {
+            border-color: rgb(16 185 129 / .25) !important;
+            background: rgb(16 185 129) !important;
+            color: #ffffff !important;
+          }
+
+          .organization-page .status-on-leave {
+            border-color: rgb(245 158 11 / .25) !important;
+            background: rgb(245 158 11) !important;
+            color: #ffffff !important;
+          }
+
+          .organization-page .status-inactive {
+            border-color: rgb(100 116 139 / .25) !important;
+            background: rgb(100 116 139) !important;
+            color: #ffffff !important;
+          }
+
+          .organization-page .status-resigned {
+            border-color: rgb(244 63 94 / .25) !important;
+            background: rgb(244 63 94) !important;
+            color: #ffffff !important;
+          }
+
+          /* Strong light/dark contrast */
+          .dark .organization-page {
+            color: #f8fafc;
+          }
+
+          .dark .organization-page .text-text {
+            color: #f8fafc !important;
+          }
+
+          .dark .organization-page .text-text-muted {
+            color: #cbd5e1 !important;
+          }
+
+          .dark .organization-page .text-text-dim {
+            color: #94a3b8 !important;
+          }
+
+          .dark .organization-page th {
+            color: #cbd5e1 !important;
+          }
+
+          .dark .organization-page td {
+            color: #f8fafc;
+          }
+
+          .dark .organization-page .organization-input {
+            color: #f8fafc !important;
+            background: #111c31 !important;
+            border-color: #334155 !important;
+          }
+
+          .dark .organization-page .organization-input::placeholder {
+            color: #94a3b8 !important;
+          }
+
+          .dark .organization-page select option {
+            color: #f8fafc;
+            background: #111c31;
+          }
+
+          .dark .organization-page .bg-bg,
+          .dark .organization-page .bg-bg\/20,
+          .dark .organization-page .bg-bg\/30 {
+            color: #f8fafc;
+          }
+
+          .organization-page .icon-accent {
+            color: #22d3ee !important;
+            background: rgb(34 211 238 / .10) !important;
+          }
+
           @media (prefers-reduced-motion: reduce) {
             .organization-card,
-            .organization-row {
-              transition: none;
+            .organization-row,
+            .organization-input {
+              transition: none !important;
             }
           }
         `}</style>
@@ -1536,7 +1682,7 @@ export default function OrganizationManagementPage() {
                 )}
               </span>
 
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">
+              <span className="inline-flex items-center rounded-full bg-cyan-500 px-2.5 py-1 text-[9px] font-extrabold tracking-wide text-white shadow-sm">
                 {organizationText(
                   "connected",
                   organizationLanguage,
@@ -1568,7 +1714,7 @@ export default function OrganizationManagementPage() {
               availableEmployees.length ===
               0
             }
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="text-base">
               +
@@ -1652,7 +1798,7 @@ export default function OrganizationManagementPage() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">
+                  <span className="flex size-8 items-center justify-center rounded-md bg-cyan-500/10 text-sm text-cyan-300">
                     👥
                   </span>
 
@@ -2147,7 +2293,7 @@ export default function OrganizationManagementPage() {
 
           {/* FOOTER */}
 
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[10px] text-text-dim">
+          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[10px] font-semibold text-text-muted">
             <span>
               {
                 filteredEmployees.length
@@ -2193,7 +2339,7 @@ export default function OrganizationManagementPage() {
                   null,
                 )
               }
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/55 backdrop-blur-sm"
             />
 
             <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-border bg-surface shadow-2xl">
@@ -2212,14 +2358,14 @@ export default function OrganizationManagementPage() {
                       null,
                     )
                   }
-                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-bg hover:text-text"
+                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-surface-hover hover:text-text"
                 >
                   ✕
                 </button>
               </div>
 
               <div className="p-5">
-                <div className="rounded-xl border border-border bg-bg/30 p-5">
+                <div className="rounded-xl border border-border bg-surface p-5">
                   <div className="flex items-center gap-4">
                     <Avatar
                       name={
@@ -2426,7 +2572,7 @@ export default function OrganizationManagementPage() {
                         null,
                       );
                     }}
-                    className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400"
+                    className="rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400"
                   >
                     {organizationText(
                       "edit",
@@ -2443,7 +2589,7 @@ export default function OrganizationManagementPage() {
                           selectedEmployee,
                         )
                       }
-                      className="rounded-lg border border-emerald-400/20 px-4 py-2.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/10"
+                      className="rounded-md border border-emerald-400/20 px-4 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/10"
                     >
                       {organizationText(
                         "reactivate",
@@ -2458,7 +2604,7 @@ export default function OrganizationManagementPage() {
                           selectedEmployee,
                         )
                       }
-                      className="rounded-lg border border-rose-400/20 px-4 py-2.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/10"
+                      className="rounded-md border border-rose-400/20 px-4 py-2.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
                     >
                       {organizationText(
                         "deactivate",
@@ -2506,7 +2652,7 @@ export default function OrganizationManagementPage() {
                   onClick={() =>
                     setShowForm(false)
                   }
-                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-bg hover:text-text"
+                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-surface-hover hover:text-text"
                 >
                   ✕
                 </button>
@@ -2970,7 +3116,7 @@ export default function OrganizationManagementPage() {
                     !form.userId ||
                     !form.positionId
                   }
-                  className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving
                     ? "..."
@@ -3009,37 +3155,22 @@ function KpiCard({
 }) {
   const styles = {
     cyan: {
-      border:
-        "border-cyan-400/20",
-      icon:
-        "bg-cyan-500/10 text-cyan-300",
+      icon: "bg-cyan-500/10 text-cyan-300",
     },
-
     green: {
-      border:
-        "border-emerald-400/20",
-      icon:
-        "bg-emerald-500/10 text-emerald-300",
+      icon: "bg-emerald-500/10 text-emerald-300",
     },
-
     amber: {
-      border:
-        "border-amber-400/20",
-      icon:
-        "bg-amber-500/10 text-amber-300",
+      icon: "bg-amber-500/10 text-amber-300",
     },
-
     purple: {
-      border:
-        "border-purple-400/20",
-      icon:
-        "bg-purple-500/10 text-purple-300",
+      icon: "bg-violet-500/10 text-violet-300",
     },
   }[tone];
 
   return (
     <div
-      className={`organization-card rounded-xl border bg-surface p-4 ${styles.border}`}
+      className="organization-card rounded-xl border border-border bg-surface p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -3053,7 +3184,7 @@ function KpiCard({
         </div>
 
         <div
-          className={`flex size-9 items-center justify-center rounded-lg text-sm ${styles.icon}`}
+          className={`flex size-8 shrink-0 items-center justify-center rounded-md text-sm ${styles.icon}`}
         >
           {icon}
         </div>
@@ -3194,28 +3325,28 @@ function StatusBadge({
       dot: "bg-emerald-400",
 
       style:
-        "border-emerald-400/20 bg-emerald-500/10 text-emerald-300",
+        "status-active border-emerald-400/20 bg-emerald-500 text-white",
     },
 
     "On Leave": {
       dot: "bg-amber-400",
 
       style:
-        "border-amber-400/20 bg-amber-500/10 text-amber-300",
+        "status-on-leave border-amber-400/20 bg-amber-500 text-white",
     },
 
     Inactive: {
       dot: "bg-zinc-400",
 
       style:
-        "border-zinc-400/20 bg-zinc-500/10 text-zinc-300",
+        "status-inactive border-zinc-400/20 bg-zinc-500 text-white",
     },
 
     Resigned: {
       dot: "bg-rose-400",
 
       style:
-        "border-rose-400/20 bg-rose-500/10 text-rose-300",
+        "status-resigned border-rose-400/20 bg-rose-500 text-white",
     },
   }[status];
 
@@ -3262,7 +3393,7 @@ function TypeBadge({
   language: OrganizationLanguage;
 }) {
   return (
-    <span className="inline-flex rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-muted">
+    <span className="inline-flex rounded-md border border-border bg-surface px-2.5 py-1 text-[10px] font-semibold text-text-muted">
       {employmentTypeName(type, language)}
     </span>
   );
@@ -3281,7 +3412,7 @@ function Th({
 }) {
   return (
     <th
-      className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-text-dim ${
+      className={`px-4 py-3 text-[10px] font-bold uppercase tracking-wide text-text-muted ${
         align === "right"
           ? "text-right"
           : "text-left"

@@ -156,7 +156,7 @@ const SHIFT_TEXT = {
   status: ["Status", "状态"],
   active: ["Active", "启用"],
   inactive: ["Inactive", "停用"],
-  smartLogisticRotation: ["Smart Logistic Rotation", "Smart Logistic 轮班"],
+  smartLogisticRotation: ["Smart Logistic Rotation", "智能物流轮班"],
   employees: ["Employees", "员工"],
   rotationType: ["Rotation Type", "轮班类型"],
   semiMonthly: ["Semi Monthly", "半月轮班"],
@@ -270,7 +270,7 @@ function shiftName(
 }
 
 function scheduleName(value: ScheduleType, language: OrganizationLanguage) {
-  if (value === "1") return language === "cn" ? "08:00–17:00" : "08:00–17:00";
+  if (value === "1") return language === "cn" ? "8小时" : "8 Hours";
   if (value === "4") return language === "cn" ? "4小时" : "4 Hours";
   if (value === "D") return language === "cn" ? "白班" : "Day";
   if (value === "N") return language === "cn" ? "夜班" : "Night";
@@ -449,7 +449,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-border-subtle bg-surface ${className}`}>
+    <div className={`rounded-xl border border-border bg-surface transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.12)] ${className}`}>
       {children}
     </div>
   );
@@ -479,13 +479,13 @@ function StatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold shadow-sm ${
         active
-          ? "border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
-          : "border-border bg-surface-hover text-text"
+          ? "bg-emerald-500 text-white"
+          : "bg-slate-500 text-white"
       }`}
     >
-      <span className={`size-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-slate-500"}`} />
+      <span className="size-1.5 rounded-full bg-white/80" />
       {active ? text("active", language) : text("inactive", language)}
     </span>
   );
@@ -500,7 +500,7 @@ function ShiftBadge({
 }) {
   if (!shift) {
     return (
-      <span className="inline-flex min-w-[92px] items-center justify-center rounded-md border border-border bg-surface-hover px-2.5 py-1 text-[10px] font-semibold text-text-muted">
+      <span className="inline-flex min-w-[92px] items-center justify-center rounded-full bg-slate-500 px-3 py-1.5 text-[10px] font-extrabold text-white shadow-sm">
         —
       </span>
     );
@@ -510,11 +510,9 @@ function ShiftBadge({
 
   return (
     <span
-      className={`inline-flex min-w-[92px] items-center justify-center rounded-md border px-2.5 py-1 text-[10px] font-semibold ${
-        isDay
-          ? "border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-800 dark:text-cyan-300"
-          : "border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-300"
-      }`}
+      className={`inline-flex min-w-[92px] items-center justify-center rounded-md px-3 py-1.5 text-[10px] font-extrabold text-white shadow-sm ${
+  isDay ? "bg-cyan-500" : "bg-violet-500"
+}`}
     >
       {shift} {shiftName(shift, language)}
     </span>
@@ -528,23 +526,23 @@ function ScheduleBadge({
   value: ScheduleType;
   language: OrganizationLanguage;
 }) {
- const className =
-  value === "1"
-    ? "border-emerald-400 bg-emerald-50 text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/10"
-    : value === "4"
-      ? "border-amber-400 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-inset ring-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/10"
-      : value === "D"
-        ? "border-cyan-400 bg-cyan-50 text-cyan-700 shadow-sm ring-1 ring-inset ring-cyan-200 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/10"
-        : value === "N"
-          ? "border-indigo-400 bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-inset ring-indigo-200 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/10"
-          : "border-rose-400 bg-rose-50 text-rose-600 shadow-sm ring-1 ring-inset ring-rose-200 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/10";
+  const className =
+    value === "1"
+      ? "border border-emerald-500 bg-emerald-500 text-white"
+      : value === "4"
+        ? "border border-amber-500 bg-amber-500 text-white"
+        : value === "D"
+          ? "border border-cyan-500 bg-cyan-500 text-white"
+          : value === "N"
+            ? "border border-violet-500 bg-violet-500 text-white"
+            : "border border-rose-500 bg-rose-500 text-white";
 
   return (
     <span
-      className={`inline-flex min-w-12 justify-center rounded-md border px-2 py-1 text-[10px] font-bold ${className}`}
+      className={`inline-flex min-w-12 justify-center rounded-md px-3 py-1.5 text-[10px] font-extrabold shadow-sm ${className}`}
       title={scheduleName(value, language)}
     >
-      {value}
+      {scheduleName(value, language)}
     </span>
   );
 }
@@ -872,10 +870,8 @@ function MyOffCalendar({
       }
 
       // OFF -> clear
-      if (existingOff) {
-        if (existingOff.fixed) return;
-
-        await fetchJson(`${API_BASE}/off-days`, {
+     if (existingOff) {
+  await fetchJson(`${API_BASE}/off-days`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -987,48 +983,48 @@ function MyOffCalendar({
     <div className="mt-2 border-t border-border-subtle pt-6">
       <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
         <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 text-lg font-bold text-cyan-700 dark:text-cyan-300">
+          <div className="flex size-11 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/5 text-lg font-bold text-cyan-300">
             ◎
           </div>
           <div>
-            <h1 className="text-xl font-bold text-text">{language === "cn" ? "Work Schedule Calendar" : "Work Schedule"}</h1>
-            <p className="mt-1 text-xs text-text-muted">{language === "cn" ? "Choose 1, 4, or OFF for each future date." : "Choose 1, 4, or OFF for each future date."}</p>
+            <h1 className="text-xl font-bold text-text">{language === "cn" ? "工作排班日历" : "Work Schedule"}</h1>
+            <p className="mt-1 text-xs text-text-muted">{language === "cn" ? "选择未来每个日期的 1、4 或休息。" : "Choose 1, 4, or OFF for each future date."}</p>
           </div>
         </div>
       </div>
 
       <Card className="mt-5 overflow-hidden">
-        <div className="border-b-2 border-border-subtle bg-surface-hover p-4">
+        <div className="border-b border-border-subtle bg-surface-hover p-4">
           <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-text-dim">
                 {text("currentAccount", language)}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-3 py-1.5 text-sm font-bold text-cyan-800 dark:text-cyan-300">
+                <span className="inline-flex items-center rounded-md border border-cyan-500 bg-cyan-500 px-3 py-1.5 text-sm font-extrabold text-white shadow-sm">
                   {authLoading ? text("loading", language) : accountLabel}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-              <span className="inline-flex items-center gap-2 rounded-full border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-emerald-800 dark:text-emerald-300">
-                <span className="size-2.5 rounded-full bg-emerald-500" />
-                1 — 08:00–17:00
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 text-amber-800 dark:text-amber-300">
-                <span className="size-2.5 rounded-full bg-amber-500" />
-                4 — 4 Hours
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-surface-hover px-3 py-1.5 text-text">
-                <span className="size-2.5 rounded-full bg-slate-500" />
-                OFF
-              </span>
+                <span className="inline-flex items-center gap-2 rounded-md border border-emerald-500 bg-emerald-500 px-3 py-1.5 text-white shadow-sm">
+                  <span className="size-2.5 rounded-full bg-white" />
+                  1 — 08:00–17:00
+                </span>
+               <span className="inline-flex items-center gap-2 rounded-md border border-amber-500 bg-amber-500 px-3 py-1.5 text-white shadow-sm">
+                  <span className="size-2.5 rounded-sm bg-white" />
+                    4 — {language === "cn" ? "4小时" : "4 Hours"}
+                </span>
+                            <span className="inline-flex items-center gap-2 rounded-md border border-slate-500 bg-slate-500 px-3 py-1.5 text-white shadow-sm">
+                  <span className="size-2.5 rounded-sm bg-white" />
+                 {language === "cn" ? "休息" : "OFF"}
+                </span>
             </div>
           </div>
 
           {!authLoading && !currentEmployeeId && (
-            <div className="mt-4 rounded-lg border-2 border-rose-500/70 dark:border-rose-400/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
+            <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/5 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
               {text("accountNotDetected", language)}
             </div>
           )}
@@ -1040,63 +1036,66 @@ function MyOffCalendar({
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
+                className="cursor-pointer size-10 rounded-lg border border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
               >
                 ←
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date())}
-                className="cursor-pointer rounded-lg border-2 border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
+                className="cursor-pointer rounded-lg border border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
               >
                 {text("today", language)}
               </button>
-              <div className="min-w-44 rounded-lg border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-2.5 text-center text-sm font-bold text-cyan-800 dark:text-cyan-300">
+              <div className="inline-flex min-w-40 items-center justify-center rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-sm">
                 {monthName}
               </div>
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border-2 border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
+                className="cursor-pointer size-10 rounded-lg border border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
               >
                 →
               </button>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={resetUnfixed}
-                disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || saving}
-                className="cursor-pointer rounded-lg border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 transition hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {text("resetUnfixed", language)}
-              </button>
-              <button
-                type="button"
-                onClick={saveAndFix}
-                disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || saving}
-                className="cursor-pointer rounded-lg border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {saving ? text("loading", language) : text("saveAndFix", language)}
-              </button>
-            </div>
+           {isFutureOffMonth && (
+  <div className="flex gap-2">
+    <button
+      type="button"
+      onClick={resetUnfixed}
+      disabled={!currentEmployeeId || authLoading || saving}
+      className="cursor-pointer rounded-lg border border-amber-400 bg-amber-500 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-amber-400 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {text("resetUnfixed", language)}
+    </button>
+
+    <button
+      type="button"
+      onClick={saveAndFix}
+      disabled={!currentEmployeeId || authLoading || saving}
+      className="cursor-pointer rounded-lg border border-emerald-400 bg-emerald-500 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-emerald-400 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {saving ? text("loading", language) : text("saveAndFix", language)}
+    </button>
+  </div>
+)}
           </div>
 
           {message && (
-            <div className="mb-4 rounded-lg border-2 border-border bg-surface-hover px-4 py-3 text-xs font-semibold text-text">
+            <div className="mb-4 rounded-lg border border-border bg-surface-hover px-4 py-3 text-xs font-semibold text-text">
               {message}
             </div>
           )}
 
-          <div className="grid grid-cols-7 overflow-hidden rounded-xl border-2 border-border bg-surface">
+          <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-border bg-surface">
             {(language === "cn"
               ? ["一", "二", "三", "四", "五", "六", "日"]
               : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             ).map((label) => (
               <div
                 key={label}
-                className="border-b-2 border-r border-border bg-surface-hover px-2 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-text"
+                className="border-b border-r border-border bg-surface-hover px-2 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-text"
               >
                 {label}
               </div>
@@ -1126,7 +1125,7 @@ function MyOffCalendar({
                   key={key}
                   type="button"
                   onClick={() => void toggleDate(day)}
-                  disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || isFixed || saving}
+                  disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || saving}
                   className={`relative min-h-28 border-r border-b border-border-subtle p-3 text-left align-top transition ${
                     isFixed
                       ? "bg-amber-500/10 hover:bg-amber-500/15 dark:bg-amber-500/10 dark:hover:bg-amber-500/15"
@@ -1161,35 +1160,35 @@ function MyOffCalendar({
                   </div>
 
                   {status === "1" && (
-                    <div className="mt-5 flex items-center justify-center gap-2 rounded-lg border border-emerald-500 bg-emerald-100 px-3 py-2.5 text-center text-xs font-extrabold text-slate-950 shadow-sm dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-white">
-                      <span className="size-2 rounded-full bg-emerald-500 dark:bg-emerald-300" />
+                   <div className="mt-5 flex items-center justify-center gap-2 rounded-md border border-emerald-500 bg-emerald-500 px-3 py-3 text-center text-xs font-extrabold text-white shadow-sm">
+                      <span className="size-2.5 rounded-sm bg-white" />
                       <span>1 — 08:00–17:00</span>
                     </div>
                   )}
 
                   {status === "4" && (
-                    <div className="mt-5 flex items-center justify-center gap-2 rounded-lg border border-amber-500 bg-amber-100 px-3 py-2.5 text-center text-xs font-extrabold text-slate-950 shadow-sm dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-white">
-                      <span className="size-2 rounded-full bg-amber-500 dark:bg-amber-300" />
-                      <span>4 — 4 Hours</span>
+                    <div className="mt-5 flex items-center justify-center gap-2 rounded-md border border-amber-500 bg-amber-500 px-3 py-3 text-center text-xs font-extrabold text-white shadow-sm">
+                      <span className="size-2.5 rounded-sm bg-white" />
+                      <span> 4 — {language === "cn" ? "4小时" : "4 Hours"}</span>
                     </div>
                   )}
 
                   {status === "OFF" && (
-                    <div
-                      className={`mt-5 flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-center text-xs font-extrabold shadow-sm ${
+                  <div
+                      className={`mt-5 flex items-center justify-center gap-2 rounded-md border px-3 py-3 text-center text-xs font-extrabold text-white shadow-sm ${
                         isFixed
-                          ? "border-rose-500 bg-rose-100 text-slate-950 dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-white"
-                          : "border-rose-400 bg-rose-50 text-slate-950 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-white"
+                          ? "border-rose-600 bg-rose-600"
+                          : "border-rose-500 bg-rose-500"
                       }`}
                     >
                       <span
-                        className={`size-2 rounded-full ${
+                        className={`size-2.5 rounded-sm bg-white ${
                           isFixed
                             ? "bg-rose-500 dark:bg-rose-300"
                             : "bg-rose-400 dark:bg-rose-300"
                         }`}
                       />
-                      <span>OFF{isFixed ? " 🔒" : ""}</span>
+                      <span>{language === "cn" ? "休息" : "OFF"}{isFixed ? " 🔒" : ""}</span>
                     </div>
                   )}
 
@@ -1211,7 +1210,7 @@ function MyOffCalendar({
             })}
           </div>
 
-          <div className="mt-4 rounded-lg border-2 border-cyan-200 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-3 text-xs text-text-muted">
+          <div className="mt-4 rounded-lg border border-cyan-200 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-3 text-xs text-text-muted">
             {language === "cn"
               ? "未来月份点击日期可循环选择 1 → 4 → OFF → 清空；1=08:00–17:00，4=4小时（08:00–12:00或12:00–17:00）。"
               : "For future months, click a date to cycle 1 → 4 → OFF → clear; 1=08:00–17:00, 4=4 hours (08:00–12:00 or 12:00–17:00)."}
@@ -1983,70 +1982,149 @@ function ShiftManagementView() {
 
   return (
     <AppShell title={text("title", language)}>
-      <div className="min-h-full space-y-5 bg-surface p-5 text-text">
+      <div className="shift-management-page min-h-full space-y-5 p-5 text-text">
         <style>{`
           button:not(:disabled),
           select:not(:disabled) { cursor: pointer; }
           button:disabled,
           select:disabled { cursor: not-allowed; }
+
+          .shift-management-page .shift-card-hover {
+            transition:
+              border-color .25s ease,
+              box-shadow .25s ease,
+              background-color .25s ease;
+          }
+
+
+
+          /* Sharper, higher-contrast typography. Logic/layout unchanged. */
+          .shift-management-page {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: geometricPrecision;
+            font-synthesis-weight: none;
+          }
+
+          .shift-management-page h1,
+          .shift-management-page h2,
+          .shift-management-page h3,
+          .shift-management-page th,
+          .shift-management-page button,
+          .shift-management-page select,
+          .shift-management-page input {
+            text-rendering: geometricPrecision;
+          }
+
+          .shift-management-page .text-text {
+            color: rgb(15 23 42) !important;
+          }
+
+          .shift-management-page .text-text-muted {
+            color: rgb(51 65 85) !important;
+          }
+
+          .shift-management-page .text-text-dim {
+            color: rgb(71 85 105) !important;
+          }
+
+          .dark .shift-management-page .text-text,
+          [data-theme="dark"] .shift-management-page .text-text {
+            color: rgb(248 250 252) !important;
+          }
+
+          .dark .shift-management-page .text-text-muted,
+          [data-theme="dark"] .shift-management-page .text-text-muted {
+            color: rgb(203 213 225) !important;
+          }
+
+          .dark .shift-management-page .text-text-dim,
+          [data-theme="dark"] .shift-management-page .text-text-dim {
+            color: rgb(148 163 184) !important;
+          }
+
+          .shift-management-page .text-\[8px\],
+          .shift-management-page .text-\[9px\],
+          .shift-management-page .text-\[10px\] {
+            -webkit-font-smoothing: antialiased;
+          }
+
+          .shift-management-page .shift-card-hover:hover {
+            border-color: rgb(34 211 238 / .20);
+            box-shadow: 0 12px 32px rgb(8 47 73 / .12);
+          }
+
+          .shift-management-page {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+          }
+
+          .shift-management-page .text-text {
+            color: rgb(15 23 42) !important;
+          }
+
+          .shift-management-page .text-text-muted {
+            color: rgb(51 65 85) !important;
+          }
+
+          .shift-management-page .text-text-dim {
+            color: rgb(71 85 105) !important;
+          }
+
+          .dark .shift-management-page .text-text,
+          [data-theme="dark"] .shift-management-page .text-text {
+            color: rgb(248 250 252) !important;
+          }
+
+          .dark .shift-management-page .text-text-muted,
+          [data-theme="dark"] .shift-management-page .text-text-muted {
+            color: rgb(203 213 225) !important;
+          }
+
+          .dark .shift-management-page .text-text-dim,
+          [data-theme="dark"] .shift-management-page .text-text-dim {
+            color: rgb(148 163 184) !important;
+          }
+
+          .shift-management-page th,
+          .shift-management-page td,
+          .shift-management-page button,
+          .shift-management-page select,
+          .shift-management-page input {
+            text-rendering: optimizeLegibility;
+          }
         `}</style>
         {(employeeLoadError || shiftDataError) && (
-          <div className="rounded-lg border-2 border-rose-500/70 dark:border-rose-400/50 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
+          <div className="rounded-lg border border-rose-400/20 bg-rose-500/5 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
             {employeeLoadError || shiftDataError}
           </div>
         )}
 
         <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 text-lg font-bold text-cyan-700 dark:text-cyan-300">
+            <div className="flex size-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/5 text-lg font-bold text-cyan-300">
               ⇄
             </div>
             <div>
               <h1 className="text-lg font-semibold text-text">{text("title", language)}</h1>
               <p className="mt-0.5 text-[10px] text-text-dim">
                 {language === "cn"
-                  ? "Smart Logistic 半月轮班管理"
+                  ? "智能物流半月轮班管理"
                   : "Smart Logistic semi-monthly shift rotation"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("calendar")}
-              className="cursor-pointer rounded-md border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-800 dark:text-amber-300 transition hover:bg-amber-100 dark:hover:bg-amber-500/20"
-            >
-              {text("goOffCalendar", language)}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void generateSchedule()}
-              disabled={!canGenerate || loadingGeneratedSchedule || savingPairs}
-              title={
-                authLoading
-                  ? "Loading account..."
-                  : !isSupervisor
-                    ? text("supervisorOnly", language)
-                    : !isFutureMonth
-                      ? text("monthLocked", language)
-                      : text("generate", language)
-              }
-              className="cursor-pointer rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-3 py-2 text-[10px] font-bold text-cyan-800 dark:text-cyan-300 transition hover:bg-cyan-100 dark:hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {text("generate", language)}
-            </button>
-          </div>
         </div>
 
-        <div className="flex overflow-x-auto rounded-xl border-2 border-border-subtle bg-surface-hover p-1">
+        <div className="flex overflow-x-auto rounded-xl border border-border bg-surface-hover/60 p-1">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`whitespace-nowrap rounded-lg px-4 py-2 text-[10px] font-bold transition ${
+              className={`whitespace-nowrap rounded-md px-4 py-2 text-[10px] font-semibold transition ${
                 activeTab === tab.key
                   ? "bg-cyan-500 text-white"
                   : "text-text-muted hover:bg-surface hover:text-text"
@@ -2093,11 +2171,11 @@ function ShiftManagementView() {
               />
 
               {loadingEmployees || loadingShiftData ? (
-                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
+                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
                   {text("loading", language)}
                 </div>
               ) : filteredMembers.length === 0 ? (
-                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
+                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
                   {text("noData", language)}
                 </div>
               ) : (
@@ -2105,7 +2183,7 @@ function ShiftManagementView() {
                   {filteredMembers.map((member) => (
                     <div
                       key={member.id}
-                      className={`rounded-lg border-2 p-3 ${
+                      className={`rounded-lg border p-3 ${
                         member.excluded
                           ? "border-amber-500/50 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10"
                           : "border-border-subtle bg-surface"
@@ -2119,7 +2197,7 @@ function ShiftManagementView() {
                           <p className="mt-0.5 text-[10px] text-text-dim">{member.employeeId}</p>
                         </div>
                         {member.excluded ? (
-                          <span className="rounded-md border-2 border-amber-500/60 dark:border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-800 dark:text-amber-300">
+                          <span className="inline-flex items-center rounded-md border border-amber-400 bg-amber-500 px-2.5 py-1 text-[9px] font-extrabold text-white shadow-sm dark:border-amber-400 dark:bg-amber-500 dark:text-white">
                             {text("excluded", language)}
                           </span>
                         ) : (
@@ -2142,17 +2220,22 @@ function ShiftManagementView() {
                 }
               />
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4">
+                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4">
                   <p className="text-[10px] text-text-dim">{text("periodOne", language)}</p>
                   <p className="mt-2 text-sm font-bold text-text">01 – 14</p>
                 </div>
-                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-4">
+                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4">
                   <p className="text-[10px] text-text-dim">{text("periodTwo", language)}</p>
                   <p className="mt-2 text-sm font-bold text-text">15 – 16 / 17 – {daysInMonth}</p>
                 </div>
-                <div className="rounded-lg border-2 border-amber-500/50 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-4">
-                  <p className="text-[10px] text-amber-700 dark:text-amber-300">{text("transitionRule", language)}</p>
-                  <p className="mt-2 text-sm font-bold text-amber-900 dark:text-amber-200">N/S → OFF → D/S</p>
+                <div className="rounded-lg border border-amber-400 bg-amber-500 p-4">
+                  <p className="text-[10px] font-semibold text-white/90">
+                    {text("transitionRule", language)}
+                  </p>
+
+                  <p className="mt-2 text-sm font-extrabold text-white">
+                    N/S → {language === "cn" ? "休息" : "OFF"} → D/S
+                  </p>
                 </div>
               </div>
             </Card>
@@ -2161,35 +2244,96 @@ function ShiftManagementView() {
 
         {activeTab === "master" && (
           <Card className="overflow-hidden">
-            <div className="border-b-2 border-border-subtle p-4">
+            <div className="border-b border-border-subtle p-4">
               <SectionTitle
                 title={text("shiftMaster", language)}
-                subtitle={language === "cn" ? "当前系统使用两个12小时班次" : "The system currently uses two 12-hour shifts"}
+                subtitle={
+                  language === "cn"
+                    ? "当前系统班次主数据"
+                    : "Current shift master data"
+                }
               />
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
                 <thead>
-                  <tr className="border-b-2 border-border-subtle bg-surface-hover">
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("code", language)}</th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("dayShift", language)}</th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("time", language)}</th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("status", language)}</th>
+                  <tr className="border-b border-border-subtle bg-surface-hover">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                      {text("code", language)}
+                    </th>
+
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                      {text("dayShift", language)}
+                    </th>
+
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                      {text("time", language)}
+                    </th>
+
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                      {text("status", language)}
+                    </th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  <tr className="border-b border-border-subtle">
-                    <td className="px-4 py-4 text-xs font-bold text-cyan-800 dark:text-cyan-300">D/S</td>
-                    <td className="px-4 py-4 text-xs text-text">{text("dayShift", language)}</td>
-                    <td className="px-4 py-4 text-xs text-text-muted">08:00 – 20:00</td>
-                    <td className="px-4 py-4"><StatusBadge active language={language} /></td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-4 text-xs font-bold text-indigo-800 dark:text-indigo-300">N/S</td>
-                    <td className="px-4 py-4 text-xs text-text">{text("nightShift", language)}</td>
-                    <td className="px-4 py-4 text-xs text-text-muted">20:00 – 08:00</td>
-                    <td className="px-4 py-4"><StatusBadge active language={language} /></td>
-                  </tr>
+                  {shiftMasters.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-10 text-center text-xs font-semibold text-text-dim"
+                      >
+                        {text("noData", language)}
+                      </td>
+                    </tr>
+                  ) : (
+                    shiftMasters.map((shift, index) => {
+                      const isDayRotation = shift.shift_code === "D/S";
+                      const isNightRotation = shift.shift_code === "N/S";
+
+                      const shiftName =
+                        language === "cn"
+                          ? shift.shift_name_cn || shift.shift_name_en || shift.shift_code
+                          : shift.shift_name_en || shift.shift_name_cn || shift.shift_code;
+
+                      return (
+                        <tr
+                          key={shift.id}
+                          className="border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]"
+                        >
+                          <td
+                            className={`px-4 py-4 text-xs font-extrabold ${
+                              isDayRotation
+                                ? "text-cyan-500 dark:text-cyan-300"
+                                : isNightRotation
+                                  ? "text-indigo-500 dark:text-indigo-300"
+                                  : shift.shift_code === "1"
+                                    ? "text-emerald-600 dark:text-emerald-300"
+                                    : "text-amber-600 dark:text-amber-300"
+                            }`}
+                          >
+                            {shift.shift_code}
+                          </td>
+
+                          <td className="px-4 py-4 text-xs font-semibold text-text">
+                            {shiftName}
+                          </td>
+
+                          <td className="px-4 py-4 text-xs font-medium text-text-muted">
+                            {shift.start_time.slice(0, 5)} – {shift.end_time.slice(0, 5)}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <StatusBadge
+                              active={toBoolean(shift.is_active)}
+                              language={language}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2201,22 +2345,27 @@ function ShiftManagementView() {
             <Card className="p-4">
               <SectionTitle
                 title={text("smartLogisticRotation", language)}
-                subtitle={language === "cn" ? "数据库中的 Smart Logistic 轮班规则" : "Smart Logistic rotation rules stored in MySQL"}
+                subtitle={language === "cn" ? "数据库中的 智能物流轮班规则" : "Smart Logistic rotation rules stored in MySQL"}
               />
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-3">
+                <div className="rounded-lg border border-border-subtle bg-surface-hover p-3">
                   <p className="text-[10px] text-text-dim">{text("rotationType", language)}</p>
                   <p className="mt-2 text-xs font-bold text-text">{text("semiMonthly", language)}</p>
                 </div>
-                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-3">
+                <div className="rounded-lg border border-border-subtle bg-surface-hover p-3">
                   <p className="text-[10px] text-text-dim">{text("changeDate", language)}</p>
                   <p className="mt-2 text-xs font-bold text-text">{text("every15th16th", language)}</p>
                 </div>
-                <div className="rounded-lg border-2 border-amber-500/50 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-3">
-                  <p className="text-[10px] text-amber-700 dark:text-amber-300">{text("transitionRule", language)}</p>
-                  <p className="mt-2 text-xs font-bold text-amber-900 dark:text-amber-200">{text("oneDayOff", language)}</p>
+               <div className="rounded-lg border border-amber-400 bg-amber-500 p-4">
+                  <p className="text-[10px] font-semibold text-white/90">
+                    {text("transitionRule", language)}
+                  </p>
+
+                  <p className="mt-2 text-sm font-extrabold text-white">
+                    N/S → {language === "cn" ? "休息" : "OFF"} → D/S
+                  </p>
                 </div>
-                <div className="rounded-lg border-2 border-border-subtle bg-surface-hover p-3">
+                <div className="rounded-lg border border-border-subtle bg-surface-hover p-3">
                   <p className="text-[10px] text-text-dim">{text("rotationPeriod", language)}</p>
                   <p className="mt-2 text-xs font-bold text-text">01–14 / 15–16 / 17–End</p>
                 </div>
@@ -2260,7 +2409,7 @@ function ShiftManagementView() {
                   return (
                     <div
                       key={group}
-                      className="rounded-xl border-2 border-border-subtle bg-surface-hover p-4"
+                      className="rounded-xl border border-border-subtle bg-surface-hover p-4"
                     >
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
@@ -2273,7 +2422,7 @@ function ShiftManagementView() {
                               : `Rotation day: ${rotationRules[0]?.second_rotation_day ?? "—"}`}
                           </p>
                         </div>
-                        <span className="rounded-md border-2 border-cyan-300 dark:border-cyan-400/50 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-1 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
+                        <span className="inline-flex items-center justify-center rounded-md border border-cyan-500 bg-cyan-500 px-2.5 py-1 text-[9px] font-extrabold text-white shadow-sm">
                           {group}
                         </span>
                       </div>
@@ -2289,7 +2438,7 @@ function ShiftManagementView() {
                               updatePairSelection(group, "first", event.target.value)
                             }
                             disabled={savingPairs || loadingEmployees || loadingShiftData}
-                            className="cursor-pointer w-full rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
+                            className="cursor-pointer w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
                           >
                             <option value="">{text("selectEmployee", language)}</option>
                             {optionsFor("first", selection.first).map((member) => (
@@ -2310,7 +2459,7 @@ function ShiftManagementView() {
                               updatePairSelection(group, "second", event.target.value)
                             }
                             disabled={savingPairs || loadingEmployees || loadingShiftData}
-                            className="cursor-pointer w-full rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
+                            className="cursor-pointer w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
                           >
                             <option value="">{text("selectEmployee", language)}</option>
                             {optionsFor("second", selection.second).map((member) => (
@@ -2337,7 +2486,7 @@ function ShiftManagementView() {
                     loadingEmployees ||
                     loadingShiftData
                   }
-                  className="cursor-pointer rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-800 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center justify-center rounded-md border border-cyan-500 bg-cyan-500 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {savingPairs ? text("loading", language) : text("saveRotationPairs", language)}
                 </button>
@@ -2345,7 +2494,7 @@ function ShiftManagementView() {
             </Card>
 
             <Card className="overflow-hidden">
-              <div className="border-b-2 border-border-subtle p-4">
+              <div className="border-b border-border-subtle p-4">
                 <SectionTitle
                   title={text("members", language)}
                   subtitle={
@@ -2359,7 +2508,7 @@ function ShiftManagementView() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[950px]">
                   <thead>
-                    <tr className="border-b-2 border-border-subtle bg-surface-hover">
+                    <tr className="border-b border-border-subtle bg-surface-hover">
                       <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("employee", language)}</th>
                       <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("department", language)}</th>
                       <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("shiftMaster", language)}</th>
@@ -2369,7 +2518,7 @@ function ShiftManagementView() {
                   </thead>
                   <tbody>
                     {filteredMembers.map((member) => (
-                      <tr key={member.id} className="border-b border-border-subtle last:border-0">
+                      <tr key={member.id} className="border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]">
                         <td className="px-4 py-3">
                           <p className="text-xs font-bold text-text">{language === "cn" ? member.nameCn || member.name : member.name}</p>
                           <p className="mt-0.5 text-[10px] text-text-dim">{member.employeeId}</p>
@@ -2380,11 +2529,11 @@ function ShiftManagementView() {
                         </td>
                         <td className="px-4 py-3">
                           {member.excluded ? (
-                            <span className="inline-flex rounded-md border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold text-amber-800 dark:text-amber-300">
+                            <span className="inline-flex rounded-full bg-amber-500 px-3 py-1 text-[10px] font-extrabold text-white shadow-sm">
                               {text("fixed", language)}
                             </span>
                           ) : (
-                            <span className="inline-flex rounded-md border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                            <span className="inline-flex rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-extrabold text-white shadow-sm">
                               {text("rotation", language)}
                             </span>
                           )}
@@ -2399,7 +2548,7 @@ function ShiftManagementView() {
                                 })
                               }
                               disabled={savingEmployee === member.employeeId}
-                              className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-text"
+                              className="cursor-pointer rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-text"
                             >
                               <option value="">— Not Assigned —</option>
                               {shiftMasters
@@ -2427,7 +2576,7 @@ function ShiftManagementView() {
                                   excluded: !member.excluded,
                                 })
                               }
-                              className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50"
+                              className="cursor-pointer rounded-md border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50"
                             >
                               {member.excluded ? text("rotation", language) : text("fixed", language)}
                             </button>
@@ -2445,7 +2594,7 @@ function ShiftManagementView() {
 
         {activeTab === "schedule" && (
           <Card className="overflow-hidden">
-            <div className="border-b-2 border-border-subtle p-4">
+            <div className="border-b border-border-subtle p-4">
               <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
                 <div className="min-w-0">
                   <SectionTitle
@@ -2456,74 +2605,141 @@ function ShiftManagementView() {
                           ? "排班已从数据库加载"
                           : "Schedule loaded from the database"
                         : language === "cn"
-                          ? "查看 Smart Logistic 月度排班"
+                          ? "查看 智能物流 月度排班"
                           : "View Smart Logistic monthly schedule"
                     }
                   />
 
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-[9px] font-bold text-emerald-800 dark:text-emerald-300">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/20 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-[9px] font-bold text-emerald-800 dark:text-emerald-300">
                       1 = 08:00–17:00
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-800 dark:text-amber-300">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/20 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-800 dark:text-amber-300">
                       4 = 4 Hours
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-1 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-1 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
                       D = {text("day", language)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 text-[9px] font-bold text-indigo-800 dark:text-indigo-300">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-indigo-400/20 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 text-[9px] font-bold text-indigo-800 dark:text-indigo-300">
                       N = {text("night", language)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border-2 border-slate-500 bg-surface-hover px-2 py-1 text-[9px] font-bold text-text">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-400/20 bg-surface-hover px-2 py-1 text-[9px] font-bold text-text">
                       O = {text("off", language)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-stretch gap-2 xl:items-end">
-                  <button
-                    type="button"
-                    onClick={() => void exportScheduleExcel()}
-                    disabled={
-                      exportingExcel ||
-                      loadingEmployees ||
-                      loadingShiftData ||
-                      organizationEmployees.length === 0
-                    }
-                    title={
-                      exportingExcel
-                        ? text("loading", language)
-                        : text("exportExcel", language)
-                    }
-                    className="self-end shrink-0 cursor-pointer rounded-md border-2 border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {exportingExcel
-                      ? text("loading", language)
-                      : text("exportExcel", language)}
-                  </button>
+                <div className="flex w-full flex-col items-stretch gap-2.5 xl:w-auto xl:items-end">
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 rounded-xl border border-border bg-surface-hover/70 p-1.5 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("calendar")}
+                      title={text("goOffCalendar", language)}
+                      className="group inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-indigo-400/30 bg-indigo-500 px-3.5 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                      >
+                        <rect x="3" y="4" width="18" height="17" rx="2" />
+                        <path d="M16 2v4M8 2v4M3 10h18" />
+                        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+                      </svg>
+                      <span>{text("goOffCalendar", language)}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => void generateSchedule()}
+                      disabled={!canGenerate || loadingGeneratedSchedule || savingPairs}
+                      title={
+                        authLoading
+                          ? "Loading account..."
+                          : !isSupervisor
+                            ? text("supervisorOnly", language)
+                            : !isFutureMonth
+                              ? text("monthLocked", language)
+                              : text("generate", language)
+                      }
+                      className="group inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-cyan-400/50 bg-cyan-500 px-3.5 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="size-4 shrink-0 transition-transform duration-200 group-hover:rotate-12"
+                      >
+                        <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" />
+                        <path d="m19 3 .6 1.4L21 5l-1.4.6L19 7l-.6-1.4L17 5l1.4-.6L19 3Z" />
+                      </svg>
+                      <span>{text("generate", language)}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => void exportScheduleExcel()}
+                      disabled={
+                        exportingExcel ||
+                        loadingEmployees ||
+                        loadingShiftData ||
+                        organizationEmployees.length === 0
+                      }
+                      title={
+                        exportingExcel
+                          ? text("loading", language)
+                          : text("exportExcel", language)
+                      }
+                      className="group inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-50 px-3.5 text-xs font-extrabold text-emerald-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400/50 hover:bg-emerald-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                      >
+                        <path d="M5 3h10l4 4v14H5z" />
+                        <path d="M15 3v5h5M8 12h8M8 16h8M8 20h5" />
+                      </svg>
+                      <span>
+                        {exportingExcel
+                          ? text("loading", language)
+                          : text("exportExcel", language)}
+                      </span>
+                    </button>
+                  </div>
 
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       type="button"
                       onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                      className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300"
+                      aria-label="Previous month"
+                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                     >
                       ←
                     </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentDate(new Date())}
-                    className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-[10px] font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300"
-                  >
-                    {text("today", language)}
-                  </button>
-                  <div className="min-w-36 rounded-md border-2 border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-3 py-2 text-center text-[10px] font-bold text-cyan-800 dark:text-cyan-300">
-                    {monthName}
-                  </div>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentDate(new Date())}
+                      className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[10px] font-extrabold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
+                    >
+                      {text("today", language)}
+                    </button>
+                    <div className="inline-flex h-9 min-w-36 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500 px-4 text-[10px] font-extrabold text-white shadow-md shadow-cyan-500/20">
+                      {monthName}
+                    </div>
                     <button
                       type="button"
                       onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                      className="cursor-pointer rounded-md border-2 border-border bg-surface px-2.5 py-2 text-xs font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300"
+                      aria-label="Next month"
+                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                     >
                       →
                     </button>
@@ -2536,12 +2752,12 @@ function ShiftManagementView() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={text("search", language)}
-                  className="cursor-text rounded-md border-2 border-border bg-surface px-3 py-2 text-xs text-text outline-none focus:border-cyan-500 dark:focus:border-cyan-400"
+                  className="cursor-text rounded-md border border-border bg-surface px-3 py-2 text-xs text-text outline-none transition focus:border-cyan-400/50"
                 />
                 <select
                   value={departmentFilter}
                   onChange={(event) => setDepartmentFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-cyan-500 dark:focus:border-cyan-400"
+                  className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">{text("allDepartments", language)}</option>
                   {departments.map((department) => (
@@ -2553,7 +2769,7 @@ function ShiftManagementView() {
                 <select
                   value={shiftFilter}
                   onChange={(event) => setShiftFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border-2 border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none focus:border-cyan-500 dark:focus:border-cyan-400"
+                  className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">{text("allShifts", language)}</option>
                   <option value="D/S">D/S — {text("day", language)}</option>
@@ -2565,8 +2781,8 @@ function ShiftManagementView() {
             <div className="overflow-x-auto">
               <table className="w-max min-w-full border-collapse">
                 <thead>
-                  <tr className="border-b-2 border-border-subtle bg-surface-hover">
-                    <th className="sticky left-0 z-20 min-w-56 border-r-2 border-border-subtle bg-surface-hover px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                  <tr className="border-b border-border-subtle bg-surface-hover">
+                    <th className="sticky left-0 z-20 min-w-56 border-r border-border-subtle bg-surface-hover px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-text">
                       {text("employee", language)}
                     </th>
                     {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
@@ -2575,11 +2791,11 @@ function ShiftManagementView() {
                       return (
                         <th
                           key={day}
-                          className={`min-w-14 px-2 py-3 text-center text-[10px] font-bold ${
+                          className={`min-w-14 px-2 py-3 text-center text-[10px] font-extrabold ${
                             isToday
-                              ? "bg-rose-50 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300"
+                              ? "bg-blue-600 dark:bg-blue-500/15 text-blue-700 dark:text-blue-500"
                               : isRotationDay
-                                ? "border-b-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300"
+                                ? "border-b border-amber-400 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-500"
                                 : "text-text-muted"
                           }`}
                         >
@@ -2602,10 +2818,10 @@ function ShiftManagementView() {
                     const member = filteredMembers.find((item) => item.employeeId === row.employeeId);
                     return Boolean(member);
                   }).map((row) => (
-                    <tr key={row.employeeId} className="border-b border-border-subtle last:border-0">
-                      <td className="sticky left-0 z-10 border-r-2 border-border-subtle bg-surface px-4 py-3">
+                    <tr key={row.employeeId} className="border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]">
+                      <td className="sticky left-0 z-10 border-r border-border-subtle bg-surface px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-cyan-300 dark:border-cyan-400/50 bg-cyan-50 dark:bg-cyan-500/10 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-cyan-500/10 text-[9px] font-extrabold text-cyan-600 dark:text-cyan-300">
                             {row.name
                               .split(" ")
                               .map((part) => part[0])
@@ -2617,7 +2833,7 @@ function ShiftManagementView() {
                             <p className="whitespace-nowrap text-xs font-bold text-text">{language === "cn" ? row.nameCn || row.name : row.name}</p>
                             <p className="mt-0.5 whitespace-nowrap text-[9px] text-text-dim">{row.employeeId}</p>
                             {row.fixed && (
-                              <span className="mt-1 inline-flex rounded border-2 border-amber-500/60 dark:border-amber-400/60 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-bold text-amber-800 dark:text-amber-300">
+                              <span className="mt-1 inline-flex rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-extrabold text-white shadow-sm">
                                 {text("fixed", language)}
                               </span>
                             )}
@@ -2633,7 +2849,7 @@ function ShiftManagementView() {
                             key={`${row.employeeId}-${day}`}
                             className={`px-2 py-3 text-center ${
                               isToday
-                                ? "bg-rose-50 dark:bg-rose-500/10"
+                                ? "bg-blue-50 dark:bg-blue-600/20"
                                 : isRotationDay
                                   ? "bg-amber-50 dark:bg-amber-500/10"
                                   : ""
@@ -2651,7 +2867,7 @@ function ShiftManagementView() {
 
             <div className="flex flex-col gap-2 border-t-2 border-border-subtle px-4 py-3 text-[9px] text-text-muted md:flex-row md:items-center md:justify-between">
               <span>
-                {text("transitionRule", language)}: <span className="font-bold text-amber-800 dark:text-amber-300">N/S → OFF → D/S</span>
+                {text("transitionRule", language)}: <span className="font-bold text-amber-800 dark:text-amber-300"> N/S → {language === "cn" ? "休息" : "OFF"} → D/S</span>
               </span>
               <span>
                 {text("changeDate", language)}: <span className="font-bold text-text">{text("every15th16th", language)}</span>

@@ -364,7 +364,6 @@ export async function DELETE(request: NextRequest) {
           DELETE FROM personal_off_days
           WHERE employee_organization_id = ?
             AND off_date = ?
-            AND is_fixed = 0
         `,
         [employeeOrganizationId, date],
       );

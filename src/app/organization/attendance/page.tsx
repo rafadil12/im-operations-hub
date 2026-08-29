@@ -89,22 +89,22 @@ function Badge({
 }) {
   const classes: Record<AttendanceStatus, string> = {
     WORK:
-      "border-emerald-500/40 bg-emerald-50 text-slate-950 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-white",
+      "border-emerald-400 bg-emerald-500 text-white shadow-sm",
     OFF:
-      "border-rose-500/40 bg-rose-50 text-slate-950 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-white",
+      "border-rose-400 bg-rose-500 text-white shadow-sm",
     AL:
-      "border-blue-500/40 bg-blue-50 text-slate-950 dark:border-blue-400/30 dark:bg-blue-500/10 dark:text-white",
+      "border-blue-400 bg-blue-500 text-white shadow-sm",
     MC:
-      "border-violet-500/40 bg-violet-50 text-slate-950 dark:border-violet-400/30 dark:bg-violet-500/10 dark:text-white",
+      "border-violet-400 bg-violet-500 text-white shadow-sm",
     UPL:
-      "border-indigo-500/40 bg-indigo-50 text-slate-950 dark:border-indigo-400/30 dark:bg-indigo-500/10 dark:text-white",
+      "border-indigo-400 bg-indigo-500 text-white shadow-sm",
     ABSENT:
-      "border-red-500/40 bg-red-50 text-slate-950 dark:border-red-400/30 dark:bg-red-500/10 dark:text-white",
+      "border-red-400 bg-red-500 text-white shadow-sm",
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${classes[status]}`}
+      className={`attendance-badge inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${classes[status]}`}
     >
       <span className="size-1.5 rounded-full bg-current opacity-70" />
       {statusLabel(status, language)}
@@ -314,7 +314,364 @@ export default function AttendanceOverviewPage() {
 
   return (
     <AppShell title="">
-      <div className="min-h-full space-y-5 p-5 md:p-6 xl:p-8">
+      <div className="attendance-management-page min-h-full space-y-5 p-5 md:p-6 xl:p-8">
+        <style>{`
+          /*
+           * =====================================================
+           * ATTENDANCE MANAGEMENT — TYPOGRAPHY / CONTRAST ONLY
+           * =====================================================
+           *
+           * No business logic is changed here.
+           * The rules below only make text sharper and readable
+           * in both light and dark themes.
+           */
+
+          /* -----------------------------------------------------
+           * BADGES / STATUS — FORCE LEGIBLE CONTRAST
+           * ----------------------------------------------------- */
+          .attendance-management-page .attendance-badge {
+            color: #ffffff !important;
+            opacity: 1 !important;
+            font-weight: 800 !important;
+            -webkit-text-fill-color: #ffffff !important;
+            text-shadow: none !important;
+          }
+
+          .attendance-management-page .attendance-auto-badge {
+            color: #ffffff !important;
+            opacity: 1 !important;
+            font-weight: 800 !important;
+            -webkit-text-fill-color: #ffffff !important;
+            text-shadow: none !important;
+          }
+
+          .dark .attendance-management-page .attendance-badge,
+          html.dark .attendance-management-page .attendance-badge,
+          body.dark .attendance-management-page .attendance-badge,
+          [data-theme="dark"] .attendance-management-page .attendance-badge,
+          [data-mode="dark"] .attendance-management-page .attendance-badge,
+          .attendance-management-page.dark .attendance-badge {
+            color: #f8fafc !important;
+            -webkit-text-fill-color: #f8fafc !important;
+          }
+
+          .dark .attendance-management-page .attendance-auto-badge,
+          html.dark .attendance-management-page .attendance-auto-badge,
+          body.dark .attendance-management-page .attendance-auto-badge,
+          [data-theme="dark"] .attendance-management-page .attendance-auto-badge,
+          [data-mode="dark"] .attendance-management-page .attendance-auto-badge,
+          .attendance-management-page.dark .attendance-auto-badge {
+            color: #67e8f9 !important;
+            -webkit-text-fill-color: #67e8f9 !important;
+          }
+
+          .attendance-management-page {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            color: #0f172a !important;
+          }
+
+          /*
+           * LIGHT MODE
+           */
+          .attendance-management-page .text-text {
+            color: #0f172a !important;
+          }
+
+          .attendance-management-page .text-text-muted {
+            color: #475569 !important;
+          }
+
+          .attendance-management-page .text-text-dim {
+            color: #64748b !important;
+          }
+
+          .attendance-management-page th {
+            color: #475569 !important;
+            font-weight: 800 !important;
+          }
+
+          .attendance-management-page td {
+            color: #0f172a;
+          }
+
+          .attendance-management-page input,
+          .attendance-management-page select {
+            color: #0f172a !important;
+            background-color: #ffffff !important;
+            font-weight: 600;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+          }
+
+          .attendance-management-page input::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
+            font-weight: 500;
+          }
+
+          .attendance-management-page button {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+          }
+
+          .attendance-management-page .text-xs {
+            letter-spacing: 0.005em;
+          }
+
+          .attendance-management-page .text-\[10px\] {
+            letter-spacing: 0.01em;
+          }
+
+          .attendance-management-page .text-\[9px\] {
+            letter-spacing: 0.01em;
+          }
+
+          /*
+           * =====================================================
+           * DARK MODE
+           *
+           * Support the common theme patterns used by the app:
+           * .dark
+           * html.dark
+           * body.dark
+           * [data-theme="dark"]
+           * [data-mode="dark"]
+           *
+           * This is intentionally scoped to this page only.
+           * =====================================================
+           */
+
+          .dark .attendance-management-page,
+          html.dark .attendance-management-page,
+          body.dark .attendance-management-page,
+          [data-theme="dark"] .attendance-management-page,
+          [data-mode="dark"] .attendance-management-page {
+            color: #f8fafc !important;
+          }
+
+          .dark .attendance-management-page .text-text,
+          html.dark .attendance-management-page .text-text,
+          body.dark .attendance-management-page .text-text,
+          [data-theme="dark"] .attendance-management-page .text-text,
+          [data-mode="dark"] .attendance-management-page .text-text {
+            color: #f8fafc !important;
+          }
+
+          .dark .attendance-management-page .text-text-muted,
+          html.dark .attendance-management-page .text-text-muted,
+          body.dark .attendance-management-page .text-text-muted,
+          [data-theme="dark"] .attendance-management-page .text-text-muted,
+          [data-mode="dark"] .attendance-management-page .text-text-muted {
+            color: #cbd5e1 !important;
+          }
+
+          .dark .attendance-management-page .text-text-dim,
+          html.dark .attendance-management-page .text-text-dim,
+          body.dark .attendance-management-page .text-text-dim,
+          [data-theme="dark"] .attendance-management-page .text-text-dim,
+          [data-mode="dark"] .attendance-management-page .text-text-dim {
+            color: #94a3b8 !important;
+          }
+
+          .dark .attendance-management-page th,
+          html.dark .attendance-management-page th,
+          body.dark .attendance-management-page th,
+          [data-theme="dark"] .attendance-management-page th,
+          [data-mode="dark"] .attendance-management-page th {
+            color: #cbd5e1 !important;
+          }
+
+          .dark .attendance-management-page td,
+          html.dark .attendance-management-page td,
+          body.dark .attendance-management-page td,
+          [data-theme="dark"] .attendance-management-page td,
+          [data-mode="dark"] .attendance-management-page td {
+            color: #f8fafc;
+          }
+
+          /*
+           * Explicitly strengthen common Tailwind text colors
+           * used inside the page so they cannot disappear in
+           * dark mode.
+           */
+          .dark .attendance-management-page .text-slate-950,
+          html.dark .attendance-management-page .text-slate-950,
+          body.dark .attendance-management-page .text-slate-950,
+          [data-theme="dark"] .attendance-management-page .text-slate-950,
+          [data-mode="dark"] .attendance-management-page .text-slate-950 {
+            color: #f8fafc !important;
+          }
+
+          .dark .attendance-management-page .text-slate-900,
+          html.dark .attendance-management-page .text-slate-900,
+          body.dark .attendance-management-page .text-slate-900,
+          [data-theme="dark"] .attendance-management-page .text-slate-900,
+          [data-mode="dark"] .attendance-management-page .text-slate-900 {
+            color: #f8fafc !important;
+          }
+
+          .dark .attendance-management-page .text-slate-800,
+          html.dark .attendance-management-page .text-slate-800,
+          body.dark .attendance-management-page .text-slate-800,
+          [data-theme="dark"] .attendance-management-page .text-slate-800,
+          [data-mode="dark"] .attendance-management-page .text-slate-800 {
+            color: #f1f5f9 !important;
+          }
+
+          .dark .attendance-management-page .text-slate-700,
+          html.dark .attendance-management-page .text-slate-700,
+          body.dark .attendance-management-page .text-slate-700,
+          [data-theme="dark"] .attendance-management-page .text-slate-700,
+          [data-mode="dark"] .attendance-management-page .text-slate-700 {
+            color: #e2e8f0 !important;
+          }
+
+          .dark .attendance-management-page .text-slate-600,
+          html.dark .attendance-management-page .text-slate-600,
+          body.dark .attendance-management-page .text-slate-600,
+          [data-theme="dark"] .attendance-management-page .text-slate-600,
+          [data-mode="dark"] .attendance-management-page .text-slate-600 {
+            color: #cbd5e1 !important;
+          }
+
+          .dark .attendance-management-page .text-slate-500,
+          html.dark .attendance-management-page .text-slate-500,
+          body.dark .attendance-management-page .text-slate-500,
+          [data-theme="dark"] .attendance-management-page .text-slate-500,
+          [data-mode="dark"] .attendance-management-page .text-slate-500 {
+            color: #94a3b8 !important;
+          }
+
+          /*
+           * Colored status text — keep colors vivid in dark mode.
+           */
+          .dark .attendance-management-page .text-emerald-400,
+          html.dark .attendance-management-page .text-emerald-400,
+          body.dark .attendance-management-page .text-emerald-400,
+          [data-theme="dark"] .attendance-management-page .text-emerald-400,
+          [data-mode="dark"] .attendance-management-page .text-emerald-400 {
+            color: #6ee7b7 !important;
+          }
+
+          .dark .attendance-management-page .text-blue-400,
+          html.dark .attendance-management-page .text-blue-400,
+          body.dark .attendance-management-page .text-blue-400,
+          [data-theme="dark"] .attendance-management-page .text-blue-400,
+          [data-mode="dark"] .attendance-management-page .text-blue-400 {
+            color: #93c5fd !important;
+          }
+
+          .dark .attendance-management-page .text-violet-400,
+          html.dark .attendance-management-page .text-violet-400,
+          body.dark .attendance-management-page .text-violet-400,
+          [data-theme="dark"] .attendance-management-page .text-violet-400,
+          [data-mode="dark"] .attendance-management-page .text-violet-400 {
+            color: #c4b5fd !important;
+          }
+
+          .dark .attendance-management-page .text-indigo-400,
+          html.dark .attendance-management-page .text-indigo-400,
+          body.dark .attendance-management-page .text-indigo-400,
+          [data-theme="dark"] .attendance-management-page .text-indigo-400,
+          [data-mode="dark"] .attendance-management-page .text-indigo-400 {
+            color: #a5b4fc !important;
+          }
+
+          .dark .attendance-management-page .text-rose-400,
+          html.dark .attendance-management-page .text-rose-400,
+          body.dark .attendance-management-page .text-rose-400,
+          [data-theme="dark"] .attendance-management-page .text-rose-400,
+          [data-mode="dark"] .attendance-management-page .text-rose-400 {
+            color: #fda4af !important;
+          }
+
+          .dark .attendance-management-page .text-cyan-300,
+          html.dark .attendance-management-page .text-cyan-300,
+          body.dark .attendance-management-page .text-cyan-300,
+          [data-theme="dark"] .attendance-management-page .text-cyan-300,
+          [data-mode="dark"] .attendance-management-page .text-cyan-300,
+          .dark .attendance-management-page .text-cyan-400,
+          html.dark .attendance-management-page .text-cyan-400,
+          body.dark .attendance-management-page .text-cyan-400,
+          [data-theme="dark"] .attendance-management-page .text-cyan-400,
+          [data-mode="dark"] .attendance-management-page .text-cyan-400 {
+            color: #67e8f9 !important;
+          }
+
+          /*
+           * Form controls in dark mode.
+           */
+          .dark .attendance-management-page input,
+          html.dark .attendance-management-page input,
+          body.dark .attendance-management-page input,
+          [data-theme="dark"] .attendance-management-page input,
+          [data-mode="dark"] .attendance-management-page input,
+          .dark .attendance-management-page select,
+          html.dark .attendance-management-page select,
+          body.dark .attendance-management-page select,
+          [data-theme="dark"] .attendance-management-page select,
+          [data-mode="dark"] .attendance-management-page select {
+            color: #f8fafc !important;
+            background-color: #111c31 !important;
+            border-color: #334155 !important;
+          }
+
+          .dark .attendance-management-page input::placeholder,
+          html.dark .attendance-management-page input::placeholder,
+          body.dark .attendance-management-page input::placeholder,
+          [data-theme="dark"] .attendance-management-page input::placeholder,
+          [data-mode="dark"] .attendance-management-page input::placeholder {
+            color: #94a3b8 !important;
+            opacity: 1 !important;
+          }
+
+          .dark .attendance-management-page option,
+          html.dark .attendance-management-page option,
+          body.dark .attendance-management-page option,
+          [data-theme="dark"] .attendance-management-page option,
+          [data-mode="dark"] .attendance-management-page option {
+            color: #f8fafc !important;
+            background-color: #111c31 !important;
+          }
+
+          /*
+           * Slightly stronger weights for the actual content
+           * so text remains crisp at small sizes.
+           */
+          .attendance-management-page h1,
+          .attendance-management-page h2,
+          .attendance-management-page h3,
+          .attendance-management-page label,
+          .attendance-management-page th,
+          .attendance-management-page button {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+          }
+
+          .attendance-management-page h1,
+          .attendance-management-page h2,
+          .attendance-management-page h3 {
+            text-rendering: optimizeLegibility;
+          }
+
+          .attendance-management-page p,
+          .attendance-management-page span,
+          .attendance-management-page td,
+          .attendance-management-page th,
+          .attendance-management-page label {
+            text-rendering: optimizeLegibility;
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .attendance-management-page * {
+              scroll-behavior: auto !important;
+            }
+          }
+        `}</style>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -350,9 +707,9 @@ export default function AttendanceOverviewPage() {
               {cn("today", language)}
             </button>
 
-            <div className="min-w-36 rounded-lg border border-cyan-400/60 bg-cyan-100 px-4 py-2 text-center text-sm font-extrabold text-slate-900 shadow-sm dark:border-cyan-400/40 dark:bg-cyan-500/15 dark:text-white">
-              {monthLabel}
-            </div>
+            <div className="min-w-36 rounded-lg bg-cyan-500 px-4 py-2 text-center text-sm font-extrabold text-white shadow-sm">
+                {monthLabel}
+                </div>
 
             <button
               type="button"
@@ -457,7 +814,7 @@ export default function AttendanceOverviewPage() {
                     <th className="px-4 py-3">
                       {cn("result", language)}
                     </th>
-                    <th className="px-4 py-3">Hours</th>
+                    <th className="px-4 py-3"> {language === "cn" ? "工时" : "Hours"}</th>
                   </tr>
                 </thead>
 
@@ -520,26 +877,29 @@ export default function AttendanceOverviewPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-sm font-bold text-text">
-                  Attendance Rule
+                  {language === "cn" ? "考勤规则" : "Attendance Rule"}
                 </h2>
                 <p className="mt-1 text-[10px] text-text-muted">
-                  Automatic result priority
+                  {language === "cn" ? "自动考勤结果优先级" : "Automatic result priority"}
                 </p>
               </div>
 
-              <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-extrabold text-cyan-700 dark:text-cyan-200">
-                AUTO
+              <span className="attendance-auto-badge rounded-sm border border-cyan-500 bg-cyan-500 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-sm">
+                {language === "cn" ? "自动" : "AUTO"}
               </span>
             </div>
 
-            <div className="mt-5 space-y-3">
-              {[
-                ["D / N", "10.5 h"],
-                ["1", "8 h"],
-                ["4", "4 h"],
-                ["OFF", "OFF"],
-                ["AL / MC / UPL", "Override result"],
-              ].map(([left, right]) => (
+           <div className="mt-5 space-y-3">
+                {[
+                    ["D / N", "10.5 h"],
+                    ["1", "8 h"],
+                    ["4", "4 h"],
+                    ["OFF", language === "cn" ? "休息" : "OFF"],
+                    [
+                    "AL / MC / UPL",
+                    language === "cn" ? "覆盖结果" : "Override result",
+                    ],
+                ].map(([left, right]) => (
                 <div
                   key={left}
                   className="flex items-center justify-between rounded-xl border border-border-subtle bg-surface-hover px-4 py-3"
