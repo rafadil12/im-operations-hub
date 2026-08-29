@@ -9,10 +9,12 @@ type Props = {
   onCancel: () => void;
   onConfirm: () => void;
   busy?: boolean;
+  confirmLabel?: string;
 };
 
-export function ConfirmDialog({ title, message, onCancel, onConfirm, busy }: Props) {
+export function ConfirmDialog({ title, message, onCancel, onConfirm, busy, confirmLabel }: Props) {
   const { t } = useLang();
+  const label = confirmLabel ?? t.common.delete;
   return (
     <Modal
       title={title}
@@ -32,7 +34,7 @@ export function ConfirmDialog({ title, message, onCancel, onConfirm, busy }: Pro
             disabled={busy}
             className="rounded-md bg-danger px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
           >
-            {busy ? t.common.loading : t.common.delete}
+            {busy ? t.common.loading : label}
           </button>
         </>
       }

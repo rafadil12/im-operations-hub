@@ -168,8 +168,10 @@ export const navItems: NavItem[] = [
     id: "report",
     labelKey: "report",
     icon: "report",
-    disabled: true,
-    children: comingSoonChildren,
+    children: [
+      { id: "overview", labelKey: "overview", href: "/report" },
+      { id: "management", labelKey: "moduleManagement", href: "/report/management" },
+    ],
   },
   {
     id: "training",

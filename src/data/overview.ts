@@ -3,7 +3,7 @@
  *
  * Live modules (itsm, daily-operation, safety, sparepart, training) use empty
  * skeletons that are overwritten by API data in `useDashboardModules`.
- * Coming-soon modules (organization, report) keep placeholder UI until live.
+ * Coming-soon modules (organization) keep placeholder UI until live.
  */
 
 export type ModuleId =
@@ -283,7 +283,7 @@ export const dashboardModules: ModuleCardData[] = [
     title: "REPORT DASHBOARD",
     icon: "report",
     accentColor: "#eab308",
-    href: "/",
+    href: "/report",
     layout: "report",
     stats: [
       { label: "Weekly Reports", value: "24", tone: "accent" },
