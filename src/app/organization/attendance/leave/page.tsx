@@ -6,7 +6,7 @@ import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
 
-type RequestType = "AL" | "MC" | "UPL" | "OT";
+type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA";
 type RequestStatus = "Pending" | "Approved" | "Rejected";
 
 type Employee = {
@@ -63,6 +63,12 @@ const TYPE_META: Record<
     className:
       "border-orange-200 bg-orange-50 dark:border-orange-500/30 dark:bg-orange-500/10",
   },
+  ALPA: {
+    labelEn: "Absent Without Leave",
+    labelCn: "旷工",
+    className:
+    "border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10",
+},
 };
 
 const STATUS_META: Record<
@@ -207,6 +213,14 @@ export default function LeavePermissionPage() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [reason, setReason] = useState("");
+
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"" | RequestType>("");
+  const [statusFilter, setStatusFilter] = useState<"" | RequestStatus>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -400,7 +414,7 @@ export default function LeavePermissionPage() {
     if (employees.length > 0) {
       void loadRequests();
     }
-  }, [employees]);
+  }, [employees, language]);
 
   React.useEffect(() => {
     if (authLoading || !currentUserId || employees.length === 0) {
@@ -540,6 +554,47 @@ export default function LeavePermissionPage() {
     [requests],
   );
 
+  const filteredRequests = useMemo(() => {
+    return requests.filter((item) => {
+      if (employeeFilter && item.employeeNo !== employeeFilter) return false;
+      if (departmentFilter && item.department !== departmentFilter) return false;
+      if (dateFilter && item.date !== dateFilter) return false;
+      if (typeFilter && item.type !== typeFilter) return false;
+      if (statusFilter && item.status !== statusFilter) return false;
+      return true;
+    });
+  }, [
+    requests,
+    employeeFilter,
+    departmentFilter,
+    dateFilter,
+    typeFilter,
+    statusFilter,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
+
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredRequests.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredRequests, currentPage]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    employeeFilter,
+    departmentFilter,
+    dateFilter,
+    typeFilter,
+    statusFilter,
+  ]);
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const resetForm = () => {
     const firstEmployee = employees[0];
 
@@ -653,7 +708,12 @@ export default function LeavePermissionPage() {
       : TYPE_META[value].labelEn;
 
   return (
-    <AppShell title="">
+    <AppShell
+  title={
+    language === "cn"
+      ? "请假 / 外出"
+      : "Leave / Permission"
+  }>
       <div className="min-h-full space-y-5 p-5 md:p-6 xl:p-8">
         <style>{`
           [data-theme="light"] .leave-page-text,
@@ -683,12 +743,30 @@ export default function LeavePermissionPage() {
           [data-theme="dark"] .leave-status-rejected {
             color: #ffffff !important;
           }
+
+          .leave-filter-input {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 0.65rem;
+            padding: 0.7rem 0.75rem;
+            font-size: 0.75rem;
+            line-height: 1.2rem;
+            outline: none;
+            transition: border-color 160ms ease, box-shadow 160ms ease;
+          }
+
+          .leave-filter-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+          }
         `}</style>
 
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl border border-cyan-500/40 bg-cyan-500/10 text-lg font-black text-cyan-600 dark:text-cyan-300">
+              <div className="flex size-11 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/5 text-lg font-bold text-cyan-600 dark:text-cyan-300">
                 📝
               </div>
               <div>
@@ -712,7 +790,7 @@ export default function LeavePermissionPage() {
               resetForm();
               setShowForm(true);
             }}
-            className="rounded-xl bg-cyan-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-cyan-700"
+            className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md"
           >
             + {language === "cn" ? "新申请" : "New Request"}
           </button>
@@ -756,10 +834,82 @@ export default function LeavePermissionPage() {
               </p>
             </div>
 
-            <div className="rounded-full border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text">
-              {requests.length}{" "}
+            <div className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text shadow-sm">
+              {filteredRequests.length}{" "}
               {language === "cn" ? "条记录" : "records"}
             </div>
+          </div>
+
+          <div className="grid gap-3 border-b border-border-subtle p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <select
+              value={employeeFilter}
+              onChange={(event) => setEmployeeFilter(event.target.value)}
+              className="leave-filter-input"
+            >
+              <option value="">{language === "cn" ? "所有员工" : "All Employees"}</option>
+              {employees.map((employee) => (
+                <option key={employee.employee_no} value={employee.employee_no}>
+                  {employeeDisplayName(employee, language, employee.employee_no)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={departmentFilter}
+              onChange={(event) => setDepartmentFilter(event.target.value)}
+              className="leave-filter-input"
+            >
+              <option value="">{language === "cn" ? "所有部门" : "All Departments"}</option>
+              {Array.from(
+                new Set(
+                  requests
+                    .map((item) => item.department)
+                    .filter((value) => value && value !== "—"),
+                ),
+              ).map((department) => (
+                <option key={department} value={department}>
+                  {department}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+              className="leave-filter-input"
+              aria-label={language === "cn" ? "日期" : "Date"}
+            />
+
+            <select
+              value={typeFilter}
+              onChange={(event) =>
+                setTypeFilter(event.target.value as "" | RequestType)
+              }
+              className="leave-filter-input"
+            >
+              <option value="">{language === "cn" ? "所有类型" : "All Types"}</option>
+              {Object.keys(TYPE_META).map((requestType) => (
+                <option key={requestType} value={requestType}>
+                  {requestType} · {typeLabel(requestType as RequestType)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "" | RequestStatus)
+              }
+              className="leave-filter-input"
+            >
+              <option value="">{language === "cn" ? "所有状态" : "All Statuses"}</option>
+              {Object.keys(STATUS_META).map((requestStatus) => (
+                <option key={requestStatus} value={requestStatus}>
+                  {statusLabel(requestStatus as RequestStatus)}
+                </option>
+              ))}
+            </select>
           </div>
 
           {requestsError && (
@@ -834,10 +984,10 @@ export default function LeavePermissionPage() {
                     </td>
                   </tr>
                 ) : (
-                  requests.map((item) => (
+                  paginatedRequests.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-border-subtle transition hover:bg-surface-hover"
+                    className="border-b border-border-subtle transition-colors hover:bg-surface-hover/60"
                   >
                     <td className="px-4 py-3">
                       <p className="text-xs font-extrabold text-text">
@@ -858,7 +1008,7 @@ export default function LeavePermissionPage() {
 
                     <td className="px-3 py-3">
                       <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${TYPE_META[item.type].className}`}
+                        className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${TYPE_META[item.type].className}`}
                       >
                         <span className="leave-type-text">
                           {item.type} · {typeLabel(item.type)}
@@ -882,7 +1032,7 @@ export default function LeavePermissionPage() {
 
                     <td className="border-r border-border px-3 py-3">
                       <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-extrabold ${STATUS_META[item.status].className}`}
+                        className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${STATUS_META[item.status].className}`}
                       >
                         <span
                           className={
@@ -951,11 +1101,43 @@ export default function LeavePermissionPage() {
               </tbody>
             </table>
           </div>
+
+          {!requestsLoading && filteredRequests.length > 0 && (
+            <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[10px] font-semibold text-text-muted">
+                {language === "cn"
+                  ? `第 ${currentPage} / ${totalPages} 页 · 共 ${filteredRequests.length} 条`
+                  : `Page ${currentPage} of ${totalPages} · ${filteredRequests.length} records`}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {language === "cn" ? "上一页" : "Previous"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {language === "cn" ? "下一页" : "Next"}
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
 
         {showForm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]">
-            <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface shadow-2xl">
+            <div className="w-full max-w-2xl rounded-xl border border-border bg-surface shadow-2xl">
               <div className="flex items-start justify-between border-b border-border-subtle px-5 py-4">
                 <div>
                   <h2 className="text-base font-extrabold text-text">
@@ -1089,6 +1271,9 @@ export default function LeavePermissionPage() {
                     <option value="OT">
                       OT — {language === "cn" ? "加班" : "Overtime"}
                     </option>
+                    <option value="ALPA">
+                      ALPA — {language === "cn" ? "旷工" : "Absent Without Leave"}
+                    </option>
                   </select>
                 </Field>
 
@@ -1177,23 +1362,12 @@ function MetricCard({
   value: number;
   tone: "amber" | "emerald" | "blue" | "indigo";
 }) {
-  const toneClass = {
-    amber:
-      "border-amber-200 bg-amber-50 dark:border-amber-500/20 dark:bg-amber-500/10",
-    emerald:
-      "border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/10",
-    blue:
-      "border-blue-200 bg-blue-50 dark:border-blue-500/20 dark:bg-blue-500/10",
-    indigo:
-      "border-indigo-200 bg-indigo-50 dark:border-indigo-500/20 dark:bg-indigo-500/10",
-  }[tone];
-
   return (
-    <div className={`rounded-2xl border p-4 ${toneClass}`}>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-text-muted">
+    <div className="rounded-xl border border-border bg-surface p-4 transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.12)]">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-black text-text">{value}</p>
+      <p className="mt-2 text-2xl font-black text-text">{value}</p>
     </div>
   );
 }
@@ -1244,7 +1418,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-border-subtle bg-surface">
+    <div className="rounded-xl border border-border bg-surface transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.12)]">
       {children}
     </div>
   );

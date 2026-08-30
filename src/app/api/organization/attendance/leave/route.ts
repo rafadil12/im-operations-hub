@@ -3,7 +3,7 @@ import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-type LeaveType = "AL" | "MC" | "UPL" | "OT";
+type LeaveType = "AL" | "MC" | "UPL" | "OT" | "ALPA";
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
 
 type LeaveRequestRow = {
@@ -41,7 +41,8 @@ function isLeaveType(value: unknown): value is LeaveType {
     value === "AL" ||
     value === "MC" ||
     value === "UPL" ||
-    value === "OT"
+    value === "OT" ||
+    value === "ALPA"
   );
 }
 
@@ -321,7 +322,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "requestType must be AL, MC, UPL, or OT.",
+          error: "requestType must be AL, MC, UPL, OT, or ALPA.",
         },
         { status: 400 },
       );
@@ -350,7 +351,7 @@ export async function POST(request: NextRequest) {
     const startMinutes = timeToMinutes(startTime);
     const endMinutes = timeToMinutes(endTime);
 
-    // AL / MC / UPL must stay within the same day.
+    // AL / MC / UPL / ALPA must stay within the same day.
     // OT may cross midnight (e.g. 22:00 -> 02:00).
     if (requestType !== "OT" && startMinutes >= endMinutes) {
       return NextResponse.json(

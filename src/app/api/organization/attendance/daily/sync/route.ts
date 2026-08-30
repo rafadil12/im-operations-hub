@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 type ScheduleType = "D" | "N" | "1" | "4" | "OFF";
 
-type LeaveType = "AL" | "MC" | "UPL" | "A" | "OT";
+type LeaveType = "AL" | "MC" | "UPL" | "A" | "ALPA" | "OT";
 
 type AttendanceValue =
   | "10.5"
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
           FROM attendance_leave_requests
           WHERE request_date >= ?
             AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
-            AND request_type IN ('AL', 'MC', 'UPL', 'A', 'OT')
+            AND request_type IN ('AL', 'MC', 'UPL', 'A', 'ALPA', 'OT')
           ORDER BY employee_no, request_date, id ASC
         `,
         [monthStart, monthStart],
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       string,
       {
         id: number;
-        requestType: Exclude<LeaveType, "OT">;
+        requestType: Exclude<LeaveType,"OT" | "ALPA">;
       }
     >();
 
@@ -246,7 +246,9 @@ export async function POST(request: NextRequest) {
        */
       leaveMap.set(key, {
         id: row.id,
-        requestType: row.request_type,
+        requestType: row.request_type === "ALPA"
+      ? "A"
+      : row.request_type,
       });
     }
 

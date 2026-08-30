@@ -77,6 +77,8 @@ type AttendanceRow = {
   upl: number;
   absent: number;
   off: number;
+  x1: number;
+  over9: number;
   dayShift: number;
   nightShift: number;
 };
@@ -742,6 +744,8 @@ export default function DailyAttendancePage() {
         let upl = 0;
         let absent = 0;
         let off = 0;
+        let x1 = 0;
+        let over9 = 0;
         let tenPointFive = 0;
 
         for (const value of values) {
@@ -765,8 +769,13 @@ export default function DailyAttendancePage() {
             off++;
           }
 
+          if (value === "8") {
+            x1++;
+          }
+
           if (value === "10.5") {
             tenPointFive++;
+            over9++;
           }
         }
 
@@ -780,6 +789,8 @@ export default function DailyAttendancePage() {
           upl,
           absent,
           off,
+          x1,
+          over9,
           dayShift:
             rowShift === "D"
               ? tenPointFive
@@ -936,7 +947,7 @@ export default function DailyAttendancePage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl border border-cyan-500/40 bg-cyan-500/10 text-lg font-black text-cyan-600 dark:text-cyan-300">
+              <div className="flex size-11 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/5 text-lg font-bold text-cyan-300">
                 ▦
               </div>
 
@@ -968,7 +979,7 @@ export default function DailyAttendancePage() {
                   ),
                 )
               }
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-bold text-text transition hover:border-cyan-500 hover:bg-surface-hover"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
             >
               ←
             </button>
@@ -978,14 +989,14 @@ export default function DailyAttendancePage() {
               onClick={() =>
                 setSelectedDate(new Date())
               }
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-xs font-bold text-text transition hover:border-cyan-500 hover:bg-surface-hover"
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[10px] font-extrabold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
             >
               {language === "cn"
                 ? "本月"
                 : "This Month"}
             </button>
 
-            <div className="min-w-40 rounded-lg border border-cyan-400/60 bg-cyan-100 px-4 py-2 text-center text-sm font-extrabold text-slate-900 shadow-sm dark:border-cyan-400/40 dark:bg-cyan-500/15 dark:text-white">
+            <div className="inline-flex h-9 min-w-36 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500 px-4 text-[10px] font-extrabold text-white shadow-md shadow-cyan-500/20">
               {monthLabel}
             </div>
 
@@ -1000,7 +1011,7 @@ export default function DailyAttendancePage() {
                   ),
                 )
               }
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-bold text-text transition hover:border-cyan-500 hover:bg-surface-hover"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
             >
               →
             </button>
@@ -1008,7 +1019,7 @@ export default function DailyAttendancePage() {
         </div>
 
         {/* LEGEND */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           <LegendItem
             value="10.5"
             label={
@@ -1103,7 +1114,7 @@ export default function DailyAttendancePage() {
                       ? "姓名 / 工号..."
                       : "Name / employee no..."
                   }
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-xs font-medium text-text outline-none transition placeholder:text-text-dim focus:border-cyan-500"
+                  className="cursor-text rounded-md border border-border bg-surface px-3 py-2 text-xs text-text outline-none transition focus:border-cyan-400/50"
                 />
               </div>
 
@@ -1121,7 +1132,7 @@ export default function DailyAttendancePage() {
                       event.target.value,
                     )
                   }
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-xs font-medium text-text outline-none focus:border-cyan-500"
+                  className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
                     {language === "cn"
@@ -1156,7 +1167,7 @@ export default function DailyAttendancePage() {
                       event.target.value,
                     )
                   }
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-xs font-medium text-text outline-none focus:border-cyan-500"
+                  className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
                     {language === "cn"
@@ -1194,7 +1205,7 @@ export default function DailyAttendancePage() {
                     setDepartment("all");
                     setShift("all");
                   }}
-                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:border-cyan-400 hover:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-cyan-500/50 dark:hover:bg-slate-700"
+                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-extrabold text-text shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                 >
                   {language === "cn"
                     ? "重置筛选"
@@ -1260,7 +1271,9 @@ export default function DailyAttendancePage() {
               </p>
 
               <p className="mt-1 text-sm font-bold text-text">
-                Shift API
+                {language === "cn"
+                  ? "班次接口"
+                  : "Shift API"}
               </p>
             </div>
 
@@ -1272,7 +1285,9 @@ export default function DailyAttendancePage() {
               </p>
 
               <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-300">
-                Automatic
+                {language === "cn"
+                  ? "自动"
+                  : "Automatic"} 
               </p>
             </div>
           </div>
@@ -1341,7 +1356,7 @@ export default function DailyAttendancePage() {
                           key={day}
                           className={`min-w-[58px] border-r border-b px-1.5 py-2 text-center ${
                             isToday
-                            ? "border-cyan-300 bg-cyan-100 text-slate-900 dark:border-cyan-400/40 dark:bg-cyan-500/20 dark:text-slate-100"
+                            ? "border-cyan-400 bg-cyan-200 text-slate-900 dark:border-cyan-400/60 dark:bg-cyan-500/30 dark:text-white"
                             : weekday === 0
                             ? "border-red-500 bg-red-500 text-white dark:border-red-400 dark:bg-red-500 dark:text-white"
                             : isWeekend
@@ -1361,6 +1376,9 @@ export default function DailyAttendancePage() {
                               language,
                             )}
                           </div>
+                          {isToday && (
+                            <span className="mx-auto mt-1 block size-1.5 rounded-full bg-emerald-500" />
+                          )}
                         </th>
                       );
                     },
@@ -1372,25 +1390,43 @@ export default function DailyAttendancePage() {
                       : "Total Hours"}
                   </th>
 
-                  <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    AL
+                  <th className="min-w-[50px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
+                    X 1
+                  </th>
+
+                  <th className="min-w-[50px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
+                    &gt;9
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    MC
+                    {language === "cn"
+                      ? "年假"
+                      : "AL"}
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    UPL
+                    {language === "cn"
+                      ? "病假"
+                      : "MC"}  
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    A
+                    {language === "cn"
+                      ? "外出"
+                      : "UPL"}
+                  </th> 
+
+                  <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
+                    {language === "cn"
+                      ? "旷工"
+                      : "A"} 
                   </th>
 
                   <th className="min-w-[55px] border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    OFF
-                  </th>
+                    {language === "cn"
+                      ? "休息"
+                      : "OFF"}   
+                  </th> 
                 </tr>
               </thead>
 
@@ -1399,7 +1435,7 @@ export default function DailyAttendancePage() {
                   <tr>
                     <td
                       colSpan={
-                        totalDays + 9
+                        totalDays + 11
                       }
                       className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
                     >
@@ -1412,7 +1448,7 @@ export default function DailyAttendancePage() {
                   <tr>
                     <td
                       colSpan={
-                        totalDays + 9
+                        totalDays + 11
                       }
                       className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
                     >
@@ -1496,7 +1532,7 @@ export default function DailyAttendancePage() {
                                   language,
                                 )} ${
                                   isToday
-                                    ? "ring-2 ring-inset ring-cyan-400"
+                                    ? "bg-cyan-50/70 shadow-[inset_0_0_0_1px_rgb(34_211_238_/_0.18)] dark:bg-cyan-500/5 dark:shadow-[inset_0_0_18px_rgb(34_211_238_/_0.08)]"
                                     : ""
                                 }`} 
                                 title={`${day} ${monthLabel}: ${
@@ -1514,29 +1550,37 @@ export default function DailyAttendancePage() {
                           },
                         )}
 
-                        <td className="min-w-[90px] border-r-2 border-b border-l border-border-subtle bg-slate-50 px-3 text-center text-xs font-black text-slate-900 dark:bg-slate-800 dark:text-white">
+                        <td className="min-w-[90px] border-r-2 border-b border-l border-border-subtle bg-surface-hover px-3 text-center text-xs font-black text-text">
                           {row.totalHours.toFixed(
                             1,
                           )}
                         </td>
 
-                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-slate-50 px-2 text-center text-[10px] font-black text-slate-900 dark:bg-slate-800 dark:text-white">
+                        <td className="min-w-[50px] border-r border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
+                          {row.x1}
+                        </td>
+
+                        <td className="min-w-[50px] border-r border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
+                          {row.over9}
+                        </td>
+
+                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
                           {row.al}
                         </td>
 
-                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-slate-50 px-2 text-center text-[10px] font-black text-slate-900 dark:bg-slate-800 dark:text-white">
+                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
                           {row.mc}
                         </td>
 
-                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-slate-50 px-2 text-center text-[10px] font-black text-slate-900 dark:bg-slate-800 dark:text-white">
+                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
                           {row.upl}
                         </td>
 
-                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-slate-50 px-2 text-center text-[10px] font-black text-slate-900 dark:bg-slate-800 dark:text-white">
+                        <td className="min-w-[55px] border-r border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
                           {row.absent}
                         </td>
 
-                        <td className="min-w-[55px] border-b border-border-subtle bg-slate-50 px-2 text-center text-[10px] font-black text-slate-900 dark:bg-slate-800 dark:text-white">
+                        <td className="min-w-[55px] border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
                           {row.off}
                         </td>
                       </tr>
@@ -1568,7 +1612,7 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-border-subtle bg-surface ${className}`}
+      className={`rounded-xl border border-border bg-surface transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.12)] ${className}`}
     >
       {children}
     </div>

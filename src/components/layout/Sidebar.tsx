@@ -155,7 +155,7 @@ const navItems: NavItem[] = [
         {
           id: "overview",
           labelKey: "overview",
-          href: "/organization/attendance",
+          href: "/organization/attendance/overview",
         },
         {
           id: "daily",

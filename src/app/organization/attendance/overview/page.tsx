@@ -23,8 +23,24 @@ type ScheduleRow = {
 
 type AttendanceStatus = "WORK" | "OFF" | "AL" | "MC" | "UPL" | "ABSENT";
 
+type AttendanceDailyRow = {
+  employee_no: string;
+  attendance_date: string;
+  attendance_value:
+    | "10.5"
+    | "8"
+    | "4"
+    | "OFF"
+    | "AL"
+    | "MC"
+    | "UPL"
+    | "A";
+  planned_hours: number | string;
+};
+
 const API_EMPLOYEES = "/api/organization/employees?limit=100";
 const API_SCHEDULES = "/api/organization/shift-management/schedules";
+const API_DAILY = "/api/organization/attendance/daily";
 
 function toDateKey(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -120,7 +136,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-border-subtle bg-surface ${className}`}>
+    <div className={`rounded-xl border border-border bg-surface transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.12)] ${className}`}>
       {children}
     </div>
   );
@@ -134,6 +150,7 @@ export default function AttendanceOverviewPage() {
   const [date, setDate] = useState(() => new Date());
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
+  const [dailyAttendance, setDailyAttendance] = useState<AttendanceDailyRow[]>([]);
   const [department, setDepartment] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -150,15 +167,24 @@ export default function AttendanceOverviewPage() {
       setError(null);
 
       try {
-        const [employeeResponse, scheduleResponse] = await Promise.all([
-          fetch(API_EMPLOYEES, { cache: "no-store" }),
-          fetch(
-            `${API_SCHEDULES}?year=${year}&month=${month + 1}`,
-            { cache: "no-store" },
-          ),
-        ]);
+        const [employeeResponse, scheduleResponse, dailyAttendanceResponse] =
+          await Promise.all([
+            fetch(API_EMPLOYEES, { cache: "no-store" }),
+            fetch(
+              `${API_SCHEDULES}?year=${year}&month=${month + 1}`,
+              { cache: "no-store" },
+            ),
+            fetch(
+              `${API_DAILY}?year=${year}&month=${month + 1}`,
+              { cache: "no-store" },
+            ),
+          ]);
 
-        if (!employeeResponse.ok || !scheduleResponse.ok) {
+        if (
+          !employeeResponse.ok ||
+          !scheduleResponse.ok ||
+          !dailyAttendanceResponse.ok
+        ) {
           throw new Error("Failed to load attendance data.");
         }
 
@@ -166,6 +192,10 @@ export default function AttendanceOverviewPage() {
           (await employeeResponse.json()) as { data?: Employee[] };
         const scheduleJson =
           (await scheduleResponse.json()) as { data?: ScheduleRow[] };
+        const dailyAttendanceJson =
+          (await dailyAttendanceResponse.json()) as {
+            data?: AttendanceDailyRow[];
+          };
 
         if (cancelled) return;
 
@@ -178,6 +208,7 @@ export default function AttendanceOverviewPage() {
           ),
         );
         setSchedules(scheduleJson.data ?? []);
+        setDailyAttendance(dailyAttendanceJson.data ?? []);
       } catch (e) {
         if (!cancelled) {
           setError(
@@ -207,6 +238,17 @@ export default function AttendanceOverviewPage() {
         ]),
       ),
     [schedules],
+  );
+
+  const dailyAttendanceMap = useMemo(
+    () =>
+      new Map(
+        dailyAttendance.map((row) => [
+          `${row.employee_no}|${String(row.attendance_date).slice(0, 10)}`,
+          row,
+        ]),
+      ),
+    [dailyAttendance],
   );
 
   const departments = useMemo(
@@ -256,11 +298,37 @@ export default function AttendanceOverviewPage() {
       const schedule = scheduleMap.get(
         `${employee.employee_no}|${dateKey}`,
       );
+      const daily = dailyAttendanceMap.get(
+        `${employee.employee_no}|${dateKey}`,
+      );
 
       let result: AttendanceStatus = "ABSENT";
       let hours = 0;
 
-      if (schedule?.schedule_type === "OFF") {
+      if (daily) {
+        switch (daily.attendance_value) {
+          case "OFF":
+            result = "OFF";
+            break;
+          case "AL":
+            result = "AL";
+            break;
+          case "MC":
+            result = "MC";
+            break;
+          case "UPL":
+            result = "UPL";
+            break;
+          case "A":
+            result = "ABSENT";
+            break;
+          default:
+            result = "WORK";
+            break;
+        }
+
+        hours = Number(daily.planned_hours) || 0;
+      } else if (schedule?.schedule_type === "OFF") {
         result = "OFF";
       } else if (schedule) {
         result = "WORK";
@@ -274,7 +342,12 @@ export default function AttendanceOverviewPage() {
         hours,
       };
     });
-  }, [date, employeesFiltered, scheduleMap]);
+  }, [
+    date,
+    employeesFiltered,
+    scheduleMap,
+    dailyAttendanceMap,
+  ]);
 
   const stats = useMemo(() => {
     const value = {
@@ -313,377 +386,132 @@ export default function AttendanceOverviewPage() {
   );
 
   return (
-    <AppShell title="">
-      <div className="attendance-management-page min-h-full space-y-5 p-5 md:p-6 xl:p-8">
+    <AppShell title={cn("title", language)}>
+      <div className="shift-management-page min-h-full space-y-5 p-5 md:p-6 xl:p-8 text-text">
         <style>{`
-          /*
-           * =====================================================
-           * ATTENDANCE MANAGEMENT — TYPOGRAPHY / CONTRAST ONLY
-           * =====================================================
-           *
-           * No business logic is changed here.
-           * The rules below only make text sharper and readable
-           * in both light and dark themes.
-           */
+          button:not(:disabled),
+          select:not(:disabled) { cursor: pointer; }
+          button:disabled,
+          select:disabled { cursor: not-allowed; }
 
-          /* -----------------------------------------------------
-           * BADGES / STATUS — FORCE LEGIBLE CONTRAST
-           * ----------------------------------------------------- */
-          .attendance-management-page .attendance-badge {
-            color: #ffffff !important;
-            opacity: 1 !important;
-            font-weight: 800 !important;
-            -webkit-text-fill-color: #ffffff !important;
-            text-shadow: none !important;
+          .shift-management-page .shift-card-hover {
+            transition:
+              border-color .25s ease,
+              box-shadow .25s ease,
+              background-color .25s ease;
           }
 
-          .attendance-management-page .attendance-auto-badge {
-            color: #ffffff !important;
-            opacity: 1 !important;
-            font-weight: 800 !important;
-            -webkit-text-fill-color: #ffffff !important;
-            text-shadow: none !important;
-          }
 
-          .dark .attendance-management-page .attendance-badge,
-          html.dark .attendance-management-page .attendance-badge,
-          body.dark .attendance-management-page .attendance-badge,
-          [data-theme="dark"] .attendance-management-page .attendance-badge,
-          [data-mode="dark"] .attendance-management-page .attendance-badge,
-          .attendance-management-page.dark .attendance-badge {
-            color: #f8fafc !important;
-            -webkit-text-fill-color: #f8fafc !important;
-          }
 
-          .dark .attendance-management-page .attendance-auto-badge,
-          html.dark .attendance-management-page .attendance-auto-badge,
-          body.dark .attendance-management-page .attendance-auto-badge,
-          [data-theme="dark"] .attendance-management-page .attendance-auto-badge,
-          [data-mode="dark"] .attendance-management-page .attendance-auto-badge,
-          .attendance-management-page.dark .attendance-auto-badge {
-            color: #67e8f9 !important;
-            -webkit-text-fill-color: #67e8f9 !important;
-          }
-
-          .attendance-management-page {
+          /* Sharper, higher-contrast typography. Logic/layout unchanged. */
+          .shift-management-page {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
-            color: #0f172a !important;
+            text-rendering: geometricPrecision;
+            font-synthesis-weight: none;
           }
 
-          /*
-           * LIGHT MODE
-           */
-          .attendance-management-page .text-text {
-            color: #0f172a !important;
+          .shift-management-page h1,
+          .shift-management-page h2,
+          .shift-management-page h3,
+          .shift-management-page th,
+          .shift-management-page button,
+          .shift-management-page select,
+          .shift-management-page input {
+            text-rendering: geometricPrecision;
           }
 
-          .attendance-management-page .text-text-muted {
-            color: #475569 !important;
+          .shift-management-page .text-text {
+            color: rgb(15 23 42) !important;
           }
 
-          .attendance-management-page .text-text-dim {
-            color: #64748b !important;
+          .shift-management-page .text-text-muted {
+            color: rgb(51 65 85) !important;
           }
 
-          .attendance-management-page th {
-            color: #475569 !important;
-            font-weight: 800 !important;
+          .shift-management-page .text-text-dim {
+            color: rgb(71 85 105) !important;
           }
 
-          .attendance-management-page td {
-            color: #0f172a;
+          .dark .shift-management-page .text-text,
+          [data-theme="dark"] .shift-management-page .text-text {
+            color: rgb(248 250 252) !important;
           }
 
-          .attendance-management-page input,
-          .attendance-management-page select {
-            color: #0f172a !important;
-            background-color: #ffffff !important;
-            font-weight: 600;
+          .dark .shift-management-page .text-text-muted,
+          [data-theme="dark"] .shift-management-page .text-text-muted {
+            color: rgb(203 213 225) !important;
+          }
+
+          .dark .shift-management-page .text-text-dim,
+          [data-theme="dark"] .shift-management-page .text-text-dim {
+            color: rgb(148 163 184) !important;
+          }
+
+          .shift-management-page .text-\[8px\],
+          .shift-management-page .text-\[9px\],
+          .shift-management-page .text-\[10px\] {
+            -webkit-font-smoothing: antialiased;
+          }
+
+          .shift-management-page .shift-card-hover:hover {
+            border-color: rgb(34 211 238 / .20);
+            box-shadow: 0 12px 32px rgb(8 47 73 / .12);
+          }
+
+          .shift-management-page {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
           }
 
-          .attendance-management-page input::placeholder {
-            color: #64748b !important;
-            opacity: 1 !important;
-            font-weight: 500;
+          .shift-management-page .text-text {
+            color: rgb(15 23 42) !important;
           }
 
-          .attendance-management-page button {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+          .shift-management-page .text-text-muted {
+            color: rgb(51 65 85) !important;
+          }
+
+          .shift-management-page .text-text-dim {
+            color: rgb(71 85 105) !important;
+          }
+
+          .dark .shift-management-page .text-text,
+          [data-theme="dark"] .shift-management-page .text-text {
+            color: rgb(248 250 252) !important;
+          }
+
+          .dark .shift-management-page .text-text-muted,
+          [data-theme="dark"] .shift-management-page .text-text-muted {
+            color: rgb(203 213 225) !important;
+          }
+
+          .dark .shift-management-page .text-text-dim,
+          [data-theme="dark"] .shift-management-page .text-text-dim {
+            color: rgb(148 163 184) !important;
+          }
+
+          .shift-management-page th,
+          .shift-management-page td,
+          .shift-management-page button,
+          .shift-management-page select,
+          .shift-management-page input {
             text-rendering: optimizeLegibility;
-          }
-
-          .attendance-management-page .text-xs {
-            letter-spacing: 0.005em;
-          }
-
-          .attendance-management-page .text-\[10px\] {
-            letter-spacing: 0.01em;
-          }
-
-          .attendance-management-page .text-\[9px\] {
-            letter-spacing: 0.01em;
-          }
-
-          /*
-           * =====================================================
-           * DARK MODE
-           *
-           * Support the common theme patterns used by the app:
-           * .dark
-           * html.dark
-           * body.dark
-           * [data-theme="dark"]
-           * [data-mode="dark"]
-           *
-           * This is intentionally scoped to this page only.
-           * =====================================================
-           */
-
-          .dark .attendance-management-page,
-          html.dark .attendance-management-page,
-          body.dark .attendance-management-page,
-          [data-theme="dark"] .attendance-management-page,
-          [data-mode="dark"] .attendance-management-page {
-            color: #f8fafc !important;
-          }
-
-          .dark .attendance-management-page .text-text,
-          html.dark .attendance-management-page .text-text,
-          body.dark .attendance-management-page .text-text,
-          [data-theme="dark"] .attendance-management-page .text-text,
-          [data-mode="dark"] .attendance-management-page .text-text {
-            color: #f8fafc !important;
-          }
-
-          .dark .attendance-management-page .text-text-muted,
-          html.dark .attendance-management-page .text-text-muted,
-          body.dark .attendance-management-page .text-text-muted,
-          [data-theme="dark"] .attendance-management-page .text-text-muted,
-          [data-mode="dark"] .attendance-management-page .text-text-muted {
-            color: #cbd5e1 !important;
-          }
-
-          .dark .attendance-management-page .text-text-dim,
-          html.dark .attendance-management-page .text-text-dim,
-          body.dark .attendance-management-page .text-text-dim,
-          [data-theme="dark"] .attendance-management-page .text-text-dim,
-          [data-mode="dark"] .attendance-management-page .text-text-dim {
-            color: #94a3b8 !important;
-          }
-
-          .dark .attendance-management-page th,
-          html.dark .attendance-management-page th,
-          body.dark .attendance-management-page th,
-          [data-theme="dark"] .attendance-management-page th,
-          [data-mode="dark"] .attendance-management-page th {
-            color: #cbd5e1 !important;
-          }
-
-          .dark .attendance-management-page td,
-          html.dark .attendance-management-page td,
-          body.dark .attendance-management-page td,
-          [data-theme="dark"] .attendance-management-page td,
-          [data-mode="dark"] .attendance-management-page td {
-            color: #f8fafc;
-          }
-
-          /*
-           * Explicitly strengthen common Tailwind text colors
-           * used inside the page so they cannot disappear in
-           * dark mode.
-           */
-          .dark .attendance-management-page .text-slate-950,
-          html.dark .attendance-management-page .text-slate-950,
-          body.dark .attendance-management-page .text-slate-950,
-          [data-theme="dark"] .attendance-management-page .text-slate-950,
-          [data-mode="dark"] .attendance-management-page .text-slate-950 {
-            color: #f8fafc !important;
-          }
-
-          .dark .attendance-management-page .text-slate-900,
-          html.dark .attendance-management-page .text-slate-900,
-          body.dark .attendance-management-page .text-slate-900,
-          [data-theme="dark"] .attendance-management-page .text-slate-900,
-          [data-mode="dark"] .attendance-management-page .text-slate-900 {
-            color: #f8fafc !important;
-          }
-
-          .dark .attendance-management-page .text-slate-800,
-          html.dark .attendance-management-page .text-slate-800,
-          body.dark .attendance-management-page .text-slate-800,
-          [data-theme="dark"] .attendance-management-page .text-slate-800,
-          [data-mode="dark"] .attendance-management-page .text-slate-800 {
-            color: #f1f5f9 !important;
-          }
-
-          .dark .attendance-management-page .text-slate-700,
-          html.dark .attendance-management-page .text-slate-700,
-          body.dark .attendance-management-page .text-slate-700,
-          [data-theme="dark"] .attendance-management-page .text-slate-700,
-          [data-mode="dark"] .attendance-management-page .text-slate-700 {
-            color: #e2e8f0 !important;
-          }
-
-          .dark .attendance-management-page .text-slate-600,
-          html.dark .attendance-management-page .text-slate-600,
-          body.dark .attendance-management-page .text-slate-600,
-          [data-theme="dark"] .attendance-management-page .text-slate-600,
-          [data-mode="dark"] .attendance-management-page .text-slate-600 {
-            color: #cbd5e1 !important;
-          }
-
-          .dark .attendance-management-page .text-slate-500,
-          html.dark .attendance-management-page .text-slate-500,
-          body.dark .attendance-management-page .text-slate-500,
-          [data-theme="dark"] .attendance-management-page .text-slate-500,
-          [data-mode="dark"] .attendance-management-page .text-slate-500 {
-            color: #94a3b8 !important;
-          }
-
-          /*
-           * Colored status text — keep colors vivid in dark mode.
-           */
-          .dark .attendance-management-page .text-emerald-400,
-          html.dark .attendance-management-page .text-emerald-400,
-          body.dark .attendance-management-page .text-emerald-400,
-          [data-theme="dark"] .attendance-management-page .text-emerald-400,
-          [data-mode="dark"] .attendance-management-page .text-emerald-400 {
-            color: #6ee7b7 !important;
-          }
-
-          .dark .attendance-management-page .text-blue-400,
-          html.dark .attendance-management-page .text-blue-400,
-          body.dark .attendance-management-page .text-blue-400,
-          [data-theme="dark"] .attendance-management-page .text-blue-400,
-          [data-mode="dark"] .attendance-management-page .text-blue-400 {
-            color: #93c5fd !important;
-          }
-
-          .dark .attendance-management-page .text-violet-400,
-          html.dark .attendance-management-page .text-violet-400,
-          body.dark .attendance-management-page .text-violet-400,
-          [data-theme="dark"] .attendance-management-page .text-violet-400,
-          [data-mode="dark"] .attendance-management-page .text-violet-400 {
-            color: #c4b5fd !important;
-          }
-
-          .dark .attendance-management-page .text-indigo-400,
-          html.dark .attendance-management-page .text-indigo-400,
-          body.dark .attendance-management-page .text-indigo-400,
-          [data-theme="dark"] .attendance-management-page .text-indigo-400,
-          [data-mode="dark"] .attendance-management-page .text-indigo-400 {
-            color: #a5b4fc !important;
-          }
-
-          .dark .attendance-management-page .text-rose-400,
-          html.dark .attendance-management-page .text-rose-400,
-          body.dark .attendance-management-page .text-rose-400,
-          [data-theme="dark"] .attendance-management-page .text-rose-400,
-          [data-mode="dark"] .attendance-management-page .text-rose-400 {
-            color: #fda4af !important;
-          }
-
-          .dark .attendance-management-page .text-cyan-300,
-          html.dark .attendance-management-page .text-cyan-300,
-          body.dark .attendance-management-page .text-cyan-300,
-          [data-theme="dark"] .attendance-management-page .text-cyan-300,
-          [data-mode="dark"] .attendance-management-page .text-cyan-300,
-          .dark .attendance-management-page .text-cyan-400,
-          html.dark .attendance-management-page .text-cyan-400,
-          body.dark .attendance-management-page .text-cyan-400,
-          [data-theme="dark"] .attendance-management-page .text-cyan-400,
-          [data-mode="dark"] .attendance-management-page .text-cyan-400 {
-            color: #67e8f9 !important;
-          }
-
-          /*
-           * Form controls in dark mode.
-           */
-          .dark .attendance-management-page input,
-          html.dark .attendance-management-page input,
-          body.dark .attendance-management-page input,
-          [data-theme="dark"] .attendance-management-page input,
-          [data-mode="dark"] .attendance-management-page input,
-          .dark .attendance-management-page select,
-          html.dark .attendance-management-page select,
-          body.dark .attendance-management-page select,
-          [data-theme="dark"] .attendance-management-page select,
-          [data-mode="dark"] .attendance-management-page select {
-            color: #f8fafc !important;
-            background-color: #111c31 !important;
-            border-color: #334155 !important;
-          }
-
-          .dark .attendance-management-page input::placeholder,
-          html.dark .attendance-management-page input::placeholder,
-          body.dark .attendance-management-page input::placeholder,
-          [data-theme="dark"] .attendance-management-page input::placeholder,
-          [data-mode="dark"] .attendance-management-page input::placeholder {
-            color: #94a3b8 !important;
-            opacity: 1 !important;
-          }
-
-          .dark .attendance-management-page option,
-          html.dark .attendance-management-page option,
-          body.dark .attendance-management-page option,
-          [data-theme="dark"] .attendance-management-page option,
-          [data-mode="dark"] .attendance-management-page option {
-            color: #f8fafc !important;
-            background-color: #111c31 !important;
-          }
-
-          /*
-           * Slightly stronger weights for the actual content
-           * so text remains crisp at small sizes.
-           */
-          .attendance-management-page h1,
-          .attendance-management-page h2,
-          .attendance-management-page h3,
-          .attendance-management-page label,
-          .attendance-management-page th,
-          .attendance-management-page button {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-          }
-
-          .attendance-management-page h1,
-          .attendance-management-page h2,
-          .attendance-management-page h3 {
-            text-rendering: optimizeLegibility;
-          }
-
-          .attendance-management-page p,
-          .attendance-management-page span,
-          .attendance-management-page td,
-          .attendance-management-page th,
-          .attendance-management-page label {
-            text-rendering: optimizeLegibility;
-          }
-
-          @media (prefers-reduced-motion: reduce) {
-            .attendance-management-page * {
-              scroll-behavior: auto !important;
-            }
           }
         `}</style>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl border border-cyan-500/40 bg-cyan-500/10 text-xl font-black text-cyan-600 dark:text-cyan-300">
+              <div className="flex size-11 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/5 text-lg font-bold text-cyan-300">
                 ◎
               </div>
 
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-text">
+                <h1 className="text-lg font-semibold text-text">
                   {cn("title", language)}
                 </h1>
-                <p className="mt-1 max-w-2xl text-xs text-text-muted">
+                <p className="mt-0.5 text-[10px] text-text-dim">
                   {cn("subtitle", language)}
                 </p>
               </div>

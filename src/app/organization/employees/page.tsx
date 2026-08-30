@@ -438,11 +438,6 @@ const ORGANIZATION_TEXT = {
     "Database",
     "数据库",
   ],
-
-  connected: [
-    "Connected",
-    "已连接",
-  ],
 } as const;
 
 /* =========================================================
@@ -1455,7 +1450,7 @@ export default function OrganizationManagementPage() {
         organizationLanguage,
       )}
     >
-      <div className="organization-page space-y-5">
+      <div className="organization-page min-h-full space-y-5 p-5 md:p-6 xl:p-8">
         <style>{`
           .organization-page {
             --org-cyan: 34 211 238;
@@ -1510,7 +1505,7 @@ export default function OrganizationManagementPage() {
             border: 1px solid rgb(var(--border));
             background: rgb(var(--surface));
             color: rgb(var(--text));
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 10px 12px;
             font-size: 12px;
             font-weight: 600;
@@ -1670,39 +1665,65 @@ export default function OrganizationManagementPage() {
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-cyan-400" />
-
-              <span className="text-[10px] uppercase tracking-[0.16em] text-text-dim">
-                {organizationText(
-                  "management",
-                  organizationLanguage,
-                )}
-              </span>
-
-              <span className="inline-flex items-center rounded-full bg-cyan-500 px-2.5 py-1 text-[9px] font-extrabold tracking-wide text-white shadow-sm">
-                {organizationText(
-                  "connected",
-                  organizationLanguage,
-                )}
-              </span>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-50/80 text-cyan-500 shadow-sm dark:border-cyan-400/25 dark:bg-cyan-500/10 dark:text-cyan-300">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M16 21V19C16 17.8954 15.1046 17 14 17H6C4.89543 17 4 17.8954 4 19V21"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="10"
+                  cy="7"
+                  r="3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M20 21V19C20 17.3431 18.6569 16 17 16.35M16 4.13C16.8626 4.35118 17.5 5.13382 17.5 6.05C17.5 6.96618 16.8626 7.74882 16 7.97"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
 
-            <h1 className="mt-1 text-xl font-semibold text-text">
-              {organizationText(
-                "title",
-                organizationLanguage,
-              )}
-            </h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">
+                  {organizationText(
+                    "management",
+                    organizationLanguage,
+                  )}
+                </span>
+              </div>
 
-            <p className="mt-1 max-w-2xl text-sm text-text-muted">
-              {organizationText(
-                "description",
-                organizationLanguage,
-              )}
-            </p>
+              <h1 className="mt-0.5 truncate text-[21px] font-bold leading-tight tracking-[-0.02em] text-text">
+                {organizationText(
+                  "title",
+                  organizationLanguage,
+                )}
+              </h1>
+
+              <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-text-muted">
+                {organizationText(
+                  "description",
+                  organizationLanguage,
+                )}
+              </p>
+            </div>
           </div>
 
           {/* GLOBAL LANGUAGE SWITCH IS IN APPSHELL */}
@@ -1714,9 +1735,9 @@ export default function OrganizationManagementPage() {
               availableEmployees.length ===
               0
             }
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-500 px-3.5 py-2 text-[11px] font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span className="text-base">
+            <span className="text-base leading-none">
               +
             </span>
 
@@ -1731,7 +1752,7 @@ export default function OrganizationManagementPage() {
             KPI
         ================================================= */}
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <KpiCard
             title={organizationText(
               "totalEmployees",
@@ -1793,16 +1814,16 @@ export default function OrganizationManagementPage() {
             DIRECTORY
         ================================================= */}
 
-        <section className="organization-card rounded-xl border border-border bg-surface">
-          <div className="border-b border-border p-4 md:p-5">
+        <section className="organization-card overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="border-b border-border-subtle bg-surface-hover p-4 md:p-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="flex size-8 items-center justify-center rounded-md bg-cyan-500/10 text-sm text-cyan-300">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-8 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-500/5 text-sm text-cyan-500 dark:text-cyan-300">
                     👥
                   </span>
 
-                  <h2 className="text-sm font-semibold text-text">
+                  <h2 className="text-sm font-bold text-text">
                     {organizationText(
                       "employeeDirectory",
                       organizationLanguage,
@@ -1810,7 +1831,7 @@ export default function OrganizationManagementPage() {
                   </h2>
                 </div>
 
-                <p className="mt-1 text-xs text-text-muted">
+                <p className="mt-1 text-[10px] text-text-muted">
                   {organizationText(
                     "employeeDirectoryDescription",
                     organizationLanguage,
@@ -1860,7 +1881,7 @@ export default function OrganizationManagementPage() {
                         "search",
                         organizationLanguage,
                       )}
-                      className="organization-input w-full"
+                      className="organization-input w-full rounded-lg"
                       style={{
                         paddingLeft: "40px",
                         paddingRight: "12px",
@@ -1879,7 +1900,7 @@ export default function OrganizationManagementPage() {
                         .value,
                     )
                   }
-                  className="organization-input"
+                  className="organization-input rounded-lg"
                 >
                   <option value="all">
                     {organizationText(
@@ -1918,7 +1939,7 @@ export default function OrganizationManagementPage() {
                         .value,
                     )
                   }
-                  className="organization-input"
+                  className="organization-input rounded-lg"
                 >
                   <option value="all">
                     {organizationText(
@@ -1956,7 +1977,7 @@ export default function OrganizationManagementPage() {
                         .value,
                     )
                   }
-                  className="organization-input"
+                  className="organization-input rounded-lg"
                 >
                   <option value="all">
                     {organizationText(
@@ -1994,9 +2015,9 @@ export default function OrganizationManagementPage() {
           ================================================= */}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1150px]">
+            <table className="w-full min-w-[1150px] border-collapse">
               <thead>
-                <tr className="border-b border-border bg-bg/30">
+                <tr className="border-b border-border-subtle bg-surface-hover">
                   <Th>
                     {organizationText(
                       "employeeId",
@@ -2100,11 +2121,11 @@ export default function OrganizationManagementPage() {
                         key={
                           employee.id
                         }
-                        className="organization-row border-b border-border-subtle last:border-0 transition-colors"
+                        className="organization-row border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]"
                       >
                         <Td>
                           <span
-                            className="font-semibold"
+                            className="text-xs font-bold"
                             style={{
                               color:
                                 getDepartmentColor(
@@ -2139,7 +2160,7 @@ export default function OrganizationManagementPage() {
 
                             <div>
                               <p
-                                className="font-medium transition"
+                                className="text-xs font-bold transition"
                                 style={{
                                   color:
                                     getDepartmentColor(
@@ -2226,7 +2247,7 @@ export default function OrganizationManagementPage() {
                                   employee,
                                 )
                               }
-                              className="rounded-md border border-border px-2.5 py-1.5 text-[10px] text-text-muted transition hover:border-cyan-400/30 hover:text-cyan-300"
+                              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                             >
                               {organizationText(
                                 "view",
@@ -2241,7 +2262,7 @@ export default function OrganizationManagementPage() {
                                   employee,
                                 )
                               }
-                              className="rounded-md border border-border px-2.5 py-1.5 text-[10px] text-text-muted transition hover:border-cyan-400/30 hover:text-cyan-300"
+                              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                             >
                               {organizationText(
                                 "edit",
@@ -2258,7 +2279,7 @@ export default function OrganizationManagementPage() {
                                     employee,
                                   )
                                 }
-                                className="rounded-md border border-emerald-400/20 px-2.5 py-1.5 text-[10px] text-emerald-300 transition hover:bg-emerald-500/10"
+                                className="rounded-lg border border-emerald-400/30 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-bold text-emerald-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400/50 hover:bg-emerald-100 hover:shadow-md dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
                               >
                                 {organizationText(
                                   "reactivate",
@@ -2273,7 +2294,7 @@ export default function OrganizationManagementPage() {
                                     employee,
                                   )
                                 }
-                                className="rounded-md border border-rose-400/20 px-2.5 py-1.5 text-[10px] text-rose-300 transition hover:bg-rose-500/10"
+                                className="rounded-lg border border-rose-400/30 bg-rose-50 px-2.5 py-1.5 text-[10px] font-bold text-rose-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-400/50 hover:bg-rose-100 hover:shadow-md dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
                               >
                                 {organizationText(
                                   "deactivate",
@@ -2293,7 +2314,7 @@ export default function OrganizationManagementPage() {
 
           {/* FOOTER */}
 
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[10px] font-semibold text-text-muted">
+          <div className="flex items-center justify-between border-t border-border-subtle bg-surface-hover px-4 py-3 text-[10px] font-semibold text-text-muted">
             <span>
               {
                 filteredEmployees.length
@@ -2304,18 +2325,6 @@ export default function OrganizationManagementPage() {
               }{" "}
               {organizationText(
                 "employees",
-                organizationLanguage,
-              )}
-            </span>
-
-            <span>
-              {organizationText(
-                "database",
-                organizationLanguage,
-              )}{" "}
-              ·{" "}
-              {organizationText(
-                "connected",
                 organizationLanguage,
               )}
             </span>
@@ -2342,9 +2351,9 @@ export default function OrganizationManagementPage() {
               className="absolute inset-0 bg-black/55 backdrop-blur-sm"
             />
 
-            <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-border bg-surface shadow-2xl">
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
-                <h2 className="text-sm font-semibold text-text">
+            <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-border-subtle bg-surface shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface px-5 py-4">
+                <h2 className="text-sm font-bold text-text">
                   {organizationText(
                     "profile",
                     organizationLanguage,
@@ -2365,7 +2374,7 @@ export default function OrganizationManagementPage() {
               </div>
 
               <div className="p-5">
-                <div className="rounded-xl border border-border bg-surface p-5">
+                <div className="rounded-xl border border-border-subtle bg-surface p-5 shadow-sm">
                   <div className="flex items-center gap-4">
                     <Avatar
                       name={
@@ -2400,7 +2409,7 @@ export default function OrganizationManagementPage() {
                         }
                       </p>
 
-                      <p className="mt-1 text-xs text-text-muted">
+                      <p className="mt-1 text-[10px] text-text-muted">
                         {organizationLanguage ===
                         "cn"
                           ? selectedEmployee.positionCn
@@ -2625,9 +2634,9 @@ export default function OrganizationManagementPage() {
         {showForm && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
             <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-border bg-surface shadow-2xl">
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface px-5 py-4">
                 <div>
-                  <h2 className="text-sm font-semibold text-text">
+                  <h2 className="text-sm font-bold text-text">
                     {editingEmployee
                       ? organizationText(
                           "edit",
@@ -2690,7 +2699,7 @@ export default function OrganizationManagementPage() {
                                 .value,
                             )
                           }
-                          className="organization-input"
+                          className="organization-input rounded-lg"
                         >
                           <option value="">
                             {organizationText(
@@ -2735,7 +2744,7 @@ export default function OrganizationManagementPage() {
                         value={
                           form.employeeId
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2751,7 +2760,7 @@ export default function OrganizationManagementPage() {
                         value={
                           form.name
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2767,7 +2776,7 @@ export default function OrganizationManagementPage() {
                         value={
                           form.nameCn
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2802,7 +2811,7 @@ export default function OrganizationManagementPage() {
                               })()
                             : form.department
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2838,7 +2847,7 @@ export default function OrganizationManagementPage() {
                             event.target.value,
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled={
                           loadingPositions
                         }
@@ -2890,7 +2899,7 @@ export default function OrganizationManagementPage() {
                             managerId: event.target.value,
                           }))
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       >
                         <option value="">
                           {organizationText(
@@ -2945,7 +2954,7 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         placeholder="Head Office / Site A / Plant 1"
                       />
                     </FormField>
@@ -2987,7 +2996,7 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       >
                         <option value="Permanent">
                           {employmentTypeName("Permanent", organizationLanguage)}
@@ -3037,7 +3046,7 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       />
                     </FormField>
 
@@ -3066,7 +3075,7 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       >
                         <option value="Active">
                           {employmentStatusName("Active", organizationLanguage)}
@@ -3170,15 +3179,15 @@ function KpiCard({
 
   return (
     <div
-      className="organization-card rounded-xl border border-border bg-surface p-4"
+      className="organization-card rounded-xl border border-border bg-surface p-4 transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.10)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-text-dim">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
             {title}
           </p>
 
-          <p className="mt-2 text-2xl font-semibold text-text">
+          <p className="mt-1 text-2xl font-black text-text">
             {value}
           </p>
         </div>
