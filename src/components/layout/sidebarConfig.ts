@@ -170,7 +170,22 @@ export const navItems: NavItem[] = [
     icon: "report",
     children: [
       { id: "overview", labelKey: "overview", href: "/report" },
-      { id: "management", labelKey: "moduleManagement", href: "/report/management" },
+      {
+        id: "weekly-report",
+        labelKey: "reportWeeklyReport",
+        children: [
+          {
+            id: "summary",
+            labelKey: "reportSummary",
+            href: "/report/summary",
+          },
+          {
+            id: "reports",
+            labelKey: "reportReports",
+            href: "/report/reports",
+          },
+        ],
+      },
     ],
   },
   {

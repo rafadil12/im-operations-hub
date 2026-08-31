@@ -29,6 +29,8 @@ const reportTdGroup = "border border-border-subtle bg-bg/10 px-4 py-4 align-midd
 
 type ActiveTab = number | "summary";
 
+export type ReportManagementMode = "summary" | "reports";
+
 type SummaryAreaLineGroup = {
   areaId: number;
   lines: ReportLine[];
@@ -281,14 +283,16 @@ function SummaryTable({
   );
 }
 
-export function ReportManagement() {
+export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const { lang } = useLang();
   const language = lang as ReportLanguage;
   const access = useRoleAccess();
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [year, setYear] = useState(new Date().getFullYear());
-  const [activeTab, setActiveTab] = useState<ActiveTab>("summary");
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    mode === "summary" ? "summary" : 0
+  );
   const [filterWeek, setFilterWeek] = useState<number | "all">("all");
   const [filterSubItem, setFilterSubItem] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
@@ -306,8 +310,8 @@ export function ReportManagement() {
   const [reopenConfirm, setReopenConfirm] = useState(false);
   const [summaryFullscreenOpen, setSummaryFullscreenOpen] = useState(false);
 
-  const isSummary = activeTab === "summary";
-  const areaId = isSummary ? null : activeTab;
+  const isSummary = mode === "summary";
+  const areaId = isSummary || typeof activeTab !== "number" ? null : activeTab;
   const canCreate = access.canCreateReportLine;
   const canUpdate = access.canUpdateReportLine;
   const canSubmit = access.canSubmitReport;
@@ -392,14 +396,15 @@ export function ReportManagement() {
   }, [loadLines]);
 
   useEffect(() => {
+    if (mode === "summary") return;
     if (
-      activeTab !== "summary" &&
+      typeof activeTab === "number" &&
       areas.length &&
       !areas.some((area) => area.id === activeTab)
     ) {
       setActiveTab(areas[0].id);
     }
-  }, [areas, activeTab]);
+  }, [areas, activeTab, mode]);
 
   useEffect(() => {
     setFilterWeek("all");
@@ -587,55 +592,40 @@ export function ReportManagement() {
         ) : null}
       </div>
 
-      <div className="overflow-x-auto border-b border-border-subtle">
-        <div className="flex min-w-max gap-6">
-          <button
-            type="button"
-            onClick={() => setActiveTab("summary")}
-            className={[
-              "relative flex cursor-pointer items-center gap-2 pb-3 pt-1 text-sm font-medium transition-colors",
-              isSummary ? "text-text" : "text-text-muted hover:text-text",
-            ].join(" ")}
-          >
-            <span className="flex size-2 shrink-0 overflow-hidden rounded-full" aria-hidden>
-              <span className="h-full w-1/2 bg-[#3b82f6]" />
-              <span className="h-full w-1/2 bg-[#22c55e]" />
-            </span>
-            {reportText("summaryTab", language)}
-            {isSummary ? (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent" />
-            ) : null}
-          </button>
-          {areas.map((area) => {
-            const active = activeTab === area.id;
-            const color = areaColor(area.code);
-            return (
-              <button
-                key={area.id}
-                type="button"
-                onClick={() => setActiveTab(area.id)}
-                className={[
-                  "relative flex cursor-pointer items-center gap-2 pb-3 pt-1 text-sm font-medium transition-colors",
-                  active ? "text-text" : "text-text-muted hover:text-text",
-                ].join(" ")}
-              >
-                <span
-                  className="size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: color }}
-                  aria-hidden
-                />
-                {localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, lang)}
-                {active ? (
+      {mode === "reports" ? (
+        <div className="overflow-x-auto border-b border-border-subtle">
+          <div className="flex min-w-max gap-6">
+            {areas.map((area) => {
+              const active = activeTab === area.id;
+              const color = areaColor(area.code);
+              return (
+                <button
+                  key={area.id}
+                  type="button"
+                  onClick={() => setActiveTab(area.id)}
+                  className={[
+                    "relative flex cursor-pointer items-center gap-2 pb-3 pt-1 text-sm font-medium transition-colors",
+                    active ? "text-text" : "text-text-muted hover:text-text",
+                  ].join(" ")}
+                >
                   <span
-                    className="absolute inset-x-0 bottom-0 h-0.5 rounded-full"
+                    className="size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: color }}
+                    aria-hidden
                   />
-                ) : null}
-              </button>
-            );
-          })}
+                  {localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, lang)}
+                  {active ? (
+                    <span
+                      className="absolute inset-x-0 bottom-0 h-0.5 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex flex-wrap items-end gap-3 py-4">
         <div className="relative min-w-[240px] flex-1">
