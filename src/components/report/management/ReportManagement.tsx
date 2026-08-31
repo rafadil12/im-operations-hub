@@ -8,6 +8,7 @@ import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedField, localizedName, useLang } from "@/lib/i18n";
 import {
   areaColor,
+  groupLinesByWeek,
   reportText,
   type ReportArea,
   type ReportSubItem,
@@ -18,6 +19,7 @@ import {
 import { completionBarColor } from "@/lib/report/completionColor";
 import { ReportWeekFormModal } from "./ReportWeekFormModal";
 import { SummaryFullViewWorkspace } from "./SummaryFullViewWorkspace";
+import { SummaryTable } from "./SummaryTable";
 
 const filterCtrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
@@ -25,62 +27,10 @@ const filterCtrl =
 const reportTh =
   "sticky top-0 z-20 border border-border-subtle bg-surface px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
 const reportTd = "border border-border-subtle px-3 py-2.5 align-top";
-const reportTdGroup = "border border-border-subtle bg-bg/10 px-3 py-2.5 align-middle";
 
 type ActiveTab = number | "summary";
 
 export type ReportManagementMode = "summary" | "reports";
-
-type SummaryAreaLineGroup = {
-  areaId: number;
-  lines: ReportLine[];
-};
-
-type WeekLineGroup = {
-  year: number;
-  weekNumber: number;
-  areaGroups: SummaryAreaLineGroup[];
-  totalLines: number;
-};
-
-function groupLinesByWeek(lines: ReportLine[], areas: ReportArea[]): WeekLineGroup[] {
-  const areaOrder = new Map(areas.map((area, index) => [area.id, index]));
-  const map = new Map<string, Map<number, ReportLine[]>>();
-
-  for (const line of lines) {
-    if (line.weekNumber == null || line.year == null) continue;
-    const weekKey = `${line.year}-${line.weekNumber}`;
-    if (!map.has(weekKey)) map.set(weekKey, new Map());
-    const areaMap = map.get(weekKey)!;
-    if (!areaMap.has(line.areaId)) areaMap.set(line.areaId, []);
-    areaMap.get(line.areaId)!.push(line);
-  }
-
-  return Array.from(map.entries())
-    .map(([key, areaMap]) => {
-      const [yearStr, weekStr] = key.split("-");
-      const areaGroups: SummaryAreaLineGroup[] = Array.from(areaMap.entries())
-        .map(([areaId, areaLines]) => ({
-          areaId,
-          lines: [...areaLines].sort((a, b) => a.sortOrder - b.sortOrder),
-        }))
-        .sort(
-          (a, b) => (areaOrder.get(a.areaId) ?? 0) - (areaOrder.get(b.areaId) ?? 0)
-        );
-
-      const totalLines = areaGroups.reduce((sum, group) => sum + group.lines.length, 0);
-      return {
-        year: Number(yearStr),
-        weekNumber: Number(weekStr),
-        areaGroups,
-        totalLines,
-      };
-    })
-    .sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.weekNumber - a.weekNumber;
-    });
-}
 
 function SearchIcon() {
   return (
@@ -227,141 +177,19 @@ function CompletionCell({ rate }: { rate: number | null }) {
   const fillColor = completionBarColor(clamped);
 
   return (
-    <div className="mx-auto flex w-full max-w-[72px] flex-col items-center gap-1">
-      <span className="text-[11px] font-semibold leading-none" style={{ color: fillColor }}>
+    <div className="flex min-w-[64px] items-center gap-1.5">
+      <span
+        className="w-8 shrink-0 text-right text-[11px] font-semibold leading-none"
+        style={{ color: fillColor }}
+      >
         {pct}%
       </span>
-      <div className="h-1 w-full overflow-hidden rounded-full bg-border-subtle">
+      <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-border-subtle">
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${clamped}%`, backgroundColor: fillColor }}
         />
       </div>
-    </div>
-  );
-}
-
-type SummaryTableProps = {
-  weekGroups: WeekLineGroup[];
-  areaById: Map<number, ReportArea>;
-  language: ReportLanguage;
-  wrapperClassName?: string;
-};
-
-function SummaryTable({
-  weekGroups,
-  areaById,
-  language,
-  wrapperClassName = "overflow-auto",
-}: SummaryTableProps) {
-  return (
-    <div className={wrapperClassName}>
-      <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
-        <thead>
-          <tr>
-            <th className={reportTh}>{reportText("week", language)}</th>
-            <th className={reportTh}>{reportText("area", language)}</th>
-            <th className={reportTh}>{reportText("subItem", language)}</th>
-            <th className={reportTh}>{reportText("target", language)}</th>
-            <th className={`${reportTh} text-center`}>{reportText("rate", language)}</th>
-            <th className={reportTh}>{reportText("summary", language)}</th>
-            <th className={reportTh}>{reportText("plan", language)}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {weekGroups.length === 0 ? (
-            <tr>
-              <td colSpan={7} className={`${reportTd} py-12 text-center text-text-muted`}>
-                {reportText("noLines", language)}
-              </td>
-            </tr>
-          ) : (
-            weekGroups.map((group, groupIndex) => {
-              const isLastWeekGroup = groupIndex === weekGroups.length - 1;
-              let weekRowIndex = 0;
-
-              return group.areaGroups.map((areaGroup) => {
-                const area = areaById.get(areaGroup.areaId);
-                const color = area ? areaColor(area.code) : undefined;
-
-                return areaGroup.lines.map((row, lineIndex) => {
-                  const target = localizedField(row.workTargetEn, row.workTargetCn, language);
-                  const summary = localizedField(row.summaryEn, row.summaryCn, language);
-                  const plan = localizedField(row.planEn, row.planCn, language);
-                  const subItem =
-                    localizedField(row.subItemNameEn, row.subItemNameCn, language) || "—";
-                  const isFirstInWeek = weekRowIndex === 0;
-                  const isFirstInArea = lineIndex === 0;
-                  const isLastInWeek = weekRowIndex === group.totalLines - 1;
-                  const isLastInArea = lineIndex === areaGroup.lines.length - 1;
-                  const weekBottomBorder =
-                    isLastInWeek && !isLastWeekGroup ? "border-b-2 border-b-border" : "";
-                  const areaBottomBorder =
-                    isLastInArea && !isLastInWeek ? "border-b border-b-border-subtle" : "";
-
-                  weekRowIndex += 1;
-
-                  return (
-                    <tr key={row.id} className="align-top">
-                      {isFirstInWeek ? (
-                        <td
-                          rowSpan={group.totalLines}
-                          className={`${reportTdGroup} ${weekBottomBorder}`}
-                        >
-                          <WeekBadge weekNumber={group.weekNumber} year={group.year} />
-                        </td>
-                      ) : null}
-                      {isFirstInArea ? (
-                        <td
-                          rowSpan={areaGroup.lines.length}
-                          className={`${reportTdGroup} ${weekBottomBorder} ${areaBottomBorder}`}
-                        >
-                          {area ? (
-                            <span className="inline-flex items-center gap-2 text-sm font-medium text-text">
-                              <span
-                                className="size-2 shrink-0 rounded-full"
-                                style={{ backgroundColor: color }}
-                                aria-hidden
-                              />
-                              {localizedName(
-                                { name_en: area.nameEn, name_cn: area.nameCn },
-                                language
-                              )}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                      ) : null}
-                      <td className={`${reportTd} ${weekBottomBorder}`}>
-                        <span className="text-sm font-medium text-accent">{subItem}</span>
-                      </td>
-                      <td
-                        className={`${reportTd} max-w-xs text-[13px] leading-snug text-text whitespace-pre-line ${weekBottomBorder}`}
-                      >
-                        {target}
-                      </td>
-                      <td className={`${reportTd} ${weekBottomBorder}`}>
-                        <CompletionCell rate={row.weeklyCompletionRate} />
-                      </td>
-                      <td
-                        className={`${reportTd} max-w-md text-[13px] leading-snug text-text-muted whitespace-pre-line ${weekBottomBorder}`}
-                      >
-                        {summary}
-                      </td>
-                      <td
-                        className={`${reportTd} max-w-md text-[13px] leading-snug text-text-muted whitespace-pre-line ${weekBottomBorder}`}
-                      >
-                        {plan || "—"}
-                      </td>
-                    </tr>
-                  );
-                });
-              });
-            })
-          )}
-        </tbody>
-      </table>
     </div>
   );
 }
@@ -756,9 +584,11 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
       {!loading && !error ? (
         isSummary ? (
           <SummaryTable
+            year={year}
             weekGroups={weekGroups}
             areaById={areaById}
             language={language}
+            showToolbar
             wrapperClassName="overflow-auto rounded-xl border border-border-subtle bg-surface max-h-[calc(100dvh-17rem)]"
           />
         ) : (
@@ -874,9 +704,11 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
           filters={<SummaryFilterBar {...summaryFilterBarProps} />}
         >
           <SummaryTable
+            year={year}
             weekGroups={weekGroups}
             areaById={areaById}
             language={language}
+            showToolbar
             wrapperClassName="h-full overflow-auto rounded-xl border border-border-subtle bg-surface"
           />
         </SummaryFullViewWorkspace>

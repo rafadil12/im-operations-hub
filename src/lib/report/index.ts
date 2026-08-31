@@ -4,3 +4,4 @@ export * from "./apiHelpers";
 export * from "./weekCalendar";
 export * from "./overviewMetrics";
 export * from "./mapToOverview";
+export * from "./summaryGrouping";
