@@ -91,16 +91,86 @@ export type ReportAreaMetrics = {
   submittedWeeks: number;
 };
 
+export type ReportKpiSnapshot = {
+  value: number;
+  previousValue: number | null;
+  delta: number | null;
+};
+
+export type ReportDivisionMetrics = {
+  areaId: number;
+  code: string;
+  nameEn: string;
+  nameCn: string;
+  workCompletionRate: number;
+  projectProgressRate: number | null;
+  lineCount: number;
+  submissionStatus: ReportSubmissionStatus | null;
+};
+
+export type ReportDailyWorkMetrics = {
+  planned: number;
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+  completionRate: number;
+};
+
+export type ReportProjectItem = {
+  id: number;
+  areaCode: string;
+  nameEn: string;
+  nameCn: string;
+  progressRate: number;
+  status: "on_track" | "at_risk" | "delayed";
+};
+
+export type ReportProjectMetrics = {
+  activeCount: number;
+  onTrack: number;
+  atRisk: number;
+  delayed: number;
+  overallProgress: number | null;
+  items: ReportProjectItem[];
+};
+
+export type ReportSafetyMetrics = {
+  lineCount: number;
+  avgCompletionRate: number;
+  submissionStatus: ReportSubmissionStatus | null;
+  openFindings: number;
+};
+
+export type ReportAttentionItem = {
+  severity: "critical" | "warning" | "info";
+  messageEn: string;
+  messageCn: string;
+};
+
 export type ReportTrendRow = {
   label: string;
   year: number;
   weekNumber: number;
   avgRate: number;
+  workCompletionRate: number;
+  projectProgressRate: number | null;
   lineCount: number;
 };
 
 export type ReportOverviewMetrics = {
   year: number;
+  weekNumber: number;
+  weekLabel: string;
+  weekStartsOn: string;
+  weekEndsOn: string;
+  achievement: ReportKpiSnapshot;
+  workCompletion: ReportKpiSnapshot;
+  projectProgress: ReportKpiSnapshot | null;
+  onTimeRate: ReportKpiSnapshot;
+  reportCompletion: ReportKpiSnapshot;
+  reportLineCount: ReportKpiSnapshot;
+  currentWeekStatus: "on_target" | "below_target" | "above_target";
+  /** Legacy + dashboard card fields (scoped to selected week). */
   totalLines: number;
   totalWeeks: number;
   avgCompletionRate: number;
@@ -108,6 +178,11 @@ export type ReportOverviewMetrics = {
   draftCount: number;
   byArea: ReportAreaMetrics[];
   weeklyTrend: ReportTrendRow[];
+  divisions: ReportDivisionMetrics[];
+  dailyWork: ReportDailyWorkMetrics;
+  projects: ReportProjectMetrics;
+  safety: ReportSafetyMetrics;
+  attention: ReportAttentionItem[];
   recentLines: ReportLine[];
 };
 

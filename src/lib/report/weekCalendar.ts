@@ -46,3 +46,17 @@ export function formatRatePercent(rate: number | null | undefined): string {
   if (rate == null || !Number.isFinite(rate)) return "—";
   return `${Math.round(rate * 100)}%`;
 }
+
+/** Week number (1–53) for a date in the Saturday–Friday calendar. */
+export function getWeekNumberForDate(date: Date = new Date()): number {
+  const year = date.getFullYear();
+  const anchor = getYearAnchorSaturday(year);
+  const diffDays = Math.floor((date.getTime() - anchor.getTime()) / 86_400_000);
+  if (diffDays < 0) return 1;
+  return Math.min(53, Math.floor(diffDays / 7) + 1);
+}
+
+export function getPreviousWeek(year: number, weekNumber: number): { year: number; weekNumber: number } | null {
+  if (weekNumber > 1) return { year, weekNumber: weekNumber - 1 };
+  return null;
+}

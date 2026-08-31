@@ -14,6 +14,7 @@ import { mapSparepartToOverview } from "@/lib/sparepart/mapToOverview";
 import { mapSafetyToOverview, type SafetyRow } from "@/lib/safety/mapToOverview";
 import { mapTrainingToOverview } from "@/lib/training/mapToOverview";
 import { mapReportToOverview } from "@/lib/report/mapToOverview";
+import { getWeekNumberForDate } from "@/lib/report/weekCalendar";
 import { mapOrganizationToOverview } from "@/lib/organization/mapToOverview";
 import type { OrganizationOverviewMetrics } from "@/lib/organization/types";
 import type { TrainingOverviewMetrics } from "@/lib/training/types";
@@ -144,7 +145,9 @@ export function useDashboardModules() {
               : Promise.resolve(null),
 
             canViewReportOverview || canViewReportLines
-              ? fetch(`/api/report/overview?year=${new Date().getFullYear()}`, {
+              ? fetch(
+                  `/api/report/overview?year=${new Date().getFullYear()}&week=${getWeekNumberForDate()}`,
+                  {
                   method: "GET",
                   cache: "no-store",
                 })
