@@ -294,6 +294,11 @@ const ORGANIZATION_TEXT = {
     "停用",
   ],
 
+  reactivate: [
+    "Reactivate",
+    "重新启用",
+  ],
+
   noData: [
     "No employees found.",
     "未找到员工。",
@@ -432,11 +437,6 @@ const ORGANIZATION_TEXT = {
   database: [
     "Database",
     "数据库",
-  ],
-
-  connected: [
-    "Connected",
-    "已连接",
   ],
 } as const;
 
@@ -821,11 +821,13 @@ export default function OrganizationManagementPage() {
    */
   const isDirectoryEmployee = useCallback(
     (employee: Employee) =>
-      employee.employeeId !== "620000125",
+      employee.employeeId !== "620000125" &&
+      Boolean(employee.positionId) &&
+      employee.status === "Active",
     [],
   );
 
-  const directoryEmployees =
+  const directoryEmployees =  
     useMemo(
       () =>
         employees.filter(
@@ -963,7 +965,9 @@ export default function OrganizationManagementPage() {
 
       return employees.filter(
         (employee) =>
-          !employee.positionId,
+          employee.status === "Inactive" ||
+          (!employee.positionId &&
+            employee.status === "Active"),
       );
     }, [employees]);
 
@@ -1090,6 +1094,13 @@ export default function OrganizationManagementPage() {
         managerId: employee.managerId
           ? String(employee.managerId)
           : current.managerId,
+
+        // Inactive employees are shown again in Assign Employee.
+        // Selecting them means re-activate the existing organization record.
+        status:
+          employee.status === "Inactive"
+            ? "Active"
+            : employee.status,
       };
     });
   }
@@ -1110,6 +1121,9 @@ export default function OrganizationManagementPage() {
   async function saveEmployee() {
     if (
       !form.userId ||
+      !form.employeeId.trim() ||
+      !form.name.trim() ||
+      !form.department.trim() ||
       !form.positionId
     ) {
       window.alert(
@@ -1125,61 +1139,66 @@ export default function OrganizationManagementPage() {
     setSaving(true);
 
     try {
-      const isEditing =
-        Boolean(
-          editingEmployee,
+      const payloadBody = {
+        employee_id: form.employeeId.trim(),
+        user_id: Number(form.userId),
+        name: form.name.trim(),
+        name_cn: form.nameCn.trim() || null,
+        department: form.department.trim(),
+        position_id: form.positionId
+          ? Number(form.positionId)
+          : null,
+        manager_id: form.managerId
+          ? Number(form.managerId)
+          : null,
+        employment_type: form.employmentType,
+        employment_status: form.status,
+        join_date: form.joinDate || null,
+        work_location: form.location.trim() || null,
+      };
+
+      const isEditing = Boolean(editingEmployee);
+
+      let response = await fetch(
+        isEditing
+          ? `/api/organization/employees/${form.userId}`
+          : "/api/organization/employees",
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payloadBody),
+        },
+      );
+
+      let payload = await response.json();
+
+      // Some existing organization records can have no position_id yet,
+      // so the GET data looks unassigned even though the database record exists.
+      // If POST reports a duplicate, update that existing organization record.
+      const duplicateExists =
+        !isEditing &&
+        !response.ok &&
+        typeof payload?.error === "string" &&
+        payload.error
+          .toLowerCase()
+          .includes("organization data already exists");
+
+      if (duplicateExists) {
+        response = await fetch(
+          `/api/organization/employees/${form.userId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payloadBody),
+          },
         );
 
-      const url = isEditing
-        ? `/api/organization/employees/${form.userId}`
-        : "/api/organization/employees";
-
-      const method = isEditing
-        ? "PUT"
-        : "POST";
-
-      const response =
-        await fetch(url, {
-          method,
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            user_id:
-              Number(form.userId),
-
-            position_id:
-              form.positionId
-                ? Number(
-                    form.positionId,
-                  )
-                : null,
-
-            manager_id: form.managerId
-              ? Number(form.managerId)
-              : null,
-
-            employment_type:
-              form.employmentType,
-
-            employment_status:
-              form.status,
-
-            join_date:
-              form.joinDate ||
-              null,
-
-            work_location:
-              form.location.trim() ||
-              null,
-          }),
-        });
-
-      const payload =
-        await response.json();
+        payload = await response.json();
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -1302,6 +1321,79 @@ export default function OrganizationManagementPage() {
   }
 
   /* =======================================================
+     REACTIVATE
+  ======================================================= */
+
+  async function reactivateEmployee(
+    employee: Employee,
+  ) {
+    const confirmed =
+      window.confirm(
+        organizationLanguage === "cn"
+          ? `确定要重新启用员工 ${employee.name} 吗？`
+          : `Are you sure you want to reactivate ${employee.name}?`,
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response =
+        await fetch(
+          `/api/organization/employees/${employee.id}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              employment_status: "Active",
+            }),
+          },
+        );
+
+      const payload =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+            (organizationLanguage === "cn"
+              ? "员工重新启用失败。"
+              : "Failed to reactivate employee."),
+        );
+      }
+
+      setSelectedEmployee(
+        (current) =>
+          current
+            ? {
+                ...current,
+                status: "Active",
+              }
+            : null,
+      );
+
+      await loadEmployees();
+    } catch (error) {
+      console.error(
+        "reactivateEmployee failed",
+        error,
+      );
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : organizationLanguage === "cn"
+            ? "员工重新启用失败。"
+            : "Failed to reactivate employee.",
+      );
+    }
+  }
+
+  /* =======================================================
      POSITION DISPLAY
   ======================================================= */
 
@@ -1358,17 +1450,33 @@ export default function OrganizationManagementPage() {
         organizationLanguage,
       )}
     >
-      <div className="organization-page space-y-5">
+      <div className="organization-page min-h-full space-y-5 p-5 md:p-6 xl:p-8">
         <style>{`
           .organization-page {
             --org-cyan: 34 211 238;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            color: rgb(var(--text));
+          }
+
+          .organization-page *,
+          .organization-page button,
+          .organization-page input,
+          .organization-page select,
+          .organization-page textarea {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
           }
 
           .organization-card {
+            border: 1px solid rgb(var(--border));
+            background: rgb(var(--surface));
             transition:
               border-color .25s ease,
               box-shadow .25s ease,
-              transform .25s ease;
+              background-color .25s ease;
           }
 
           .organization-card:hover {
@@ -1377,12 +1485,13 @@ export default function OrganizationManagementPage() {
 
             box-shadow:
               0 12px 32px
-              rgb(8 47 73 / .12);
+              rgb(8 47 73 / .10);
           }
 
           .organization-row {
             transition:
-              background-color .2s ease;
+              background-color .2s ease,
+              border-color .2s ease;
           }
 
           .organization-row:hover {
@@ -1392,22 +1501,35 @@ export default function OrganizationManagementPage() {
 
           .organization-input {
             width: 100%;
+            min-height: 40px;
             border: 1px solid rgb(var(--border));
-            background: rgb(var(--bg));
+            background: rgb(var(--surface));
             color: rgb(var(--text));
-            border-radius: 8px;
-            padding: 9px 11px;
+            border-radius: 10px;
+            padding: 10px 12px;
             font-size: 12px;
+            font-weight: 600;
+            line-height: 1.25;
             outline: none;
+            transition:
+              border-color .2s ease,
+              background-color .2s ease,
+              box-shadow .2s ease;
           }
 
           .organization-input:focus {
             border-color:
-              rgb(var(--org-cyan) / .5);
+              rgb(var(--org-cyan) / .55);
+            box-shadow:
+              0 0 0 3px
+              rgb(var(--org-cyan) / .08);
           }
 
           .organization-input::placeholder {
-            color: rgb(var(--text-dim));
+            color:
+              rgb(var(--text-muted));
+            opacity: 1;
+            font-weight: 500;
           }
 
           .organization-input:disabled {
@@ -1415,10 +1537,126 @@ export default function OrganizationManagementPage() {
             cursor: not-allowed;
           }
 
+          .organization-page .text-text {
+            color: rgb(var(--text)) !important;
+          }
+
+          .organization-page .text-text-muted {
+            color: rgb(var(--text-muted)) !important;
+          }
+
+          .organization-page .text-text-dim {
+            color: rgb(var(--text-dim)) !important;
+          }
+
+          .organization-page h1,
+          .organization-page h2,
+          .organization-page h3,
+          .organization-page p,
+          .organization-page span,
+          .organization-page label,
+          .organization-page th,
+          .organization-page td,
+          .organization-page button {
+            text-shadow: none;
+          }
+
+          .organization-page .organization-strong-text {
+            color: rgb(var(--text)) !important;
+            font-weight: 700 !important;
+          }
+
+          .organization-page .organization-muted-text {
+            color: rgb(var(--text-muted)) !important;
+            font-weight: 500 !important;
+          }
+
+          .organization-page .organization-dim-text {
+            color: rgb(var(--text-dim)) !important;
+            font-weight: 500 !important;
+          }
+
+          /* Solid status pills, matching the Attendance style */
+          .organization-page .status-active {
+            border-color: rgb(16 185 129 / .25) !important;
+            background: rgb(16 185 129) !important;
+            color: #ffffff !important;
+          }
+
+          .organization-page .status-on-leave {
+            border-color: rgb(245 158 11 / .25) !important;
+            background: rgb(245 158 11) !important;
+            color: #ffffff !important;
+          }
+
+          .organization-page .status-inactive {
+            border-color: rgb(100 116 139 / .25) !important;
+            background: rgb(100 116 139) !important;
+            color: #ffffff !important;
+          }
+
+          .organization-page .status-resigned {
+            border-color: rgb(244 63 94 / .25) !important;
+            background: rgb(244 63 94) !important;
+            color: #ffffff !important;
+          }
+
+          /* Strong light/dark contrast */
+          .dark .organization-page {
+            color: #f8fafc;
+          }
+
+          .dark .organization-page .text-text {
+            color: #f8fafc !important;
+          }
+
+          .dark .organization-page .text-text-muted {
+            color: #cbd5e1 !important;
+          }
+
+          .dark .organization-page .text-text-dim {
+            color: #94a3b8 !important;
+          }
+
+          .dark .organization-page th {
+            color: #cbd5e1 !important;
+          }
+
+          .dark .organization-page td {
+            color: #f8fafc;
+          }
+
+          .dark .organization-page .organization-input {
+            color: #f8fafc !important;
+            background: #111c31 !important;
+            border-color: #334155 !important;
+          }
+
+          .dark .organization-page .organization-input::placeholder {
+            color: #94a3b8 !important;
+          }
+
+          .dark .organization-page select option {
+            color: #f8fafc;
+            background: #111c31;
+          }
+
+          .dark .organization-page .bg-bg,
+          .dark .organization-page .bg-bg\/20,
+          .dark .organization-page .bg-bg\/30 {
+            color: #f8fafc;
+          }
+
+          .organization-page .icon-accent {
+            color: #22d3ee !important;
+            background: rgb(34 211 238 / .10) !important;
+          }
+
           @media (prefers-reduced-motion: reduce) {
             .organization-card,
-            .organization-row {
-              transition: none;
+            .organization-row,
+            .organization-input {
+              transition: none !important;
             }
           }
         `}</style>
@@ -1427,39 +1665,65 @@ export default function OrganizationManagementPage() {
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-cyan-400" />
-
-              <span className="text-[10px] uppercase tracking-[0.16em] text-text-dim">
-                {organizationText(
-                  "management",
-                  organizationLanguage,
-                )}
-              </span>
-
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">
-                {organizationText(
-                  "connected",
-                  organizationLanguage,
-                )}
-              </span>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-50/80 text-cyan-500 shadow-sm dark:border-cyan-400/25 dark:bg-cyan-500/10 dark:text-cyan-300">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M16 21V19C16 17.8954 15.1046 17 14 17H6C4.89543 17 4 17.8954 4 19V21"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="10"
+                  cy="7"
+                  r="3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M20 21V19C20 17.3431 18.6569 16 17 16.35M16 4.13C16.8626 4.35118 17.5 5.13382 17.5 6.05C17.5 6.96618 16.8626 7.74882 16 7.97"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
 
-            <h1 className="mt-1 text-xl font-semibold text-text">
-              {organizationText(
-                "title",
-                organizationLanguage,
-              )}
-            </h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">
+                  {organizationText(
+                    "management",
+                    organizationLanguage,
+                  )}
+                </span>
+              </div>
 
-            <p className="mt-1 max-w-2xl text-sm text-text-muted">
-              {organizationText(
-                "description",
-                organizationLanguage,
-              )}
-            </p>
+              <h1 className="mt-0.5 truncate text-[21px] font-bold leading-tight tracking-[-0.02em] text-text">
+                {organizationText(
+                  "title",
+                  organizationLanguage,
+                )}
+              </h1>
+
+              <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-text-muted">
+                {organizationText(
+                  "description",
+                  organizationLanguage,
+                )}
+              </p>
+            </div>
           </div>
 
           {/* GLOBAL LANGUAGE SWITCH IS IN APPSHELL */}
@@ -1471,9 +1735,9 @@ export default function OrganizationManagementPage() {
               availableEmployees.length ===
               0
             }
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-500 px-3.5 py-2 text-[11px] font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span className="text-base">
+            <span className="text-base leading-none">
               +
             </span>
 
@@ -1488,7 +1752,7 @@ export default function OrganizationManagementPage() {
             KPI
         ================================================= */}
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <KpiCard
             title={organizationText(
               "totalEmployees",
@@ -1550,16 +1814,16 @@ export default function OrganizationManagementPage() {
             DIRECTORY
         ================================================= */}
 
-        <section className="organization-card rounded-xl border border-border bg-surface">
-          <div className="border-b border-border p-4 md:p-5">
+        <section className="organization-card overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="border-b border-border-subtle bg-surface-hover p-4 md:p-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-8 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-500/5 text-sm text-cyan-500 dark:text-cyan-300">
                     👥
                   </span>
 
-                  <h2 className="text-sm font-semibold text-text">
+                  <h2 className="text-sm font-bold text-text">
                     {organizationText(
                       "employeeDirectory",
                       organizationLanguage,
@@ -1567,7 +1831,7 @@ export default function OrganizationManagementPage() {
                   </h2>
                 </div>
 
-                <p className="mt-1 text-xs text-text-muted">
+                <p className="mt-1 text-[10px] text-text-muted">
                   {organizationText(
                     "employeeDirectoryDescription",
                     organizationLanguage,
@@ -1578,27 +1842,52 @@ export default function OrganizationManagementPage() {
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {/* SEARCH */}
 
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-text-dim">
-                    🔍
-                  </span>
+                <div className="relative w-full min-w-[220px]">
+                    {/* SEARCH ICON */}
+                    <span
+                      className="pointer-events-none absolute left-3 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center"
+                      aria-hidden="true"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="11"
+                          cy="11"
+                          r="7"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        />
+                        <path
+                          d="M16.5 16.5L21 21"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </span>
 
-                  <input
-                    value={search}
-                    onChange={(event) =>
-                      setSearch(
-                        event.target
-                          .value,
-                      )
-                    }
-                    placeholder={organizationText(
-                      "search",
-                      organizationLanguage,
-                    )}
-                    className="organization-input pl-9"
-                  />
-                </div>
-
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(event) =>
+                        setSearch(event.target.value)
+                      }
+                      placeholder={organizationText(
+                        "search",
+                        organizationLanguage,
+                      )}
+                      className="organization-input w-full rounded-lg"
+                      style={{
+                        paddingLeft: "40px",
+                        paddingRight: "12px",
+                      }}
+                    />
+                  </div>
                 {/* DEPARTMENT */}
 
                 <select
@@ -1611,7 +1900,7 @@ export default function OrganizationManagementPage() {
                         .value,
                     )
                   }
-                  className="organization-input"
+                  className="organization-input rounded-lg"
                 >
                   <option value="all">
                     {organizationText(
@@ -1650,7 +1939,7 @@ export default function OrganizationManagementPage() {
                         .value,
                     )
                   }
-                  className="organization-input"
+                  className="organization-input rounded-lg"
                 >
                   <option value="all">
                     {organizationText(
@@ -1660,19 +1949,19 @@ export default function OrganizationManagementPage() {
                   </option>
 
                   <option value="Active">
-                    Active
+                    {employmentStatusName("Active", organizationLanguage)}
                   </option>
 
                   <option value="On Leave">
-                    On Leave
+                    {employmentStatusName("On Leave", organizationLanguage)}
                   </option>
 
                   <option value="Inactive">
-                    Inactive
+                    {employmentStatusName("Inactive", organizationLanguage)}
                   </option>
 
                   <option value="Resigned">
-                    Resigned
+                    {employmentStatusName("Resigned", organizationLanguage)}
                   </option>
                 </select>
 
@@ -1688,7 +1977,7 @@ export default function OrganizationManagementPage() {
                         .value,
                     )
                   }
-                  className="organization-input"
+                  className="organization-input rounded-lg"
                 >
                   <option value="all">
                     {organizationText(
@@ -1698,23 +1987,23 @@ export default function OrganizationManagementPage() {
                   </option>
 
                   <option value="Permanent">
-                    Permanent
+                    {employmentTypeName("Permanent", organizationLanguage)}
                   </option>
 
                   <option value="Contract">
-                    Contract
+                    {employmentTypeName("Contract", organizationLanguage)}
                   </option>
 
                   <option value="Probation">
-                    Probation
+                    {employmentTypeName("Probation", organizationLanguage)}
                   </option>
 
                   <option value="Intern">
-                    Intern
+                    {employmentTypeName("Intern", organizationLanguage)}
                   </option>
 
                   <option value="Outsource">
-                    Outsource
+                    {employmentTypeName("Outsource", organizationLanguage)}
                   </option>
                 </select>
               </div>
@@ -1726,9 +2015,9 @@ export default function OrganizationManagementPage() {
           ================================================= */}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1150px]">
+            <table className="w-full min-w-[1150px] border-collapse">
               <thead>
-                <tr className="border-b border-border bg-bg/30">
+                <tr className="border-b border-border-subtle bg-surface-hover">
                   <Th>
                     {organizationText(
                       "employeeId",
@@ -1832,10 +2121,18 @@ export default function OrganizationManagementPage() {
                         key={
                           employee.id
                         }
-                        className="organization-row border-b border-border-subtle last:border-0"
+                        className="organization-row border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]"
                       >
                         <Td>
-                          <span className="font-semibold text-cyan-300">
+                          <span
+                            className="text-xs font-bold"
+                            style={{
+                              color:
+                                getDepartmentColor(
+                                  employee.department,
+                                ),
+                            }}
+                          >
                             {
                               employee.employeeId
                             }
@@ -1856,10 +2153,21 @@ export default function OrganizationManagementPage() {
                               name={
                                 employee.name
                               }
+                              department={
+                                employee.department
+                              }
                             />
 
                             <div>
-                              <p className="font-medium text-text transition hover:text-cyan-300">
+                              <p
+                                className="text-xs font-bold transition"
+                                style={{
+                                  color:
+                                    getDepartmentColor(
+                                      employee.department,
+                                    ),
+                                }}
+                              >
                                 {
                                   organizationLanguage ===
                                   "cn"
@@ -1910,18 +2218,24 @@ export default function OrganizationManagementPage() {
 
                         <Td>
                           <TypeBadge
-                            type={
-                              employee.employmentType
-                            }
-                          />
+                              type={
+                                employee.employmentType
+                              }
+                              language={
+                                organizationLanguage
+                              }
+                            />
                         </Td>
 
                         <Td>
                           <StatusBadge
-                            status={
-                              employee.status
-                            }
-                          />
+                              status={
+                                employee.status
+                              }
+                              language={
+                                organizationLanguage
+                              }
+                            />
                         </Td>
 
                         <Td align="right">
@@ -1933,7 +2247,7 @@ export default function OrganizationManagementPage() {
                                   employee,
                                 )
                               }
-                              className="rounded-md border border-border px-2.5 py-1.5 text-[10px] text-text-muted transition hover:border-cyan-400/30 hover:text-cyan-300"
+                              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                             >
                               {organizationText(
                                 "view",
@@ -1948,7 +2262,7 @@ export default function OrganizationManagementPage() {
                                   employee,
                                 )
                               }
-                              className="rounded-md border border-border px-2.5 py-1.5 text-[10px] text-text-muted transition hover:border-cyan-400/30 hover:text-cyan-300"
+                              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                             >
                               {organizationText(
                                 "edit",
@@ -1956,8 +2270,23 @@ export default function OrganizationManagementPage() {
                               )}
                             </button>
 
-                            {employee.status !==
-                              "Inactive" && (
+                            {employee.status ===
+                              "Inactive" ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void reactivateEmployee(
+                                    employee,
+                                  )
+                                }
+                                className="rounded-lg border border-emerald-400/30 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-bold text-emerald-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400/50 hover:bg-emerald-100 hover:shadow-md dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                              >
+                                {organizationText(
+                                  "reactivate",
+                                  organizationLanguage,
+                                )}
+                              </button>
+                            ) : (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -1965,7 +2294,7 @@ export default function OrganizationManagementPage() {
                                     employee,
                                   )
                                 }
-                                className="rounded-md border border-rose-400/20 px-2.5 py-1.5 text-[10px] text-rose-300 transition hover:bg-rose-500/10"
+                                className="rounded-lg border border-rose-400/30 bg-rose-50 px-2.5 py-1.5 text-[10px] font-bold text-rose-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-400/50 hover:bg-rose-100 hover:shadow-md dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
                               >
                                 {organizationText(
                                   "deactivate",
@@ -1985,7 +2314,7 @@ export default function OrganizationManagementPage() {
 
           {/* FOOTER */}
 
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[10px] text-text-dim">
+          <div className="flex items-center justify-between border-t border-border-subtle bg-surface-hover px-4 py-3 text-[10px] font-semibold text-text-muted">
             <span>
               {
                 filteredEmployees.length
@@ -1996,18 +2325,6 @@ export default function OrganizationManagementPage() {
               }{" "}
               {organizationText(
                 "employees",
-                organizationLanguage,
-              )}
-            </span>
-
-            <span>
-              {organizationText(
-                "database",
-                organizationLanguage,
-              )}{" "}
-              ·{" "}
-              {organizationText(
-                "connected",
                 organizationLanguage,
               )}
             </span>
@@ -2031,12 +2348,12 @@ export default function OrganizationManagementPage() {
                   null,
                 )
               }
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/55 backdrop-blur-sm"
             />
 
-            <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-border bg-surface shadow-2xl">
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
-                <h2 className="text-sm font-semibold text-text">
+            <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-border-subtle bg-surface shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface px-5 py-4">
+                <h2 className="text-sm font-bold text-text">
                   {organizationText(
                     "profile",
                     organizationLanguage,
@@ -2050,14 +2367,14 @@ export default function OrganizationManagementPage() {
                       null,
                     )
                   }
-                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-bg hover:text-text"
+                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-surface-hover hover:text-text"
                 >
                   ✕
                 </button>
               </div>
 
               <div className="p-5">
-                <div className="rounded-xl border border-border bg-bg/30 p-5">
+                <div className="rounded-xl border border-border-subtle bg-surface p-5 shadow-sm">
                   <div className="flex items-center gap-4">
                     <Avatar
                       name={
@@ -2080,6 +2397,9 @@ export default function OrganizationManagementPage() {
                           status={
                             selectedEmployee.status
                           }
+                          language={
+                            organizationLanguage
+                          }
                         />
                       </div>
 
@@ -2089,7 +2409,7 @@ export default function OrganizationManagementPage() {
                         }
                       </p>
 
-                      <p className="mt-1 text-xs text-text-muted">
+                      <p className="mt-1 text-[10px] text-text-muted">
                         {organizationLanguage ===
                         "cn"
                           ? selectedEmployee.positionCn
@@ -2261,7 +2581,7 @@ export default function OrganizationManagementPage() {
                         null,
                       );
                     }}
-                    className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400"
+                    className="rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400"
                   >
                     {organizationText(
                       "edit",
@@ -2269,8 +2589,23 @@ export default function OrganizationManagementPage() {
                     )}
                   </button>
 
-                  {selectedEmployee.status !==
-                    "Inactive" && (
+                  {selectedEmployee.status ===
+                    "Inactive" ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void reactivateEmployee(
+                          selectedEmployee,
+                        )
+                      }
+                      className="rounded-md border border-emerald-400/20 px-4 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/10"
+                    >
+                      {organizationText(
+                        "reactivate",
+                        organizationLanguage,
+                      )}
+                    </button>
+                  ) : (
                     <button
                       type="button"
                       onClick={() =>
@@ -2278,7 +2613,7 @@ export default function OrganizationManagementPage() {
                           selectedEmployee,
                         )
                       }
-                      className="rounded-lg border border-rose-400/20 px-4 py-2.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/10"
+                      className="rounded-md border border-rose-400/20 px-4 py-2.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
                     >
                       {organizationText(
                         "deactivate",
@@ -2299,9 +2634,9 @@ export default function OrganizationManagementPage() {
         {showForm && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
             <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-border bg-surface shadow-2xl">
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface px-5 py-4">
                 <div>
-                  <h2 className="text-sm font-semibold text-text">
+                  <h2 className="text-sm font-bold text-text">
                     {editingEmployee
                       ? organizationText(
                           "edit",
@@ -2326,7 +2661,7 @@ export default function OrganizationManagementPage() {
                   onClick={() =>
                     setShowForm(false)
                   }
-                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-bg hover:text-text"
+                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-surface-hover hover:text-text"
                 >
                   ✕
                 </button>
@@ -2364,7 +2699,7 @@ export default function OrganizationManagementPage() {
                                 .value,
                             )
                           }
-                          className="organization-input"
+                          className="organization-input rounded-lg"
                         >
                           <option value="">
                             {organizationText(
@@ -2409,7 +2744,7 @@ export default function OrganizationManagementPage() {
                         value={
                           form.employeeId
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2425,7 +2760,7 @@ export default function OrganizationManagementPage() {
                         value={
                           form.name
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2441,7 +2776,7 @@ export default function OrganizationManagementPage() {
                         value={
                           form.nameCn
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2476,7 +2811,7 @@ export default function OrganizationManagementPage() {
                               })()
                             : form.department
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled
                         readOnly
                       />
@@ -2512,7 +2847,7 @@ export default function OrganizationManagementPage() {
                             event.target.value,
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         disabled={
                           loadingPositions
                         }
@@ -2564,7 +2899,7 @@ export default function OrganizationManagementPage() {
                             managerId: event.target.value,
                           }))
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       >
                         <option value="">
                           {organizationText(
@@ -2619,7 +2954,7 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                         placeholder="Head Office / Site A / Plant 1"
                       />
                     </FormField>
@@ -2661,26 +2996,26 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       >
                         <option value="Permanent">
-                          Permanent
+                          {employmentTypeName("Permanent", organizationLanguage)}
                         </option>
 
                         <option value="Contract">
-                          Contract
+                          {employmentTypeName("Contract", organizationLanguage)}
                         </option>
 
                         <option value="Probation">
-                          Probation
+                          {employmentTypeName("Probation", organizationLanguage)}
                         </option>
 
                         <option value="Intern">
-                          Intern
+                          {employmentTypeName("Intern", organizationLanguage)}
                         </option>
 
                         <option value="Outsource">
-                          Outsource
+                          {employmentTypeName("Outsource", organizationLanguage)}
                         </option>
                       </select>
                     </FormField>
@@ -2711,7 +3046,7 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       />
                     </FormField>
 
@@ -2740,22 +3075,22 @@ export default function OrganizationManagementPage() {
                             }),
                           )
                         }
-                        className="organization-input"
+                        className="organization-input rounded-lg"
                       >
                         <option value="Active">
-                          Active
+                          {employmentStatusName("Active", organizationLanguage)}
                         </option>
 
                         <option value="On Leave">
-                          On Leave
+                          {employmentStatusName("On Leave", organizationLanguage)}
                         </option>
 
                         <option value="Inactive">
-                          Inactive
+                          {employmentStatusName("Inactive", organizationLanguage)}
                         </option>
 
                         <option value="Resigned">
-                          Resigned
+                          {employmentStatusName("Resigned", organizationLanguage)}
                         </option>
                       </select>
                     </FormField>
@@ -2790,7 +3125,7 @@ export default function OrganizationManagementPage() {
                     !form.userId ||
                     !form.positionId
                   }
-                  className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving
                     ? "..."
@@ -2829,51 +3164,36 @@ function KpiCard({
 }) {
   const styles = {
     cyan: {
-      border:
-        "border-cyan-400/20",
-      icon:
-        "bg-cyan-500/10 text-cyan-300",
+      icon: "bg-cyan-500/10 text-cyan-300",
     },
-
     green: {
-      border:
-        "border-emerald-400/20",
-      icon:
-        "bg-emerald-500/10 text-emerald-300",
+      icon: "bg-emerald-500/10 text-emerald-300",
     },
-
     amber: {
-      border:
-        "border-amber-400/20",
-      icon:
-        "bg-amber-500/10 text-amber-300",
+      icon: "bg-amber-500/10 text-amber-300",
     },
-
     purple: {
-      border:
-        "border-purple-400/20",
-      icon:
-        "bg-purple-500/10 text-purple-300",
+      icon: "bg-violet-500/10 text-violet-300",
     },
   }[tone];
 
   return (
     <div
-      className={`organization-card rounded-xl border bg-surface p-4 ${styles.border}`}
+      className="organization-card rounded-xl border border-border bg-surface p-4 transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.10)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-text-dim">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
             {title}
           </p>
 
-          <p className="mt-2 text-2xl font-semibold text-text">
+          <p className="mt-1 text-2xl font-black text-text">
             {value}
           </p>
         </div>
 
         <div
-          className={`flex size-9 items-center justify-center rounded-lg text-sm ${styles.icon}`}
+          className={`flex size-8 shrink-0 items-center justify-center rounded-md text-sm ${styles.icon}`}
         >
           {icon}
         </div>
@@ -2886,11 +3206,61 @@ function KpiCard({
    AVATAR
 ========================================================= */
 
+function getDepartmentColor(
+  department: string,
+): string {
+  const value = department
+    .trim()
+    .toLowerCase();
+
+  if (value === "it") {
+    return "#22D3EE";
+  }
+
+  if (value === "mes") {
+    return "#A78BFA";
+  }
+
+  if (
+    value === "intelligent logistics"
+  ) {
+    return "#34D399";
+  }
+
+  return "#94A3B8";
+}
+
+function getDepartmentBorderColor(
+  department: string,
+): string {
+  const value = department
+    .trim()
+    .toLowerCase();
+
+  if (value === "it") {
+    return "rgba(34, 211, 238, 0.35)";
+  }
+
+  if (value === "mes") {
+    return "rgba(167, 139, 250, 0.35)";
+  }
+
+  if (
+    value === "intelligent logistics"
+  ) {
+    return "rgba(52, 211, 153, 0.35)";
+  }
+
+  return "rgba(148, 163, 184, 0.35)";
+}
+
 function Avatar({
   name,
+  department = "",
   large = false,
 }: {
   name: string;
+  department?: string;
   large?: boolean;
 }) {
   const initials =
@@ -2908,12 +3278,23 @@ function Avatar({
   return (
     <div
       className={[
-        "flex shrink-0 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-500/10 font-semibold text-cyan-300",
+        "flex shrink-0 items-center justify-center rounded-full border bg-transparent font-semibold",
 
         large
           ? "size-16 text-lg"
           : "size-9 text-[10px]",
       ].join(" ")}
+      style={{
+        color: getDepartmentColor(
+          department,
+        ),
+        borderColor:
+          getDepartmentBorderColor(
+            department,
+          ),
+        backgroundColor:
+          "rgba(34, 211, 238, 0.035)",
+      }}
     >
       {initials}
     </div>
@@ -2924,38 +3305,57 @@ function Avatar({
    STATUS
 ========================================================= */
 
+function employmentStatusName(
+  status: EmployeeStatus,
+  language: OrganizationLanguage,
+): string {
+  const names: Record<
+    EmployeeStatus,
+    [string, string]
+  > = {
+    Active: ["Active", "在职"],
+    "On Leave": ["On Leave", "休假"],
+    Inactive: ["Inactive", "停用"],
+    Resigned: ["Resigned", "离职"],
+  };
+
+  return names[status][language === "cn" ? 1 : 0];
+}
+
 function StatusBadge({
   status,
+  language,
 }: {
   status: EmployeeStatus;
+  language: OrganizationLanguage;
 }) {
   const config = {
     Active: {
       dot: "bg-emerald-400",
 
       style:
-        "border-emerald-400/20 bg-emerald-500/10 text-emerald-300",
+        "status-active border-emerald-400/20 bg-emerald-500 text-white",
     },
 
     "On Leave": {
       dot: "bg-amber-400",
 
       style:
-        "border-amber-400/20 bg-amber-500/10 text-amber-300",
+        "status-on-leave border-amber-400/20 bg-amber-500 text-white",
     },
 
     Inactive: {
       dot: "bg-zinc-400",
 
       style:
-        "border-zinc-400/20 bg-zinc-500/10 text-zinc-300",
+        "status-inactive border-zinc-400/20 bg-zinc-500 text-white",
     },
 
     Resigned: {
       dot: "bg-rose-400",
 
       style:
-        "border-rose-400/20 bg-rose-500/10 text-rose-300",
+        "status-resigned border-rose-400/20 bg-rose-500 text-white",
     },
   }[status];
 
@@ -2967,7 +3367,7 @@ function StatusBadge({
         className={`size-1.5 rounded-full ${config.dot}`}
       />
 
-      {status}
+      {employmentStatusName(status, language)}
     </span>
   );
 }
@@ -2976,14 +3376,34 @@ function StatusBadge({
    TYPE
 ========================================================= */
 
+function employmentTypeName(
+  type: EmploymentType,
+  language: OrganizationLanguage,
+): string {
+  const names: Record<
+    EmploymentType,
+    [string, string]
+  > = {
+    Permanent: ["Permanent", "正式员工"],
+    Contract: ["Contract", "合同员工"],
+    Probation: ["Probation", "试用期员工"],
+    Intern: ["Intern", "实习生"],
+    Outsource: ["Outsource", "外包员工"],
+  };
+
+  return names[type][language === "cn" ? 1 : 0];
+}
+
 function TypeBadge({
   type,
+  language,
 }: {
   type: EmploymentType;
+  language: OrganizationLanguage;
 }) {
   return (
-    <span className="inline-flex rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-muted">
-      {type}
+    <span className="inline-flex rounded-md border border-border bg-surface px-2.5 py-1 text-[10px] font-semibold text-text-muted">
+      {employmentTypeName(type, language)}
     </span>
   );
 }
@@ -3001,7 +3421,7 @@ function Th({
 }) {
   return (
     <th
-      className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-text-dim ${
+      className={`px-4 py-3 text-[10px] font-bold uppercase tracking-wide text-text-muted ${
         align === "right"
           ? "text-right"
           : "text-left"
@@ -3019,9 +3439,11 @@ function Th({
 function Td({
   children,
   align = "left",
+  style,
 }: {
   children: React.ReactNode;
   align?: "left" | "right";
+  style?: React.CSSProperties;
 }) {
   return (
     <td
@@ -3030,6 +3452,7 @@ function Td({
           ? "text-right"
           : "text-left"
       }`}
+      style={style}
     >
       {children}
     </td>

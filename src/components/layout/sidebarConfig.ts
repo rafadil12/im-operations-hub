@@ -6,6 +6,7 @@ export type NavLabelKey = keyof Dict["nav"];
 export type NavChild = {
   id: string;
   labelKey: NavLabelKey;
+  label?: [string, string];
   href?: string;
   disabled?: boolean;
   children?: NavChild[];
@@ -122,9 +123,44 @@ export const navItems: NavItem[] = [
     icon: "organization",
     children: [
       {
-        id: "management",
+        id: "overview",
+        labelKey: "overview",
+        label: ["Summary", "汇总"],
+        href: "/organization/overview",
+      },
+      {
+        id: "employees",
         labelKey: "moduleManagement",
         href: "/organization/employees",
+      },
+      {
+        id: "shift",
+        labelKey: "shift",
+        href: "/organization/shift",
+      },
+      {
+        id: "attendance",
+        labelKey: "moduleManagement",
+        label: ["Attendance", "考勤管理"],
+        children: [
+          {
+            id: "overview",
+            labelKey: "overview",
+            href: "/organization/attendance/overview",
+          },
+          {
+            id: "daily",
+            labelKey: "moduleManagement",
+            label: ["Daily Attendance", "每日考勤"],
+            href: "/organization/attendance/daily-attendance",
+          },
+          {
+            id: "leave-permission",
+            labelKey: "moduleManagement",
+            label: ["Leave / Permission", "请假 / 外出"],
+            href: "/organization/attendance/leave",
+          },
+        ],
       },
     ],
   },

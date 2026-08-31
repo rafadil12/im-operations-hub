@@ -137,7 +137,7 @@ export function Sidebar() {
             ...item,
             children: item.children.filter((child) => {
               if (child.id === "overview") return canViewTrainingOverview;
-              if (child.id === "activities") {
+              if (child.id === "session") {
                 return (
                   canViewTrainingSessions ||
                   canCreateTrainingSession ||

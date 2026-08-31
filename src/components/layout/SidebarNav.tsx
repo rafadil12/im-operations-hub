@@ -80,8 +80,15 @@ export function SidebarNav({
     collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100",
   ].join(" ");
 
+  const resolveLabel = (child: { labelKey: NavChild["labelKey"]; label?: NavChild["label"] }) =>
+    child.label
+      ? t.safety.management === "安全管理"
+        ? child.label[1]
+        : child.label[0]
+      : t.nav[child.labelKey];
+
   const renderChild = (child: NavChild, parentId: string) => {
-    const label = t.nav[child.labelKey];
+    const label = resolveLabel(child);
     const active = isChildActive(pathname, child);
 
     if (child.children?.length) {
