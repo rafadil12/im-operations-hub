@@ -16,16 +16,16 @@ import {
   type ReportWeek,
 } from "@/lib/report";
 import { completionBarColor } from "@/lib/report/completionColor";
-import { Modal } from "@/components/ui/Modal";
 import { ReportWeekFormModal } from "./ReportWeekFormModal";
+import { SummaryFullViewWorkspace } from "./SummaryFullViewWorkspace";
 
 const filterCtrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
 const reportTh =
   "sticky top-0 z-20 border border-border-subtle bg-surface px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
-const reportTd = "border border-border-subtle px-4 py-4 align-top";
-const reportTdGroup = "border border-border-subtle bg-bg/10 px-4 py-4 align-middle";
+const reportTd = "border border-border-subtle px-3 py-2.5 align-top";
+const reportTdGroup = "border border-border-subtle bg-bg/10 px-3 py-2.5 align-middle";
 
 type ActiveTab = number | "summary";
 
@@ -101,6 +101,89 @@ function SearchIcon() {
   );
 }
 
+type SummaryFilterBarProps = {
+  language: ReportLanguage;
+  lang: "en" | "cn";
+  search: string;
+  onSearchChange: (value: string) => void;
+  filterWeek: number | "all";
+  onFilterWeekChange: (value: number | "all") => void;
+  filterSubItem: number | "all";
+  onFilterSubItemChange: (value: number | "all") => void;
+  weekOptions: number[];
+  subItems: ReportSubItem[];
+  areaId: number | null;
+};
+
+function SummaryFilterBar({
+  language,
+  lang,
+  search,
+  onSearchChange,
+  filterWeek,
+  onFilterWeekChange,
+  filterSubItem,
+  onFilterSubItemChange,
+  weekOptions,
+  subItems,
+  areaId,
+}: SummaryFilterBarProps) {
+  const visibleSubItems = subItems.filter((item) => areaId == null || item.areaId === areaId);
+
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="relative min-w-[240px] flex-1">
+        <SearchIcon />
+        <input
+          type="search"
+          className="w-full rounded-md border border-border bg-bg/40 py-2 pl-9 pr-3 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent"
+          placeholder={reportText("searchPlaceholder", language)}
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </div>
+      <div className="min-w-[120px]">
+        <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-dim">
+          {reportText("week", language)}
+        </label>
+        <select
+          className={filterCtrl + " w-full min-w-[120px]"}
+          value={filterWeek === "all" ? "all" : String(filterWeek)}
+          onChange={(e) =>
+            onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
+          }
+        >
+          <option value="all">{reportText("all", language)}</option>
+          {weekOptions.map((w) => (
+            <option key={w} value={w}>
+              Week {w}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="min-w-[160px]">
+        <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-dim">
+          {reportText("subItem", language)}
+        </label>
+        <select
+          className={filterCtrl + " w-full min-w-[160px]"}
+          value={filterSubItem === "all" ? "all" : String(filterSubItem)}
+          onChange={(e) =>
+            onFilterSubItemChange(e.target.value === "all" ? "all" : Number(e.target.value))
+          }
+        >
+          <option value="all">{reportText("all", language)}</option>
+          {visibleSubItems.map((item) => (
+            <option key={item.id} value={item.id}>
+              {localizedName({ name_en: item.nameEn, name_cn: item.nameCn }, lang)}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 function WeekBadge({
   weekNumber,
   year,
@@ -144,11 +227,11 @@ function CompletionCell({ rate }: { rate: number | null }) {
   const fillColor = completionBarColor(clamped);
 
   return (
-    <div className="mx-auto flex w-full max-w-[88px] flex-col items-center gap-1.5">
-      <span className="text-xs font-semibold" style={{ color: fillColor }}>
+    <div className="mx-auto flex w-full max-w-[72px] flex-col items-center gap-1">
+      <span className="text-[11px] font-semibold leading-none" style={{ color: fillColor }}>
         {pct}%
       </span>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle">
+      <div className="h-1 w-full overflow-hidden rounded-full bg-border-subtle">
         <div
           className="h-full rounded-full transition-all"
           style={{ width: `${clamped}%`, backgroundColor: fillColor }}
@@ -254,7 +337,7 @@ function SummaryTable({
                         <span className="text-sm font-medium text-accent">{subItem}</span>
                       </td>
                       <td
-                        className={`${reportTd} max-w-xs text-sm leading-relaxed text-text whitespace-pre-line ${weekBottomBorder}`}
+                        className={`${reportTd} max-w-xs text-[13px] leading-snug text-text whitespace-pre-line ${weekBottomBorder}`}
                       >
                         {target}
                       </td>
@@ -262,12 +345,12 @@ function SummaryTable({
                         <CompletionCell rate={row.weeklyCompletionRate} />
                       </td>
                       <td
-                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line ${weekBottomBorder}`}
+                        className={`${reportTd} max-w-md text-[13px] leading-snug text-text-muted whitespace-pre-line ${weekBottomBorder}`}
                       >
                         {summary}
                       </td>
                       <td
-                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line ${weekBottomBorder}`}
+                        className={`${reportTd} max-w-md text-[13px] leading-snug text-text-muted whitespace-pre-line ${weekBottomBorder}`}
                       >
                         {plan || "—"}
                       </td>
@@ -527,6 +610,35 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     await loadWeeks();
   };
 
+  const summaryFilterBarProps = {
+    language,
+    lang,
+    search,
+    onSearchChange: setSearch,
+    filterWeek,
+    onFilterWeekChange: setFilterWeek,
+    filterSubItem,
+    onFilterSubItemChange: setFilterSubItem,
+    weekOptions,
+    subItems,
+    areaId,
+  };
+
+  const summaryContextSubtitle = [
+    filterWeek !== "all" ? `Week ${filterWeek}` : reportText("all", language),
+    filterSubItem !== "all"
+      ? localizedName(
+          {
+            name_en: subItems.find((item) => item.id === filterSubItem)?.nameEn ?? "",
+            name_cn: subItems.find((item) => item.id === filterSubItem)?.nameCn ?? "",
+          },
+          lang
+        )
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div className="space-y-0">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
@@ -627,57 +739,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-end gap-3 py-4">
-        <div className="relative min-w-[240px] flex-1">
-          <SearchIcon />
-          <input
-            type="search"
-            className="w-full rounded-md border border-border bg-bg/40 py-2 pl-9 pr-3 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent"
-            placeholder={reportText("searchPlaceholder", language)}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="min-w-[120px]">
-          <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-dim">
-            {reportText("week", language)}
-          </label>
-          <select
-            className={filterCtrl + " w-full min-w-[120px]"}
-            value={filterWeek === "all" ? "all" : String(filterWeek)}
-            onChange={(e) =>
-              setFilterWeek(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
-          >
-            <option value="all">{reportText("all", language)}</option>
-            {weekOptions.map((w) => (
-              <option key={w} value={w}>
-                Week {w}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-[160px]">
-          <label className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-text-dim">
-            {reportText("subItem", language)}
-          </label>
-          <select
-            className={filterCtrl + " w-full min-w-[160px]"}
-            value={filterSubItem === "all" ? "all" : String(filterSubItem)}
-            onChange={(e) =>
-              setFilterSubItem(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
-          >
-            <option value="all">{reportText("all", language)}</option>
-            {subItems
-              .filter((c) => c.areaId === areaId)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {localizedName({ name_en: c.nameEn, name_cn: c.nameCn }, lang)}
-                </option>
-              ))}
-          </select>
-        </div>
+      <div className="py-4">
+        <SummaryFilterBar {...summaryFilterBarProps} />
       </div>
 
       {loading ? (
@@ -802,24 +865,21 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
       ) : null}
 
       {summaryFullscreenOpen ? (
-        <Modal
-          title={reportText("summaryTab", language)}
-          subtitle={
-            <p className="text-xs text-text-muted">
-              {year}
-              {filterWeek !== "all" ? ` · Week ${filterWeek}` : ` · ${reportText("all", language)}`}
-            </p>
-          }
-          size="full"
-          onClose={() => setSummaryFullscreenOpen(false)}
+        <SummaryFullViewWorkspace
+          language={language}
+          subtitle={summaryContextSubtitle}
+          year={year}
+          onYearChange={setYear}
+          onExit={() => setSummaryFullscreenOpen(false)}
+          filters={<SummaryFilterBar {...summaryFilterBarProps} />}
         >
           <SummaryTable
             weekGroups={weekGroups}
             areaById={areaById}
             language={language}
-            wrapperClassName="min-h-0 flex-1 overflow-auto"
+            wrapperClassName="h-full overflow-auto rounded-xl border border-border-subtle bg-surface"
           />
-        </Modal>
+        </SummaryFullViewWorkspace>
       ) : null}
 
       {weekFormOpen && areaId != null ? (

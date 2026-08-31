@@ -15,6 +15,8 @@ const REPORT_TEXT = {
   ] as TextPair,
   summaryTab: ["Summary", "汇总"] as TextPair,
   summaryFullView: ["Full View", "全屏查看"] as TextPair,
+  summaryExitFullView: ["Exit Full View", "退出全屏"] as TextPair,
+  summaryFullViewContext: ["Weekly Report — Summary", "周报 — 汇总"] as TextPair,
   totalLines: ["Report Lines", "事项总数"] as TextPair,
   avgCompletion: ["Avg Completion", "平均完成度"] as TextPair,
   submittedAreas: ["Submitted", "已提交"] as TextPair,
