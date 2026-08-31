@@ -14,6 +14,8 @@ import { mapSparepartToOverview } from "@/lib/sparepart/mapToOverview";
 import { mapSafetyToOverview, type SafetyRow } from "@/lib/safety/mapToOverview";
 import { mapTrainingToOverview } from "@/lib/training/mapToOverview";
 import { mapReportToOverview } from "@/lib/report/mapToOverview";
+import { mapOrganizationToOverview } from "@/lib/organization/mapToOverview";
+import type { OrganizationOverviewMetrics } from "@/lib/organization/types";
 import type { TrainingOverviewMetrics } from "@/lib/training/types";
 import type { ReportOverviewMetrics } from "@/lib/report/types";
 import type { AnalysisResponse, SafetyApiResponse } from "@/lib/overview/types";
@@ -31,6 +33,7 @@ export function useDashboardModules() {
     canViewTrainingSessions,
     canViewReportOverview,
     canViewReportLines,
+    canViewOverview,
   } = useRoleAccess();
 
   const [modules, setModules] = useState<ModuleCardData[]>(dashboardModules);
@@ -54,6 +57,7 @@ export function useDashboardModules() {
           safetyMonthlyData,
           trainingData,
           reportData,
+          organizationData,
         ] =
           await Promise.all([
             canViewDailyAnalysis
@@ -157,6 +161,25 @@ export function useDashboardModules() {
                   })
                   .catch(() => null)
               : Promise.resolve(null),
+
+            canViewOverview
+              ? fetch("/api/organization/overview", {
+                  method: "GET",
+                  cache: "no-store",
+                })
+                  .then(async (response) => {
+                    const result = (await response.json()) as {
+                      success?: boolean;
+                      data?: OrganizationOverviewMetrics;
+                      error?: string;
+                    };
+                    if (!response.ok || !result.data) {
+                      throw new Error(result.error ?? "Failed to load organization overview.");
+                    }
+                    return result.data;
+                  })
+                  .catch(() => null)
+              : Promise.resolve(null),
           ]);
 
         if (cancelled) return;
@@ -197,6 +220,11 @@ export function useDashboardModules() {
               case "report":
                 return reportData ? mapReportToOverview(mod, reportData) : mod;
 
+              case "organization":
+                return organizationData
+                  ? mapOrganizationToOverview(mod, organizationData)
+                  : mod;
+
               default:
                 return mod;
             }
@@ -221,6 +249,7 @@ export function useDashboardModules() {
     canViewTrainingSessions,
     canViewReportOverview,
     canViewReportLines,
+    canViewOverview,
     lang,
   ]);
 

@@ -103,15 +103,26 @@ export type ModuleCardData = {
   };
   /** Sparepart stock movement widgets. */
   stockFlows?: StatItem[];
-  /** Organization tree. */
-  orgTree?: {
-    root: string;
-    children: string[];
+  /** Organization hierarchy chart. */
+  orgChart?: {
+    company: string;
+    leader: string;
+    divisions: {
+      name: string;
+      personnelCount: number;
+    }[];
   };
-  genderStats?: {
-    male: number;
-    female: number;
-  };
+  /** Monthly department attendance breakdown. */
+  departmentPerformance?: {
+    department: string;
+    employees: number;
+    present: number;
+    leave: number;
+    mc: number;
+    upl: number;
+    absent: number;
+    attendanceRate: number;
+  }[];
   /** Report circular status indicators. */
   progressRings?: ProgressRing[];
   /** Training recent table. */
@@ -255,26 +266,27 @@ export const dashboardModules: ModuleCardData[] = [
     title: "ORGANIZATION DASHBOARD",
     icon: "organization",
     accentColor: "#38bdf8",
-    href: "/",
+    href: "/organization/employees",
     layout: "organization",
     stats: [
-      { label: "Total Headcount", value: "48", tone: "accent" },
-      { label: "Active", value: "45", tone: "success" },
-      { label: "On Leave", value: "2", tone: "warning" },
-      { label: "New Join", value: "3", trend: "this month", tone: "success" },
+      { label: "Total Personel", value: EMPTY, tone: "accent" },
+      { label: "Attendance Rate", value: EMPTY, tone: "success" },
+      { label: "Total Absen", value: EMPTY, tone: "warning" },
+      { label: "Total On leave", value: EMPTY, tone: "warning" },
     ],
     chart: {
       title: "Headcount",
       type: "donut",
       legend: [],
     },
-    orgTree: {
-      root: "IT Department",
-      children: ["MES", "IT Infrastructure", "Intelligent Logistics"],
-    },
-    genderStats: {
-      male: 62,
-      female: 38,
+    orgChart: {
+      company: "Intelligent Manufacturing Department",
+      leader: "WANG CHUNLAI",
+      divisions: [
+        { name: "MES", personnelCount: 0 },
+        { name: "IT", personnelCount: 0 },
+        { name: "Intelligent Logistics", personnelCount: 0 },
+      ],
     },
   },
   {
