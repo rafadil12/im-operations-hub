@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const [lines, areas, subItems] = await Promise.all([
       loadReportLines({ year, weekNumber, weekId, areaId }),
       loadReportAreas(),
-      loadReportSubItems(areaId),
+      loadReportSubItems(),
     ]);
 
     return NextResponse.json({ success: true, data: lines, areas, subItems });

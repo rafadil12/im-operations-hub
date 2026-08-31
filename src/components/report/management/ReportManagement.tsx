@@ -669,11 +669,13 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
             }
           >
             <option value="all">{reportText("all", language)}</option>
-            {subItems.map((c) => (
-              <option key={c.id} value={c.id}>
-                {localizedName({ name_en: c.nameEn, name_cn: c.nameCn }, lang)}
-              </option>
-            ))}
+            {subItems
+              .filter((c) => c.areaId === areaId)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {localizedName({ name_en: c.nameEn, name_cn: c.nameCn }, lang)}
+                </option>
+              ))}
           </select>
         </div>
       </div>

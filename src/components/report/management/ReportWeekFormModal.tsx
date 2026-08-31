@@ -423,7 +423,11 @@ export function ReportWeekFormModal({
                 className={field}
                 value={areaId}
                 disabled={mode === "edit" || readOnly}
-                onChange={(e) => setAreaId(Number(e.target.value))}
+                onChange={(e) => {
+                  const nextAreaId = Number(e.target.value);
+                  setAreaId(nextAreaId);
+                  setLines((prev) => prev.map((l) => ({ ...l, subItemId: "" })));
+                }}
               >
                 {areas.map((a) => (
                   <option key={a.id} value={a.id}>
