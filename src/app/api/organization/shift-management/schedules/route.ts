@@ -33,8 +33,8 @@ function isValidDate(value: string): boolean {
 
 function isManualScheduleType(
   value: unknown,
-): value is "1" | "4" {
-  return value === "1" || value === "4";
+): value is "1" | "4" | "OFF" {
+  return value === "1" || value === "4" || value === "OFF";
 }
 
 /* =========================================================
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error:
-            "scheduleType must be 1 or 4.",
+            "scheduleType must be 1, 4, or OFF.",
         },
         { status: 400 },
       );
@@ -450,9 +450,7 @@ export async function POST(request: NextRequest) {
    }
 
    Hanya menghapus manual schedule:
-   1 / 4
-
-   OFF tetap ditangani oleh /off-days.
+   1 / 4 / OFF
 
    ========================================================= */
 
@@ -497,7 +495,7 @@ export async function DELETE(
         DELETE FROM shift_schedules
         WHERE employee_no = ?
           AND schedule_date = ?
-          AND schedule_type IN ('1', '4')
+          AND schedule_type IN ('1', '4', 'OFF')
       `,
       [
         employeeNo,

@@ -107,7 +107,7 @@ type CalendarWorkSchedule = {
   id: string;
   employeeId: string;
   date: string;
-  scheduleType: "1" | "4";
+  scheduleType: "1" | "4" | "OFF";
   databaseId?: number;
 };
 
@@ -659,14 +659,16 @@ function MyOffCalendar({
         const rows = (payload.data ?? [])
           .filter(
             (row) =>
-              (row.schedule_type === "1" || row.schedule_type === "4") &&
+              (row.schedule_type === "1" ||
+                row.schedule_type === "4" ||
+                row.schedule_type === "OFF") &&
               row.employee_no === currentEmployeeId,
           )
           .map<CalendarWorkSchedule>((row) => ({
             id: String(row.id),
             employeeId: row.employee_no,
             date: String(row.schedule_date).slice(0, 10),
-            scheduleType: row.schedule_type as "1" | "4",
+            scheduleType: row.schedule_type as "1" | "4" | "OFF",
             databaseId: row.id,
           }));
 
@@ -739,6 +741,8 @@ function MyOffCalendar({
     [organizationEmployees, currentEmployeeId],
   );
 
+  const usesScheduleOffFallback = !currentEmployee;
+
   const calendarCells = useMemo(
     () => getCalendarCells(year, month),
     [year, month],
@@ -752,7 +756,7 @@ function MyOffCalendar({
     year > currentCalendarYear ||
     (year === currentCalendarYear && selectedCalendarMonth > currentCalendarMonth);
 
-  async function saveWorkSchedule(date: string, scheduleType: "1" | "4") {
+  async function saveWorkSchedule(date: string, scheduleType: "1" | "4" | "OFF") {
     if (!currentEmployeeId) return false;
 
     try {
@@ -837,6 +841,11 @@ function MyOffCalendar({
 
       // 4 -> OFF
       if (existingWork?.scheduleType === "4") {
+        if (usesScheduleOffFallback) {
+          await saveWorkSchedule(key, "OFF");
+          return;
+        }
+
         await deleteWorkSchedule(key);
 
         const payload = await fetchJson<{ data?: OffDayApiRow[] }>(`${API_BASE}/off-days`, {
@@ -870,8 +879,13 @@ function MyOffCalendar({
       }
 
       // OFF -> clear
-     if (existingOff) {
-  await fetchJson(`${API_BASE}/off-days`, {
+      if (usesScheduleOffFallback && existingWork?.scheduleType === "OFF") {
+        await deleteWorkSchedule(key);
+        return;
+      }
+
+      if (existingOff) {
+        await fetchJson(`${API_BASE}/off-days`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
