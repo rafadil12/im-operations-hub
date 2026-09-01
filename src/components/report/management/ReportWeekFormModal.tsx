@@ -24,8 +24,13 @@ import {
   type ReportLine,
   type ReportSubItem,
   type ReportWeek,
+  type ReportWeekAttachment,
 } from "@/lib/report";
 import { mergeSelectableWeekNumbers } from "@/lib/report/weekCalendar";
+import {
+  ReportWeekAttachments,
+  uploadPendingReportAttachments,
+} from "./ReportWeekAttachments";
 
 type ReportWeekFormModalProps = {
   open: boolean;
@@ -235,6 +240,9 @@ export function ReportWeekFormModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [savedAttachments, setSavedAttachments] = useState<ReportWeekAttachment[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
 
   const areaSubItems = useMemo(
     () => subItems.filter((s) => s.areaId === areaId),
@@ -257,6 +265,9 @@ export function ReportWeekFormModal({
     setAreaId(initialAreaId);
     setError(null);
     setIsSubmitted(false);
+    setSavedAttachments([]);
+    setPendingFiles([]);
+    setAttachmentUploading(false);
 
     if (mode === "create") {
       setLines([newWeekLineDraft()]);
@@ -277,12 +288,14 @@ export function ReportWeekFormModal({
           data: {
             lines: ReportLine[];
             submission: { status: "draft" | "submitted" } | null;
+            attachments?: ReportWeekAttachment[];
           };
           error?: string;
         }>(`/api/report/week-lines?${qs}`);
 
         if (!res.success || !res.data) throw new Error(res.error ?? "Failed to load");
         setIsSubmitted(res.data.submission?.status === "submitted");
+        setSavedAttachments(res.data.attachments ?? []);
         setLines(
           res.data.lines.length
             ? res.data.lines.map((row) => lineToDraft(row))
@@ -336,6 +349,11 @@ export function ReportWeekFormModal({
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Save failed");
+
+      if (pendingFiles.length) {
+        await uploadPendingReportAttachments(year, weekNumber, areaId, pendingFiles);
+      }
+
       onSaved();
       onClose();
     } catch (err) {
@@ -453,6 +471,22 @@ export function ReportWeekFormModal({
               {reportText("submitted", language)}
             </p>
           ) : null}
+
+          <ReportWeekAttachments
+            language={language}
+            readOnly={readOnly}
+            year={year}
+            weekNumber={weekNumber}
+            areaId={areaId}
+            savedAttachments={savedAttachments}
+            pendingFiles={pendingFiles}
+            uploading={attachmentUploading || saving}
+            onSavedAttachmentsChange={setSavedAttachments}
+            onPendingFilesChange={setPendingFiles}
+            onUploadingChange={setAttachmentUploading}
+            onError={setError}
+            uploadImmediately={mode === "edit"}
+          />
 
           <div>
             <div className="mb-2 flex items-center justify-between">

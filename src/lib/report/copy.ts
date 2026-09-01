@@ -163,6 +163,18 @@ const REPORT_TEXT = {
   yearInputAria: ["Year, editable", "年份，可编辑"] as TextPair,
   workTrend: ["Work Completion Trend", "工作完成度趋势"] as TextPair,
   projectTrend: ["Project Progress", "项目进度"] as TextPair,
+  attachments: ["Attachments", "附件"] as TextPair,
+  uploadAttachment: ["Upload file", "上传文件"] as TextPair,
+  uploadAttachmentHint: [
+    "PPT, Excel, PDF, PNG, JPEG — max 100MB each",
+    "支持 PPT、Excel、PDF、PNG、JPEG — 单个最大 100MB",
+  ] as TextPair,
+  removeAttachment: ["Remove", "移除"] as TextPair,
+  noAttachments: ["No files attached.", "暂无附件。"] as TextPair,
+  attachmentInvalidType: [
+    "Unsupported file type. Allowed: PPT, Excel, PDF, PNG, JPEG.",
+    "不支持的文件类型。允许：PPT、Excel、PDF、PNG、JPEG。",
+  ] as TextPair,
 } as const;
 
 export type ReportTextKey = keyof typeof REPORT_TEXT;

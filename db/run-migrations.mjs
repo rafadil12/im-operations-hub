@@ -1345,5 +1345,11 @@ if (!(await indexExists("report_lines", "uk_report_lines_week_area_subitem"))) {
   console.log("uk_report_lines_week_area_subitem already exists.");
 }
 
+await applySqlFile(
+  "028_report_week_attachments.sql",
+  readMigrationSql,
+  "Created report_week_attachments table.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

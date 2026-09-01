@@ -187,6 +187,17 @@ export type ReportOverviewMetrics = {
   recentLineStats: { onTrack: number; needsAttention: number };
 };
 
+export type ReportWeekAttachment = {
+  id: number;
+  weekId: number;
+  areaId: number;
+  originalName: string;
+  url: string;
+  mimeType: string | null;
+  size: number | null;
+  createdAt: string;
+};
+
 export type ReportLineInput = {
   weekId: number;
   areaId: number;

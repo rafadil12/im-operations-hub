@@ -18,6 +18,7 @@ import {
   saveReportWeekLines,
   type ReportWeekLinePayload,
 } from "@/lib/report/weekReportStore";
+import { loadReportWeekAttachments } from "@/lib/report/attachmentStore";
 import { parseCompletionRate } from "@/lib/report/weekCalendar";
 import { validateWeekLinePayload } from "@/lib/report/weekFormValidation";
 
@@ -89,11 +90,12 @@ export async function GET(request: Request) {
       return jsonError("year, week, and areaId are required.");
     }
 
-    const [bundle, areas, subItems, weeks] = await Promise.all([
-      loadReportWeekBundle(year, weekNumber, areaId),
+    const bundle = await loadReportWeekBundle(year, weekNumber, areaId);
+    const [areas, subItems, weeks, attachments] = await Promise.all([
       loadReportAreas(),
       loadReportSubItems(areaId),
       loadReportWeeks(year),
+      loadReportWeekAttachments(bundle.weekId, areaId),
     ]);
 
     return NextResponse.json({
@@ -105,6 +107,7 @@ export async function GET(request: Request) {
         weekId: bundle.weekId,
         lines: bundle.lines,
         submission: bundle.submission,
+        attachments,
       },
       areas,
       subItems,
