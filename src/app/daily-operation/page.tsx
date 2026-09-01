@@ -5,7 +5,7 @@ import { DailyOperationLandingCards } from "@/components/daily-operation/DailyOp
 export const metadata = pageMetadata({
   title: "Daily Operation",
   description:
-    "Manage and analyze daily operational records: create and track tasks, review analytics and maintain the module master data.",
+    "Daily Operation hub: Activities, Insights, and Configuration for factory operational records.",
   path: "/daily-operation",
 });
 

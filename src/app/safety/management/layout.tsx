@@ -5,16 +5,12 @@ import { pageMetadata } from "@/lib/seo";
 // The page itself is a Client Component, which cannot export metadata.
 
 export const metadata = pageMetadata({
-  title: "Safety Management",
+  title: "Management · Safety",
   description:
-    "Create, edit and track safety management records, weekly activities, monthly activities and safety cases.",
+    "Monitor all weekly safety obligations, HSE meetings every Tuesday, and monthly requirements.",
   path: "/safety/management",
 });
 
-export default function ManagementLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function ManagementLayout({ children }: { children: ReactNode }) {
   return children;
 }

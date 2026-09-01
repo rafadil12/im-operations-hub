@@ -9,11 +9,8 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import { normalizeCategoryCode } from "@/lib/sparepartCategories";
-import {
-  overviewMatchesFilters,
-  type SparepartOverviewData,
-} from "@/lib/sparepartOverview";
+import { normalizeCategoryCode } from "@/lib/sparepart/categories";
+import { overviewMatchesFilters, type SparepartOverviewData } from "@/lib/sparepart/overview";
 
 function isAbortError(err: unknown): boolean {
   return (
@@ -78,10 +75,9 @@ export default function SparepartIndexPage() {
     qs.set("start", range.start);
     qs.set("end", range.end);
 
-    apiGetAbs<SparepartOverviewData>(
-      `/api/sparepart/overview?${qs.toString()}`,
-      { signal: ac.signal },
-    )
+    apiGetAbs<SparepartOverviewData>(`/api/sparepart/overview?${qs.toString()}`, {
+      signal: ac.signal,
+    })
       .then((next) => {
         if (ac.signal.aborted || requestId !== loadIdRef.current) return;
         if (!overviewMatchesFilters(next, category, range)) return;
@@ -99,13 +95,7 @@ export default function SparepartIndexPage() {
       });
 
     return () => ac.abort();
-  }, [
-    access.canViewSparepartOverview,
-    category,
-    loading,
-    range,
-    t.common.error,
-  ]);
+  }, [access.canViewSparepartOverview, category, loading, range, t.common.error]);
 
   if (loading || !hasAnySparepart) {
     return (
@@ -152,9 +142,7 @@ export default function SparepartIndexPage() {
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-lg font-semibold text-text">
-            {t.sparepart.overviewTitle}
-          </h1>
+          <h1 className="text-lg font-semibold text-text">{t.sparepart.overviewTitle}</h1>
           <p className="text-sm text-text-muted">{t.sparepart.overviewDesc}</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -176,9 +164,7 @@ export default function SparepartIndexPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-semibold text-text">
-          {t.sparepart.overviewTitle}
-        </h1>
+        <h1 className="text-lg font-semibold text-text">{t.sparepart.overviewTitle}</h1>
         <p className="text-sm text-text-muted">{t.sparepart.overviewDesc}</p>
       </div>
 

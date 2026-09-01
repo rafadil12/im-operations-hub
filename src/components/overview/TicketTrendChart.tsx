@@ -27,12 +27,7 @@ type Props = {
   legendLabels?: string[];
 };
 
-export function TicketTrendChart({
-  data,
-  height = 140,
-  compact = false,
-  legendLabels,
-}: Props) {
+export function TicketTrendChart({ data, height = 140, compact = false, legendLabels }: Props) {
   const { lang } = useLang();
   const { theme } = useTheme();
 
@@ -46,10 +41,8 @@ export function TicketTrendChart({
 
   const showPrevious = (legendLabels?.length ?? 2) > 1;
 
-  const currentLegend =
-    legendLabels?.[0] ?? (lang === "cn" ? "当前时间段" : "Current Period");
-  const previousLegend =
-    legendLabels?.[1] ?? (lang === "cn" ? "对比时间段" : "Previous Period");
+  const currentLegend = legendLabels?.[0] ?? (lang === "cn" ? "当前时间段" : "Current Period");
+  const previousLegend = legendLabels?.[1] ?? (lang === "cn" ? "对比时间段" : "Previous Period");
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -87,7 +80,7 @@ export function TicketTrendChart({
               const [year, month] = value.split("-");
               return new Date(Number(year), Number(month) - 1).toLocaleDateString(
                 lang === "cn" ? "zh-CN" : "en-US",
-                { month: "short" },
+                { month: "short" }
               );
             }
 
@@ -123,8 +116,7 @@ export function TicketTrendChart({
             color: legendColor,
           }}
           formatter={(value) => {
-            const label =
-              value === "current" ? currentLegend : previousLegend;
+            const label = value === "current" ? currentLegend : previousLegend;
             return <span style={{ color: legendColor }}>{label}</span>;
           }}
         />

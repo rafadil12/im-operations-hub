@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { getCurrentMonth } from "@/lib/dateRange";
@@ -47,7 +47,7 @@ function allMonths(year: number): string[] {
   });
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const gate = await requirePermission(PERMISSIONS.sparepartStockView);
   if (gate instanceof NextResponse) return gate;
 
@@ -78,39 +78,33 @@ export async function GET(_request: NextRequest) {
        ORDER BY month_key ASC
     `;
 
-    const [
-      [summary],
-      [monthUsage],
-      [yearUsage],
-      mostUsed,
-      trendRows,
-      prevTrendRows,
-    ] = await Promise.all([
-      query<SummaryRow[]>(
-        `SELECT
+    const [[summary], [monthUsage], [yearUsage], mostUsed, trendRows, prevTrendRows] =
+      await Promise.all([
+        query<SummaryRow[]>(
+          `SELECT
            COUNT(*) AS total_items,
            SUM(CASE WHEN stock_current <= 0 THEN 1 ELSE 0 END) AS zero_stock
          FROM sparepart_items
-         WHERE deleted_at IS NULL`,
-      ),
-      query<UsageRow[]>(
-        `SELECT ${USAGE_SQL} AS qty
+         WHERE deleted_at IS NULL`
+        ),
+        query<UsageRow[]>(
+          `SELECT ${USAGE_SQL} AS qty
          FROM sparepart_mat_docs d
          JOIN sparepart_mat_doc_items li ON li.doc_id = d.id
          WHERE ${dateFilter}
            AND d.movement_type IN ('201', '202')`,
-        monthParams,
-      ),
-      query<UsageRow[]>(
-        `SELECT ${USAGE_SQL} AS qty
+          monthParams
+        ),
+        query<UsageRow[]>(
+          `SELECT ${USAGE_SQL} AS qty
          FROM sparepart_mat_docs d
          JOIN sparepart_mat_doc_items li ON li.doc_id = d.id
          WHERE ${dateFilter}
            AND d.movement_type IN ('201', '202')`,
-        yearParams,
-      ),
-      query<MostUsedRow[]>(
-        `SELECT
+          yearParams
+        ),
+        query<MostUsedRow[]>(
+          `SELECT
            i.code,
            i.name_en,
            i.name_cn,
@@ -125,19 +119,14 @@ export async function GET(_request: NextRequest) {
          HAVING qty > 0
          ORDER BY qty DESC
          LIMIT 3`,
-        monthParams,
-      ),
-      query<TrendRow[]>(trendSql, yearParams),
-      query<TrendRow[]>(trendSql, prevYearParams),
-    ]);
+          monthParams
+        ),
+        query<TrendRow[]>(trendSql, yearParams),
+        query<TrendRow[]>(trendSql, prevYearParams),
+      ]);
 
     const byMonth = (rows: TrendRow[]) =>
-      new Map(
-        rows.map((row) => [
-          String(row.month_key).slice(5, 7),
-          Number(row.qty ?? 0),
-        ]),
-      );
+      new Map(rows.map((row) => [String(row.month_key).slice(5, 7), Number(row.qty ?? 0)]));
 
     const currentByMonth = byMonth(trendRows);
     const previousByMonth = byMonth(prevTrendRows);
@@ -169,9 +158,6 @@ export async function GET(_request: NextRequest) {
     });
   } catch (error) {
     console.error("GET /sparepart/analysis failed", error);
-    return NextResponse.json(
-      { error: "Failed to load sparepart analysis." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load sparepart analysis." }, { status: 500 });
   }
 }

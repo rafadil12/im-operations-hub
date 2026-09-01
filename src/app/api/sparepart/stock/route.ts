@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
-import { LOW_STOCK_SQL } from "@/lib/sparepartCategories";
+import { LOW_STOCK_SQL } from "@/lib/sparepart/categories";
 import type { SparepartStockBalanceRow } from "@/lib/types";
 
 type SummaryRow = {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (q) {
       conditions.push(
         `(i.code LIKE ? OR i.name_en LIKE ? OR i.name_cn LIKE ?
-          OR i.brand_en LIKE ? OR i.brand_cn LIKE ? OR i.model LIKE ?)`,
+          OR i.brand_en LIKE ? OR i.brand_cn LIKE ? OR i.model LIKE ?)`
       );
       const like = `%${q}%`;
       params.push(like, like, like, like, like, like);
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
                OR loc.name_en LIKE ?
                OR loc.name_cn LIKE ?
              )
-         )`,
+         )`
       );
       const like = `%${location}%`;
       params.push(location, location, location, like, like);
@@ -64,12 +64,10 @@ export async function GET(request: NextRequest) {
       conditions.push("i.is_active = 1 AND i.min_stock > 0 AND i.stock_current <= 0");
     } else if (status === "low") {
       conditions.push(
-        "i.is_active = 1 AND i.min_stock > 0 AND i.stock_current > 0 AND i.stock_current <= i.min_stock",
+        "i.is_active = 1 AND i.min_stock > 0 AND i.stock_current > 0 AND i.stock_current <= i.min_stock"
       );
     } else if (status === "normal") {
-      conditions.push(
-        `NOT (${LOW_STOCK_SQL})`,
-      );
+      conditions.push(`NOT (${LOW_STOCK_SQL})`);
     } else if (sp.get("lowStock") === "1") {
       conditions.push(LOW_STOCK_SQL);
     }
@@ -99,7 +97,7 @@ export async function GET(request: NextRequest) {
        JOIN uoms u ON u.id = i.uom_id
        WHERE ${where}
        ORDER BY i.code ASC`,
-      params,
+      params
     );
 
     const [summary] = await query<SummaryRow[]>(
@@ -109,14 +107,14 @@ export async function GET(request: NextRequest) {
          SUM(CASE WHEN ${LOW_STOCK_SQL} THEN 1 ELSE 0 END) AS low_stock,
          COALESCE(SUM(i.stock_current), 0) AS total_current
        FROM sparepart_items i
-       WHERE i.deleted_at IS NULL`,
+       WHERE i.deleted_at IS NULL`
     );
 
     const locations = await query<LocRow[]>(
       `SELECT code, name_en, name_cn
        FROM sparepart_storage_locations
        WHERE is_active = 1
-       ORDER BY name_en ASC`,
+       ORDER BY name_en ASC`
     );
 
     return NextResponse.json({
@@ -132,9 +130,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("GET /sparepart/stock failed", error);
-    return NextResponse.json(
-      { error: "Failed to load stock overview." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load stock overview." }, { status: 500 });
   }
 }

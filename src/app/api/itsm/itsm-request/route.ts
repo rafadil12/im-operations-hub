@@ -96,11 +96,7 @@ export async function GET(request: NextRequest) {
         group_name,
         is_service_request
       FROM itsm_requests
-      ${
-        conditions.length
-          ? `WHERE ${conditions.join(" AND ")}`
-          : ""
-      }
+      ${conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""}
       ORDER BY
         STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p') DESC
     `;
@@ -108,7 +104,6 @@ export async function GET(request: NextRequest) {
     const rows = await query<ItsmRequest[]>(sql, params);
 
     return NextResponse.json({ rows });
-
   } catch (error) {
     console.error(error);
 
@@ -118,7 +113,7 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 500,
-      },
+      }
     );
   }
 }

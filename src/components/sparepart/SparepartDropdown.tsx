@@ -28,12 +28,7 @@ export const sparepartDropdownMenuClass =
 
 function ChevronDown({ className = "" }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 10 6"
-      className={className}
-      fill="currentColor"
-      aria-hidden
-    >
+    <svg viewBox="0 0 10 6" className={className} fill="currentColor" aria-hidden>
       <path d="M5 6L0 0h10L5 6Z" />
     </svg>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLang } from "@/lib/i18n";
+import { fillTemplate } from "@/lib/i18n/fillTemplate";
 import { formatDisplay } from "@/lib/datetime";
 import type { ItsmRequest } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
@@ -17,19 +18,8 @@ type Props = {
   onPageSizeChange: (pageSize: PageSize) => void;
 };
 
-const th =
-  "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
+const th = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
 const td = "px-3 py-2 align-top text-xs text-text-muted";
-
-function fillTemplate(
-  template: string,
-  values: Record<string, string | number>,
-): string {
-  return Object.entries(values).reduce(
-    (text, [key, value]) => text.replaceAll(`{${key}}`, String(value)),
-    template,
-  );
-}
 
 export function ManagementTable({
   rows,
@@ -79,46 +69,29 @@ export function ManagementTable({
                 key={row.request_id}
                 className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
               >
-                <td className={`${td} whitespace-nowrap`}>
-                  {row.request_id}
-                </td>
+                <td className={`${td} whitespace-nowrap`}>{row.request_id}</td>
 
                 <td className={`${td} max-w-sm`}>
                   <span className="line-clamp-2">{row.subject}</span>
                 </td>
 
-                <td className={`${td} whitespace-nowrap`}>
-                  {row.requester}
-                </td>
+                <td className={`${td} whitespace-nowrap`}>{row.requester}</td>
 
-                <td className={`${td} whitespace-nowrap`}>
-                  {row.technician}
-                </td>
+                <td className={`${td} whitespace-nowrap`}>{row.technician}</td>
 
                 <td className={td}>
-                  <StatusBadge
-                    label={row.status}
-                    toneKey={row.status}
-                  />
+                  <StatusBadge label={row.status} toneKey={row.status} />
                 </td>
 
-                <td className={`${td} whitespace-nowrap`}>
-                  {row.priority ?? "-"}
-                </td>
+                <td className={`${td} whitespace-nowrap`}>{row.priority ?? "-"}</td>
 
                 <td className={`${td} whitespace-nowrap`}>
-                  {row.due_by_date
-                    ? formatDisplay(row.due_by_date)
-                    : "-"}
+                  {row.due_by_date ? formatDisplay(row.due_by_date) : "-"}
                 </td>
 
-                <td className={`${td} whitespace-nowrap`}>
-                  {formatDisplay(row.created_date)}
-                </td>
+                <td className={`${td} whitespace-nowrap`}>{formatDisplay(row.created_date)}</td>
 
-                <td className={`${td} whitespace-nowrap`}>
-                  {row.group_name ?? "-"}
-                </td>
+                <td className={`${td} whitespace-nowrap`}>{row.group_name ?? "-"}</td>
               </tr>
             ))}
           </tbody>
@@ -132,16 +105,11 @@ export function ManagementTable({
 
             <select
               value={pageSize}
-              onChange={(e) =>
-                onPageSizeChange(Number(e.target.value) as PageSize)
-              }
+              onChange={(e) => onPageSizeChange(Number(e.target.value) as PageSize)}
               className="rounded border border-border bg-surface px-2 py-1 text-xs text-text outline-none focus:border-accent"
             >
               {PAGE_SIZE_OPTIONS.map((size) => (
-                <option
-                  key={size}
-                  value={size}
-                >
+                <option key={size} value={size}>
                   {size}
                 </option>
               ))}

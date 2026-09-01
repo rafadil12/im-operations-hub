@@ -92,17 +92,12 @@ export async function sendWeComNotification(content: string): Promise<void> {
  * Best-effort: format + send WeCom for one record.
  * Never throws — failures are logged only so DB writes stay successful.
  */
-export async function notifyMesRecordCreated(
-  record: MesDataRow,
-): Promise<void> {
+export async function notifyMesRecordCreated(record: MesDataRow): Promise<void> {
   try {
     const message = formatMesRecordWeComMessage(record);
     await sendWeComNotification(message);
   } catch (error) {
-    console.error(
-      `Failed to send WeCom notification for record ${record.id}:`,
-      error,
-    );
+    console.error(`Failed to send WeCom notification for record ${record.id}:`, error);
   }
 }
 
@@ -110,9 +105,7 @@ export async function notifyMesRecordCreated(
  * Best-effort: send one WeCom notification per record, sequentially.
  * Never throws — failures are logged only.
  */
-export async function notifyMesRecordsCreated(
-  records: MesDataRow[],
-): Promise<void> {
+export async function notifyMesRecordsCreated(records: MesDataRow[]): Promise<void> {
   for (const record of records) {
     await notifyMesRecordCreated(record);
   }

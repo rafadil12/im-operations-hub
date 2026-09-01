@@ -30,15 +30,12 @@ export async function GET(_request: NextRequest, context: Ctx) {
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
        WHERE b.item_id = ? AND b.qty > 0
        ORDER BY loc.name_en ASC`,
-      [itemId],
+      [itemId]
     );
 
     return NextResponse.json({ balances });
   } catch (error) {
     console.error("GET /sparepart/materials/[id]/balances failed", error);
-    return NextResponse.json(
-      { error: "Failed to load balances." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load balances." }, { status: 500 });
   }
 }

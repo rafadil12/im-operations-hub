@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PERMISSIONS, requirePermission } from "@/lib/auth";
+import type { RowDataPacket } from "mysql2";
+import { PERMISSIONS, PROTECTED_ACCOUNT_EMPLOYEE_NO, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -11,29 +12,57 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
 
   try {
     const { id } = await ctx.params;
+    const userId = Number(id);
     const body = await request.json();
-    const name_en = body.name_en?.toString().trim() || null;
-    const name_cn = body.name_cn?.toString().trim() || null;
-    const division_id = body.division_id ? Number(body.division_id) : null;
+    const divisionId =
+      body.division_id === null || body.division_id === "" || body.division_id === undefined
+        ? null
+        : Number(body.division_id);
 
-    if (!name_en && !name_cn) {
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid PIC id." }, { status: 400 });
+    }
+    if (divisionId === null || Number.isNaN(divisionId)) {
+      return NextResponse.json({ error: "Division is required." }, { status: 400 });
+    }
+
+    const current = await query<RowDataPacket[]>(
+      `SELECT su.is_daily_operation_pic, u.employee_no
+       FROM users u
+       INNER JOIN system_users su ON su.user_id = u.id
+       WHERE u.id = ?
+       LIMIT 1`,
+      [userId]
+    );
+    if (!current[0] || Number(current[0].is_daily_operation_pic) !== 1) {
+      return NextResponse.json({ error: "PIC not found." }, { status: 404 });
+    }
+    if (String(current[0].employee_no ?? "").toUpperCase() === PROTECTED_ACCOUNT_EMPLOYEE_NO) {
       return NextResponse.json(
-        { error: "Name (EN or CN) is required." },
-        { status: 400 },
+        { error: "The Super Admin account cannot be a PIC." },
+        { status: 400 }
       );
     }
 
-    const result = await execute(
-      "UPDATE users SET name_cn = ?, name_en = ?, division_id = ? WHERE id = ?",
-      [name_cn, name_en, division_id, Number(id)],
+    const divisions = await query<RowDataPacket[]>(
+      "SELECT id FROM divisions WHERE id = ? LIMIT 1",
+      [divisionId]
     );
+    if (!divisions[0]) {
+      return NextResponse.json({ error: "Division not found." }, { status: 404 });
+    }
+
+    const result = await execute("UPDATE users SET division_id = ? WHERE id = ?", [
+      divisionId,
+      userId,
+    ]);
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("PUT /users/[id] failed", error);
-    return NextResponse.json({ error: "Failed to update user." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update PIC." }, { status: 500 });
   }
 }
 
@@ -43,24 +72,32 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
 
   try {
     const { id } = await ctx.params;
+    const userId = Number(id);
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid PIC id." }, { status: 400 });
+    }
+
     const used = await query<CountRow[]>(
       "SELECT COUNT(*) AS c FROM mes_record WHERE user_id = ? AND deleted_at IS NULL",
-      [Number(id)],
+      [userId]
     );
     if (Number(used[0]?.c ?? 0) > 0) {
       return NextResponse.json(
-        { error: "Cannot delete: user is still referenced by records." },
-        { status: 409 },
+        { error: "Cannot unassign: PIC is still referenced by records." },
+        { status: 409 }
       );
     }
 
-    const result = await execute("DELETE FROM users WHERE id = ?", [Number(id)]);
+    const result = await execute(
+      "UPDATE system_users SET is_daily_operation_pic = 0 WHERE user_id = ?",
+      [userId]
+    );
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /users/[id] failed", error);
-    return NextResponse.json({ error: "Failed to delete user." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to unassign PIC." }, { status: 500 });
   }
 }

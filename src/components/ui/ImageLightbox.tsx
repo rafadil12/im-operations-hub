@@ -14,7 +14,11 @@ function subscribe() {
 }
 
 export function ImageLightbox({ src, alt = "", onClose }: Props) {
-  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,6 +59,6 @@ export function ImageLightbox({ src, alt = "", onClose }: Props) {
         />
       </div>
     </div>,
-    document.body,
+    document.body
   );
 }

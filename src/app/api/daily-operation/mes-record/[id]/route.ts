@@ -4,7 +4,7 @@ import { execute, query } from "@/lib/db";
 import {
   parseAndValidateMesBody,
   type MesValidationErrorKey,
-} from "@/lib/mesRecordValidation";
+} from "@/lib/daily-operation/mesRecordValidation";
 import type { MesData, MesDataInput } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const { id } = await ctx.params;
     const rows = await query<MesData[]>(
       "SELECT * FROM mes_record WHERE id = ? AND deleted_at IS NULL",
-      [Number(id)],
+      [Number(id)]
     );
     if (!rows.length) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -53,7 +53,7 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
           error: VALIDATION_MESSAGES[parsed.messageKey],
           errors: parsed.errors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
         data.start_time,
         data.end_time,
         Number(id),
-      ],
+      ]
     );
 
     if (result.affectedRows === 0) {
@@ -101,7 +101,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const { id } = await ctx.params;
     const result = await execute(
       "UPDATE mes_record SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
-      [Number(id)],
+      [Number(id)]
     );
 
     if (result.affectedRows === 0) {

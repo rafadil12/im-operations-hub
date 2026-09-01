@@ -3,11 +3,10 @@ import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { query, withTransaction } from "@/lib/db";
-import { slugLocationCode } from "@/lib/sparepartLocations";
+import { slugLocationCode } from "@/lib/sparepart/locations";
 import type { SparepartStorageLocation } from "@/lib/types";
 
-const LOCATION_SELECT =
-  "id, code, name_en, name_cn, is_active, created_at, updated_at";
+const LOCATION_SELECT = "id, code, name_en, name_cn, is_active, created_at, updated_at";
 
 function parseNames(body: {
   name_en?: string;
@@ -41,15 +40,12 @@ export async function GET(request: NextRequest) {
       `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations
        ${where}
-       ORDER BY name_en ASC`,
+       ORDER BY name_en ASC`
     );
     return NextResponse.json({ rows });
   } catch (error) {
     console.error("GET /sparepart/storage-locations failed", error);
-    return NextResponse.json(
-      { error: "Failed to load storage locations." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load storage locations." }, { status: 500 });
   }
 }
 
@@ -67,46 +63,36 @@ export async function POST(request: NextRequest) {
     };
     const names = parseNames(body);
     if (!names) {
-      return NextResponse.json(
-        { error: "Name EN and Name CN are required." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Name EN and Name CN are required." }, { status: 400 });
     }
     if (names.name_en.includes(",") || names.name_cn.includes(",")) {
       return NextResponse.json(
         { error: "Location name must not contain commas." },
-        { status: 400 },
+        { status: 400 }
       );
     }
-    const code =
-      String(body.code ?? "").trim() || slugLocationCode(names.name_en);
+    const code = String(body.code ?? "").trim() || slugLocationCode(names.name_en);
     const isActive = body.is_active === false ? 0 : 1;
 
     const result = await query<ResultSetHeader>(
       `INSERT INTO sparepart_storage_locations (code, name_en, name_cn, is_active)
        VALUES (?, ?, ?, ?)`,
-      [code, names.name_en, names.name_cn, isActive],
+      [code, names.name_en, names.name_cn, isActive]
     );
 
     const rows = await query<SparepartStorageLocation[]>(
       `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
-      [result.insertId],
+      [result.insertId]
     );
     return NextResponse.json({ location: rows[0] }, { status: 201 });
   } catch (error) {
     const errno = (error as { errno?: number }).errno;
     if (errno === 1062) {
-      return NextResponse.json(
-        { error: "Storage location code already exists." },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: "Storage location code already exists." }, { status: 409 });
     }
     console.error("POST /sparepart/storage-locations failed", error);
-    return NextResponse.json(
-      { error: "Failed to create storage location." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create storage location." }, { status: 500 });
   }
 }
 
@@ -131,7 +117,7 @@ export async function PUT(request: NextRequest) {
     const existing = await query<SparepartStorageLocation[]>(
       `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
-      [id],
+      [id]
     );
     if (!existing[0]) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -143,45 +129,36 @@ export async function PUT(request: NextRequest) {
         : body.name != null
           ? String(body.name).trim()
           : existing[0].name_en;
-    const nameCn =
-      body.name_cn != null
-        ? String(body.name_cn).trim()
-        : existing[0].name_cn;
-    const code =
-      body.code != null ? String(body.code).trim() : existing[0].code;
+    const nameCn = body.name_cn != null ? String(body.name_cn).trim() : existing[0].name_cn;
+    const code = body.code != null ? String(body.code).trim() : existing[0].code;
     if (!nameEn || !nameCn || !code) {
       return NextResponse.json(
         { error: "code, name_en, and name_cn are required." },
-        { status: 400 },
+        { status: 400 }
       );
     }
     if (nameEn.includes(",") || nameCn.includes(",")) {
       return NextResponse.json(
         { error: "Location name must not contain commas." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const nextActive =
-      body.is_active === undefined
-        ? Number(existing[0].is_active)
-        : body.is_active
-          ? 1
-          : 0;
+      body.is_active === undefined ? Number(existing[0].is_active) : body.is_active ? 1 : 0;
 
     if (nextActive === 0 && Number(existing[0].is_active) === 1) {
       const [stock] = await query<RowDataPacket[]>(
         `SELECT COALESCE(SUM(qty), 0) AS total
          FROM sparepart_stock_balances WHERE storage_location_id = ?`,
-        [id],
+        [id]
       );
       if (Number(stock?.total ?? 0) !== 0) {
         return NextResponse.json(
           {
-            error:
-              "Cannot deactivate a storage location that still has non-zero stock.",
+            error: "Cannot deactivate a storage location that still has non-zero stock.",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -190,28 +167,22 @@ export async function PUT(request: NextRequest) {
       `UPDATE sparepart_storage_locations
        SET code = ?, name_en = ?, name_cn = ?, is_active = ?
        WHERE id = ?`,
-      [code, nameEn, nameCn, nextActive, id],
+      [code, nameEn, nameCn, nextActive, id]
     );
 
     const rows = await query<SparepartStorageLocation[]>(
       `SELECT ${LOCATION_SELECT}
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
-      [id],
+      [id]
     );
     return NextResponse.json({ location: rows[0] });
   } catch (error) {
     const errno = (error as { errno?: number }).errno;
     if (errno === 1062) {
-      return NextResponse.json(
-        { error: "Storage location code already exists." },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: "Storage location code already exists." }, { status: 409 });
     }
     console.error("PUT /sparepart/storage-locations failed", error);
-    return NextResponse.json(
-      { error: "Failed to update storage location." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to update storage location." }, { status: 500 });
   }
 }
 
@@ -229,7 +200,7 @@ export async function DELETE(request: NextRequest) {
     return await withTransaction(async (conn) => {
       const [existingRows] = await conn.query<RowDataPacket[]>(
         `SELECT id, is_active FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
-        [id],
+        [id]
       );
       const existing = existingRows[0];
       if (!existing) {
@@ -238,57 +209,46 @@ export async function DELETE(request: NextRequest) {
       if (Number(existing.is_active) === 1) {
         return NextResponse.json(
           {
-            error:
-              "Cannot delete an active storage location. Deactivate it first.",
+            error: "Cannot delete an active storage location. Deactivate it first.",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
       const [stockRows] = await conn.query<RowDataPacket[]>(
         `SELECT COALESCE(SUM(qty), 0) AS total
          FROM sparepart_stock_balances WHERE storage_location_id = ?`,
-        [id],
+        [id]
       );
       if (Number(stockRows[0]?.total ?? 0) !== 0) {
         return NextResponse.json(
           {
-            error:
-              "Cannot delete a storage location that still has non-zero stock.",
+            error: "Cannot delete a storage location that still has non-zero stock.",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
       const [docRefs] = await conn.query<RowDataPacket[]>(
         `SELECT COUNT(*) AS cnt FROM sparepart_mat_doc_items
          WHERE storage_location_id = ? OR to_storage_location_id = ?`,
-        [id, id],
+        [id, id]
       );
       if (Number(docRefs[0]?.cnt ?? 0) > 0) {
         return NextResponse.json(
           {
-            error:
-              "Cannot delete a storage location that is referenced by material documents.",
+            error: "Cannot delete a storage location that is referenced by material documents.",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
-      await conn.query(
-        `DELETE FROM sparepart_stock_balances WHERE storage_location_id = ?`,
-        [id],
-      );
-      await conn.query(`DELETE FROM sparepart_storage_locations WHERE id = ?`, [
-        id,
-      ]);
+      await conn.query(`DELETE FROM sparepart_stock_balances WHERE storage_location_id = ?`, [id]);
+      await conn.query(`DELETE FROM sparepart_storage_locations WHERE id = ?`, [id]);
       return NextResponse.json({ ok: true });
     });
   } catch (error) {
     console.error("DELETE /sparepart/storage-locations failed", error);
-    return NextResponse.json(
-      { error: "Failed to delete storage location." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to delete storage location." }, { status: 500 });
   }
 }

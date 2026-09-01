@@ -10,13 +10,7 @@ type ImOneLogoProps = {
  */
 function ImOneMark({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 44 40"
-      className={className}
-      fill="none"
-      aria-hidden
-      focusable="false"
-    >
+    <svg viewBox="0 0 44 40" className={className} fill="none" aria-hidden focusable="false">
       <defs>
         <linearGradient id="im-one-i" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#4cb8f7" />
@@ -38,19 +32,9 @@ function ImOneMark({ className }: { className?: string }) {
       </defs>
 
       <circle cx="5" cy="5" r="4.6" fill="url(#im-one-i)" />
-      <rect
-        x="0.6"
-        y="12.6"
-        width="8.8"
-        height="26.4"
-        rx="4.4"
-        fill="url(#im-one-i)"
-      />
+      <rect x="0.6" y="12.6" width="8.8" height="26.4" rx="4.4" fill="url(#im-one-i)" />
 
-      <path
-        d="M13 39V3h8l7 17 7-17h8v36h-6.5V14l-6 14h-5l-6-14v25z"
-        fill="url(#im-one-m)"
-      />
+      <path d="M13 39V3h8l7 17 7-17h8v36h-6.5V14l-6 14h-5l-6-14v25z" fill="url(#im-one-m)" />
       <path d="M21 3l7 17-2.5 8L19.5 14z" fill="url(#im-one-fold)" />
       <path d="M35 3h8v36h-6.5V14z" fill="url(#im-one-plane)" />
     </svg>
@@ -70,10 +54,7 @@ function ZhiZaoSeal() {
   );
 }
 
-export function ImOneLogo({
-  variant = "full",
-  className = "",
-}: ImOneLogoProps) {
+export function ImOneLogo({ variant = "full", className = "" }: ImOneLogoProps) {
   return (
     <div
       className={`flex items-center gap-2 ${className}`}

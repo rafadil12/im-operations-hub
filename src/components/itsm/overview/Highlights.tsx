@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Building2,
-  UserRound,
-  Timer,
-} from "lucide-react";
+import { Building2, UserRound, Timer } from "lucide-react";
 
 import { useLang } from "@/lib/i18n";
 import SummaryCard from "./SummaryCard";

@@ -15,11 +15,7 @@ type AuthContextValue = {
   account: AuthAccountPublic | null;
   loading: boolean;
   refresh: () => Promise<void>;
-  login: (input: {
-    login: string;
-    password: string;
-    remember?: boolean;
-  }) => Promise<void>;
+  login: (input: { login: string; password: string; remember?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -53,11 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(
-    async (input: {
-      login: string;
-      password: string;
-      remember?: boolean;
-    }) => {
+    async (input: { login: string; password: string; remember?: boolean }) => {
       const identifier = input.login.trim();
       if (!identifier || !input.password) {
         throw new Error("Employee ID and password are required.");
@@ -75,13 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = (await res.json().catch(() => ({}))) as {
         account?: AuthAccountPublic;
         error?: string;
+        code?: string;
       };
       if (!res.ok || !data.account) {
-        throw new Error(data.error || "Login failed.");
+        throw new Error(data.error || "Login failed.", { cause: data.code });
       }
       setAccount(data.account);
     },
-    [],
+    []
   );
 
   const logout = useCallback(async () => {
@@ -94,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({ account, loading, refresh, login, logout }),
-    [account, loading, refresh, login, logout],
+    [account, loading, refresh, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

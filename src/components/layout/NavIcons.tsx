@@ -6,11 +6,7 @@ type NavIconProps = {
 };
 
 type DuotoneProps = NavIconProps & {
-  children: (colors: {
-    primary: string;
-    accent: string;
-    cutout: string;
-  }) => ReactNode;
+  children: (colors: { primary: string; accent: string; cutout: string }) => ReactNode;
 };
 
 function DuotoneSvg({ active, className, children }: DuotoneProps) {
@@ -86,15 +82,7 @@ export function DailyOperationIcon({ active, className }: NavIconProps) {
             strokeWidth="1.75"
             strokeLinejoin="round"
           />
-          <rect
-            x="8"
-            y="3"
-            width="8"
-            height="3.5"
-            rx="1.25"
-            stroke={primary}
-            strokeWidth="1.75"
-          />
+          <rect x="8" y="3" width="8" height="3.5" rx="1.25" stroke={primary} strokeWidth="1.75" />
           <circle cx="9.25" cy="10.5" r="0.9" fill={accent} />
           <circle cx="9.25" cy="14" r="0.9" fill={accent} />
           <circle cx="9.25" cy="17.5" r="0.9" fill={accent} />
@@ -206,10 +194,7 @@ export function OrganizationIcon({ active, className }: NavIconProps) {
             fill={accent}
           />
           <circle cx="9.5" cy="8.25" r="3" fill={primary} />
-          <path
-            d="M3.5 18.75c0-2.9 2.7-5.25 6-5.25s6 2.35 6 5.25v.5H3.5v-.5Z"
-            fill={primary}
-          />
+          <path d="M3.5 18.75c0-2.9 2.7-5.25 6-5.25s6 2.35 6 5.25v.5H3.5v-.5Z" fill={primary} />
         </>
       )}
     </DuotoneSvg>
@@ -228,12 +213,7 @@ export function ReportIcon({ active, className }: NavIconProps) {
             strokeWidth="1.75"
             strokeLinejoin="round"
           />
-          <path
-            d="M14.5 3.5V8H19"
-            stroke={primary}
-            strokeWidth="1.75"
-            strokeLinejoin="round"
-          />
+          <path d="M14.5 3.5V8H19" stroke={primary} strokeWidth="1.75" strokeLinejoin="round" />
           <path
             d="M14.25 17.75a3.1 3.1 0 1 1 0-6.2 3.1 3.1 0 0 1 0 6.2Z"
             fill={accent}
@@ -252,10 +232,7 @@ export function TrainingIcon({ active, className }: NavIconProps) {
     <DuotoneSvg active={active} className={className}>
       {({ primary, accent }) => (
         <>
-          <path
-            d="M2.5 10.25 12 5.5l9.5 4.75L12 15 2.5 10.25Z"
-            fill={accent}
-          />
+          <path d="M2.5 10.25 12 5.5l9.5 4.75L12 15 2.5 10.25Z" fill={accent} />
           <path
             d="M6.5 12.5v4.25c0 .4.9 1.75 5.5 1.75s5.5-1.35 5.5-1.75V12.5"
             stroke={primary}
@@ -263,12 +240,7 @@ export function TrainingIcon({ active, className }: NavIconProps) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <path
-            d="M21.5 10.25v5.5"
-            stroke={primary}
-            strokeWidth="1.75"
-            strokeLinecap="round"
-          />
+          <path d="M21.5 10.25v5.5" stroke={primary} strokeWidth="1.75" strokeLinecap="round" />
           <circle cx="21.5" cy="16.5" r="1.1" fill={accent} />
         </>
       )}
@@ -308,10 +280,7 @@ export type NavIconId =
   | "training"
   | "settings";
 
-const iconMap: Record<
-  NavIconId,
-  (props: NavIconProps) => ReactElement
-> = {
+const iconMap: Record<NavIconId, (props: NavIconProps) => ReactElement> = {
   dashboard: OverviewIcon,
   itsm: ItsmIcon,
   "daily-operation": DailyOperationIcon,
@@ -323,11 +292,7 @@ const iconMap: Record<
   settings: SettingsIcon,
 };
 
-export function NavIcon({
-  id,
-  active,
-  className,
-}: NavIconProps & { id: NavIconId }) {
+export function NavIcon({ id, active, className }: NavIconProps & { id: NavIconId }) {
   const Icon = iconMap[id];
   return <Icon active={active} className={className} />;
 }

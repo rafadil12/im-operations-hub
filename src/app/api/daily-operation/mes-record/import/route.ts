@@ -7,7 +7,7 @@ import {
   IMPORT_MAX_ROWS,
   parseActivitiesWorkbook,
   type ImportRowError,
-} from "@/lib/mesRecordImport";
+} from "@/lib/daily-operation/mesRecordImport";
 import { loadMasters } from "@/lib/masters";
 import type { MesDataInput, MesDataRow } from "@/lib/types";
 import { notifyMesRecordsCreated } from "@/lib/wecomNotification";
@@ -46,10 +46,7 @@ const RECORDS_BY_IDS_SQL = `
   ORDER BY FIELD(m.id, ?)
 `;
 
-async function insertRow(
-  conn: PoolConnection,
-  data: MesDataInput,
-): Promise<number> {
+async function insertRow(conn: PoolConnection, data: MesDataInput): Promise<number> {
   const [result] = await conn.query<ResultSetHeader>(INSERT_SQL, [
     data.user_id,
     data.division_id,
@@ -81,7 +78,7 @@ export async function POST(request: NextRequest) {
           error: "Please upload an Excel (.xlsx) file.",
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -91,7 +88,7 @@ export async function POST(request: NextRequest) {
           error: `File is too large. Maximum size is ${Math.round(IMPORT_MAX_BYTES / (1024 * 1024))}MB.`,
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -102,7 +99,7 @@ export async function POST(request: NextRequest) {
           error: "Only .xlsx files are supported.",
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -113,11 +110,10 @@ export async function POST(request: NextRequest) {
     if (!parsed.ok) {
       return NextResponse.json(
         {
-          error:
-            "Import failed. Fix the errors below and try again. No records were saved.",
+          error: "Import failed. Fix the errors below and try again. No records were saved.",
           errors: parsed.errors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -127,7 +123,7 @@ export async function POST(request: NextRequest) {
           error: `Too many rows. Maximum is ${IMPORT_MAX_ROWS}.`,
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -137,7 +133,7 @@ export async function POST(request: NextRequest) {
           error: "No data rows found in the file.",
           errors: [] as ImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -153,17 +149,11 @@ export async function POST(request: NextRequest) {
     // Failures must not undo a successful import.
     try {
       if (insertIds.length > 0) {
-        const records = await query<MesDataRow[]>(RECORDS_BY_IDS_SQL, [
-          insertIds,
-          insertIds,
-        ]);
+        const records = await query<MesDataRow[]>(RECORDS_BY_IDS_SQL, [insertIds, insertIds]);
         await notifyMesRecordsCreated(records);
       }
     } catch (wecomError) {
-      console.error(
-        "Failed to send WeCom notifications after import:",
-        wecomError,
-      );
+      console.error("Failed to send WeCom notifications after import:", wecomError);
     }
 
     return NextResponse.json({ imported: parsed.rows.length });
@@ -171,7 +161,7 @@ export async function POST(request: NextRequest) {
     console.error("POST /mes-record/import failed", error);
     return NextResponse.json(
       { error: "Failed to import records.", errors: [] as ImportRowError[] },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

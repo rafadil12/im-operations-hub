@@ -43,7 +43,15 @@ export function AdminGate({ children, require = "settings" }: Props) {
       }
       router.replace("/");
     }
-  }, [access.canManageAccounts, access.canManageRoles, account, canEnter, loading, require, router]);
+  }, [
+    access.canManageAccounts,
+    access.canManageRoles,
+    account,
+    canEnter,
+    loading,
+    require,
+    router,
+  ]);
 
   if (loading) {
     return (

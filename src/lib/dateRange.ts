@@ -9,7 +9,7 @@ function pad(n: number): string {
 
 function formatDateTime(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours(),
+    d.getHours()
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
@@ -48,11 +48,7 @@ export function getPreviousMonth(reference: Date = new Date()): DateRange {
  * Given a reference date, returns the operational week that contains it.
  */
 export function getOperationalWeek(reference: Date = new Date()): DateRange {
-  const ref = new Date(
-    reference.getFullYear(),
-    reference.getMonth(),
-    reference.getDate(),
-  );
+  const ref = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate());
   // getDay(): Sunday=0 ... Saturday=6. Days since last Saturday.
   const daysSinceSaturday = (ref.getDay() + 1) % 7;
   const start = new Date(ref);
@@ -70,10 +66,7 @@ export function getOperationalWeek(reference: Date = new Date()): DateRange {
  * Build a range from date-only strings (inclusive). Falls back to the current
  * operational week when inputs are missing or invalid.
  */
-export function resolveRange(
-  startInput?: string | null,
-  endInput?: string | null,
-): DateRange {
+export function resolveRange(startInput?: string | null, endInput?: string | null): DateRange {
   const week = getOperationalWeek();
 
   const startValid = startInput && /^\d{4}-\d{2}-\d{2}/.test(startInput);

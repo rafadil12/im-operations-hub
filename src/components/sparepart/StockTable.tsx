@@ -1,89 +1,36 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useLang, localizedName, localizedField } from "@/lib/i18n";
-import {
-  isItemActive,
-  stockLevelStatus,
-  type StockLevelStatus,
-} from "@/lib/sparepartCategories";
-import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
-import type { SortDir, SortKey } from "@/lib/sparepartSort";
+import { fillTemplate } from "@/lib/i18n/fillTemplate";
+import { stockLevelStatus } from "@/lib/sparepart/categories";
+import type { SparepartItem } from "@/lib/types";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { StockLevelBadge } from "@/components/sparepart/StockLevelBadge";
+import { SortHeader } from "@/components/sparepart/StockTableSort";
+import {
+  PAGE_SIZE_OPTIONS,
+  type PageSize,
+  type SortDir,
+  type SortKey,
+  type StockTableRow,
+  type StockTableVariant,
+  formatQty,
+  isBalanceRow,
+  rowCategoryLabel,
+  rowIsActive,
+  rowKey,
+  rowMinStock,
+  rowStock,
+  rowUom,
+  STOCK_TABLE_TD as td,
+  STOCK_TABLE_TH as th,
+} from "@/components/sparepart/stockTableRows";
 
-export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
-export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
-export type StockTableVariant = "master" | "stock";
-export type { SortDir, SortKey };
-
-type TableRow = SparepartItem | SparepartStockBalanceRow;
-
-function isBalanceRow(row: TableRow): row is SparepartStockBalanceRow {
-  return "item_id" in row;
-}
-
-function rowKey(row: TableRow): string {
-  if (isBalanceRow(row)) {
-    return String(row.item_id);
-  }
-  return String(row.id);
-}
-
-function rowStock(row: TableRow): number {
-  return row.stock_current;
-}
-
-function rowMinStock(row: TableRow): number {
-  return row.min_stock;
-}
-
-function rowIsActive(row: TableRow): boolean {
-  return isItemActive(row.is_active);
-}
-
-function rowUom(row: TableRow): string {
-  return row.uom_code?.trim() || "";
-}
-
-function formatQty(qty: number, uom: string): string {
-  return uom ? `${qty} ${uom}` : String(qty);
-}
-
-function rowCategoryLabel(
-  row: TableRow,
-  lang: "en" | "cn",
-): string {
-  return (
-    localizedName(
-      {
-        name_en: row.category_name_en ?? null,
-        name_cn: row.category_name_cn ?? null,
-      },
-      lang,
-    ) || row.category_code || "-"
-  );
-}
-
-const STATUS_BADGE_CLASS: Record<StockLevelStatus, string> = {
-  critical:
-    "rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger",
-  low: "rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning",
-  normal:
-    "rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success",
-};
-
-function StockLevelBadge({
-  status,
-  labels,
-}: {
-  status: StockLevelStatus;
-  labels: Record<StockLevelStatus, string>;
-}) {
-  return <span className={STATUS_BADGE_CLASS[status]}>{labels[status]}</span>;
-}
+export { PAGE_SIZE_OPTIONS, type PageSize, type SortDir, type SortKey, type StockTableVariant };
 
 type Props = {
-  rows: TableRow[];
+  rows: StockTableRow[];
   totalCount: number;
   page: number;
   pageSize: PageSize;
@@ -91,197 +38,13 @@ type Props = {
   onPageSizeChange: (pageSize: PageSize) => void;
   onEdit?: (row: SparepartItem) => void;
   onDelete?: (row: SparepartItem) => void;
-  onRowClick?: (row: TableRow) => void;
+  onRowClick?: (row: StockTableRow) => void;
   variant?: StockTableVariant;
   readOnly?: boolean;
   sortKey?: SortKey | null;
   sortDir?: SortDir;
   onSortChange?: (key: SortKey | null, dir: SortDir | null) => void;
 };
-
-const th =
-  "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-text-dim";
-const td = "px-3 py-2 align-top text-xs text-text-muted";
-
-function fillTemplate(
-  template: string,
-  values: Record<string, string | number>,
-): string {
-  return Object.entries(values).reduce(
-    (text, [key, value]) => text.replaceAll(`{${key}}`, String(value)),
-    template,
-  );
-}
-
-function ChevronIcon({
-  direction,
-  active,
-  className = "",
-}: {
-  direction: "up" | "down";
-  active: boolean;
-  className?: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 10 6"
-      className={`h-2 w-2.5 shrink-0 ${
-        active ? "text-text opacity-100" : "text-text-dim opacity-50"
-      } ${className}`}
-      fill="currentColor"
-      aria-hidden
-    >
-      {direction === "up" ? (
-        <path d="M5 0L10 6H0L5 0Z" />
-      ) : (
-        <path d="M5 6L0 0H10L5 6Z" />
-      )}
-    </svg>
-  );
-}
-
-function SortHeader({
-  label,
-  columnKey,
-  sortKey,
-  sortDir,
-  open,
-  onOpenChange,
-  onSortChange,
-  sortAscLabel,
-  sortDescLabel,
-  className = "",
-  menuAlign = "left",
-}: {
-  label: string;
-  columnKey: SortKey;
-  sortKey: SortKey | null;
-  sortDir: SortDir;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSortChange: (key: SortKey | null, dir: SortDir | null) => void;
-  sortAscLabel: string;
-  sortDescLabel: string;
-  className?: string;
-  menuAlign?: "left" | "right";
-}) {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const active = sortKey === columnKey;
-  const ariaSort = active
-    ? sortDir === "asc"
-      ? "ascending"
-      : "descending"
-    : "none";
-  const chevronDir = active && sortDir === "asc" ? "up" : "down";
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        onOpenChange(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onOpenChange(false);
-    };
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, onOpenChange]);
-
-  const pick = (dir: SortDir) => {
-    if (active && sortDir === dir) {
-      onSortChange(null, null);
-    } else {
-      onSortChange(columnKey, dir);
-    }
-    onOpenChange(false);
-  };
-
-  return (
-    <th
-      className={[th, className, className.includes("text-center") ? "!text-center" : ""]
-        .filter(Boolean)
-        .join(" ")}
-      aria-sort={ariaSort}
-    >
-      <div
-        className={[
-          "relative inline-block",
-          className.includes("text-center") ? "w-full" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        ref={menuRef}
-      >
-        <button
-          type="button"
-          onClick={() => onOpenChange(!open)}
-          aria-expanded={open}
-          aria-haspopup="menu"
-          className={[
-            "inline-flex items-center rounded-sm uppercase tracking-wide transition-colors",
-            "hover:text-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
-            className.includes("text-center") ? "justify-center w-full" : "text-left",
-            active || open ? "text-text" : "text-text-dim",
-          ].join(" ")}
-        >
-          {label}
-          <ChevronIcon
-            direction={chevronDir}
-            active={active || open}
-            className="ml-1.5"
-          />
-        </button>
-
-        {open ? (
-          <div
-            role="menu"
-            className={[
-              "absolute z-30 mt-1 min-w-[10.5rem] rounded-md border border-border bg-bg-elevated py-1 shadow-lg",
-              menuAlign === "right" ? "right-0" : "left-0",
-            ].join(" ")}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => pick("asc")}
-              className={[
-                "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs",
-                active && sortDir === "asc"
-                  ? "bg-accent/10 text-text"
-                  : "text-text-muted hover:bg-surface-hover hover:text-text",
-              ].join(" ")}
-            >
-              <ChevronIcon direction="up" active={active && sortDir === "asc"} />
-              <span className="normal-case tracking-normal">{sortAscLabel}</span>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => pick("desc")}
-              className={[
-                "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs",
-                active && sortDir === "desc"
-                  ? "bg-accent/10 text-text"
-                  : "text-text-muted hover:bg-surface-hover hover:text-text",
-              ].join(" ")}
-            >
-              <ChevronIcon
-                direction="down"
-                active={active && sortDir === "desc"}
-              />
-              <span className="normal-case tracking-normal">{sortDescLabel}</span>
-            </button>
-          </div>
-        ) : null}
-      </div>
-    </th>
-  );
-}
 
 export function StockTable({
   rows,
@@ -327,7 +90,7 @@ export function StockTable({
     label: string,
     columnKey: SortKey,
     className = "",
-    menuAlign: "left" | "right" = "left",
+    menuAlign: "left" | "right" = "left"
   ) => (
     <SortHeader
       key={columnKey}
@@ -384,24 +147,13 @@ export function StockTable({
                   {renderSortHeader(t.sparepart.category, "category")}
                   {renderSortHeader(t.sparepart.minStock, "min_stock", "text-center")}
                   {showCurrentStock
-                    ? renderSortHeader(
-                        t.sparepart.stockCurrent,
-                        "stock_current",
-                        "text-center",
-                      )
+                    ? renderSortHeader(t.sparepart.stockCurrent, "stock_current", "text-center")
                     : null}
                   {showCurrentStock
-                    ? renderSortHeader(
-                        t.sparepart.stockStatus,
-                        "status",
-                        "text-center",
-                        "right",
-                      )
+                    ? renderSortHeader(t.sparepart.stockStatus, "status", "text-center", "right")
                     : null}
                   {showItemStatus ? (
-                    <th className={`${th} text-center !text-center`}>
-                      {t.sparepart.stockStatus}
-                    </th>
+                    <th className={`${th} text-center !text-center`}>{t.sparepart.stockStatus}</th>
                   ) : null}
                 </>
               ) : (
@@ -413,19 +165,13 @@ export function StockTable({
                   <th className={th}>{t.sparepart.category}</th>
                   <th className={`${th} text-center`}>{t.sparepart.minStock}</th>
                   {showCurrentStock ? (
-                    <th className={`${th} text-center`}>
-                      {t.sparepart.stockCurrent}
-                    </th>
+                    <th className={`${th} text-center`}>{t.sparepart.stockCurrent}</th>
                   ) : null}
                   {showCurrentStock ? (
-                    <th className={`${th} text-center`}>
-                      {t.sparepart.stockStatus}
-                    </th>
+                    <th className={`${th} text-center`}>{t.sparepart.stockStatus}</th>
                   ) : null}
                   {showItemStatus ? (
-                    <th className={`${th} text-center !text-center`}>
-                      {t.sparepart.stockStatus}
-                    </th>
+                    <th className={`${th} text-center !text-center`}>{t.sparepart.stockStatus}</th>
                   ) : null}
                 </>
               )}
@@ -456,9 +202,7 @@ export function StockTable({
                   </span>
                 </td>
                 <td className={td}>
-                  <span className="line-clamp-2 break-words">
-                    {row.model || "-"}
-                  </span>
+                  <span className="line-clamp-2 break-words">{row.model || "-"}</span>
                 </td>
                 <td className={td}>
                   <span className="line-clamp-2 break-words text-text">
@@ -480,11 +224,7 @@ export function StockTable({
                 {showCurrentStock ? (
                   <td className={`${td} text-center`}>
                     <StockLevelBadge
-                      status={stockLevelStatus(
-                        rowMinStock(row),
-                        rowStock(row),
-                        rowIsActive(row),
-                      )}
+                      status={stockLevelStatus(rowMinStock(row), rowStock(row), rowIsActive(row))}
                       labels={{
                         critical: t.sparepart.statusCritical,
                         low: t.sparepart.statusLow,
@@ -507,10 +247,7 @@ export function StockTable({
                   </td>
                 ) : null}
                 {showActions ? (
-                  <td
-                    className={`${td} whitespace-nowrap`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <td className={`${td} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                     {!isBalanceRow(row) && onEdit ? (
                       <button
                         type="button"

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import {
-  isProtectedRoleName,
-  PERMISSIONS,
-  requirePermission,
-} from "@/lib/auth";
+import { isProtectedRoleName, PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -24,9 +20,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     const name = body.name?.toString().trim().toLowerCase() ?? "";
     const description = body.description?.toString().trim() || null;
     const permissionIds: number[] = Array.isArray(body.permissionIds)
-      ? body.permissionIds
-          .map((x: unknown) => Number(x))
-          .filter((n: number) => !Number.isNaN(n))
+      ? body.permissionIds.map((x: unknown) => Number(x)).filter((n: number) => !Number.isNaN(n))
       : [];
 
     if (!name) {
@@ -35,13 +29,13 @@ export async function PUT(request: NextRequest, context: Ctx) {
     if (!/^[a-z][a-z0-9_]*$/.test(name)) {
       return NextResponse.json(
         { error: "Role name must be lowercase letters, numbers, or underscores." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const existing = await query<RowDataPacket[]>(
       "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
-      [id],
+      [id]
     );
     if (!existing[0]) {
       return NextResponse.json({ error: "Role not found." }, { status: 404 });
@@ -49,7 +43,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     if (isProtectedRoleName(existing[0].name) && name !== existing[0].name) {
       return NextResponse.json(
         { error: "The superadmin role name cannot be changed." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -57,18 +51,16 @@ export async function PUT(request: NextRequest, context: Ctx) {
       const critical = await query<RowDataPacket[]>(
         `SELECT id, code FROM permissions
          WHERE code IN (?, ?)`,
-        [PERMISSIONS.adminRolesManage, PERMISSIONS.adminAccountsManage],
+        [PERMISSIONS.adminRolesManage, PERMISSIONS.adminAccountsManage]
       );
-      const missing = critical.filter(
-        (row) => !permissionIds.includes(Number(row.id)),
-      );
+      const missing = critical.filter((row) => !permissionIds.includes(Number(row.id)));
       if (missing.length > 0) {
         return NextResponse.json(
           {
             error:
               "Cannot remove admin.roles.manage or admin.accounts.manage from the superadmin role.",
           },
-          { status: 400 },
+          { status: 400 }
         );
       }
     }
@@ -81,10 +73,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
       ]);
       await conn.execute("DELETE FROM role_permissions WHERE role_id = ?", [id]);
       for (const permissionId of permissionIds) {
-        await conn.execute(
-          "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-          [id, permissionId],
-        );
+        await conn.execute("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)", [
+          id,
+          permissionId,
+        ]);
       }
     });
 
@@ -112,7 +104,7 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
 
     const existing = await query<RowDataPacket[]>(
       "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
-      [id],
+      [id]
     );
     if (!existing[0]) {
       return NextResponse.json({ error: "Role not found." }, { status: 404 });
@@ -120,18 +112,18 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     if (isProtectedRoleName(existing[0].name)) {
       return NextResponse.json(
         { error: "The superadmin role cannot be deleted." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const assigned = await query<RowDataPacket[]>(
       "SELECT COUNT(*) AS c FROM system_users WHERE role_id = ?",
-      [id],
+      [id]
     );
     if (Number(assigned[0]?.c ?? 0) > 0) {
       return NextResponse.json(
         { error: "Role is still assigned to one or more accounts." },
-        { status: 409 },
+        { status: 409 }
       );
     }
 

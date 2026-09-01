@@ -52,7 +52,7 @@ function formatValue(
   month: number,
   day: number,
   hour: number,
-  minute: number,
+  minute: number
 ): string {
   return `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}`;
 }
@@ -152,26 +152,15 @@ export function DateTimePicker({
   const parsed = parseValue(value);
   const now = useMemo(() => new Date(), []);
 
-  const [viewYear, setViewYear] = useState(
-    () => parsed?.year ?? now.getFullYear(),
-  );
-  const [viewMonth, setViewMonth] = useState(
-    () => parsed?.month ?? now.getMonth() + 1,
-  );
+  const [viewYear, setViewYear] = useState(() => parsed?.year ?? now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => parsed?.month ?? now.getMonth() + 1);
   const [hour, setHour] = useState(() => parsed?.hour ?? now.getHours());
-  const [minute, setMinute] = useState(
-    () => parsed?.minute ?? now.getMinutes(),
-  );
+  const [minute, setMinute] = useState(() => parsed?.minute ?? now.getMinutes());
   const [selectedDay, setSelectedDay] = useState<{
     year: number;
     month: number;
     day: number;
-  } | null>(
-    () =>
-      parsed
-        ? { year: parsed.year, month: parsed.month, day: parsed.day }
-        : null,
-  );
+  } | null>(() => (parsed ? { year: parsed.year, month: parsed.month, day: parsed.day } : null));
 
   const seedFromValue = useCallback(() => {
     const p = parseValue(value);
@@ -190,7 +179,7 @@ export function DateTimePicker({
     setSelectedDay(
       p
         ? { year: p.year, month: p.month, day: p.day }
-        : { year: base.year, month: base.month, day: base.day },
+        : { year: base.year, month: base.month, day: base.day }
     );
   }, [value]);
 
@@ -212,18 +201,12 @@ export function DateTimePicker({
   }, [open]);
 
   const commit = useCallback(
-    (
-      day: { year: number; month: number; day: number },
-      h: number,
-      m: number,
-    ) => {
+    (day: { year: number; month: number; day: number }, h: number, m: number) => {
       const clampedH = Math.min(23, Math.max(0, h));
       const clampedM = Math.min(59, Math.max(0, m));
-      onChange(
-        formatValue(day.year, day.month, day.day, clampedH, clampedM),
-      );
+      onChange(formatValue(day.year, day.month, day.day, clampedH, clampedM));
     },
-    [onChange],
+    [onChange]
   );
 
   const shiftMonth = (delta: number) => {
@@ -285,12 +268,7 @@ export function DateTimePicker({
     }
   };
 
-  const pickDay = (cell: {
-    year: number;
-    month: number;
-    day: number;
-    inMonth: boolean;
-  }) => {
+  const pickDay = (cell: { year: number; month: number; day: number; inMonth: boolean }) => {
     const day = { year: cell.year, month: cell.month, day: cell.day };
     setSelectedDay(day);
     if (!cell.inMonth) {
@@ -409,10 +387,7 @@ export function DateTimePicker({
 
             <div className="mb-1 grid grid-cols-7 gap-0.5">
               {WEEKDAYS.map((d) => (
-                <div
-                  key={d}
-                  className="py-1 text-center text-[10px] font-medium text-text-dim"
-                >
+                <div key={d} className="py-1 text-center text-[10px] font-medium text-text-dim">
                   {d}
                 </div>
               ))}
@@ -434,9 +409,7 @@ export function DateTimePicker({
                     onClick={() => pickDay(cell)}
                     className={[
                       "h-8 w-8 rounded-md text-xs tabular-nums transition-colors",
-                      !cell.inMonth
-                        ? "text-text-dim"
-                        : "text-text hover:bg-surface-hover",
+                      !cell.inMonth ? "text-text-dim" : "text-text hover:bg-surface-hover",
                       isSelected
                         ? "bg-accent font-semibold text-white hover:bg-accent"
                         : isToday
@@ -471,12 +444,7 @@ export function DateTimePicker({
           </div>
 
           <div className="flex gap-2 p-3">
-            <ScrollColumn
-              items={HOURS}
-              selected={hour}
-              onSelect={pickHour}
-              label="Hours (00–23)"
-            />
+            <ScrollColumn items={HOURS} selected={hour} onSelect={pickHour} label="Hours (00–23)" />
             <ScrollColumn
               items={MINUTES}
               selected={minute}

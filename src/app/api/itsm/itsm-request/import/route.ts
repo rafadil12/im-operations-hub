@@ -8,7 +8,7 @@ import {
   parseItsmRequestWorkbook,
   type ItsmImportRow,
   type ItsmImportRowError,
-} from "@/lib/itsmRequestImport";
+} from "@/lib/itsm/requestImport";
 
 export const runtime = "nodejs";
 
@@ -60,10 +60,7 @@ function rowParams(row: ItsmImportRow): unknown[] {
   ];
 }
 
-async function loadExistingRequestIds(
-  conn: PoolConnection,
-  ids: number[],
-): Promise<Set<number>> {
+async function loadExistingRequestIds(conn: PoolConnection, ids: number[]): Promise<Set<number>> {
   const existing = new Set<number>();
   if (!ids.length) return existing;
 
@@ -72,7 +69,7 @@ async function loadExistingRequestIds(
     const placeholders = batch.map(() => "?").join(",");
     const [rows] = await conn.query<RowDataPacket[]>(
       `SELECT DISTINCT request_id FROM itsm_requests WHERE request_id IN (${placeholders})`,
-      batch,
+      batch
     );
     for (const row of rows) {
       const id = Number(row.request_id);
@@ -83,10 +80,7 @@ async function loadExistingRequestIds(
   return existing;
 }
 
-async function dedupeExistingRequestIds(
-  conn: PoolConnection,
-  ids: number[],
-): Promise<void> {
+async function dedupeExistingRequestIds(conn: PoolConnection, ids: number[]): Promise<void> {
   if (!ids.length) return;
 
   for (let i = 0; i < ids.length; i += ID_BATCH_SIZE) {
@@ -98,7 +92,7 @@ async function dedupeExistingRequestIds(
        WHERE request_id IN (${placeholders})
        GROUP BY request_id
        HAVING COUNT(*) > 1`,
-      batch,
+      batch
     );
 
     for (const row of rows) {
@@ -115,7 +109,7 @@ async function dedupeExistingRequestIds(
                SELECT MAX(id) AS id FROM itsm_requests WHERE request_id = ?
              ) keep_row
            )`,
-        [requestId, requestId],
+        [requestId, requestId]
       );
     }
   }
@@ -135,7 +129,7 @@ export async function POST(req: NextRequest) {
           error: "Please upload an Excel (.xlsx) file.",
           errors: [] as ItsmImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -145,7 +139,7 @@ export async function POST(req: NextRequest) {
           error: `File is too large. Maximum size is ${Math.round(ITSM_IMPORT_MAX_BYTES / (1024 * 1024))}MB.`,
           errors: [] as ItsmImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -156,7 +150,7 @@ export async function POST(req: NextRequest) {
           error: "Only .xlsx files are supported.",
           errors: [] as ItsmImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -166,11 +160,10 @@ export async function POST(req: NextRequest) {
     if (!parsed.ok) {
       return NextResponse.json(
         {
-          error:
-            "Import failed. Fix the errors below and try again. No records were saved.",
+          error: "Import failed. Fix the errors below and try again. No records were saved.",
           errors: parsed.errors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -180,7 +173,7 @@ export async function POST(req: NextRequest) {
           error: `Too many rows. Maximum is ${ITSM_IMPORT_MAX_ROWS}.`,
           errors: [] as ItsmImportRowError[],
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -201,7 +194,7 @@ export async function POST(req: NextRequest) {
 
       await dedupeExistingRequestIds(
         conn,
-        toUpdate.map((row) => row.request_id),
+        toUpdate.map((row) => row.request_id)
       );
 
       for (const row of toUpdate) {
@@ -233,7 +226,7 @@ export async function POST(req: NextRequest) {
         error: "Import failed.",
         errors: [] as ItsmImportRowError[],
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

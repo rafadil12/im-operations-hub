@@ -16,7 +16,6 @@ type Props = {
 export default function ItsmOverview({ data }: Props) {
   return (
     <div className="space-y-6">
-
       {/* KPI */}
       <KpiCards data={data.kpi} />
 
@@ -34,7 +33,6 @@ export default function ItsmOverview({ data }: Props) {
         <RecentTickets rows={data.recentTickets} />
         <OldestTickets rows={data.oldestTickets} />
       </div>
-
     </div>
   );
 }

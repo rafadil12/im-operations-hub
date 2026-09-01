@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
-import {
-  SparepartImageError,
-  renameMaterialImage,
-} from "@/lib/sparepartImages";
-import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
-import { parseSparepartItemBody } from "@/lib/sparepartValidation";
+import { SparepartImageError, renameMaterialImage } from "@/lib/sparepart/images";
+import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepart/categories";
+import { parseSparepartItemBody } from "@/lib/sparepart/validation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -30,7 +27,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
        FROM ${ITEM_CATEGORY_FROM}
        WHERE i.id = ? AND i.deleted_at IS NULL
        LIMIT 1`,
-      [itemId],
+      [itemId]
     );
     if (!rows[0]) {
       return NextResponse.json({ error: "Material not found." }, { status: 404 });
@@ -46,16 +43,13 @@ export async function GET(_request: NextRequest, context: Ctx) {
        JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
        WHERE b.item_id = ? AND b.qty > 0
        ORDER BY loc.name_en ASC`,
-      [itemId],
+      [itemId]
     );
 
     return NextResponse.json({ row: { ...rows[0], balances } });
   } catch (error) {
     console.error("GET /sparepart/materials/[id] failed", error);
-    return NextResponse.json(
-      { error: "Failed to load material." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load material." }, { status: 500 });
   }
 }
 
@@ -71,41 +65,33 @@ export async function PUT(request: NextRequest, context: Ctx) {
     if (!parsed.ok) {
       return NextResponse.json(
         { error: "Validation failed.", errors: parsed.errors },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const data = parsed.data;
     const categoryRows = await query<{ id: number }[]>(
       `SELECT id FROM sparepart_categories WHERE id = ? AND is_active = 1 LIMIT 1`,
-      [data.category_id],
+      [data.category_id]
     );
     if (!categoryRows[0]) {
-      return NextResponse.json(
-        { error: "Invalid category." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid category." }, { status: 400 });
     }
     const uomRows = await query<{ id: number }[]>(
       `SELECT id FROM uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
-      [data.uom_id],
+      [data.uom_id]
     );
     if (!uomRows[0]) {
       return NextResponse.json({ error: "Invalid UoM." }, { status: 400 });
     }
 
-    const existing = await query<
-      Pick<SparepartItem, "id" | "code" | "image_url">[]
-    >(
+    const existing = await query<Pick<SparepartItem, "id" | "code" | "image_url">[]>(
       `SELECT id, code, image_url FROM sparepart_items
        WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
-      [itemId],
+      [itemId]
     );
     if (!existing[0]) {
-      return NextResponse.json(
-        { error: "Material not found." },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Material not found." }, { status: 404 });
     }
 
     let nextImageUrl = existing[0].image_url;
@@ -114,14 +100,11 @@ export async function PUT(request: NextRequest, context: Ctx) {
         nextImageUrl = await renameMaterialImage(
           existing[0].code,
           data.code,
-          existing[0].image_url,
+          existing[0].image_url
         );
       } catch (err) {
         if (err instanceof SparepartImageError) {
-          return NextResponse.json(
-            { error: err.message },
-            { status: err.status },
-          );
+          return NextResponse.json({ error: err.message }, { status: err.status });
         }
         throw err;
       }
@@ -148,13 +131,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
           data.category_id,
           data.uom_id,
           itemId,
-        ],
+        ]
       );
       if (result.affectedRows === 0) {
-        return NextResponse.json(
-          { error: "Material not found." },
-          { status: 404 },
-        );
+        return NextResponse.json({ error: "Material not found." }, { status: 404 });
       }
       return NextResponse.json({ ok: true });
     } catch (err) {
@@ -162,17 +142,14 @@ export async function PUT(request: NextRequest, context: Ctx) {
       if (code === "ER_DUP_ENTRY") {
         return NextResponse.json(
           { error: `Material code "${data.code}" already exists.` },
-          { status: 409 },
+          { status: 409 }
         );
       }
       throw err;
     }
   } catch (error) {
     console.error("PUT /sparepart/materials/[id] failed", error);
-    return NextResponse.json(
-      { error: "Failed to update material." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to update material." }, { status: 500 });
   }
 }
 
@@ -185,20 +162,14 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     const result = await execute(
       `UPDATE sparepart_items SET deleted_at = NOW()
        WHERE id = ? AND deleted_at IS NULL`,
-      [Number(id)],
+      [Number(id)]
     );
     if (result.affectedRows === 0) {
-      return NextResponse.json(
-        { error: "Material not found." },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Material not found." }, { status: 404 });
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /sparepart/materials/[id] failed", error);
-    return NextResponse.json(
-      { error: "Failed to delete material." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to delete material." }, { status: 500 });
   }
 }

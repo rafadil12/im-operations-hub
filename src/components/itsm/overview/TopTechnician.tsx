@@ -18,9 +18,7 @@ export default function TopTechnician({ rows }: Props) {
     if (rows.length <= 5) return;
 
     const interval = setInterval(() => {
-      setStartIndex((prev) =>
-        prev + 1 >= rows.length ? 0 : prev + 1
-      );
+      setStartIndex((prev) => (prev + 1 >= rows.length ? 0 : prev + 1));
     }, 4000);
 
     return () => clearInterval(interval);
@@ -29,22 +27,15 @@ export default function TopTechnician({ rows }: Props) {
   const visibleRows =
     rows.length <= 5
       ? rows
-      : Array.from(
-          { length: 5 },
-          (_, i) => rows[(startIndex + i) % rows.length]
-        );
+      : Array.from({ length: 5 }, (_, i) => rows[(startIndex + i) % rows.length]);
 
   return (
     <div className="rounded-xl border border-border-subtle bg-surface shadow-sm">
       <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
         <div>
-          <h2 className="text-lg font-semibold text-text">
-            {t.itsm.topTechnician}
-          </h2>
+          <h2 className="text-lg font-semibold text-text">{t.itsm.topTechnician}</h2>
 
-          <p className="text-sm text-text-muted">
-            {t.itsm.highestAssignedTickets}
-          </p>
+          <p className="text-sm text-text-muted">{t.itsm.highestAssignedTickets}</p>
         </div>
 
         <Medal className="h-5 w-5 text-yellow-500" />
@@ -52,9 +43,7 @@ export default function TopTechnician({ rows }: Props) {
 
       <div className="divide-y divide-border-subtle overflow-hidden">
         {visibleRows.length === 0 ? (
-          <div className="p-6 text-center text-sm text-text-muted">
-            {t.itsm.noTechnicianData}
-          </div>
+          <div className="p-6 text-center text-sm text-text-muted">{t.itsm.noTechnicianData}</div>
         ) : (
           visibleRows.map((item, index) => (
             <div
@@ -67,9 +56,7 @@ export default function TopTechnician({ rows }: Props) {
                 </div>
 
                 <div>
-                  <div className="font-medium text-text">
-                    {item.technician}
-                  </div>
+                  <div className="font-medium text-text">{item.technician}</div>
 
                   <div className="text-xs text-text-muted">
                     {t.itsm.rank} #{((startIndex + index) % rows.length) + 1}
@@ -78,13 +65,9 @@ export default function TopTechnician({ rows }: Props) {
               </div>
 
               <div className="text-right">
-                <div className="text-lg font-bold text-text">
-                  {item.totalTickets}
-                </div>
+                <div className="text-lg font-bold text-text">{item.totalTickets}</div>
 
-                <div className="text-xs text-text-muted">
-                  {t.itsm.tickets}
-                </div>
+                <div className="text-xs text-text-muted">{t.itsm.tickets}</div>
               </div>
             </div>
           ))

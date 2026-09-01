@@ -98,17 +98,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback((next: Theme) => writeTheme(next), []);
   const toggleTheme = useCallback(
     () => writeTheme(getSnapshot() === "dark" ? "light" : "dark"),
-    [],
+    []
   );
 
   const value = useMemo<ThemeContextValue>(
     () => ({ theme, setTheme, toggleTheme }),
-    [theme, setTheme, toggleTheme],
+    [theme, setTheme, toggleTheme]
   );
 
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

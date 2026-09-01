@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const rawLimit = Number(sp.get("limit") || DEFAULT_LIMIT);
     const limit = Math.min(
       Math.max(Number.isFinite(rawLimit) ? rawLimit : DEFAULT_LIMIT, 1),
-      MAX_LIMIT,
+      MAX_LIMIT
     );
 
     if (Number.isInteger(id) && id > 0) {
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
          FROM sparepart_storage_locations
          WHERE id = ?
          LIMIT 1`,
-        [id],
+        [id]
       );
       return NextResponse.json({ rows });
     }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
          FROM sparepart_storage_locations
          WHERE is_active = 1 AND (code = ? OR name_en = ? OR name_cn = ?)
          LIMIT 5`,
-        [exactCode, exactCode, exactCode],
+        [exactCode, exactCode, exactCode]
       );
       return NextResponse.json({ rows });
     }
@@ -62,17 +62,8 @@ export async function GET(request: NextRequest) {
 
     const like = `%${needle}%`;
     const prefix = `${needle}%`;
-    const excludeClause =
-      Number.isInteger(excludeId) && excludeId > 0 ? "AND id <> ?" : "";
-    const params: Array<string | number> = [
-      like,
-      like,
-      like,
-      needle,
-      prefix,
-      prefix,
-      prefix,
-    ];
+    const excludeClause = Number.isInteger(excludeId) && excludeId > 0 ? "AND id <> ?" : "";
+    const params: Array<string | number> = [like, like, like, needle, prefix, prefix, prefix];
     if (excludeClause) params.push(excludeId);
     params.push(limit);
 
@@ -91,15 +82,12 @@ export async function GET(request: NextRequest) {
          END,
          name_en ASC
        LIMIT ?`,
-      params,
+      params
     );
 
     return NextResponse.json({ rows });
   } catch (error) {
     console.error("GET /sparepart/storage-locations/suggest failed", error);
-    return NextResponse.json(
-      { error: "Failed to suggest storage locations." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to suggest storage locations." }, { status: 500 });
   }
 }

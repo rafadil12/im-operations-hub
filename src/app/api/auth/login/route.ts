@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (!login.trim() || !password) {
       return NextResponse.json(
         { error: "Employee ID and password are required." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -53,33 +53,36 @@ export async function POST(request: NextRequest) {
 
     if (
       isLoginRateLimited(loginAttempts, key) ||
-      isLoginRateLimited(
-        loginAttempts,
-        ipKey,
-        Date.now(),
-        undefined,
-        LOGIN_MAX_IP_FAILURES,
-      )
+      isLoginRateLimited(loginAttempts, ipKey, Date.now(), undefined, LOGIN_MAX_IP_FAILURES)
     ) {
       return NextResponse.json(
         {
-          error:
-            "Too many failed login attempts. Please try again in 15 minutes.",
+          error: "Too many failed login attempts. Please try again in 15 minutes.",
         },
-        { status: 429 },
+        { status: 429 }
       );
     }
 
-    const account = await authenticateLogin(login, password);
-    if (!account) {
+    const result = await authenticateLogin(login, password);
+    if (!result.ok) {
+      if (result.code === "inactive") {
+        return NextResponse.json(
+          {
+            error: "This account is inactive. Contact an administrator.",
+            code: "inactive",
+          },
+          { status: 403 }
+        );
+      }
       recordLoginFailure(loginAttempts, key);
       recordLoginFailure(loginAttempts, ipKey);
       return NextResponse.json(
-        { error: "Invalid employee ID or password." },
-        { status: 401 },
+        { error: "Invalid employee ID or password.", code: "invalid_credentials" },
+        { status: 401 }
       );
     }
 
+    const account = result.account;
     clearLoginFailures(loginAttempts, key);
 
     const maxAgeSeconds = remember ? MAX_AGE_SECONDS : 60 * 60 * 12;

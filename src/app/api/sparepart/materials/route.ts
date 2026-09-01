@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
-import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepartCategories";
-import { parseSparepartItemBody } from "@/lib/sparepartValidation";
+import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepart/categories";
+import { parseSparepartItemBody } from "@/lib/sparepart/validation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 const SEARCH_SQL = `
@@ -14,7 +14,7 @@ const SEARCH_SQL = `
 async function categoryExists(id: number): Promise<boolean> {
   const rows = await query<{ id: number }[]>(
     `SELECT id FROM sparepart_categories WHERE id = ? AND is_active = 1 LIMIT 1`,
-    [id],
+    [id]
   );
   return Boolean(rows[0]);
 }
@@ -22,7 +22,7 @@ async function categoryExists(id: number): Promise<boolean> {
 async function uomExists(id: number): Promise<boolean> {
   const rows = await query<{ id: number }[]>(
     `SELECT id FROM uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
-    [id],
+    [id]
   );
   return Boolean(rows[0]);
 }
@@ -60,10 +60,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ rows });
   } catch (error) {
     console.error("GET /sparepart/materials failed", error);
-    return NextResponse.json(
-      { error: "Failed to load materials." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load materials." }, { status: 500 });
   }
 }
 
@@ -77,16 +74,13 @@ export async function POST(request: NextRequest) {
     if (!parsed.ok) {
       return NextResponse.json(
         { error: "Validation failed.", errors: parsed.errors },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const data = parsed.data;
     if (!(await categoryExists(data.category_id))) {
-      return NextResponse.json(
-        { error: "Invalid category." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid category." }, { status: 400 });
     }
     if (!(await uomExists(data.uom_id))) {
       return NextResponse.json({ error: "Invalid UoM." }, { status: 400 });
@@ -110,7 +104,7 @@ export async function POST(request: NextRequest) {
           data.is_active ? 1 : 0,
           data.category_id,
           data.uom_id,
-        ],
+        ]
       );
       return NextResponse.json({ id: result.insertId }, { status: 201 });
     } catch (err) {
@@ -118,16 +112,13 @@ export async function POST(request: NextRequest) {
       if (code === "ER_DUP_ENTRY") {
         return NextResponse.json(
           { error: `Material code "${data.code}" already exists.` },
-          { status: 409 },
+          { status: 409 }
         );
       }
       throw err;
     }
   } catch (error) {
     console.error("POST /sparepart/materials failed", error);
-    return NextResponse.json(
-      { error: "Failed to create material." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create material." }, { status: 500 });
   }
 }

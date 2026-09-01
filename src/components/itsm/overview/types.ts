@@ -27,7 +27,6 @@ export interface HighlightData {
   topRequester: string;
   topRequesterTickets: number;
   topRequesterPercent: number;
-
 }
 
 export interface TechnicianRanking {

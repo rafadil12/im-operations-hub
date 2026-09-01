@@ -1,15 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { BarItem } from "@/data/overview-mock";
+import type { BarItem } from "@/data/overview";
+import { useLang } from "@/lib/i18n";
+
+/** ~38px row (label + optional sublabel + bar) + 10px gap between rows. */
+const BAR_ROW_HEIGHT_PX = 38;
+const BAR_ROW_GAP_PX = 10;
+
+function barChartMinHeight(minRows: number): number {
+  return minRows * BAR_ROW_HEIGHT_PX + Math.max(0, minRows - 1) * BAR_ROW_GAP_PX;
+}
 
 type BarChartPlaceholderProps = {
   items: BarItem[];
+  /** Reserve vertical space for at least this many rows when data is sparse or empty. */
+  minRows?: number;
 };
 
-export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
+export function BarChartPlaceholder({ items, minRows = 3 }: BarChartPlaceholderProps) {
+  const { t } = useLang();
+  const minHeight = barChartMinHeight(minRows);
+
+  if (items.length === 0) {
+    return (
+      <div
+        className="flex items-center justify-center text-sm text-text-muted"
+        style={{ minHeight }}
+      >
+        {t.common.noData}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col justify-between gap-2.5">
+    <div
+      className="flex h-full flex-col justify-between gap-2.5"
+      style={{ minHeight: items.length < minRows ? minHeight : undefined }}
+    >
       {items.map((item, index) => {
         const width = Math.max(8, Math.round((item.value / item.max) * 100));
         return (
@@ -17,9 +45,7 @@ export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
             <div className="mb-0.5 flex items-start justify-between gap-2 text-[11px]">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-text">{item.label}</p>
-                {item.sublabel ? (
-                  <p className="truncate text-text-muted">{item.sublabel}</p>
-                ) : null}
+                {item.sublabel ? <p className="truncate text-text-muted">{item.sublabel}</p> : null}
               </div>
               <span className="shrink-0 font-medium text-text">{item.value}</span>
             </div>
@@ -40,9 +66,7 @@ type VerticalBarChartPlaceholderProps = {
   items: BarItem[];
 };
 
-export function VerticalBarChartPlaceholder({
-  items,
-}: VerticalBarChartPlaceholderProps) {
+export function VerticalBarChartPlaceholder({ items }: VerticalBarChartPlaceholderProps) {
   const max = Math.max(...items.map((item) => item.max), 1);
 
   return (
@@ -72,56 +96,6 @@ export function VerticalBarChartPlaceholder({
   );
 }
 
-type TrendChartPlaceholderProps = {
-  legend: { label: string; color: string }[];
-};
-
-export function TrendChartPlaceholder({ legend }: TrendChartPlaceholderProps) {
-  return (
-    <div>
-      <div className="mb-2 flex flex-wrap gap-3">
-        {legend.map((item) => (
-          <span
-            key={item.label}
-            className="inline-flex items-center gap-1.5 text-[11px] text-text-muted"
-          >
-            <span
-              className="size-2 rounded-full"
-              style={{ backgroundColor: item.color }}
-            />
-            {item.label}
-          </span>
-        ))}
-      </div>
-      <svg
-        viewBox="0 0 320 90"
-        className="h-24 w-full"
-        role="img"
-        aria-label="Ticket trend chart placeholder"
-      >
-        <polyline
-          fill="none"
-          stroke="#3b82f6"
-          strokeWidth="2"
-          points="0,60 45,52 90,55 135,40 180,45 225,28 270,35 320,22"
-        />
-        <polyline
-          fill="none"
-          stroke="#22c55e"
-          strokeWidth="2"
-          points="0,70 45,65 90,58 135,50 180,42 225,38 270,30 320,25"
-        />
-        <polyline
-          fill="none"
-          stroke="#f59e0b"
-          strokeWidth="2"
-          points="0,75 45,72 90,68 135,70 180,62 225,66 270,58 320,55"
-        />
-      </svg>
-    </div>
-  );
-}
-
 type DonutChartPlaceholderProps = {
   legend: { label: string; color: string }[];
   /** Percentages 0–100 aligned with legend order. Defaults to mock split. */
@@ -130,26 +104,41 @@ type DonutChartPlaceholderProps = {
   centerLabel?: string;
   /** Center pie + legend as a block (e.g. Daily Operation / Safety category). */
   align?: "start" | "center";
+  /** Legend beside (row) or under (column) the donut. */
+  layout?: "row" | "column";
+  /** Split legend into label row + percentage row (under column layout). */
+  legendVariant?: "list" | "split";
+  /** Donut diameter. */
+  size?: "md" | "lg";
 };
 
 const DONUT_ANIM_MS = 2000;
+
+const DONUT_SIZE_CLASS = {
+  md: "size-28",
+  lg: "size-44",
+} as const;
+
+const DONUT_HOLE_CLASS = {
+  md: "inset-3",
+  lg: "inset-4",
+} as const;
+
+const DONUT_VALUE_CLASS = {
+  md: "text-lg",
+  lg: "text-2xl",
+} as const;
 
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
-function resolveSegments(
-  legend: { color: string }[],
-  segments?: number[],
-): number[] {
+function resolveSegments(legend: { color: string }[], segments?: number[]): number[] {
   if (segments && segments.length === legend.length) return segments;
   return legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
 }
 
-function buildConicGradient(
-  legend: { color: string }[],
-  segments: number[],
-): string {
+function buildConicGradient(legend: { color: string }[], segments: number[]): string {
   let cursor = 0;
   const stops: string[] = [];
   for (let i = 0; i < legend.length; i++) {
@@ -170,12 +159,13 @@ export function DonutChartPlaceholder({
   centerValue = "78%",
   centerLabel = "Done",
   align = "start",
+  layout = "row",
+  legendVariant = "list",
+  size = "md",
 }: DonutChartPlaceholderProps) {
   const targetSegments = resolveSegments(legend, segments);
   const segmentsKey = targetSegments.join("|");
-  const [animatedSegments, setAnimatedSegments] = useState(() =>
-    targetSegments.map(() => 0),
-  );
+  const [animatedSegments, setAnimatedSegments] = useState(() => targetSegments.map(() => 0));
 
   useEffect(() => {
     const targets = segmentsKey.split("|").map(Number);
@@ -207,50 +197,83 @@ export function DonutChartPlaceholder({
     return () => cancelAnimationFrame(frame);
   }, [segmentsKey]);
 
-  const centered = align === "center";
+  const centered = align === "center" || layout === "column";
+  const isColumn = layout === "column";
+  const splitLegend = legendVariant === "split" && isColumn;
+  const legendColumns = { gridTemplateColumns: `repeat(${legend.length}, minmax(0, 1fr))` };
 
   return (
     <div
       className={[
-        "flex items-center gap-5",
+        "flex gap-4",
+        isColumn ? "flex-col items-center" : "items-center",
         centered ? "justify-center" : "",
+        splitLegend ? "w-full" : "",
       ].join(" ")}
     >
       <div
-        className="relative size-28 shrink-0 rounded-full"
+        className={["relative shrink-0 rounded-full", DONUT_SIZE_CLASS[size]].join(" ")}
         style={{
           background: buildConicGradient(legend, animatedSegments),
         }}
         role="img"
         aria-label="Task status donut chart"
       >
-        <div className="absolute inset-3 rounded-full bg-surface" />
+        <div className={["absolute rounded-full bg-surface", DONUT_HOLE_CLASS[size]].join(" ")} />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-lg font-semibold text-text">{centerValue}</p>
+            <p className={["font-semibold text-text", DONUT_VALUE_CLASS[size]].join(" ")}>
+              {centerValue}
+            </p>
             <p className="text-[10px] text-text-dim">{centerLabel}</p>
           </div>
         </div>
       </div>
-      <ul className="space-y-2">
-        {legend.map((item, index) => (
-          <li
-            key={item.label}
-            className="flex items-center gap-2 text-xs text-text-muted"
-          >
-            <span
-              className="size-2.5 rounded-full"
-              style={{ backgroundColor: item.color }}
-            />
-            <span>
-              {item.label}
-              {targetSegments[index] != null
-                ? ` — ${targetSegments[index]}%`
-                : ""}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {splitLegend ? (
+        <div className="w-full px-1">
+          <div className="grid gap-x-2 text-center" style={legendColumns}>
+            {legend.map((item) => (
+              <p
+                key={`${item.label}-label`}
+                className="truncate text-[11px] font-semibold"
+                style={{ color: item.color }}
+                title={item.label}
+              >
+                {item.label}
+              </p>
+            ))}
+          </div>
+          <div className="mt-1 grid gap-x-2 text-center" style={legendColumns}>
+            {legend.map((item, index) => (
+              <p
+                key={`${item.label}-pct`}
+                className="text-[11px] font-semibold tabular-nums"
+                style={{ color: item.color }}
+              >
+                {Number((animatedSegments[index] ?? 0).toFixed(1))}%
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <ul
+          className={[
+            isColumn ? "flex flex-wrap justify-center gap-x-4 gap-y-2" : "space-y-2",
+          ].join(" ")}
+        >
+          {legend.map((item, index) => (
+            <li key={item.label} className="flex items-center gap-2 text-xs text-text-muted">
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+              <span>
+                {item.label}
+                {targetSegments[index] != null
+                  ? ` — ${Number(targetSegments[index].toFixed(1))}%`
+                  : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

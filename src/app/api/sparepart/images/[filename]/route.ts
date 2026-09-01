@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
-import {
-  SparepartImageError,
-  readMaterialImageFile,
-} from "@/lib/sparepartImages";
+import { SparepartImageError, readMaterialImageFile } from "@/lib/sparepart/images";
 
 type Ctx = { params: Promise<{ filename: string }> };
 
@@ -32,9 +29,6 @@ export async function GET(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("GET /sparepart/images/[filename] failed", error);
-    return NextResponse.json(
-      { error: "Failed to load image." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load image." }, { status: 500 });
   }
 }

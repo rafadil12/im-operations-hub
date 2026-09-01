@@ -5,7 +5,7 @@ import {
   parseGoodsMovementBody,
   postGoodsMovement,
   SparepartPostingError,
-} from "@/lib/sparepartPosting";
+} from "@/lib/sparepart/posting";
 import type { SparepartGoodsMovementInput } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -31,15 +31,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     if (error instanceof SparepartPostingError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status },
-      );
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("POST /sparepart/goods-movements failed", error);
-    return NextResponse.json(
-      { error: "Failed to post goods movement." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to post goods movement." }, { status: 500 });
   }
 }

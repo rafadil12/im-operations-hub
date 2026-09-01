@@ -9,7 +9,7 @@ export async function GET() {
 
   try {
     const rows = await query<RowDataPacket[]>(
-      "SELECT id, code, description FROM permissions ORDER BY code",
+      "SELECT id, code, description FROM permissions ORDER BY code"
     );
     return NextResponse.json({
       rows: rows.map((r) => ({
@@ -20,9 +20,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/settings/permissions failed", error);
-    return NextResponse.json(
-      { error: "Failed to load permissions." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load permissions." }, { status: 500 });
   }
 }

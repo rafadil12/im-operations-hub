@@ -134,7 +134,7 @@ export function ChangePasswordModal({ onClose }: Props) {
     onChange: (v: string) => void,
     show: boolean,
     setShow: (v: boolean) => void,
-    autoComplete: string,
+    autoComplete: string
   ) => (
     <div>
       <label className={labelCls} htmlFor={id}>
@@ -207,7 +207,7 @@ export function ChangePasswordModal({ onClose }: Props) {
           setCurrentPassword,
           showCurrent,
           setShowCurrent,
-          "current-password",
+          "current-password"
         )}
         {passwordField(
           "new-password",
@@ -216,7 +216,7 @@ export function ChangePasswordModal({ onClose }: Props) {
           setNewPassword,
           showNew,
           setShowNew,
-          "new-password",
+          "new-password"
         )}
         {passwordField(
           "confirm-password",
@@ -225,7 +225,7 @@ export function ChangePasswordModal({ onClose }: Props) {
           setConfirmPassword,
           showConfirm,
           setShowConfirm,
-          "new-password",
+          "new-password"
         )}
       </div>
     </Modal>

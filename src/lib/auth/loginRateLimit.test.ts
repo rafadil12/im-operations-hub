@@ -47,9 +47,7 @@ describe("login rate limit", () => {
 
     expect(isLoginRateLimited(store, key, t0 + LOGIN_WINDOW_MS)).toBe(true);
 
-    expect(
-      isLoginRateLimited(store, key, t0 + LOGIN_WINDOW_MS + 1),
-    ).toBe(false);
+    expect(isLoginRateLimited(store, key, t0 + LOGIN_WINDOW_MS + 1)).toBe(false);
   });
 
   it("blocks an IP after LOGIN_MAX_IP_FAILURES across logins", () => {
@@ -60,15 +58,7 @@ describe("login rate limit", () => {
     for (let i = 0; i < LOGIN_MAX_IP_FAILURES; i++) {
       recordLoginFailure(store, ipKey, t0);
     }
-    expect(
-      isLoginRateLimited(
-        store,
-        ipKey,
-        t0,
-        LOGIN_WINDOW_MS,
-        LOGIN_MAX_IP_FAILURES,
-      ),
-    ).toBe(true);
+    expect(isLoginRateLimited(store, ipKey, t0, LOGIN_WINDOW_MS, LOGIN_MAX_IP_FAILURES)).toBe(true);
   });
 
   it("successful clear removes the account bucket", () => {
@@ -103,9 +93,7 @@ describe("login rate limit", () => {
     }
     recordLoginFailure(store, key, t0 + LOGIN_WINDOW_MS + 1);
     expect(store.get(key)?.count).toBe(1);
-    expect(
-      isLoginRateLimited(store, key, t0 + LOGIN_WINDOW_MS + 1),
-    ).toBe(false);
+    expect(isLoginRateLimited(store, key, t0 + LOGIN_WINDOW_MS + 1)).toBe(false);
   });
 
   it("prunes expired buckets", () => {

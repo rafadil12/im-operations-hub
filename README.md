@@ -12,12 +12,13 @@ IM One is an internal tool: every route sends `noindex, nofollow` and `/robots.t
 | --- | --- | --- |
 | Overview | Live | `/` |
 | ITSM | Live | `/itsm`, `/itsm/management`, `/itsm/analysis` |
-| Daily Operation | Live | `/daily-operation/management`, `/daily-operation/analysis`, `/daily-operation/master/*` |
+| Daily Operation | Live | `/daily-operation/activities`, `/daily-operation/insights`, `/daily-operation/configuration/*` |
 | Sparepart | Live | `/sparepart`, `/sparepart/stock`, `/sparepart/post`, `/sparepart/documents`, `/sparepart/materials`, `/sparepart/locations` |
 | Settings | Live | `/settings/roles`, `/settings/accounts` |
-| Safety, Organization, Report, Training | Coming soon | — |
+| Safety | Live | `/safety`, `/safety/management` |
+| Organization, Report, Training | Coming soon | — |
 
-Overview KPI cards for Daily Operation, ITSM, and Sparepart use live APIs. Other overview cards are placeholders until those modules ship.
+Overview KPI cards for Daily Operation, ITSM, Sparepart, and Safety use live APIs. Other overview cards are placeholders until those modules ship.
 
 ## Getting started
 

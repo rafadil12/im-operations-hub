@@ -11,12 +11,8 @@ export function SettingsTabs() {
   const { canManageRoles, canManageAccounts } = useRoleAccess();
 
   const tabs = [
-    canManageRoles
-      ? { label: t.nav.settingsRoles, href: "/settings/roles" }
-      : null,
-    canManageAccounts
-      ? { label: t.nav.settingsAccounts, href: "/settings/accounts" }
-      : null,
+    canManageRoles ? { label: t.nav.settingsRoles, href: "/settings/roles" } : null,
+    canManageAccounts ? { label: t.nav.settingsAccounts, href: "/settings/accounts" } : null,
   ].filter((tab): tab is { label: string; href: string } => tab !== null);
 
   if (!tabs.length) return null;

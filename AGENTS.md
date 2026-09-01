@@ -19,3 +19,27 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - Multi-loc overrides are hardcoded in the script (IT00004 → Server Room only; IT00056/57/58 → Gudang Internal; IT00104 → split Server Room + Meja IT).
   - Documents are attributed to seeded **Super Admin** (`employee_no=SUPERADMIN`).
 - Run migrations: `node --env-file=.env.local db/run-migrations.mjs`
+
+## Report module
+
+- Weekly report attachments (PPT, Excel, PDF, PNG, JPEG) on Add/Edit Week Report form; stored in `report_week_attachments` (week × area).
+- Uploads: set `REPORT_UPLOAD_DIR` in `.env.local` (served via `/api/report/files/...`).
+- Run migrations: `node --env-file=.env.local db/run-migrations.mjs`
+
+## Safety module
+
+- Shared logic lives under `src/lib/safety/` (types, mappers, copy, evidence, overview metrics, API helpers).
+- UI: `src/components/safety/overview/` (dashboard) and `src/components/safety/management/` (submissions).
+- Routes: `/safety` (overview), `/safety/management` (weekly/monthly activity uploads).
+
+## Training module
+
+- Divisions: sessions link to `divisions` via `division_id` (not a hard-coded category ENUM). Safety training stays in the Safety module.
+- Bilingual content: `topic_en`/`topic_cn` on sessions; participant names are a separate master (`training_participants.name_en`/`name_cn`) — not linked to `users`/employees. Session attendance snapshots `participant_name_en`/`participant_name_cn`.
+- Tables: `training_sessions`, `training_session_participants`, `training_participants`.
+- Shared logic: `src/lib/training/`. UI: `src/components/training/{overview,session}/`.
+- Routes: `/training` (overview), `/training/session` (CRUD).
+- Uploads: set `TRAINING_UPLOAD_DIR` in `.env.local` (served via `/api/training/files/...`).
+- Import Excel (`培训记录_Training+Notes.xlsx`, sheets MES/INTELLIGENT/IT only → map to divisions MES / Intelligent Logistics / IT):
+  `node --env-file=.env.local db/import-training-notes.mjs` (add `--force` to truncate + re-import).
+- Run migrations: `node --env-file=.env.local db/run-migrations.mjs`

@@ -16,7 +16,7 @@ export function getDict(lang: Lang = DEFAULT_LANG): Dict {
 /** Pick the localized master-data name based on the active language. */
 export function localizedName(
   item: { name_en: string | null; name_cn: string | null } | null | undefined,
-  lang: Lang = DEFAULT_LANG,
+  lang: Lang = DEFAULT_LANG
 ): string {
   if (!item) return "-";
   if (lang === "cn") return item.name_cn || item.name_en || "-";
@@ -27,7 +27,7 @@ export function localizedName(
 export function localizedField(
   enValue: string | null | undefined,
   cnValue: string | null | undefined,
-  lang: Lang = DEFAULT_LANG,
+  lang: Lang = DEFAULT_LANG
 ): string {
   if (lang === "cn") return cnValue || enValue || "-";
   return enValue || cnValue || "-";

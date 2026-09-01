@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY st.id, st.name_en, st.name_cn`,
-        params,
+        params
       ),
       query<NamedRow[]>(
         `SELECT c.name_en, c.name_cn, COUNT(*) AS count
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
          
          WHERE ${filter}
          GROUP BY c.id, c.name_en, c.name_cn ORDER BY count DESC`,
-        params,
+        params
       ),
       query<NamedRow[]>(
         `SELECT s.name_en, s.name_cn, COUNT(*) AS count
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY s.id, s.name_en, s.name_cn ORDER BY count DESC`,
-        params,
+        params
       ),
       query<NamedRow[]>(
         `SELECT d.name_en, d.name_cn, COUNT(*) AS count
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY d.id, d.name_en, d.name_cn ORDER BY count DESC`,
-        params,
+        params
       ),
       query<NamedRow[]>(
         `SELECT t.name_en, t.name_cn, COUNT(*) AS count
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY t.id, t.name_en, t.name_cn ORDER BY count DESC`,
-        params,
+        params
       ),
       query<TrendRow[]>(
         `SELECT DATE(m.start_time) AS date, COUNT(*) AS count
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY DATE(m.start_time) ORDER BY date ASC`,
-        params,
+        params
       ),
       query<CountRow[]>(
         `SELECT u.name_en AS label, COUNT(*) AS count
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY u.name_en ORDER BY count DESC LIMIT 5`,
-        params,
+        params
       ),
       query<UserRow[]>(
         `SELECT u.name_en, u.name_cn, d.name_en AS division, COUNT(*) AS count
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
          LEFT JOIN divisions d ON u.division_id = d.id
          WHERE ${filter}
          GROUP BY u.id, u.name_en, u.name_cn, d.name_en ORDER BY count DESC`,
-        params,
+        params
       ),
       query<DurationRow[]>(
         `SELECT d.name_en AS division,
@@ -122,14 +122,14 @@ export async function GET(request: NextRequest) {
          FROM mes_record m
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter} AND m.end_time IS NOT NULL`,
-        params,
+        params
       ),
       query<AvgRow[]>(
         `SELECT AVG(TIMESTAMPDIFF(MINUTE, m.start_time, m.end_time)) AS avg_minutes
          FROM mes_record m 
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter} AND m.end_time IS NOT NULL`,
-        params,
+        params
       ),
     ]);
 
@@ -179,9 +179,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ result, range: { start, end } });
   } catch (error) {
     console.error("GET /analysis failed", error);
-    return NextResponse.json(
-      { error: "Failed to load analysis." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load analysis." }, { status: 500 });
   }
 }

@@ -4,11 +4,10 @@ export const SITE_NAME = "IM One";
 export const SITE_TAGLINE = "Intelligent Operations, One Platform";
 export const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
 export const SITE_DESCRIPTION =
-  "IM One is the intelligent operations platform for factory teams: daily operation records, ITSM, analytics and master data in one place.";
+  "IM One is the intelligent operations platform for factory teams: Daily Operation, ITSM, Safety, Sparepart, analytics and master data in one place.";
 
 /** Fallback keeps metadataBase valid in dev so relative canonical/OG URLs resolve. */
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /** Route served by app/opengraph-image.tsx. */
 export const OG_IMAGE = {
@@ -19,28 +18,25 @@ export const OG_IMAGE = {
 };
 
 type PageSeo = {
-  /** Segment title only — the root layout appends " | IM One". */
+  /** Segment title only — always rendered as "{title} | IM One". */
   title: string;
   description: string;
   /** Route path, resolved against metadataBase for canonical and og:url. */
   path: string;
-  /**
-   * Pages in the same segment as the root layout must spell out the full title,
-   * because a layout's title template never applies to its sibling page.
-   */
-  absoluteTitle?: boolean;
 };
 
-export function pageMetadata({
-  title,
-  description,
-  path,
-  absoluteTitle = false,
-}: PageSeo): Metadata {
+/**
+ * Build page metadata with an absolute document title.
+ *
+ * Always uses `title.absolute` so nested layouts that set their own title
+ * do not clear the root `%s | IM One` template (Next.js replaces the child
+ * template stash with `null` when a parent exports a plain string title).
+ */
+export function pageMetadata({ title, description, path }: PageSeo): Metadata {
   const fullTitle = `${title} | ${SITE_NAME}`;
 
   return {
-    title: absoluteTitle ? { absolute: fullTitle } : title,
+    title: { absolute: fullTitle },
     description,
     alternates: { canonical: path },
     // Nested segments replace the parent openGraph wholesale, so every page

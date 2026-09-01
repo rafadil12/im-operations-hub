@@ -1,9 +1,6 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  createSessionToken,
-  verifySessionToken,
-} from "@/lib/auth/session";
+import { createSessionToken, verifySessionToken } from "@/lib/auth/session";
 
 const SECRET = "test-auth-secret-16chars";
 
@@ -43,12 +40,8 @@ describe("session token sessionVersion", () => {
       roleName: "admin",
       exp: Math.floor(Date.now() / 1000) + 3600,
     };
-    const encoded = Buffer.from(JSON.stringify(legacy), "utf8").toString(
-      "base64url",
-    );
-    const signature = createHmac("sha256", SECRET)
-      .update(encoded)
-      .digest("base64url");
+    const encoded = Buffer.from(JSON.stringify(legacy), "utf8").toString("base64url");
+    const signature = createHmac("sha256", SECRET).update(encoded).digest("base64url");
     const payload = verifySessionToken(`${encoded}.${signature}`);
     expect(payload?.sessionVersion).toBe(0);
   });

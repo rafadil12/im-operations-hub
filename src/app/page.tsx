@@ -5,9 +5,8 @@ import { OverviewGrid } from "@/components/overview/OverviewGrid";
 export const metadata = pageMetadata({
   title: "Dashboard",
   description:
-    "Cross-module dashboard of IM One: live KPI cards for daily operation, ITSM and factory modules in a single view.",
+    "Cross-module dashboard of IM One: live KPI cards for Daily Operation, ITSM, Safety, Sparepart and factory modules in a single view.",
   path: "/",
-  absoluteTitle: true,
 });
 
 export default function Home() {

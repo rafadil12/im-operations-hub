@@ -24,6 +24,18 @@ export const PERMISSIONS = {
   safetySubmissionCreate: "safety.submission.create",
   safetySubmissionUpdate: "safety.submission.update",
   safetySubmissionDelete: "safety.submission.delete",
+  trainingOverviewView: "training.overview.view",
+  trainingSessionRead: "training.session.read",
+  trainingSessionCreate: "training.session.create",
+  trainingSessionUpdate: "training.session.update",
+  trainingSessionDelete: "training.session.delete",
+  reportOverviewView: "report.overview.view",
+  reportLineRead: "report.line.read",
+  reportLineCreate: "report.line.create",
+  reportLineUpdate: "report.line.update",
+  reportLineDelete: "report.line.delete",
+  reportSubmissionSubmit: "report.submission.submit",
+  reportSubmissionReopen: "report.submission.reopen",
   sparepartOverviewView: "sparepart.overview.view",
   sparepartStockView: "sparepart.stock.view",
   sparepartDocumentRead: "sparepart.document.read",
@@ -51,12 +63,8 @@ export function isProtectedRoleName(name: string | null | undefined): boolean {
   return String(name ?? "").toLowerCase() === PROTECTED_ROLE_NAME;
 }
 
-export function isProtectedAccountEmployeeNo(
-  employeeNo: string | null | undefined,
-): boolean {
-  return (
-    String(employeeNo ?? "").toUpperCase() === PROTECTED_ACCOUNT_EMPLOYEE_NO
-  );
+export function isProtectedAccountEmployeeNo(employeeNo: string | null | undefined): boolean {
+  return String(employeeNo ?? "").toUpperCase() === PROTECTED_ACCOUNT_EMPLOYEE_NO;
 }
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -76,6 +84,10 @@ export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
   PERMISSIONS.dailyAnalysisView,
   PERMISSIONS.safetyOverviewView,
   PERMISSIONS.safetySubmissionRead,
+  PERMISSIONS.trainingOverviewView,
+  PERMISSIONS.trainingSessionRead,
+  PERMISSIONS.reportOverviewView,
+  PERMISSIONS.reportLineRead,
   PERMISSIONS.sparepartOverviewView,
   PERMISSIONS.sparepartStockView,
   PERMISSIONS.sparepartDocumentRead,
@@ -106,6 +118,18 @@ export type RoleAccess = {
   canCreateSafetySubmission: boolean;
   canUpdateSafetySubmission: boolean;
   canDeleteSafetySubmission: boolean;
+  canViewTrainingOverview: boolean;
+  canViewTrainingSessions: boolean;
+  canCreateTrainingSession: boolean;
+  canUpdateTrainingSession: boolean;
+  canDeleteTrainingSession: boolean;
+  canViewReportOverview: boolean;
+  canViewReportLines: boolean;
+  canCreateReportLine: boolean;
+  canUpdateReportLine: boolean;
+  canDeleteReportLine: boolean;
+  canSubmitReport: boolean;
+  canReopenReport: boolean;
   canViewSparepartOverview: boolean;
   canViewSparepartStock: boolean;
   canViewSparepartDocuments: boolean;
@@ -127,7 +151,7 @@ export type RoleAccess = {
 
 export function accountHasPermission(
   account: AuthAccountPublic | null | undefined,
-  code: string,
+  code: string
 ): boolean {
   if (!account) {
     return (GUEST_PERMISSIONS as readonly string[]).includes(code);
@@ -148,43 +172,26 @@ export function permissionsIncludeAdminManage(permissions: string[]): boolean {
 }
 
 /** True when the caller may assign privileged roles (superadmin / admin / roles-manage). */
-export function canAssignPrivilegedRoles(
-  account: AuthAccountPublic | null | undefined,
-): boolean {
+export function canAssignPrivilegedRoles(account: AuthAccountPublic | null | undefined): boolean {
   if (!account) return false;
   if (isProtectedRoleName(account.roleName)) return true;
   if (account.roleName === "admin") return true;
   return accountHasPermission(account, PERMISSIONS.adminRolesManage);
 }
 
-function hasPermission(
-  account: AuthAccountPublic | null | undefined,
-  code: string,
-): boolean {
+function hasPermission(account: AuthAccountPublic | null | undefined, code: string): boolean {
   return accountHasPermission(account, code);
 }
 
-export function getRoleAccess(
-  account: AuthAccountPublic | null | undefined,
-): RoleAccess {
+export function getRoleAccess(account: AuthAccountPublic | null | undefined): RoleAccess {
   const roleName = account?.roleName ?? null;
   const isGuest = !account;
-  const isAdmin =
-    roleName === "admin" || isProtectedRoleName(roleName);
+  const isAdmin = roleName === "admin" || isProtectedRoleName(roleName);
   const isTechnician = roleName === "technician";
 
-  const hasSettingsModule = hasPermission(
-    account,
-    PERMISSIONS.settingsAccess,
-  );
-  const canManageRoles = hasPermission(
-    account,
-    PERMISSIONS.adminRolesManage,
-  );
-  const canManageAccounts = hasPermission(
-    account,
-    PERMISSIONS.adminAccountsManage,
-  );
+  const hasSettingsModule = hasPermission(account, PERMISSIONS.settingsAccess);
+  const canManageRoles = hasPermission(account, PERMISSIONS.adminRolesManage);
+  const canManageAccounts = hasPermission(account, PERMISSIONS.adminAccountsManage);
 
   return {
     isGuest,
@@ -193,123 +200,50 @@ export function getRoleAccess(
     canViewOverview: hasPermission(account, PERMISSIONS.overviewView),
     canViewDailyRecords: hasPermission(account, PERMISSIONS.dailyRecordRead),
     canAddDailyRecord: hasPermission(account, PERMISSIONS.dailyRecordCreate),
-    canUpdateDailyRecord: hasPermission(
-      account,
-      PERMISSIONS.dailyRecordUpdate,
-    ),
-    canDeleteDailyRecord: hasPermission(
-      account,
-      PERMISSIONS.dailyRecordDelete,
-    ),
-    canImportDailyRecord: hasPermission(
-      account,
-      PERMISSIONS.dailyRecordImport,
-    ),
-    canExportDailyRecord: hasPermission(
-      account,
-      PERMISSIONS.dailyRecordExport,
-    ),
-    canDownloadDailyTemplate: hasPermission(
-      account,
-      PERMISSIONS.dailyRecordTemplate,
-    ),
-    canViewDailyAnalysis: hasPermission(
-      account,
-      PERMISSIONS.dailyAnalysisView,
-    ),
-    canManageConfiguration: hasPermission(
-      account,
-      PERMISSIONS.dailyMasterManage,
-    ),
+    canUpdateDailyRecord: hasPermission(account, PERMISSIONS.dailyRecordUpdate),
+    canDeleteDailyRecord: hasPermission(account, PERMISSIONS.dailyRecordDelete),
+    canImportDailyRecord: hasPermission(account, PERMISSIONS.dailyRecordImport),
+    canExportDailyRecord: hasPermission(account, PERMISSIONS.dailyRecordExport),
+    canDownloadDailyTemplate: hasPermission(account, PERMISSIONS.dailyRecordTemplate),
+    canViewDailyAnalysis: hasPermission(account, PERMISSIONS.dailyAnalysisView),
+    canManageConfiguration: hasPermission(account, PERMISSIONS.dailyMasterManage),
     canViewItsmOverview: hasPermission(account, PERMISSIONS.itsmOverviewView),
     canViewItsmRequests: hasPermission(account, PERMISSIONS.itsmRequestRead),
-    canImportItsmRequest: hasPermission(
-      account,
-      PERMISSIONS.itsmRequestImport,
-    ),
-    canExportItsmRequest: hasPermission(
-      account,
-      PERMISSIONS.itsmRequestExport,
-    ),
-    canDownloadItsmTemplate: hasPermission(
-      account,
-      PERMISSIONS.itsmRequestTemplate,
-    ),
+    canImportItsmRequest: hasPermission(account, PERMISSIONS.itsmRequestImport),
+    canExportItsmRequest: hasPermission(account, PERMISSIONS.itsmRequestExport),
+    canDownloadItsmTemplate: hasPermission(account, PERMISSIONS.itsmRequestTemplate),
     canViewItsmAnalysis: hasPermission(account, PERMISSIONS.itsmAnalysisView),
-    canViewSafetyOverview: hasPermission(
-      account,
-      PERMISSIONS.safetyOverviewView,
-    ),
-    canViewSafetySubmissions: hasPermission(
-      account,
-      PERMISSIONS.safetySubmissionRead,
-    ),
-    canCreateSafetySubmission: hasPermission(
-      account,
-      PERMISSIONS.safetySubmissionCreate,
-    ),
-    canUpdateSafetySubmission: hasPermission(
-      account,
-      PERMISSIONS.safetySubmissionUpdate,
-    ),
-    canDeleteSafetySubmission: hasPermission(
-      account,
-      PERMISSIONS.safetySubmissionDelete,
-    ),
-    canViewSparepartOverview: hasPermission(
-      account,
-      PERMISSIONS.sparepartOverviewView,
-    ),
-    canViewSparepartStock: hasPermission(
-      account,
-      PERMISSIONS.sparepartStockView,
-    ),
-    canViewSparepartDocuments: hasPermission(
-      account,
-      PERMISSIONS.sparepartDocumentRead,
-    ),
-    canPostSparepartDocument: hasPermission(
-      account,
-      PERMISSIONS.sparepartDocumentPost,
-    ),
-    canReverseSparepartDocument: hasPermission(
-      account,
-      PERMISSIONS.sparepartDocumentReverse,
-    ),
-    canViewSparepartMaterials: hasPermission(
-      account,
-      PERMISSIONS.sparepartMaterialsRead,
-    ),
-    canCreateSparepartMaterial: hasPermission(
-      account,
-      PERMISSIONS.sparepartMaterialsCreate,
-    ),
-    canUpdateSparepartMaterial: hasPermission(
-      account,
-      PERMISSIONS.sparepartMaterialsUpdate,
-    ),
-    canDeleteSparepartMaterial: hasPermission(
-      account,
-      PERMISSIONS.sparepartMaterialsDelete,
-    ),
-    canImportSparepartMaterials: hasPermission(
-      account,
-      PERMISSIONS.sparepartMaterialsImport,
-    ),
-    canExportSparepartMaterials: hasPermission(
-      account,
-      PERMISSIONS.sparepartMaterialsExport,
-    ),
-    canDownloadSparepartTemplate: hasPermission(
-      account,
-      PERMISSIONS.sparepartMaterialsTemplate,
-    ),
-    canManageSparepartLocations: hasPermission(
-      account,
-      PERMISSIONS.sparepartLocationsManage,
-    ),
-    canAccessSettings:
-      hasSettingsModule || canManageRoles || canManageAccounts,
+    canViewSafetyOverview: hasPermission(account, PERMISSIONS.safetyOverviewView),
+    canViewSafetySubmissions: hasPermission(account, PERMISSIONS.safetySubmissionRead),
+    canCreateSafetySubmission: hasPermission(account, PERMISSIONS.safetySubmissionCreate),
+    canUpdateSafetySubmission: hasPermission(account, PERMISSIONS.safetySubmissionUpdate),
+    canDeleteSafetySubmission: hasPermission(account, PERMISSIONS.safetySubmissionDelete),
+    canViewTrainingOverview: hasPermission(account, PERMISSIONS.trainingOverviewView),
+    canViewTrainingSessions: hasPermission(account, PERMISSIONS.trainingSessionRead),
+    canCreateTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionCreate),
+    canUpdateTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionUpdate),
+    canDeleteTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionDelete),
+    canViewReportOverview: hasPermission(account, PERMISSIONS.reportOverviewView),
+    canViewReportLines: hasPermission(account, PERMISSIONS.reportLineRead),
+    canCreateReportLine: hasPermission(account, PERMISSIONS.reportLineCreate),
+    canUpdateReportLine: hasPermission(account, PERMISSIONS.reportLineUpdate),
+    canDeleteReportLine: hasPermission(account, PERMISSIONS.reportLineDelete),
+    canSubmitReport: hasPermission(account, PERMISSIONS.reportSubmissionSubmit),
+    canReopenReport: hasPermission(account, PERMISSIONS.reportSubmissionReopen),
+    canViewSparepartOverview: hasPermission(account, PERMISSIONS.sparepartOverviewView),
+    canViewSparepartStock: hasPermission(account, PERMISSIONS.sparepartStockView),
+    canViewSparepartDocuments: hasPermission(account, PERMISSIONS.sparepartDocumentRead),
+    canPostSparepartDocument: hasPermission(account, PERMISSIONS.sparepartDocumentPost),
+    canReverseSparepartDocument: hasPermission(account, PERMISSIONS.sparepartDocumentReverse),
+    canViewSparepartMaterials: hasPermission(account, PERMISSIONS.sparepartMaterialsRead),
+    canCreateSparepartMaterial: hasPermission(account, PERMISSIONS.sparepartMaterialsCreate),
+    canUpdateSparepartMaterial: hasPermission(account, PERMISSIONS.sparepartMaterialsUpdate),
+    canDeleteSparepartMaterial: hasPermission(account, PERMISSIONS.sparepartMaterialsDelete),
+    canImportSparepartMaterials: hasPermission(account, PERMISSIONS.sparepartMaterialsImport),
+    canExportSparepartMaterials: hasPermission(account, PERMISSIONS.sparepartMaterialsExport),
+    canDownloadSparepartTemplate: hasPermission(account, PERMISSIONS.sparepartMaterialsTemplate),
+    canManageSparepartLocations: hasPermission(account, PERMISSIONS.sparepartLocationsManage),
+    canAccessSettings: hasSettingsModule || canManageRoles || canManageAccounts,
     canManageRoles,
     canManageAccounts,
   };

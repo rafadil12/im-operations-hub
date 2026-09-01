@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { ModuleCardData } from "@/data/overview-mock";
+import type { ModuleCardData } from "@/data/overview";
 import { getDict, useLang } from "@/lib/i18n";
 import { ModuleCard } from "./ModuleCard";
 
@@ -11,10 +11,7 @@ type CardExpandModalProps = {
   onClose: () => void;
 };
 
-export function CardExpandModal({
-  data,
-  onClose,
-}: CardExpandModalProps) {
+export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
   const router = useRouter();
   const { lang } = useLang();
   const t = getDict(lang);
@@ -38,11 +35,7 @@ export function CardExpandModal({
   }, [onClose]);
 
   const maxWidth =
-    data.colSpan === 3
-      ? "max-w-7xl"
-      : data.colSpan === 2
-        ? "max-w-6xl"
-        : "max-w-4xl";
+    data.colSpan === 3 ? "max-w-7xl" : data.colSpan === 2 ? "max-w-6xl" : "max-w-4xl";
 
   const handleViewDetail = () => {
     router.push(data.href);
@@ -68,10 +61,7 @@ export function CardExpandModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-          <p
-            id="expanded-card-title"
-            className="text-sm font-semibold text-text"
-          >
+          <p id="expanded-card-title" className="text-sm font-semibold text-text">
             {data.number}. {data.title}
           </p>
 
@@ -90,16 +80,13 @@ export function CardExpandModal({
               aria-label={t.dashboard.close}
               className="rounded-md border border-border px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
             >
-              ✕
+              ×
             </button>
           </div>
         </div>
 
         <div className="overflow-y-auto p-4">
-          <ModuleCard
-            data={data}
-            expanded
-          />
+          <ModuleCard data={data} expanded />
         </div>
 
         <p className="border-t border-border-subtle px-4 py-2 text-[11px] text-text-dim">

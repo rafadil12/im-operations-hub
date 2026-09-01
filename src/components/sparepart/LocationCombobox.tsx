@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
 import type { SparepartStorageLocation } from "@/lib/types";
@@ -30,10 +24,7 @@ type Props = {
   excludeId?: string;
 };
 
-function labelFor(
-  loc: SparepartStorageLocation,
-  lang: "en" | "cn",
-): string {
+function labelFor(loc: SparepartStorageLocation, lang: "en" | "cn"): string {
   return `${loc.code} — ${localizedName(loc, lang)}`;
 }
 
@@ -79,10 +70,9 @@ export function LocationCombobox({
     resolveAbortRef.current = ac;
 
     const params = new URLSearchParams({ id: value });
-    apiGetAbs<SuggestResponse>(
-      `/api/sparepart/storage-locations/suggest?${params.toString()}`,
-      { signal: ac.signal },
-    )
+    apiGetAbs<SuggestResponse>(`/api/sparepart/storage-locations/suggest?${params.toString()}`, {
+      signal: ac.signal,
+    })
       .then((data) => {
         const row = data.rows[0];
         if (!row) {
@@ -140,10 +130,9 @@ export function LocationCombobox({
     });
     if (excludeId) params.set("excludeId", excludeId);
 
-    apiGetAbs<SuggestResponse>(
-      `/api/sparepart/storage-locations/suggest?${params.toString()}`,
-      { signal: ac.signal },
-    )
+    apiGetAbs<SuggestResponse>(`/api/sparepart/storage-locations/suggest?${params.toString()}`, {
+      signal: ac.signal,
+    })
       .then((data) => {
         setSuggestions(data.rows);
         setHighlight(0);
@@ -190,7 +179,7 @@ export function LocationCombobox({
       const params = new URLSearchParams({ exactCode: code });
       const data = await apiGetAbs<SuggestResponse>(
         `/api/sparepart/storage-locations/suggest?${params.toString()}`,
-        { signal: ac.signal },
+        { signal: ac.signal }
       );
       const match = data.rows.find((row) => String(row.id) !== excludeId);
       if (match) {
@@ -211,9 +200,7 @@ export function LocationCombobox({
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setOpen(true);
-      setHighlight((h) =>
-        suggestions.length ? Math.min(h + 1, suggestions.length - 1) : 0,
-      );
+      setHighlight((h) => (suggestions.length ? Math.min(h + 1, suggestions.length - 1) : 0));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
@@ -278,10 +265,7 @@ export function LocationCombobox({
             <li key={loc.id} role="option" aria-selected={index === highlight}>
               <button
                 type="button"
-                className={[
-                  sparepartDropdownOptionClass(index === highlight),
-                  "text-xs",
-                ].join(" ")}
+                className={[sparepartDropdownOptionClass(index === highlight), "text-xs"].join(" ")}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(loc)}
                 onMouseEnter={() => setHighlight(index)}

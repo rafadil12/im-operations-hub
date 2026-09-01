@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
-import {
-  reverseMaterialDocument,
-  SparepartPostingError,
-} from "@/lib/sparepartPosting";
+import { reverseMaterialDocument, SparepartPostingError } from "@/lib/sparepart/posting";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -40,15 +37,9 @@ export async function POST(request: NextRequest, context: Ctx) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     if (error instanceof SparepartPostingError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status },
-      );
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error("POST /sparepart/documents/[id]/reverse failed", error);
-    return NextResponse.json(
-      { error: "Failed to reverse material document." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to reverse material document." }, { status: 500 });
   }
 }
