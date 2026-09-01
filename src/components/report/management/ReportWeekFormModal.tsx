@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Modal } from "@/components/ui/Modal";
 import { AlertDialog } from "@/components/ui/AlertDialog";
+import { FullViewWorkspace } from "./FullViewWorkspace";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
 import {
@@ -350,35 +350,41 @@ export function ReportWeekFormModal({
         onClose={() => setError(null)}
       />
 
-      <Modal
-      title={mode === "create" ? reportText("addReport", language) : reportText("editReport", language)}
-      subtitle={reportText("addReportSubtitle", language)}
-      onClose={onClose}
-      size="xl"
-      closeDisabled={saving}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs text-text-muted disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          {!readOnly ? (
+      <FullViewWorkspace
+        language={language}
+        title={
+          mode === "create" ? reportText("addReport", language) : reportText("editReport", language)
+        }
+        subtitle={reportText("addReportSubtitle", language)}
+        ariaLabel={
+          mode === "create" ? reportText("addReport", language) : reportText("editReport", language)
+        }
+        onExit={onClose}
+        exitDisabled={saving}
+        exitButtonVariant="close"
+        footer={
+          <>
             <button
               type="button"
-              onClick={() => void handleSave()}
-              disabled={saving || loading}
-              className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              onClick={onClose}
+              disabled={saving}
+              className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs text-text-muted disabled:opacity-50"
             >
-              {saving ? reportText("loading", language) : reportText("saveWeekReport", language)}
+              Cancel
             </button>
-          ) : null}
-        </>
-      }
-    >
+            {!readOnly ? (
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saving || loading}
+                className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {saving ? reportText("loading", language) : reportText("saveWeekReport", language)}
+              </button>
+            ) : null}
+          </>
+        }
+      >
       {loading ? (
         <div className="py-12 text-center text-sm text-text-muted">{reportText("loading", language)}</div>
       ) : (
@@ -602,7 +608,7 @@ export function ReportWeekFormModal({
           </div>
         </div>
       )}
-    </Modal>
+    </FullViewWorkspace>
     </>
   );
 }
