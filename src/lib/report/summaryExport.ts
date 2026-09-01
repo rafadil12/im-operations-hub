@@ -1,13 +1,15 @@
 import { localizedField, localizedName } from "@/lib/i18n";
+import { getAttachmentsForWeekArea } from "./attachmentLookup";
 import { reportText } from "./copy";
 import type { WeekLineGroup } from "./summaryGrouping";
 import { formatRatePercent } from "./weekCalendar";
-import type { ReportArea, ReportLanguage } from "./types";
+import type { ReportArea, ReportLanguage, ReportWeekAttachment } from "./types";
 
 export async function exportSummaryToExcel(input: {
   year: number;
   weekGroups: WeekLineGroup[];
   areaById: Map<number, ReportArea>;
+  attachmentMap: Map<string, ReportWeekAttachment[]>;
   language: ReportLanguage;
 }): Promise<void> {
   const ExcelJS = (await import("exceljs")).default;
@@ -22,6 +24,7 @@ export async function exportSummaryToExcel(input: {
     reportText("rate", input.language),
     reportText("summary", input.language),
     reportText("plan", input.language),
+    reportText("attachments", input.language),
   ];
 
   sheet.addRow(headers);
@@ -34,7 +37,16 @@ export async function exportSummaryToExcel(input: {
         ? localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, input.language)
         : "—";
 
-      for (const row of areaGroup.lines) {
+      const areaAttachments = areaGroup.lines[0]
+        ? getAttachmentsForWeekArea(
+            input.attachmentMap,
+            areaGroup.lines[0].weekId,
+            areaGroup.areaId
+          )
+        : [];
+      const attachmentNames = areaAttachments.map((a) => a.originalName).join(", ");
+
+      for (const [lineIndex, row] of areaGroup.lines.entries()) {
         sheet.addRow([
           `Week ${group.weekNumber} (${group.year})`,
           areaName,
@@ -43,6 +55,7 @@ export async function exportSummaryToExcel(input: {
           formatRatePercent(row.weeklyCompletionRate),
           localizedField(row.summaryEn, row.summaryCn, input.language),
           localizedField(row.planEn, row.planCn, input.language) || "—",
+          lineIndex === 0 ? attachmentNames || "—" : "",
         ]);
       }
     }
@@ -56,6 +69,7 @@ export async function exportSummaryToExcel(input: {
     { width: 12 },
     { width: 48 },
     { width: 36 },
+    { width: 28 },
   ];
 
   const buffer = await workbook.xlsx.writeBuffer();

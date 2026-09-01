@@ -27,6 +27,29 @@ function mapAttachmentRow(row: AttachmentRow): ReportWeekAttachment {
   };
 }
 
+export async function loadReportAttachmentsByYear(
+  year: number,
+  areaId?: number
+): Promise<ReportWeekAttachment[]> {
+  const params: (number | string)[] = [year];
+  let areaClause = "";
+  if (areaId != null) {
+    areaClause = " AND rwa.area_id = ?";
+    params.push(areaId);
+  }
+
+  const rows = await query<AttachmentRow[]>(
+    `SELECT rwa.id, rwa.week_id, rwa.area_id, rwa.original_name, rwa.stored_name,
+            rwa.file_url, rwa.mime_type, rwa.file_size, rwa.created_at
+     FROM report_week_attachments rwa
+     JOIN report_weeks rw ON rw.id = rwa.week_id
+     WHERE rw.year = ?${areaClause}
+     ORDER BY rw.week_number DESC, rwa.area_id ASC, rwa.created_at ASC, rwa.id ASC`,
+    params
+  );
+  return rows.map(mapAttachmentRow);
+}
+
 export async function loadReportWeekAttachments(
   weekId: number,
   areaId: number

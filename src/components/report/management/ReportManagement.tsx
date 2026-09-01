@@ -15,9 +15,13 @@ import {
   type ReportLanguage,
   type ReportLine,
   type ReportWeek,
+  type ReportWeekAttachment,
 } from "@/lib/report";
+import { buildAttachmentMap, getAttachmentsForWeekArea } from "@/lib/report/attachmentLookup";
 import { completionBarColor } from "@/lib/report/completionColor";
 import { getWeekNumberForDate } from "@/lib/report/weekCalendar";
+import { ReportAttachmentsCell } from "./ReportAttachmentsCell";
+import { ReportAttachmentsModal } from "./ReportAttachmentsModal";
 import { ExpandableTextCell } from "./ExpandableTextCell";
 import { ReportWeekFormModal } from "./ReportWeekFormModal";
 import { SummaryFilterPanel } from "./SummaryFilterPanel";
@@ -220,6 +224,10 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const [areas, setAreas] = useState<ReportArea[]>([]);
   const [subItems, setSubItems] = useState<ReportSubItem[]>([]);
   const [lines, setLines] = useState<ReportLine[]>([]);
+  const [attachments, setAttachments] = useState<ReportWeekAttachment[]>([]);
+  const [attachmentsModalOpen, setAttachmentsModalOpen] = useState(false);
+  const [attachmentsModalItems, setAttachmentsModalItems] = useState<ReportWeekAttachment[]>([]);
+  const [attachmentsModalTitle, setAttachmentsModalTitle] = useState("");
   const [submissionStatus, setSubmissionStatus] = useState<"draft" | "submitted" | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -278,11 +286,13 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         data: ReportLine[];
         areas?: ReportArea[];
         subItems?: ReportSubItem[];
+        attachments?: ReportWeekAttachment[];
         error?: string;
       }>(`/api/report/lines?${qs}`);
 
       if (!res.success) throw new Error(res.error ?? "Failed");
       setLines(res.data ?? []);
+      setAttachments(res.attachments ?? []);
       if (res.areas) setAreas(res.areas);
       if (res.subItems) setSubItems(res.subItems);
 
@@ -298,6 +308,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     } catch (err) {
       setError(getApiErrorMessage(err) || reportText("errorLoad", language));
       setLines([]);
+      setAttachments([]);
     } finally {
       setLoading(false);
     }
@@ -348,6 +359,17 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
 
   const areaById = useMemo(() => new Map(areas.map((area) => [area.id, area])), [areas]);
 
+  const attachmentMap = useMemo(() => buildAttachmentMap(attachments), [attachments]);
+
+  const openAttachmentsModal = useCallback(
+    (items: ReportWeekAttachment[], title: string) => {
+      setAttachmentsModalItems(items);
+      setAttachmentsModalTitle(title);
+      setAttachmentsModalOpen(true);
+    },
+    []
+  );
+
   const filteredLines = useMemo(() => {
     const q = isSummary ? search.trim().toLowerCase() : "";
     return lines.filter((row) => {
@@ -384,6 +406,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     year,
     weekGroups,
     areaById,
+    attachmentMap,
     language,
   });
 
@@ -645,6 +668,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
             areaById={areaById}
             language={language}
             controls={summaryTableControls}
+            attachmentMap={attachmentMap}
+            onViewAttachments={openAttachmentsModal}
             wrapperClassName="overflow-auto rounded-xl border border-border-subtle bg-surface min-h-[32rem] max-h-[calc(100dvh-14rem)]"
           />
         ) : (
@@ -658,6 +683,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                 <th className={reportTh}>{reportText("rate", language)}</th>
                 <th className={reportTh}>{reportText("summary", language)}</th>
                 <th className={reportTh}>{reportText("plan", language)}</th>
+                <th className={reportTh}>{reportText("attachments", language)}</th>
                 {showActionsColumn ? (
                   <th className={reportTh}>{reportText("actions", language)}</th>
                 ) : null}
@@ -667,15 +693,25 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
               {filteredLines.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={showActionsColumn ? 7 : 6}
+                    colSpan={showActionsColumn ? 8 : 7}
                     className={`${reportTd} py-12 text-center text-text-muted`}
                   >
                     {reportText("noLines", language)}
                   </td>
                 </tr>
               ) : (
-                reportWeekGroups.flatMap((group) =>
-                  group.lines.map((row, lineIndex) => {
+                reportWeekGroups.flatMap((group) => {
+                  const firstLine = group.lines[0];
+                  const weekAttachments = firstLine
+                    ? getAttachmentsForWeekArea(
+                        attachmentMap,
+                        firstLine.weekId,
+                        firstLine.areaId
+                      )
+                    : [];
+                  const attachmentTitle = `Week ${group.weekNumber} (${group.year})`;
+
+                  return group.lines.map((row, lineIndex) => {
                     const isFirstInWeek = lineIndex === 0;
                     const target = localizedField(row.workTargetEn, row.workTargetCn, lang);
                     const summary = localizedField(row.summaryEn, row.summaryCn, lang);
@@ -723,6 +759,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                         <td className={`${reportTd} max-w-md`}>
                           <ExpandableTextCell text={plan || "—"} language={language} muted />
                         </td>
+                        {isFirstInWeek ? (
+                          <td rowSpan={group.lines.length} className={reportTdGroup}>
+                            <ReportAttachmentsCell
+                              attachments={weekAttachments}
+                              language={language}
+                              onView={() => openAttachmentsModal(weekAttachments, attachmentTitle)}
+                            />
+                          </td>
+                        ) : null}
                         {showActionsColumn && isFirstInWeek ? (
                           <td rowSpan={group.lines.length} className={reportTdGroup}>
                             {editableWeek || deletable ? (
@@ -751,8 +796,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                         ) : null}
                       </tr>
                     );
-                  })
-                )
+                  });
+                })
               )}
             </tbody>
           </table>
@@ -778,6 +823,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
             areaById={areaById}
             language={language}
             controls={summaryTableControls}
+            attachmentMap={attachmentMap}
+            onViewAttachments={openAttachmentsModal}
             wrapperClassName="h-full overflow-auto rounded-xl border border-border-subtle bg-surface"
           />
         </SummaryFullViewWorkspace>
@@ -819,6 +866,14 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
           onCancel={() => setDeleteWeekGroup(null)}
         />
       ) : null}
+
+      <ReportAttachmentsModal
+        open={attachmentsModalOpen}
+        onClose={() => setAttachmentsModalOpen(false)}
+        attachments={attachmentsModalItems}
+        language={language}
+        title={attachmentsModalTitle}
+      />
     </div>
   );
 }

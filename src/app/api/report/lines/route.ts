@@ -7,6 +7,7 @@ import {
   parseWeekNumber,
   parseYear,
 } from "@/lib/report/apiHelpers";
+import { loadReportAttachmentsByYear } from "@/lib/report/attachmentStore";
 import {
   ensureDraftSubmission,
   ensureReportWeek,
@@ -33,13 +34,14 @@ export async function GET(request: Request) {
     const weekId = parsePositiveInt(searchParams.get("weekId")) ?? undefined;
     const areaId = parsePositiveInt(searchParams.get("areaId")) ?? undefined;
 
-    const [lines, areas, subItems] = await Promise.all([
+    const [lines, areas, subItems, attachments] = await Promise.all([
       loadReportLines({ year, weekNumber, weekId, areaId }),
       loadReportAreas(),
       loadReportSubItems(),
+      year != null ? loadReportAttachmentsByYear(year, areaId) : Promise.resolve([]),
     ]);
 
-    return NextResponse.json({ success: true, data: lines, areas, subItems });
+    return NextResponse.json({ success: true, data: lines, areas, subItems, attachments });
   } catch (error) {
     console.error("GET /api/report/lines ERROR:", error);
     return jsonError("Failed to load report lines.", 500);

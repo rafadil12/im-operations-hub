@@ -181,6 +181,8 @@ const REPORT_TEXT = {
     "Unsupported file type. Allowed: PPT, Excel, PDF, PNG, JPEG.",
     "不支持的文件类型。允许：PPT、Excel、PDF、PNG、JPEG。",
   ] as TextPair,
+  viewFiles: ["View files", "查看附件"] as TextPair,
+  viewFilesCount: ["{n} file(s)", "{n} 个文件"] as TextPair,
 } as const;
 
 export type ReportTextKey = keyof typeof REPORT_TEXT;

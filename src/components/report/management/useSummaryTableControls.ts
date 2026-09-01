@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
-import { reportText, type ReportArea, type ReportLanguage } from "@/lib/report";
+import { reportText, type ReportArea, type ReportLanguage, type ReportWeekAttachment } from "@/lib/report";
 import { exportSummaryToExcel } from "@/lib/report/summaryExport";
 import type { WeekLineGroup } from "@/lib/report/summaryGrouping";
 import {
@@ -21,6 +21,7 @@ export function useSummaryTableControls(input: {
   year: number;
   weekGroups: WeekLineGroup[];
   areaById: Map<number, ReportArea>;
+  attachmentMap: Map<string, ReportWeekAttachment[]>;
   language: ReportLanguage;
 }) {
   const { success: toastSuccess, error: toastError } = useToast();
@@ -76,6 +77,7 @@ export function useSummaryTableControls(input: {
         year: input.year,
         weekGroups: input.weekGroups,
         areaById: input.areaById,
+        attachmentMap: input.attachmentMap,
         language: input.language,
       });
       toastSuccess(reportText("exportSuccess", input.language));
@@ -84,7 +86,7 @@ export function useSummaryTableControls(input: {
     } finally {
       setExporting(false);
     }
-  }, [input.areaById, input.language, input.weekGroups, input.year, toastError, toastSuccess]);
+  }, [input.areaById, input.attachmentMap, input.language, input.weekGroups, input.year, toastError, toastSuccess]);
 
   return {
     columnWidths,

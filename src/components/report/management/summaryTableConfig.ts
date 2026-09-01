@@ -5,7 +5,8 @@ export type SummaryColumnId =
   | "target"
   | "completion"
   | "summary"
-  | "plan";
+  | "plan"
+  | "attachments";
 
 export const SUMMARY_COLUMNS: SummaryColumnId[] = [
   "week",
@@ -15,6 +16,7 @@ export const SUMMARY_COLUMNS: SummaryColumnId[] = [
   "completion",
   "summary",
   "plan",
+  "attachments",
 ];
 
 export const STICKY_SUMMARY_COLUMNS = new Set<SummaryColumnId>(["week", "area"]);
@@ -27,6 +29,7 @@ export const DEFAULT_COLUMN_WIDTHS: Record<SummaryColumnId, number> = {
   completion: 88,
   summary: 320,
   plan: 200,
+  attachments: 100,
 };
 
 export const DEFAULT_COLUMN_VISIBILITY: Record<SummaryColumnId, boolean> = {
@@ -37,6 +40,7 @@ export const DEFAULT_COLUMN_VISIBILITY: Record<SummaryColumnId, boolean> = {
   completion: true,
   summary: true,
   plan: true,
+  attachments: true,
 };
 
 export const COLUMN_WIDTHS_STORAGE_KEY = "report-summary-column-widths";

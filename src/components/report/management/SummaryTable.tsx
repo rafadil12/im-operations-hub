@@ -2,14 +2,17 @@
 
 import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { localizedField, localizedName } from "@/lib/i18n";
+import { getAttachmentsForWeekArea } from "@/lib/report/attachmentLookup";
 import {
   areaColor,
   reportText,
   type ReportArea,
   type ReportLanguage,
+  type ReportWeekAttachment,
 } from "@/lib/report";
 import { completionBarColor } from "@/lib/report/completionColor";
 import type { WeekLineGroup } from "@/lib/report/summaryGrouping";
+import { ReportAttachmentsCell } from "./ReportAttachmentsCell";
 import { ExpandableTextCell } from "./ExpandableTextCell";
 import { WeekBadge } from "./WeekBadge";
 import {
@@ -92,6 +95,8 @@ export type SummaryTableProps = {
   areaById: Map<number, ReportArea>;
   language: ReportLanguage;
   controls: SummaryTableControls;
+  attachmentMap: Map<string, ReportWeekAttachment[]>;
+  onViewAttachments: (attachments: ReportWeekAttachment[], title: string) => void;
   wrapperClassName?: string;
 };
 
@@ -100,6 +105,8 @@ export function SummaryTable({
   areaById,
   language,
   controls,
+  attachmentMap,
+  onViewAttachments,
   wrapperClassName = "overflow-auto",
 }: SummaryTableProps) {
   const { columnWidths, columnVisibility, visibleColumns, resizeColumn } = controls;
@@ -128,11 +135,12 @@ export function SummaryTable({
 
   const cellClass = (columnId: SummaryColumnId, extra = "") => {
     const stickyLeft = stickyLeftOffset(columnId, columnWidths, columnVisibility);
+    const isGroupColumn = columnId === "week" || columnId === "area" || columnId === "attachments";
     return [
-      columnId === "week" || columnId === "area" ? reportTdGroup : reportTd,
+      isGroupColumn ? reportTdGroup : reportTd,
       stickyLeft != null ? "sticky z-[1] bg-surface" : "",
-      columnId === "week" || columnId === "area" ? "bg-bg/10" : "",
-      columnId === "week" ? "text-center" : "",
+      isGroupColumn ? "bg-bg/10" : "",
+      columnId === "week" || columnId === "attachments" ? "text-center" : "",
       extra,
     ]
       .filter(Boolean)
@@ -203,6 +211,15 @@ export function SummaryTable({
                       isLastInWeek && !isLastWeekGroup ? "border-b-2 border-b-border" : "";
                     const areaBottomBorder =
                       isLastInArea && !isLastInWeek ? "border-b border-b-border-subtle" : "";
+                    const areaAttachments = getAttachmentsForWeekArea(
+                      attachmentMap,
+                      row.weekId,
+                      areaGroup.areaId
+                    );
+                    const areaLabel = area
+                      ? localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, language)
+                      : "—";
+                    const attachmentTitle = `Week ${group.weekNumber} · ${areaLabel}`;
 
                     weekRowIndex += 1;
 
@@ -231,6 +248,13 @@ export function SummaryTable({
                       completion: <CompletionCell rate={row.weeklyCompletionRate} />,
                       summary: <ExpandableTextCell text={summary} language={language} muted />,
                       plan: <ExpandableTextCell text={plan || "—"} language={language} muted />,
+                      attachments: isFirstInArea ? (
+                        <ReportAttachmentsCell
+                          attachments={areaAttachments}
+                          language={language}
+                          onView={() => onViewAttachments(areaAttachments, attachmentTitle)}
+                        />
+                      ) : null,
                     };
 
                     return (
@@ -238,7 +262,8 @@ export function SummaryTable({
                         {visibleColumns.map((columnId) => {
                           if (
                             (columnId === "week" && !isFirstInWeek) ||
-                            (columnId === "area" && !isFirstInArea)
+                            (columnId === "area" && !isFirstInArea) ||
+                            (columnId === "attachments" && !isFirstInArea)
                           ) {
                             return null;
                           }
@@ -246,7 +271,7 @@ export function SummaryTable({
                           const rowSpan =
                             columnId === "week"
                               ? group.totalLines
-                              : columnId === "area"
+                              : columnId === "area" || columnId === "attachments"
                                 ? areaGroup.lines.length
                                 : undefined;
 
@@ -256,7 +281,11 @@ export function SummaryTable({
                               rowSpan={rowSpan}
                               className={cellClass(
                                 columnId,
-                                `${weekBottomBorder} ${columnId === "area" ? areaBottomBorder : ""}`
+                                `${weekBottomBorder} ${
+                                  columnId === "area" || columnId === "attachments"
+                                    ? areaBottomBorder
+                                    : ""
+                                }`
                               )}
                               style={cellStyle(columnId)}
                             >
