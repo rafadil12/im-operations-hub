@@ -1150,5 +1150,206 @@ if (await tableExists("training_sessions")) {
   console.log("training_sessions missing; skipped 023 training bilingual migration.");
 }
 
+// ---------------------------------------------------------------------------
+// 024: Report module tables + permissions
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "024_report_module.sql",
+  readMigrationSql,
+  "Applied report module (areas, weeks, lines, permissions).",
+);
+
+// ---------------------------------------------------------------------------
+// 025: Report submission reopen permission
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "025_report_submission_reopen.sql",
+  readMigrationSql,
+  "Applied report submission reopen permission.",
+);
+
+// ---------------------------------------------------------------------------
+// 026: report_sub_items replaces report_category_templates
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "026_report_sub_items.sql",
+  readMigrationSql,
+  "Created report_sub_items table.",
+);
+
+const [lineCols] = await conn.query(
+  `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'report_lines'
+     AND COLUMN_NAME IN ('category_template_id', 'sub_item_id')`
+);
+const lineColSet = new Set(lineCols.map((r) => r.COLUMN_NAME));
+
+const [templateTable] = await conn.query(
+  `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'report_category_templates'`
+);
+
+if (templateTable.length > 0) {
+  await conn.query(
+    `INSERT INTO report_sub_items (area_id, name_en, name_cn, sort_order)
+     SELECT area_id, name_en, name_cn, sort_order FROM report_category_templates
+     ON DUPLICATE KEY UPDATE
+       name_en = VALUES(name_en),
+       sort_order = VALUES(sort_order)`
+  );
+  console.log("Migrated report_category_templates rows into report_sub_items.");
+}
+
+if (lineColSet.has("category_template_id") && !lineColSet.has("sub_item_id")) {
+  await conn.query(
+    `ALTER TABLE report_lines ADD COLUMN sub_item_id INT NULL AFTER area_id`
+  );
+  console.log("Added report_lines.sub_item_id.");
+
+  if (templateTable.length > 0) {
+    await conn.query(
+      `UPDATE report_lines rl
+       JOIN report_category_templates ct ON ct.id = rl.category_template_id
+       JOIN report_sub_items si ON si.area_id = ct.area_id AND si.name_cn = ct.name_cn
+       SET rl.sub_item_id = si.id
+       WHERE rl.category_template_id IS NOT NULL`
+    );
+    console.log("Mapped category_template_id → sub_item_id on report_lines.");
+  }
+
+  try {
+    await conn.query(`ALTER TABLE report_lines DROP FOREIGN KEY fk_report_lines_category`);
+    console.log("Dropped fk_report_lines_category.");
+  } catch (err) {
+    console.log(`Skip drop fk_report_lines_category: ${err.message ?? err}`);
+  }
+
+  try {
+    await conn.query(`ALTER TABLE report_lines DROP INDEX idx_report_lines_category`);
+  } catch {
+    /* index may not exist */
+  }
+
+  await conn.query(`ALTER TABLE report_lines DROP COLUMN category_template_id`);
+  console.log("Dropped report_lines.category_template_id.");
+
+  await tryAddFk(
+    `ALTER TABLE report_lines
+       ADD KEY idx_report_lines_sub_item (sub_item_id),
+       ADD CONSTRAINT fk_report_lines_sub_item
+         FOREIGN KEY (sub_item_id) REFERENCES report_sub_items (id)
+         ON DELETE SET NULL`,
+    "fk_report_lines_sub_item"
+  );
+} else if (lineColSet.has("sub_item_id")) {
+  await tryAddFk(
+    `ALTER TABLE report_lines
+       ADD CONSTRAINT fk_report_lines_sub_item
+         FOREIGN KEY (sub_item_id) REFERENCES report_sub_items (id)
+         ON DELETE SET NULL`,
+    "fk_report_lines_sub_item"
+  );
+}
+
+if (templateTable.length > 0) {
+  await conn.query(`DROP TABLE report_category_templates`);
+  console.log("Dropped report_category_templates.");
+}
+
+// ---------------------------------------------------------------------------
+// 027: Report week batch save — revisions, submitter audit, unique sub-item
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "027_report_week_batch.sql",
+  readMigrationSql,
+  "Created report_line_revisions table.",
+);
+
+if (!(await columnExists("report_week_submissions", "submitted_by_system_user_id"))) {
+  await conn.query(
+    `ALTER TABLE report_week_submissions
+       ADD COLUMN submitted_by_system_user_id INT NULL AFTER submitted_by,
+       ADD COLUMN submitted_by_label VARCHAR(255) NULL AFTER submitted_by_system_user_id`
+  );
+  console.log("Added report_week_submissions submitter audit columns.");
+} else {
+  console.log("report_week_submissions submitter audit columns already exist.");
+}
+
+if (await columnExists("report_week_submissions", "submitted_by")) {
+  await conn.query(
+    `UPDATE report_week_submissions rws
+     INNER JOIN system_users su ON su.user_id = rws.submitted_by
+     SET rws.submitted_by_system_user_id = su.id
+     WHERE rws.submitted_by IS NOT NULL AND rws.submitted_by_system_user_id IS NULL`
+  );
+
+  await conn.query(
+    `UPDATE report_week_submissions rws
+     INNER JOIN system_users su ON su.id = rws.submitted_by_system_user_id
+     INNER JOIN users u ON u.id = su.user_id
+     SET rws.submitted_by_label = TRIM(CONCAT(COALESCE(u.employee_no, ''), ' - ', COALESCE(u.name_en, u.name_cn, u.employee_no)))
+     WHERE rws.submitted_by_system_user_id IS NOT NULL
+       AND (rws.submitted_by_label IS NULL OR rws.submitted_by_label = '')`
+  );
+
+  await conn.query(`ALTER TABLE report_week_submissions DROP COLUMN submitted_by`);
+  console.log("Migrated report_week_submissions.submitted_by → system_user audit columns.");
+}
+
+if (!(await indexExists("report_week_submissions", "idx_report_submission_submitted_by"))) {
+  await conn.query(
+    `ALTER TABLE report_week_submissions
+       ADD INDEX idx_report_submission_submitted_by (submitted_by_system_user_id)`
+  );
+  console.log("Added idx_report_submission_submitted_by.");
+}
+
+await tryAddFk(
+  `ALTER TABLE report_week_submissions
+     ADD CONSTRAINT fk_report_submission_submitted_by_su
+     FOREIGN KEY (submitted_by_system_user_id) REFERENCES system_users (id)
+     ON DELETE SET NULL ON UPDATE CASCADE`,
+  "fk_report_submission_submitted_by_su"
+);
+
+if (!(await indexExists("report_lines", "uk_report_lines_week_area_subitem"))) {
+  const [dupes] = await conn.query(
+    `SELECT COUNT(*) AS n FROM (
+       SELECT week_id, area_id, sub_item_id
+       FROM report_lines
+       WHERE sub_item_id IS NOT NULL
+       GROUP BY week_id, area_id, sub_item_id
+       HAVING COUNT(*) > 1
+     ) d`
+  );
+  if (Number(dupes[0]?.n ?? 0) > 0) {
+    await conn.query(
+      `DELETE rl1 FROM report_lines rl1
+       INNER JOIN report_lines rl2
+         ON rl1.week_id = rl2.week_id
+        AND rl1.area_id = rl2.area_id
+        AND rl1.sub_item_id = rl2.sub_item_id
+        AND rl1.sub_item_id IS NOT NULL
+        AND rl1.id > rl2.id`
+    );
+    console.log("Removed duplicate report_lines (week, area, sub-item).");
+  }
+
+  await conn.query(
+    `ALTER TABLE report_lines
+       ADD UNIQUE KEY uk_report_lines_week_area_subitem (week_id, area_id, sub_item_id)`
+  );
+  console.log("Added uk_report_lines_week_area_subitem.");
+} else {
+  console.log("uk_report_lines_week_area_subitem already exists.");
+}
+
+await applySqlFile(
+  "028_report_week_attachments.sql",
+  readMigrationSql,
+  "Created report_week_attachments table.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

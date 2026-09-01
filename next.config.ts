@@ -30,6 +30,11 @@ const nextConfig: NextConfig = {
         destination: "/training/session",
         permanent: true,
       },
+      {
+        source: "/report/management",
+        destination: "/report/summary",
+        permanent: true,
+      },
     ];
   },
 };

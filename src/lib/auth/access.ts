@@ -29,6 +29,13 @@ export const PERMISSIONS = {
   trainingSessionCreate: "training.session.create",
   trainingSessionUpdate: "training.session.update",
   trainingSessionDelete: "training.session.delete",
+  reportOverviewView: "report.overview.view",
+  reportLineRead: "report.line.read",
+  reportLineCreate: "report.line.create",
+  reportLineUpdate: "report.line.update",
+  reportLineDelete: "report.line.delete",
+  reportSubmissionSubmit: "report.submission.submit",
+  reportSubmissionReopen: "report.submission.reopen",
   sparepartOverviewView: "sparepart.overview.view",
   sparepartStockView: "sparepart.stock.view",
   sparepartDocumentRead: "sparepart.document.read",
@@ -79,6 +86,8 @@ export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
   PERMISSIONS.safetySubmissionRead,
   PERMISSIONS.trainingOverviewView,
   PERMISSIONS.trainingSessionRead,
+  PERMISSIONS.reportOverviewView,
+  PERMISSIONS.reportLineRead,
   PERMISSIONS.sparepartOverviewView,
   PERMISSIONS.sparepartStockView,
   PERMISSIONS.sparepartDocumentRead,
@@ -114,6 +123,13 @@ export type RoleAccess = {
   canCreateTrainingSession: boolean;
   canUpdateTrainingSession: boolean;
   canDeleteTrainingSession: boolean;
+  canViewReportOverview: boolean;
+  canViewReportLines: boolean;
+  canCreateReportLine: boolean;
+  canUpdateReportLine: boolean;
+  canDeleteReportLine: boolean;
+  canSubmitReport: boolean;
+  canReopenReport: boolean;
   canViewSparepartOverview: boolean;
   canViewSparepartStock: boolean;
   canViewSparepartDocuments: boolean;
@@ -207,6 +223,13 @@ export function getRoleAccess(account: AuthAccountPublic | null | undefined): Ro
     canCreateTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionCreate),
     canUpdateTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionUpdate),
     canDeleteTrainingSession: hasPermission(account, PERMISSIONS.trainingSessionDelete),
+    canViewReportOverview: hasPermission(account, PERMISSIONS.reportOverviewView),
+    canViewReportLines: hasPermission(account, PERMISSIONS.reportLineRead),
+    canCreateReportLine: hasPermission(account, PERMISSIONS.reportLineCreate),
+    canUpdateReportLine: hasPermission(account, PERMISSIONS.reportLineUpdate),
+    canDeleteReportLine: hasPermission(account, PERMISSIONS.reportLineDelete),
+    canSubmitReport: hasPermission(account, PERMISSIONS.reportSubmissionSubmit),
+    canReopenReport: hasPermission(account, PERMISSIONS.reportSubmissionReopen),
     canViewSparepartOverview: hasPermission(account, PERMISSIONS.sparepartOverviewView),
     canViewSparepartStock: hasPermission(account, PERMISSIONS.sparepartStockView),
     canViewSparepartDocuments: hasPermission(account, PERMISSIONS.sparepartDocumentRead),

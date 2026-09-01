@@ -33,7 +33,7 @@ export function OverviewGrid() {
           <div
             key={module.id}
             className={
-              module.id === "training"
+              module.colSpan === 3
                 ? "col-span-full"
                 : module.colSpan === 2
                   ? "xl:col-span-2"

@@ -2,7 +2,11 @@
 
 import type { ModuleCardData, ProgressRing } from "@/data/overview";
 import { BarChartPlaceholder, DonutChartPlaceholder } from "@/components/ui/ChartPlaceholder";
+import { useLang } from "@/lib/i18n";
 import { TicketTrendChart } from "./TicketTrendChart";
+
+/** Match BarChartPlaceholder min height (3 rows) for side-by-side panel alignment. */
+const PANEL_LIST_MIN_HEIGHT_PX = 134;
 
 export function ChartSection({
   data,
@@ -47,31 +51,46 @@ export function ChartSection({
 }
 
 export function PicsList({ data }: { data: ModuleCardData }) {
+  const { t } = useLang();
   if (!data.pics) return null;
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
       <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">{data.pics.title}</h4>
 
-      <ul className="flex min-h-0 flex-1 flex-col justify-between gap-2">
-        {data.pics.items.map((pic) => (
-          <li key={pic.name} className="flex items-center gap-2.5">
-            <span
-              className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-              style={{ backgroundColor: data.accentColor }}
-            >
-              {pic.initials}
-            </span>
+      {data.pics.items.length === 0 ? (
+        <div
+          className="flex flex-1 items-center justify-center text-sm text-text-muted"
+          style={{ minHeight: PANEL_LIST_MIN_HEIGHT_PX }}
+        >
+          {t.common.noData}
+        </div>
+      ) : (
+        <ul
+          className="flex min-h-0 flex-1 flex-col justify-between gap-2"
+          style={
+            data.pics.items.length < 3 ? { minHeight: PANEL_LIST_MIN_HEIGHT_PX } : undefined
+          }
+        >
+          {data.pics.items.map((pic) => (
+            <li key={pic.name} className="flex items-center gap-2.5">
+              <span
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                style={{ backgroundColor: data.accentColor }}
+              >
+                {pic.initials}
+              </span>
 
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-text">{pic.name}</p>
-              <p className="truncate text-[10px] text-text-dim">{pic.role}</p>
-            </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium text-text">{pic.name}</p>
+                <p className="truncate text-[10px] text-text-dim">{pic.role}</p>
+              </div>
 
-            <span className="text-xs font-semibold text-text-muted">{pic.count}</span>
-          </li>
-        ))}
-      </ul>
+              <span className="text-xs font-semibold text-text-muted">{pic.count}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

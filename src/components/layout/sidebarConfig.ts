@@ -165,19 +165,36 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    id: "report",
-    labelKey: "report",
-    icon: "report",
-    disabled: true,
-    children: comingSoonChildren,
-  },
-  {
     id: "training",
     labelKey: "training",
     icon: "training",
     children: [
       { id: "overview", labelKey: "overview", href: "/training" },
       { id: "session", labelKey: "session", href: "/training/session" },
+    ],
+  },
+  {
+    id: "report",
+    labelKey: "report",
+    icon: "report",
+    children: [
+      { id: "overview", labelKey: "overview", href: "/report" },
+      {
+        id: "weekly-report",
+        labelKey: "reportWeeklyReport",
+        children: [
+          {
+            id: "summary",
+            labelKey: "reportSummary",
+            href: "/report/summary",
+          },
+          {
+            id: "reports",
+            labelKey: "reportReports",
+            href: "/report/reports",
+          },
+        ],
+      },
     ],
   },
   {

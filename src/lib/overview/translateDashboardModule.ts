@@ -1,6 +1,19 @@
 import type { ModuleCardData } from "@/data/overview";
 import type { Dict } from "@/lib/i18n";
 
+function translateOrganizationDivisionName(name: string, t: Dict): string {
+  switch (name) {
+    case "MES":
+      return t.dashboard.mes;
+    case "IT":
+      return t.dashboard.itDivision;
+    case "Intelligent Logistics":
+      return t.dashboard.intelligentLogistics;
+    default:
+      return name;
+  }
+}
+
 /** Apply dashboard i18n labels onto a module card without changing numeric data. */
 export function translateDashboardModule(module: ModuleCardData, t: Dict): ModuleCardData {
   if (module.id === "itsm") {
@@ -132,22 +145,26 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
         ...stat,
         label:
           [
-            t.dashboard.totalHeadcount,
-            t.dashboard.activeHeadcount,
-            t.dashboard.onLeave,
-            t.dashboard.newJoin,
+            t.dashboard.totalPersonel,
+            t.dashboard.attendanceRate,
+            t.dashboard.totalAbsen,
+            t.dashboard.totalOnLeave,
           ][index] ?? stat.label,
       })),
-      orgTree: module.orgTree
+      orgChart: module.orgChart
         ? {
-            root: t.dashboard.itDepartment,
-            children: [
-              t.dashboard.mes,
-              t.dashboard.itInfrastructure,
-              t.dashboard.intelligentLogistics,
-            ],
+            company: t.dashboard.intelligentManufacturingDepartment,
+            leader: module.orgChart.leader,
+            divisions: module.orgChart.divisions.map((division) => ({
+              ...division,
+              name: translateOrganizationDivisionName(division.name, t),
+            })),
           }
         : undefined,
+      departmentPerformance: module.departmentPerformance?.map((row) => ({
+        ...row,
+        department: translateOrganizationDivisionName(row.department, t),
+      })),
     };
   }
 
@@ -159,37 +176,18 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
         ...stat,
         label:
           [
-            t.dashboard.weeklyReports,
-            t.dashboard.monthlyReports,
-            t.dashboard.completed,
-            t.dashboard.pending,
+            t.dashboard.achievement,
+            t.dashboard.workCompletion,
+            t.dashboard.projectProgress,
+            t.dashboard.reportCompletion,
           ][index] ?? stat.label,
       })),
       trendBars: module.trendBars
         ? {
             ...module.trendBars,
-            title: t.dashboard.reportTrend,
+            title: t.dashboard.workCompletionTrend,
           }
         : undefined,
-      chart: {
-        ...module.chart,
-        title: t.dashboard.reportByCategory,
-        legend: module.chart.legend.map((item, index) => ({
-          ...item,
-          label:
-            [t.dashboard.operational, t.dashboard.incident, t.dashboard.audit, t.dashboard.other][
-              index
-            ] ?? item.label,
-        })),
-        centerLabel: t.dashboard.reports,
-      },
-      progressRings: module.progressRings?.map((ring, index) => ({
-        ...ring,
-        label:
-          [t.dashboard.onTime, t.dashboard.late, t.dashboard.inProgress, t.dashboard.notStarted][
-            index
-          ] ?? ring.label,
-      })),
     };
   }
 

@@ -50,6 +50,8 @@ describe("guestHasPermission", () => {
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetySubmissionRead);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.trainingOverviewView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.trainingSessionRead);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.reportOverviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.reportLineRead);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartOverviewView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartStockView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartDocumentRead);
@@ -247,6 +249,6 @@ describe("privileged role assignment helpers", () => {
 
 describe("PERMISSIONS catalog", () => {
   it("has exactly 42 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(42);
+    expect(Object.keys(PERMISSIONS)).toHaveLength(49);
   });
 });

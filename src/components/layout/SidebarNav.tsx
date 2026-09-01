@@ -162,6 +162,7 @@ export function SidebarNav({
             ...prev,
             [parentId]: true,
             ...(parentId === "sparepart" ? { "sparepart-management": true } : {}),
+            ...(parentId === "report" ? { "report-weekly-report": true } : {}),
           }));
         }}
         className={childClass(active)}

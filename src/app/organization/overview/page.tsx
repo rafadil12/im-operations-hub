@@ -108,6 +108,16 @@ type DepartmentSummary = {
   attendanceRate: number;
 };
 
+type EmployeeAttendanceSummary = {
+  employee: Employee;
+  present: number;
+  leave: number;
+  mc: number;
+  upl: number;
+  absent: number;
+  off: number;
+};
+
 const API_EMPLOYEES =
   "/api/organization/employees?limit=100";
 
@@ -818,6 +828,141 @@ function HorizontalBarChart({
             </div>
           </div>
         ),
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   EMPLOYEE MONTHLY ATTENDANCE
+========================================================= */
+
+function EmployeeMonthlyAttendance({
+  data,
+  totalDays,
+  language,
+}: {
+  data: EmployeeAttendanceSummary[];
+  totalDays: number;
+  language: OrganizationLanguage;
+}) {
+  const segmentWidth = (value: number) =>
+    totalDays > 0 ? `${(value / totalDays) * 100}%` : "0%";
+
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {data.map((item, index) => {
+        const rate =
+          totalDays > 0
+            ? (item.present / totalDays) * 100
+            : 0;
+
+        return (
+          <div
+            key={item.employee.employee_no}
+            className="rounded-xl border border-border-subtle bg-bg/20 p-3 transition-colors duration-200 hover:bg-surface-hover"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-[9px] font-extrabold text-cyan-400">
+                {String(index + 1).padStart(2, "0")}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-bold text-text">
+                      {employeeName(item.employee, language)}
+                    </p>
+                    <p className="mt-0.5 truncate text-[8px] text-text-dim">
+                      {item.employee.employee_no}
+                    </p>
+                  </div>
+
+                  <span
+                    className={[
+                      "shrink-0 text-sm font-extrabold",
+                      rate >= 90
+                        ? "text-emerald-400"
+                        : rate >= 70
+                          ? "text-amber-400"
+                          : "text-rose-400",
+                    ].join(" ")}
+                  >
+                    {rate.toFixed(0)}%
+                  </span>
+                </div>
+
+                <div className="mt-2 flex h-2.5 w-full overflow-hidden rounded-full bg-bg">
+                  {item.present > 0 && (
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{ width: segmentWidth(item.present) }}
+                    />
+                  )}
+                  {item.leave > 0 && (
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{ width: segmentWidth(item.leave) }}
+                    />
+                  )}
+                  {item.mc > 0 && (
+                    <div
+                      className="h-full bg-violet-500"
+                      style={{ width: segmentWidth(item.mc) }}
+                    />
+                  )}
+                  {item.upl > 0 && (
+                    <div
+                      className="h-full bg-indigo-500"
+                      style={{ width: segmentWidth(item.upl) }}
+                    />
+                  )}
+                  {item.absent > 0 && (
+                    <div
+                      className="h-full bg-rose-500"
+                      style={{ width: segmentWidth(item.absent) }}
+                    />
+                  )}
+                  {item.off > 0 && (
+                    <div
+                      className="h-full bg-slate-500"
+                      style={{ width: segmentWidth(item.off) }}
+                    />
+                  )}
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[8px] font-semibold">
+                  <span className="text-emerald-400">
+                    {language === "cn" ? "出勤" : "P"} {item.present}
+                  </span>
+                  <span className="text-blue-400">
+                    {language === "cn" ? "年假" : "AL"} {item.leave}
+                  </span>
+                  <span className="text-violet-400">
+                    {language === "cn" ? "病假" : "MC"} {item.mc}
+                  </span>
+                  <span className="text-indigo-400">
+                    {language === "cn" ? "外出" : "UPL"} {item.upl}
+                  </span>
+                  <span className="text-rose-400">
+                    {language === "cn" ? "缺勤" : "A"} {item.absent}
+                  </span>
+                  <span className="text-slate-400">
+                    {language === "cn" ? "休息" : "OFF"} {item.off}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {data.length === 0 && (
+        <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted lg:col-span-2">
+          {language === "cn"
+            ? "没有员工考勤数据"
+            : "No employee attendance data"}
+        </div>
       )}
     </div>
   );
@@ -1691,6 +1836,66 @@ export default function AttendanceOverviewPage() {
       attendanceMap,
       totalDays,
     ]);
+
+  /* =======================================================
+     EMPLOYEE MONTHLY ATTENDANCE
+  ======================================================= */
+
+  const employeeAttendanceSummary = useMemo<
+    EmployeeAttendanceSummary[]
+  >(() => {
+    return employees
+      .map((employee) => {
+        let present = 0;
+        let leave = 0;
+        let mc = 0;
+        let upl = 0;
+        let absent = 0;
+        let off = 0;
+
+        for (const day of monthDays) {
+          const attendance = attendanceMap.get(
+            `${employee.employee_no}|${day.dateKey}`,
+          );
+
+          if (!attendance) continue;
+
+          const value = attendance.attendance_value;
+          if (isPresent(value)) present++;
+          else if (value === "AL") leave++;
+          else if (value === "MC") mc++;
+          else if (value === "UPL") upl++;
+          else if (value === "A") absent++;
+          else if (value === "OFF") off++;
+        }
+
+        return {
+          employee,
+          present,
+          leave,
+          mc,
+          upl,
+          absent,
+          off,
+        };
+      })
+      .sort((a, b) => {
+        const aRate = totalDays > 0 ? a.present / totalDays : 0;
+        const bRate = totalDays > 0 ? b.present / totalDays : 0;
+        return (
+          aRate - bRate ||
+          employeeName(a.employee, language).localeCompare(
+            employeeName(b.employee, language),
+          )
+        );
+      });
+  }, [
+    employees,
+    monthDays,
+    attendanceMap,
+    totalDays,
+    language,
+  ]);
 
   /* =======================================================
      RECENT REQUESTS
@@ -2569,6 +2774,63 @@ export default function AttendanceOverviewPage() {
             </div>
           </section>
         </div>
+
+        {/* =================================================
+            EMPLOYEE MONTHLY ATTENDANCE
+        ================================================= */}
+
+        <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
+          <SectionHeader
+            title={
+              language === "cn"
+                ? "员工月度考勤"
+                : "Employee Monthly Attendance"
+            }
+            description={
+              language === "cn"
+                ? "每位员工整个月份的出勤及状态构成。"
+                : "Monthly attendance rate and status breakdown for each employee."
+            }
+          />
+
+          <div className="mt-4">
+            {loading ? (
+              <div className="flex h-[160px] items-center justify-center text-xs text-text-muted">
+                {language === "cn" ? "加载中..." : "Loading..."}
+              </div>
+            ) : (
+              <EmployeeMonthlyAttendance
+                data={employeeAttendanceSummary}
+                totalDays={totalDays}
+                language={language}
+              />
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border-subtle pt-3 text-[9px] text-text-dim">
+            <span className="font-semibold text-text-muted">
+              {language === "cn" ? "图例" : "Legend"}
+            </span>
+            <span className="text-emerald-400">
+              {language === "cn" ? "出勤" : "P / Present"}
+            </span>
+            <span className="text-blue-400">
+              {language === "cn" ? "年假" : "AL"}
+            </span>
+            <span className="text-violet-400">
+              {language === "cn" ? "病假" : "MC"}
+            </span>
+            <span className="text-indigo-400">
+              {language === "cn" ? "外出" : "UPL"}
+            </span>
+            <span className="text-rose-400">
+              {language === "cn" ? "缺勤" : "A"}
+            </span>
+            <span className="text-slate-400">
+              {language === "cn" ? "休息" : "OFF"}
+            </span>
+          </div>
+        </section>
 
         {/* =================================================
             DAILY ATTENDANCE

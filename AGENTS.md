@@ -20,6 +20,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - Documents are attributed to seeded **Super Admin** (`employee_no=SUPERADMIN`).
 - Run migrations: `node --env-file=.env.local db/run-migrations.mjs`
 
+## Report module
+
+- Weekly report attachments (PPT, Excel, PDF, PNG, JPEG) on Add/Edit Week Report form; stored in `report_week_attachments` (week × area).
+- Uploads: set `REPORT_UPLOAD_DIR` in `.env.local` (served via `/api/report/files/...`).
+- Run migrations: `node --env-file=.env.local db/run-migrations.mjs`
+
 ## Safety module
 
 - Shared logic lives under `src/lib/safety/` (types, mappers, copy, evidence, overview metrics, API helpers).
