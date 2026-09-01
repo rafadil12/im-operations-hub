@@ -24,13 +24,15 @@ import { SummaryFilterPanel } from "./SummaryFilterPanel";
 import { SummaryFullViewWorkspace } from "./SummaryFullViewWorkspace";
 import { SummaryTable } from "./SummaryTable";
 import { useSummaryTableControls } from "./useSummaryTableControls";
+import { WeekBadge } from "./WeekBadge";
 
 const filterCtrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 
 const reportTh =
-  "sticky top-0 z-20 border border-border-subtle bg-surface px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
+  "sticky top-0 z-20 border border-border-subtle bg-surface px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
 const reportTd = "border border-border-subtle px-3 py-2.5 align-top";
+const reportTdGroup = "border border-border-subtle bg-bg/10 px-3 py-2.5 align-middle text-center";
 
 type ReportWeekGroup = {
   year: number;
@@ -174,39 +176,6 @@ function ReportFilterBar({
   );
 }
 
-function WeekBadge({
-  weekNumber,
-  year,
-  onClick,
-}: {
-  weekNumber: number;
-  year: number;
-  onClick?: () => void;
-}) {
-  const inner = (
-    <>
-      <span className="inline-block rounded-md bg-bg/70 px-2 py-0.5 text-xs font-medium text-text-muted ring-1 ring-border-subtle">
-        Week {weekNumber}
-      </span>
-      <p className="mt-1 text-[11px] text-text-dim">{year}</p>
-    </>
-  );
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="cursor-pointer whitespace-nowrap text-left hover:opacity-80"
-      >
-        {inner}
-      </button>
-    );
-  }
-
-  return <div className="whitespace-nowrap">{inner}</div>;
-}
-
 function CompletionCell({ rate }: { rate: number | null }) {
   if (rate == null) {
     return <span className="text-text-dim">—</span>;
@@ -270,7 +239,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const canDelete = access.canDeleteReportLine;
   const canSubmit = access.canSubmitReport;
   const canReopen = access.canReopenReport;
-  const showActionsColumn = canUpdate || canCreate || canDelete;
+  const showActionsColumn =
+    (canUpdate || canCreate || canDelete) && filterWeek !== "all";
   const isSubmitted = submissionStatus === "submitted";
   const selectedWeekFilter = filterWeek === "all" ? null : filterWeek;
 
@@ -685,11 +655,11 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                 <th className={reportTh}>{reportText("week", language)}</th>
                 <th className={reportTh}>{reportText("subItem", language)}</th>
                 <th className={reportTh}>{reportText("target", language)}</th>
-                <th className={`${reportTh} text-center`}>{reportText("rate", language)}</th>
+                <th className={reportTh}>{reportText("rate", language)}</th>
                 <th className={reportTh}>{reportText("summary", language)}</th>
                 <th className={reportTh}>{reportText("plan", language)}</th>
                 {showActionsColumn ? (
-                  <th className={`${reportTh} text-center`}>{reportText("actions", language)}</th>
+                  <th className={reportTh}>{reportText("actions", language)}</th>
                 ) : null}
               </tr>
             </thead>
@@ -718,10 +688,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                     return (
                       <tr key={row.id} className="align-top">
                         {isFirstInWeek ? (
-                          <td
-                            rowSpan={group.lines.length}
-                            className={`${reportTd} align-middle`}
-                          >
+                          <td rowSpan={group.lines.length} className={reportTdGroup}>
                             <WeekBadge
                               weekNumber={group.weekNumber}
                               year={group.year}
@@ -757,10 +724,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                           <ExpandableTextCell text={plan || "—"} language={language} muted />
                         </td>
                         {showActionsColumn && isFirstInWeek ? (
-                          <td
-                            rowSpan={group.lines.length}
-                            className={`${reportTd} align-middle text-center`}
-                          >
+                          <td rowSpan={group.lines.length} className={reportTdGroup}>
                             {editableWeek || deletable ? (
                               <div className="flex items-center justify-center gap-2">
                                 {editableWeek ? (

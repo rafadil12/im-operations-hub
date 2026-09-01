@@ -176,37 +176,18 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
         ...stat,
         label:
           [
-            t.dashboard.weeklyReports,
-            t.dashboard.monthlyReports,
-            t.dashboard.completed,
-            t.dashboard.pending,
+            t.dashboard.achievement,
+            t.dashboard.workCompletion,
+            t.dashboard.projectProgress,
+            t.dashboard.reportCompletion,
           ][index] ?? stat.label,
       })),
       trendBars: module.trendBars
         ? {
             ...module.trendBars,
-            title: t.dashboard.reportTrend,
+            title: t.dashboard.workCompletionTrend,
           }
         : undefined,
-      chart: {
-        ...module.chart,
-        title: t.dashboard.reportByCategory,
-        legend: module.chart.legend.map((item, index) => ({
-          ...item,
-          label:
-            [t.dashboard.operational, t.dashboard.incident, t.dashboard.audit, t.dashboard.other][
-              index
-            ] ?? item.label,
-        })),
-        centerLabel: t.dashboard.reports,
-      },
-      progressRings: module.progressRings?.map((ring, index) => ({
-        ...ring,
-        label:
-          [t.dashboard.onTime, t.dashboard.late, t.dashboard.inProgress, t.dashboard.notStarted][
-            index
-          ] ?? ring.label,
-      })),
     };
   }
 

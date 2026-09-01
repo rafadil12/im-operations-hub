@@ -6,6 +6,9 @@
  * Coming-soon modules (organization) keep placeholder UI until live.
  */
 
+import type { ReportTrendRow, ReportPeriodStatus } from "@/lib/report/types";
+import type { TrainingOverviewMetrics } from "@/lib/training/types";
+
 export type ModuleId =
   | "itsm"
   | "daily-operation"
@@ -67,7 +70,7 @@ export type ModuleCardData = {
   accentColor: string;
   href: string;
   layout: ModuleLayout;
-  /** Grid column span on xl screens (Training = 3 / full width). */
+  /** Grid column span on xl screens (Report = 3 / full width). */
   colSpan?: 1 | 2 | 3;
   stats: StatItem[];
   bars?: {
@@ -125,8 +128,23 @@ export type ModuleCardData = {
   }[];
   /** Report circular status indicators. */
   progressRings?: ProgressRing[];
+  /** Report weekly trend for home dashboard line chart. */
+  reportWeeklyTrend?: ReportTrendRow[];
+  /** Report current month summary for home dashboard card. */
+  reportCurrentMonth?: {
+    monthLabel: string;
+    status: ReportPeriodStatus;
+    achievement: number;
+    submittedCount: number;
+    draftCount: number;
+    areaCount: number;
+    totalLines: number;
+    byArea: ProgressRing[];
+  };
   /** Training recent table. */
   recentRows?: TrainingRow[];
+  /** Training division breakdown for expand-mode Recharts donut. */
+  trainingByDivision?: TrainingOverviewMetrics["byDivision"];
 };
 
 const EMPTY = "â";
@@ -290,54 +308,13 @@ export const dashboardModules: ModuleCardData[] = [
     },
   },
   {
-    id: "report",
-    number: 6,
-    title: "REPORT DASHBOARD",
-    icon: "report",
-    accentColor: "#eab308",
-    href: "/report",
-    layout: "report",
-    stats: [
-      { label: "Weekly Reports", value: "24", tone: "accent" },
-      { label: "Monthly Reports", value: "8", tone: "accent" },
-      { label: "Completed", value: "19", trend: "79%", tone: "success" },
-      { label: "Pending", value: "5", tone: "warning" },
-    ],
-    trendBars: {
-      title: "Report Trend",
-      items: [
-        { label: "W1", value: 6, max: 12, color: "#eab308" },
-        { label: "W2", value: 8, max: 12, color: "#eab308" },
-        { label: "W3", value: 5, max: 12, color: "#eab308" },
-        { label: "W4", value: 10, max: 12, color: "#eab308" },
-        { label: "W5", value: 7, max: 12, color: "#eab308" },
-        { label: "W6", value: 9, max: 12, color: "#eab308" },
-      ],
-    },
-    chart: {
-      title: "Report by Category",
-      type: "donut",
-      legend: [],
-      segments: [40, 25, 20, 15],
-      centerValue: "32",
-      centerLabel: "Reports",
-    },
-    progressRings: [
-      { label: "On Time", value: 72, color: "#22c55e" },
-      { label: "Late", value: 18, color: "#ef4444" },
-      { label: "In Progress", value: 45, color: "#3b82f6" },
-      { label: "Not Started", value: 12, color: "#94a3b8" },
-    ],
-  },
-  {
     id: "training",
-    number: 7,
+    number: 6,
     title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",
     href: "/training",
     layout: "training",
-    colSpan: 3,
     stats: [
       { label: "Total Training", value: "—", tone: "accent" },
       { label: "Participants", value: "—", tone: "accent" },
@@ -366,5 +343,35 @@ export const dashboardModules: ModuleCardData[] = [
       centerLabel: "Sessions",
     },
     recentRows: [],
+  },
+  {
+    id: "report",
+    number: 7,
+    title: "REPORT DASHBOARD",
+    icon: "report",
+    accentColor: "#eab308",
+    href: "/report",
+    layout: "report",
+    colSpan: 3,
+    stats: [
+      { label: "Achievement", value: EMPTY, tone: "success" },
+      { label: "Work Completion", value: EMPTY, tone: "accent" },
+      { label: "Project Progress", value: EMPTY, tone: "warning" },
+      { label: "Report Completion", value: EMPTY, tone: "success" },
+    ],
+    trendBars: {
+      title: "Work Completion Trend",
+      items: [],
+    },
+    chart: {
+      title: "By category",
+      type: "donut",
+      legend: [],
+      segments: [],
+      centerValue: EMPTY,
+      centerLabel: "Lines",
+    },
+    progressRings: [],
+    reportWeeklyTrend: [],
   },
 ];

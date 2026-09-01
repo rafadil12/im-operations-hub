@@ -8,6 +8,7 @@ import {
 import type {
   ReportArea,
   ReportAttentionItem,
+  ReportCurrentMonthMetrics,
   ReportDailyWorkMetrics,
   ReportDivisionMetrics,
   ReportKpiSnapshot,
@@ -18,7 +19,13 @@ import type {
   ReportSafetyMetrics,
   ReportTrendRow,
 } from "./types";
-import { parseCompletionRate, weekDateRange, weekLabel } from "./weekCalendar";
+import {
+  monthLabel,
+  parseCompletionRate,
+  weeksInCalendarMonth,
+  weekDateRange,
+  weekLabel,
+} from "./weekCalendar";
 
 const TARGET_THRESHOLD = 90;
 
@@ -263,6 +270,76 @@ function buildAttentionItems(input: {
   return items.slice(0, 8);
 }
 
+function computeCurrentMonthMetrics(
+  input: {
+    areas: ReportArea[];
+    rows: ReportLineRow[];
+    submissions: { weekId: number; areaId: number; status: "draft" | "submitted" }[];
+    asOf?: Date;
+    lang?: "en" | "cn";
+  }
+): ReportCurrentMonthMetrics {
+  const asOf = input.asOf ?? new Date();
+  const calYear = asOf.getFullYear();
+  const month = asOf.getMonth() + 1;
+  const lang = input.lang ?? "en";
+  const monthWeekNumbers = weeksInCalendarMonth(calYear, month);
+
+  const monthRows = input.rows.filter((row) => {
+    const rowYear = Number(row.year ?? calYear);
+    const rowWeek = Number(row.week_number ?? 0);
+    return rowYear === calYear && monthWeekNumbers.includes(rowWeek);
+  });
+
+  const monthLines = monthRows.map(mapReportLineRow);
+  const achievement = computeWeekAchievement(monthLines);
+
+  const weekIdsInMonth = new Set<number>();
+  for (const row of monthRows) {
+    const weekId = Number(row.week_id);
+    if (weekId) weekIdsInMonth.add(weekId);
+  }
+
+  const monthSubmissions = input.submissions.filter((s) => weekIdsInMonth.has(s.weekId));
+  const submittedCount = monthSubmissions.filter((s) => s.status === "submitted").length;
+  const draftCount = monthSubmissions.filter((s) => s.status === "draft").length;
+
+  const byArea = input.areas.map((area) => {
+    const areaMonthLines = monthLines.filter((line) => line.areaId === area.id);
+    const areaRates = areaMonthLines
+      .map((line) => line.weeklyCompletionRate)
+      .filter((rate): rate is number => rate != null && Number.isFinite(rate));
+
+    const submittedWeeks = new Set(
+      monthSubmissions
+        .filter((s) => s.areaId === area.id && s.status === "submitted")
+        .map((s) => s.weekId)
+    ).size;
+
+    return {
+      areaId: area.id,
+      code: area.code,
+      nameEn: area.nameEn,
+      nameCn: area.nameCn,
+      lineCount: areaMonthLines.length,
+      avgCompletionRate: avgRateFromFractions(areaRates),
+      submittedWeeks,
+    };
+  });
+
+  return {
+    month,
+    year: calYear,
+    monthLabel: monthLabel(calYear, month, lang),
+    status: weekStatus(achievement),
+    achievement,
+    submittedCount,
+    draftCount,
+    totalLines: monthLines.length,
+    byArea,
+  };
+}
+
 export function computeReportOverviewMetrics(input: {
   year: number;
   weekNumber: number;
@@ -492,6 +569,12 @@ export function computeReportOverviewMetrics(input: {
         )
       : null;
 
+  const currentMonth = computeCurrentMonthMetrics({
+    areas: input.areas,
+    rows: input.rows,
+    submissions: input.submissions,
+  });
+
   return {
     year,
     weekNumber,
@@ -509,6 +592,7 @@ export function computeReportOverviewMetrics(input: {
       delta: lineDelta,
     },
     currentWeekStatus: weekStatus(achievement),
+    currentMonth,
     totalLines: lines.length,
     totalWeeks: new Set(input.rows.map((row) => `${row.year}-${row.week_number}`)).size,
     avgCompletionRate: achievement,

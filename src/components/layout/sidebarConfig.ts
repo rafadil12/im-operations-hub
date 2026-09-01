@@ -165,6 +165,15 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    id: "training",
+    labelKey: "training",
+    icon: "training",
+    children: [
+      { id: "overview", labelKey: "overview", href: "/training" },
+      { id: "session", labelKey: "session", href: "/training/session" },
+    ],
+  },
+  {
     id: "report",
     labelKey: "report",
     icon: "report",
@@ -186,15 +195,6 @@ export const navItems: NavItem[] = [
           },
         ],
       },
-    ],
-  },
-  {
-    id: "training",
-    labelKey: "training",
-    icon: "training",
-    children: [
-      { id: "overview", labelKey: "overview", href: "/training" },
-      { id: "session", labelKey: "session", href: "/training/session" },
     ],
   },
   {

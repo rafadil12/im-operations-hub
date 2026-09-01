@@ -221,7 +221,7 @@ export function useDashboardModules() {
                 return trainingData ? mapTrainingToOverview(mod, trainingData) : mod;
 
               case "report":
-                return reportData ? mapReportToOverview(mod, reportData) : mod;
+                return reportData ? mapReportToOverview(mod, reportData, lang) : mod;
 
               case "organization":
                 return organizationData

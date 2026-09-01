@@ -34,6 +34,25 @@ export function weekLabel(weekNumber: number, lang: "en" | "cn" = "cn"): string 
   return lang === "en" ? `Week ${weekNumber}` : `${weekNumber}周`;
 }
 
+/** Week numbers whose Saturday start falls in the given calendar month. */
+export function weeksInCalendarMonth(year: number, month: number): number[] {
+  const weeks: number[] = [];
+  for (let weekNumber = 1; weekNumber <= 53; weekNumber += 1) {
+    const { startsOn } = weekDateRange(year, weekNumber);
+    const start = new Date(`${startsOn}T00:00:00`);
+    if (start.getFullYear() === year && start.getMonth() + 1 === month) {
+      weeks.push(weekNumber);
+    }
+  }
+  return weeks;
+}
+
+export function monthLabel(year: number, month: number, lang: "en" | "cn" = "en"): string {
+  if (lang === "cn") return `${year}年${month}月`;
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString("en", { month: "long", year: "numeric" });
+}
+
 export function parseCompletionRate(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === "") return null;
   const num = Number(raw);

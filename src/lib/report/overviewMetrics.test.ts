@@ -97,5 +97,7 @@ describe("computeReportOverviewMetrics", () => {
     expect(metrics.projects.activeCount).toBe(0);
     expect(metrics.projects.overallProgress).toBeNull();
     expect(metrics.attention).toHaveLength(0);
+    expect(metrics.currentMonth).toBeDefined();
+    expect(metrics.currentMonth.totalLines).toBeGreaterThanOrEqual(0);
   });
 });

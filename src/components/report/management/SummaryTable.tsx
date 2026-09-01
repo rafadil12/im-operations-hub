@@ -11,6 +11,7 @@ import {
 import { completionBarColor } from "@/lib/report/completionColor";
 import type { WeekLineGroup } from "@/lib/report/summaryGrouping";
 import { ExpandableTextCell } from "./ExpandableTextCell";
+import { WeekBadge } from "./WeekBadge";
 import {
   stickyLeftOffset,
   type SummaryColumnId,
@@ -18,20 +19,9 @@ import {
 import type { SummaryTableControls } from "./useSummaryTableControls";
 
 const reportThBase =
-  "relative border border-border-subtle bg-surface px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
+  "relative border border-border-subtle bg-surface px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
 const reportTd = "border border-border-subtle px-3 py-2.5 align-top";
 const reportTdGroup = "border border-border-subtle bg-bg/10 px-3 py-2.5 align-middle";
-
-function WeekBadge({ weekNumber, year }: { weekNumber: number; year: number }) {
-  return (
-    <div className="whitespace-nowrap">
-      <span className="inline-block rounded-md bg-bg/70 px-2 py-0.5 text-xs font-medium text-text-muted ring-1 ring-border-subtle">
-        Week {weekNumber}
-      </span>
-      <p className="mt-1 text-[11px] text-text-dim">{year}</p>
-    </div>
-  );
-}
 
 function CompletionCell({ rate }: { rate: number | null }) {
   if (rate == null) {
@@ -125,7 +115,6 @@ export function SummaryTable({
       reportThBase,
       "sticky top-0",
       stickyLeft != null ? "z-[3]" : "z-[2]",
-      columnId === "completion" ? "text-center" : "",
     ].join(" ");
   };
 
@@ -143,6 +132,7 @@ export function SummaryTable({
       columnId === "week" || columnId === "area" ? reportTdGroup : reportTd,
       stickyLeft != null ? "sticky z-[1] bg-surface" : "",
       columnId === "week" || columnId === "area" ? "bg-bg/10" : "",
+      columnId === "week" ? "text-center" : "",
       extra,
     ]
       .filter(Boolean)

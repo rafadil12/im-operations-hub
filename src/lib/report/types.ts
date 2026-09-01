@@ -157,6 +157,20 @@ export type ReportTrendRow = {
   lineCount: number;
 };
 
+export type ReportPeriodStatus = "on_target" | "below_target" | "above_target";
+
+export type ReportCurrentMonthMetrics = {
+  month: number;
+  year: number;
+  monthLabel: string;
+  status: ReportPeriodStatus;
+  achievement: number;
+  submittedCount: number;
+  draftCount: number;
+  totalLines: number;
+  byArea: ReportAreaMetrics[];
+};
+
 export type ReportOverviewMetrics = {
   year: number;
   weekNumber: number;
@@ -169,7 +183,8 @@ export type ReportOverviewMetrics = {
   onTimeRate: ReportKpiSnapshot;
   reportCompletion: ReportKpiSnapshot;
   reportLineCount: ReportKpiSnapshot;
-  currentWeekStatus: "on_target" | "below_target" | "above_target";
+  currentWeekStatus: ReportPeriodStatus;
+  currentMonth: ReportCurrentMonthMetrics;
   /** Legacy + dashboard card fields (scoped to selected week). */
   totalLines: number;
   totalWeeks: number;

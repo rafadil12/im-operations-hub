@@ -154,6 +154,7 @@ const REPORT_TEXT = {
   delayed: ["Delayed", "滞后"] as TextPair,
   noActiveProjects: ["No active projects this week.", "本周无进行中项目。"] as TextPair,
   currentWeek: ["Current Week", "本周"] as TextPair,
+  currentMonth: ["Current Month", "本月"] as TextPair,
   targetActual: ["Target vs Actual", "目标与实际"] as TextPair,
   openFindings: ["Open Findings", "待处理项"] as TextPair,
   apply: ["Apply", "应用"] as TextPair,

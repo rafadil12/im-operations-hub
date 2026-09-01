@@ -54,5 +54,6 @@ export function mapTrainingToOverview(
       completion: row.attachment ? "File" : "—",
       avgScore: row.divisionNameEn || row.divisionNameCn || "—",
     })),
+    trainingByDivision: metrics.byDivision,
   };
 }
