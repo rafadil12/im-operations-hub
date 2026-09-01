@@ -153,6 +153,9 @@ const REPORT_TEXT = {
   apply: ["Apply", "应用"] as TextPair,
   previousWeek: ["Previous week", "上一周"] as TextPair,
   nextWeek: ["Next week", "下一周"] as TextPair,
+  weekTypeHint: ["Type week 1–53 or year, press Enter", "输入周次 1–53 或年份，按 Enter"] as TextPair,
+  weekInputAria: ["Week number, editable", "周次，可编辑"] as TextPair,
+  yearInputAria: ["Year, editable", "年份，可编辑"] as TextPair,
   workTrend: ["Work Completion Trend", "工作完成度趋势"] as TextPair,
   projectTrend: ["Project Progress", "项目进度"] as TextPair,
 } as const;

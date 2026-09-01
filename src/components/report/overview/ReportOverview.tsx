@@ -49,6 +49,25 @@ function StatRow({ label, value }: { label: string; value: number | string }) {
   );
 }
 
+const editablePickerClass =
+  "group/field relative flex cursor-text items-center justify-center gap-1 rounded-md border border-dashed border-border bg-bg/40 px-2.5 py-1.5 transition hover:border-accent/50 hover:bg-bg/60 focus-within:border-accent focus-within:bg-bg/60 focus-within:ring-2 focus-within:ring-accent/20";
+
+const editableInputClass =
+  "bg-transparent text-center text-sm font-semibold text-text caret-accent outline-none placeholder:font-normal placeholder:text-text-dim [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+function PickerEditIcon() {
+  return (
+    <svg
+      aria-hidden
+      className="size-3 shrink-0 text-text-dim transition group-hover/field:text-accent group-focus-within/field:text-accent"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+    >
+      <path d="M13.586 3.586a2 2 0 0 1 2.828 2.828l-9.5 9.5a1 1 0 0 1-.389.242l-3.5 1a1 1 0 0 1-1.213-1.213l1-3.5a1 1 0 0 1 .242-.389l9.5-9.5z" />
+    </svg>
+  );
+}
+
 export function ReportOverview() {
   const { lang } = useLang();
   const language = lang as ReportLanguage;
@@ -56,8 +75,9 @@ export function ReportOverview() {
   const initialWeek = getWeekNumberForDate(new Date());
 
   const [year, setYear] = useState(initialYear);
-  const [draftYear, setDraftYear] = useState(initialYear);
+  const [draftYear, setDraftYear] = useState<number | "">(initialYear);
   const [weekNumber, setWeekNumber] = useState(initialWeek);
+  const [draftWeek, setDraftWeek] = useState<number | "">(initialWeek);
   const [metrics, setMetrics] = useState<ReportOverviewMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,12 +113,35 @@ export function ReportOverview() {
     return () => ac.abort();
   }, [year, weekNumber, loadMetrics]);
 
+  const clampWeek = (value: number) => Math.min(53, Math.max(1, Math.round(value)));
+  const clampYear = (value: number) => Math.min(2100, Math.max(2000, Math.round(value)));
+
   const goWeek = (delta: number) => {
-    setWeekNumber((current) => Math.min(53, Math.max(1, current + delta)));
+    setWeekNumber((current) => {
+      const next = clampWeek(current + delta);
+      setDraftWeek(next);
+      return next;
+    });
+  };
+
+  const applyWeek = () => {
+    if (draftWeek === "" || !Number.isFinite(Number(draftWeek))) {
+      setDraftWeek(weekNumber);
+      return;
+    }
+    const next = clampWeek(Number(draftWeek));
+    setDraftWeek(next);
+    setWeekNumber(next);
   };
 
   const applyYear = () => {
-    setYear(draftYear);
+    if (draftYear === "" || !Number.isFinite(Number(draftYear))) {
+      setDraftYear(year);
+      return;
+    }
+    const next = clampYear(Number(draftYear));
+    setDraftYear(next);
+    setYear(next);
   };
 
   const weekRangeLabel =
@@ -115,42 +158,99 @@ export function ReportOverview() {
           <p className="mt-1 text-xs text-text-dim">{weekRangeLabel}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => goWeek(-1)}
-              className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted hover:bg-surface-hover"
-              aria-label={reportText("previousWeek", language)}
-            >
-              ‹
-            </button>
-            <div className="min-w-[88px] rounded-md border border-border bg-surface px-3 py-1.5 text-center text-xs font-medium text-text">
-              {weekLabel(weekNumber, language)}
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => goWeek(-1)}
+                className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted hover:bg-surface-hover"
+                aria-label={reportText("previousWeek", language)}
+              >
+                ‹
+              </button>
+              <label
+                className={`${editablePickerClass} min-w-[104px]`}
+                title={reportText("weekTypeHint", language)}
+              >
+                {language === "cn" ? null : (
+                  <span className="shrink-0 text-xs text-text-muted">{reportText("week", language)}</span>
+                )}
+                <input
+                  type="number"
+                  min={1}
+                  max={53}
+                  placeholder="36"
+                  aria-label={reportText("weekInputAria", language)}
+                  title={reportText("weekTypeHint", language)}
+                  className={`${editableInputClass} w-11`}
+                  value={draftWeek}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      setDraftWeek("");
+                      return;
+                    }
+                    const num = Number(raw);
+                    if (Number.isFinite(num)) setDraftWeek(num);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") applyWeek();
+                  }}
+                  onBlur={applyWeek}
+                />
+                {language === "cn" ? (
+                  <span className="shrink-0 text-xs text-text-muted">{reportText("week", language)}</span>
+                ) : null}
+                <PickerEditIcon />
+              </label>
+              <button
+                type="button"
+                onClick={() => goWeek(1)}
+                className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted hover:bg-surface-hover"
+                aria-label={reportText("nextWeek", language)}
+              >
+                ›
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => goWeek(1)}
-              className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted hover:bg-surface-hover"
-              aria-label={reportText("nextWeek", language)}
-            >
-              ›
-            </button>
-          </div>
 
-          <input
-            type="number"
-            className="w-24 rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent"
-            value={draftYear}
-            onChange={(e) => setDraftYear(Number(e.target.value))}
-          />
-          <button
-            type="button"
-            onClick={applyYear}
-            className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-          >
-            {reportText("apply", language)}
-          </button>
+            <label
+              className={`${editablePickerClass} min-w-[96px]`}
+              title={reportText("weekTypeHint", language)}
+            >
+              {language === "cn" ? null : (
+                <span className="shrink-0 text-xs text-text-muted">{reportText("year", language)}</span>
+              )}
+              <input
+                type="number"
+                min={2000}
+                max={2100}
+                placeholder="2026"
+                aria-label={reportText("yearInputAria", language)}
+                title={reportText("weekTypeHint", language)}
+                className={`${editableInputClass} w-14`}
+                value={draftYear}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setDraftYear("");
+                    return;
+                  }
+                  const num = Number(raw);
+                  if (Number.isFinite(num)) setDraftYear(num);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") applyYear();
+                }}
+                onBlur={applyYear}
+              />
+              {language === "cn" ? (
+                <span className="shrink-0 text-xs text-text-muted">{reportText("year", language)}</span>
+              ) : null}
+              <PickerEditIcon />
+            </label>
+          </div>
+          <p className="text-[10px] text-text-dim">{reportText("weekTypeHint", language)}</p>
         </div>
       </div>
 
