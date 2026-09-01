@@ -18,6 +18,7 @@ import {
 } from "@/lib/report";
 import { completionBarColor } from "@/lib/report/completionColor";
 import { getWeekNumberForDate } from "@/lib/report/weekCalendar";
+import { ExpandableTextCell } from "./ExpandableTextCell";
 import { ReportWeekFormModal } from "./ReportWeekFormModal";
 import { SummaryFilterPanel } from "./SummaryFilterPanel";
 import { SummaryFullViewWorkspace } from "./SummaryFullViewWorkspace";
@@ -30,6 +31,37 @@ const filterCtrl =
 const reportTh =
   "sticky top-0 z-20 border border-border-subtle bg-surface px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
 const reportTd = "border border-border-subtle px-3 py-2.5 align-top";
+
+type ReportWeekGroup = {
+  year: number;
+  weekNumber: number;
+  lines: ReportLine[];
+};
+
+function groupReportLinesByWeek(lines: ReportLine[]): ReportWeekGroup[] {
+  const map = new Map<string, ReportLine[]>();
+
+  for (const line of lines) {
+    if (line.weekNumber == null || line.year == null) continue;
+    const key = `${line.year}-${line.weekNumber}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(line);
+  }
+
+  return Array.from(map.entries())
+    .map(([key, groupLines]) => {
+      const [yearStr, weekStr] = key.split("-");
+      return {
+        year: Number(yearStr),
+        weekNumber: Number(weekStr),
+        lines: [...groupLines].sort((a, b) => a.sortOrder - b.sortOrder),
+      };
+    })
+    .sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.weekNumber - a.weekNumber;
+    });
+}
 
 type ActiveTab = number | "summary";
 
@@ -203,7 +235,7 @@ function CompletionCell({ rate }: { rate: number | null }) {
 }
 
 export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const language = lang as ReportLanguage;
   const access = useRoleAccess();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -227,14 +259,18 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const [weekFormWeek, setWeekFormWeek] = useState(getWeekNumberForDate());
   const [submitting, setSubmitting] = useState(false);
   const [reopenConfirm, setReopenConfirm] = useState(false);
+  const [deleteWeekGroup, setDeleteWeekGroup] = useState<ReportWeekGroup | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [summaryFullscreenOpen, setSummaryFullscreenOpen] = useState(false);
 
   const isSummary = mode === "summary";
   const areaId = isSummary || typeof activeTab !== "number" ? null : activeTab;
   const canCreate = access.canCreateReportLine;
   const canUpdate = access.canUpdateReportLine;
+  const canDelete = access.canDeleteReportLine;
   const canSubmit = access.canSubmitReport;
   const canReopen = access.canReopenReport;
+  const showActionsColumn = canUpdate || canCreate || canDelete;
   const isSubmitted = submissionStatus === "submitted";
   const selectedWeekFilter = filterWeek === "all" ? null : filterWeek;
 
@@ -364,6 +400,11 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     });
   }, [lines, filterWeek, filterSubItem, search, lang, areaById, isSummary]);
 
+  const reportWeekGroups = useMemo(
+    () => (isSummary ? [] : groupReportLinesByWeek(filteredLines)),
+    [isSummary, filteredLines]
+  );
+
   const weekGroups = useMemo(
     () => (isSummary ? groupLinesByWeek(filteredLines, areas) : []),
     [isSummary, filteredLines, areas]
@@ -392,6 +433,34 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     if (!canUpdate && !canCreate) return false;
     if (row.submissionStatus === "submitted") return false;
     return row.weekNumber != null;
+  };
+
+  const rowCanDelete = (row: ReportLine) => {
+    if (!canDelete) return false;
+    if (row.submissionStatus === "submitted") return false;
+    return true;
+  };
+
+  const weekCanEdit = (group: ReportWeekGroup) => rowCanEditWeek(group.lines[0]);
+  const weekCanDelete = (group: ReportWeekGroup) => rowCanDelete(group.lines[0]);
+
+  const deleteWeekReport = async () => {
+    if (!deleteWeekGroup) return;
+    setDeleting(true);
+    try {
+      for (const line of deleteWeekGroup.lines) {
+        const res = await fetch(`/api/report/lines/${line.id}`, { method: "DELETE" });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error ?? "Delete failed");
+      }
+      toastSuccess(reportText("deleteSuccess", language));
+      setDeleteWeekGroup(null);
+      await loadLines();
+    } catch (err) {
+      toastError(getApiErrorMessage(err));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const submitArea = async () => {
@@ -619,7 +688,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                 <th className={`${reportTh} text-center`}>{reportText("rate", language)}</th>
                 <th className={reportTh}>{reportText("summary", language)}</th>
                 <th className={reportTh}>{reportText("plan", language)}</th>
-                {(canUpdate || canCreate) ? (
+                {showActionsColumn ? (
                   <th className={`${reportTh} text-center`}>{reportText("actions", language)}</th>
                 ) : null}
               </tr>
@@ -628,82 +697,98 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
               {filteredLines.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={canUpdate || canCreate ? 7 : 6}
+                    colSpan={showActionsColumn ? 7 : 6}
                     className={`${reportTd} py-12 text-center text-text-muted`}
                   >
                     {reportText("noLines", language)}
                   </td>
                 </tr>
               ) : (
-                filteredLines.map((row) => {
-                  const target = localizedField(row.workTargetEn, row.workTargetCn, lang);
-                  const summary = localizedField(row.summaryEn, row.summaryCn, lang);
-                  const plan = localizedField(row.planEn, row.planCn, lang);
-                  const subItem = localizedField(row.subItemNameEn, row.subItemNameCn, lang) || "—";
-                  const editableWeek = rowCanEditWeek(row);
+                reportWeekGroups.flatMap((group) =>
+                  group.lines.map((row, lineIndex) => {
+                    const isFirstInWeek = lineIndex === 0;
+                    const target = localizedField(row.workTargetEn, row.workTargetCn, lang);
+                    const summary = localizedField(row.summaryEn, row.summaryCn, lang);
+                    const plan = localizedField(row.planEn, row.planCn, lang);
+                    const subItem =
+                      localizedField(row.subItemNameEn, row.subItemNameCn, lang) || "—";
+                    const editableWeek = weekCanEdit(group);
+                    const deletable = weekCanDelete(group);
 
-                  return (
-                    <tr key={row.id} className="align-top">
-                      <td className={reportTd}>
-                        {row.weekNumber != null && row.year != null ? (
-                          <WeekBadge
-                            weekNumber={row.weekNumber}
-                            year={row.year}
-                            onClick={
-                              editableWeek ? () => openEditWeek(row.weekNumber!) : undefined
-                            }
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className={reportTd}>
-                        {editableWeek ? (
-                          <button
-                            type="button"
-                            onClick={() => openEditWeek(row.weekNumber!)}
-                            className="cursor-pointer text-left text-sm font-medium text-accent hover:underline"
+                    return (
+                      <tr key={row.id} className="align-top">
+                        {isFirstInWeek ? (
+                          <td
+                            rowSpan={group.lines.length}
+                            className={`${reportTd} align-middle`}
                           >
-                            {subItem}
-                          </button>
-                        ) : (
-                          <span className="text-sm font-medium text-accent">{subItem}</span>
-                        )}
-                      </td>
-                      <td
-                        className={`${reportTd} max-w-xs text-sm leading-relaxed text-text whitespace-pre-line`}
-                      >
-                        {target}
-                      </td>
-                      <td className={reportTd}>
-                        <CompletionCell rate={row.weeklyCompletionRate} />
-                      </td>
-                      <td
-                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line`}
-                      >
-                        {summary}
-                      </td>
-                      <td
-                        className={`${reportTd} max-w-md text-sm leading-relaxed text-text-muted whitespace-pre-line`}
-                      >
-                        {plan || "—"}
-                      </td>
-                      {(canUpdate || canCreate) && (
-                        <td className={`${reportTd} text-center`}>
+                            <WeekBadge
+                              weekNumber={group.weekNumber}
+                              year={group.year}
+                              onClick={
+                                editableWeek ? () => openEditWeek(group.weekNumber) : undefined
+                              }
+                            />
+                          </td>
+                        ) : null}
+                        <td className={reportTd}>
                           {editableWeek ? (
                             <button
                               type="button"
-                              onClick={() => openEditWeek(row.weekNumber!)}
-                              className="cursor-pointer text-xs text-accent hover:underline"
+                              onClick={() => openEditWeek(group.weekNumber)}
+                              className="cursor-pointer text-left text-sm font-medium text-accent hover:underline"
                             >
-                              {reportText("editReport", language)}
+                              {subItem}
                             </button>
-                          ) : null}
+                          ) : (
+                            <span className="text-sm font-medium text-accent">{subItem}</span>
+                          )}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })
+                        <td className={`${reportTd} max-w-xs`}>
+                          <ExpandableTextCell text={target} language={language} />
+                        </td>
+                        <td className={reportTd}>
+                          <CompletionCell rate={row.weeklyCompletionRate} />
+                        </td>
+                        <td className={`${reportTd} max-w-md`}>
+                          <ExpandableTextCell text={summary} language={language} muted />
+                        </td>
+                        <td className={`${reportTd} max-w-md`}>
+                          <ExpandableTextCell text={plan || "—"} language={language} muted />
+                        </td>
+                        {showActionsColumn && isFirstInWeek ? (
+                          <td
+                            rowSpan={group.lines.length}
+                            className={`${reportTd} align-middle text-center`}
+                          >
+                            {editableWeek || deletable ? (
+                              <div className="flex items-center justify-center gap-2">
+                                {editableWeek ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditWeek(group.weekNumber)}
+                                    className="cursor-pointer text-xs text-accent hover:underline"
+                                  >
+                                    {t.common.edit}
+                                  </button>
+                                ) : null}
+                                {deletable ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleteWeekGroup(group)}
+                                    className="cursor-pointer text-xs text-danger hover:underline"
+                                  >
+                                    {reportText("delete", language)}
+                                  </button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </td>
+                        ) : null}
+                      </tr>
+                    );
+                  })
+                )
               )}
             </tbody>
           </table>
@@ -758,6 +843,16 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
           busy={submitting}
           onConfirm={() => void reopenArea()}
           onCancel={() => setReopenConfirm(false)}
+        />
+      ) : null}
+
+      {deleteWeekGroup ? (
+        <ConfirmDialog
+          title={reportText("delete", language)}
+          message={reportText("deleteConfirm", language)}
+          busy={deleting}
+          onConfirm={() => void deleteWeekReport()}
+          onCancel={() => setDeleteWeekGroup(null)}
         />
       ) : null}
     </div>

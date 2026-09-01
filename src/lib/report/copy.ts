@@ -56,7 +56,7 @@ const REPORT_TEXT = {
   status: ["Status", "状态"] as TextPair,
   draft: ["Draft", "草稿"] as TextPair,
   submitted: ["Submitted", "已提交"] as TextPair,
-  submit: ["Submit category", "提交本类别"] as TextPair,
+  submit: ["Submit Reports", "提交周报"] as TextPair,
   reopen: ["Reopen for Edit", "重新打开编辑"] as TextPair,
   reopenConfirm: [
     "Reopen this report? It will return to draft and can be edited again.",
@@ -120,7 +120,8 @@ const REPORT_TEXT = {
   errorLoad: ["Failed to load report data.", "加载周报数据失败。"] as TextPair,
   submitSuccess: ["Report submitted.", "周报已提交。"] as TextPair,
   saveSuccess: ["Report line saved.", "事项已保存。"] as TextPair,
-  deleteSuccess: ["Report line deleted.", "事项已删除。"] as TextPair,
+  deleteSuccess: ["Week report deleted.", "周报已删除。"] as TextPair,
+  deleteConfirm: ["Delete this week report and all its lines?", "确定删除此周报及其所有事项？"] as TextPair,
   weekRange: ["Sat – Fri", "周六 – 周五"] as TextPair,
   all: ["All", "全部"] as TextPair,
   searchPlaceholder: [
