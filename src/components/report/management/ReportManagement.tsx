@@ -17,6 +17,7 @@ import {
   type ReportWeek,
 } from "@/lib/report";
 import { completionBarColor } from "@/lib/report/completionColor";
+import { getWeekNumberForDate } from "@/lib/report/weekCalendar";
 import { ReportWeekFormModal } from "./ReportWeekFormModal";
 import { SummaryFilterPanel } from "./SummaryFilterPanel";
 import { SummaryFullViewWorkspace } from "./SummaryFullViewWorkspace";
@@ -223,7 +224,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const [error, setError] = useState<string | null>(null);
   const [weekFormOpen, setWeekFormOpen] = useState(false);
   const [weekFormMode, setWeekFormMode] = useState<"create" | "edit">("create");
-  const [weekFormWeek, setWeekFormWeek] = useState<number | "">("");
+  const [weekFormWeek, setWeekFormWeek] = useState(getWeekNumberForDate());
   const [submitting, setSubmitting] = useState(false);
   const [reopenConfirm, setReopenConfirm] = useState(false);
   const [summaryFullscreenOpen, setSummaryFullscreenOpen] = useState(false);
@@ -377,7 +378,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
 
   const openCreateWeek = () => {
     setWeekFormMode("create");
-    setWeekFormWeek(selectedWeekFilter ?? "");
+    setWeekFormWeek(selectedWeekFilter ?? getWeekNumberForDate(new Date()));
     setWeekFormOpen(true);
   };
 

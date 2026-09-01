@@ -25,12 +25,13 @@ import {
   type ReportSubItem,
   type ReportWeek,
 } from "@/lib/report";
+import { mergeSelectableWeekNumbers } from "@/lib/report/weekCalendar";
 
 type ReportWeekFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
   initialYear: number;
-  initialWeekNumber: number | "";
+  initialWeekNumber: number;
   initialAreaId: number;
   areas: ReportArea[];
   subItems: ReportSubItem[];
@@ -227,7 +228,7 @@ export function ReportWeekFormModal({
   const language = lang as ReportLanguage;
 
   const [year, setYear] = useState(initialYear);
-  const [weekNumber, setWeekNumber] = useState<number | "">(initialWeekNumber);
+  const [weekNumber, setWeekNumber] = useState(initialWeekNumber);
   const [areaId, setAreaId] = useState(initialAreaId);
   const [lines, setLines] = useState<ReportWeekLineDraft[]>([newWeekLineDraft()]);
   const [loading, setLoading] = useState(false);
@@ -238,6 +239,15 @@ export function ReportWeekFormModal({
   const areaSubItems = useMemo(
     () => subItems.filter((s) => s.areaId === areaId),
     [subItems, areaId]
+  );
+
+  const weekOptions = useMemo(
+    () =>
+      mergeSelectableWeekNumbers(
+        year,
+        weeks.filter((w) => w.year === year).map((w) => w.weekNumber)
+      ),
+    [year, weeks]
   );
 
   useEffect(() => {
@@ -251,11 +261,6 @@ export function ReportWeekFormModal({
     if (mode === "create") {
       setLines([newWeekLineDraft()]);
       setLoading(false);
-      return;
-    }
-
-    if (initialWeekNumber === "") {
-      setLines([newWeekLineDraft()]);
       return;
     }
 
@@ -292,14 +297,16 @@ export function ReportWeekFormModal({
     })();
   }, [open, mode, initialYear, initialWeekNumber, initialAreaId, lang]);
 
+  useEffect(() => {
+    if (!weekOptions.length) return;
+    if (!weekOptions.includes(weekNumber)) {
+      setWeekNumber(weekOptions[0]);
+    }
+  }, [weekOptions, weekNumber]);
+
   const readOnly = isSubmitted || !canSave;
 
   const handleSave = async () => {
-    if (weekNumber === "") {
-      setError(reportText("week", language));
-      return;
-    }
-
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
       if (line.subItemId === "") {
@@ -411,14 +418,11 @@ export function ReportWeekFormModal({
                 className={field}
                 value={weekNumber}
                 disabled={mode === "edit" || readOnly}
-                onChange={(e) =>
-                  setWeekNumber(e.target.value === "" ? "" : Number(e.target.value))
-                }
+                onChange={(e) => setWeekNumber(Number(e.target.value))}
               >
-                <option value="">—</option>
-                {weeks.map((w) => (
-                  <option key={w.id} value={w.weekNumber}>
-                    Week {w.weekNumber}
+                {weekOptions.map((w) => (
+                  <option key={w} value={w}>
+                    Week {w}
                   </option>
                 ))}
               </select>

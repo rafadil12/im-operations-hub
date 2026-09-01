@@ -60,3 +60,23 @@ export function getPreviousWeek(year: number, weekNumber: number): { year: numbe
   if (weekNumber > 1) return { year, weekNumber: weekNumber - 1 };
   return null;
 }
+
+/** Max selectable week for a calendar year (past: 53, current: today, future: none). */
+export function getMaxSelectableWeek(year: number, asOf: Date = new Date()): number {
+  const currentYear = asOf.getFullYear();
+  if (year < currentYear) return 53;
+  if (year > currentYear) return 0;
+  return getWeekNumberForDate(asOf);
+}
+
+/** Calendar weeks 1..max for year, merged with DB weeks, descending. */
+export function mergeSelectableWeekNumbers(
+  year: number,
+  dbWeekNumbers: number[] = [],
+  asOf: Date = new Date()
+): number[] {
+  const set = new Set(dbWeekNumbers.filter((w) => Number.isInteger(w) && w >= 1 && w <= 53));
+  const maxWeek = getMaxSelectableWeek(year, asOf);
+  for (let w = 1; w <= maxWeek; w += 1) set.add(w);
+  return Array.from(set).sort((a, b) => b - a);
+}
