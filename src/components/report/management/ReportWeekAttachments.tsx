@@ -3,7 +3,11 @@
 import { useRef, useState } from "react";
 import { getApiErrorMessage } from "@/lib/apiClient";
 import { reportText, type ReportLanguage, type ReportWeekAttachment } from "@/lib/report";
-import { isAllowedReportFile, REPORT_FILE_ACCEPT } from "@/lib/report/attachmentAccept";
+import {
+  isAllowedReportFile,
+  MAX_REPORT_WEEK_ATTACHMENTS,
+  REPORT_FILE_ACCEPT,
+} from "@/lib/report/attachmentAccept";
 
 const section =
   "rounded-lg border border-border-subtle bg-bg/30 p-3 space-y-3";
@@ -48,6 +52,10 @@ export function ReportWeekAttachments({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
+  const attachmentCount = savedAttachments.length + pendingFiles.length;
+  const atMax = attachmentCount >= MAX_REPORT_WEEK_ATTACHMENTS;
+  const canUpload = !readOnly && !atMax;
+
   const uploadFile = async (file: File) => {
     const form = new FormData();
     form.append("year", String(year));
@@ -68,13 +76,19 @@ export function ReportWeekAttachments({
 
   const handleFiles = async (files: FileList | File[]) => {
     const list = Array.from(files);
-    if (!list.length || readOnly) return;
+    if (!list.length || !canUpload) return;
 
     for (const file of list) {
       if (!isAllowedReportFile(file.name)) {
         onError(reportText("attachmentInvalidType", language));
         return;
       }
+    }
+
+    const remaining = MAX_REPORT_WEEK_ATTACHMENTS - attachmentCount;
+    if (list.length > remaining) {
+      onError(reportText("attachmentMaxReached", language));
+      return;
     }
 
     if (!uploadImmediately) {
@@ -117,21 +131,9 @@ export function ReportWeekAttachments({
 
   return (
     <div className={section}>
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-text">{reportText("attachments", language)}</h3>
-        {!readOnly ? (
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => inputRef.current?.click()}
-            className="cursor-pointer rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            + {reportText("uploadAttachment", language)}
-          </button>
-        ) : null}
-      </div>
+      <h3 className="text-sm font-semibold text-text">{reportText("attachments", language)}</h3>
 
-      {!readOnly ? (
+      {canUpload ? (
         <label
           className={[
             "group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-4 py-5 text-center transition-colors",
@@ -163,7 +165,7 @@ export function ReportWeekAttachments({
             multiple
             accept={REPORT_FILE_ACCEPT}
             className="sr-only"
-            disabled={uploading || readOnly}
+            disabled={uploading}
             onChange={(e) => {
               const files = e.target.files;
               if (files?.length) void handleFiles(files);

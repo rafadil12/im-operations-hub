@@ -7,7 +7,7 @@ import {
 } from "@/lib/report/attachmentStore";
 import { jsonError, parsePositiveInt, parseWeekNumber, parseYear } from "@/lib/report/apiHelpers";
 import { ensureReportWeek, getSubmissionStatus } from "@/lib/report/lineStore";
-import { isAllowedReportFile } from "@/lib/report/attachmentAccept";
+import { isAllowedReportFile, MAX_REPORT_WEEK_ATTACHMENTS } from "@/lib/report/attachmentAccept";
 import { saveReportUploadedFile } from "@/lib/report/upload";
 
 export const runtime = "nodejs";
@@ -69,6 +69,11 @@ export async function POST(request: Request) {
     const submission = await getSubmissionStatus(weekId, areaId);
     if (submission?.status === "submitted") {
       return jsonError("This week report is submitted and cannot be edited.");
+    }
+
+    const existing = await loadReportWeekAttachments(weekId, areaId);
+    if (existing.length >= MAX_REPORT_WEEK_ATTACHMENTS) {
+      return jsonError(`Maximum ${MAX_REPORT_WEEK_ATTACHMENTS} attachments per report.`);
     }
 
     const uploaded = await saveReportUploadedFile(file, year, weekNumber);

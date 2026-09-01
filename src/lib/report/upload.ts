@@ -3,8 +3,6 @@ import { mkdir, writeFile } from "fs/promises";
 import { randomUUID } from "crypto";
 import { getReportFileExtension, isAllowedReportFile } from "./attachmentAccept";
 
-const MAX_FILE_BYTES = 100 * 1024 * 1024;
-
 export function getReportUploadDir(): string {
   const dir = process.env.REPORT_UPLOAD_DIR;
 
@@ -65,10 +63,6 @@ export async function saveReportUploadedFile(file: File, year: number, weekNumbe
   const storedName = `${randomUUID()}${ext || ".bin"}`;
   const absolute = path.join(dir, storedName);
   const buffer = Buffer.from(await file.arrayBuffer());
-
-  if (buffer.byteLength > MAX_FILE_BYTES) {
-    throw new Error("File too large (max 100MB).");
-  }
 
   await writeFile(absolute, buffer);
 

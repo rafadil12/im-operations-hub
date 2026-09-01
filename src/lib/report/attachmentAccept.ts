@@ -1,3 +1,5 @@
+export const MAX_REPORT_WEEK_ATTACHMENTS = 5;
+
 export const REPORT_ALLOWED_EXTENSIONS = new Set([
   ".ppt",
   ".pptx",

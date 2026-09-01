@@ -166,8 +166,12 @@ const REPORT_TEXT = {
   attachments: ["Attachments", "附件"] as TextPair,
   uploadAttachment: ["Upload file", "上传文件"] as TextPair,
   uploadAttachmentHint: [
-    "PPT, Excel, PDF, PNG, JPEG — max 100MB each",
-    "支持 PPT、Excel、PDF、PNG、JPEG — 单个最大 100MB",
+    "PPT, Excel, PDF, PNG, JPEG — up to 5 files",
+    "支持 PPT、Excel、PDF、PNG、JPEG — 最多 5 个文件",
+  ] as TextPair,
+  attachmentMaxReached: [
+    "Maximum 5 attachments per report.",
+    "每个周报最多 5 个附件。",
   ] as TextPair,
   removeAttachment: ["Remove", "移除"] as TextPair,
   noAttachments: ["No files attached.", "暂无附件。"] as TextPair,
