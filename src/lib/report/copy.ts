@@ -10,8 +10,8 @@ const REPORT_TEXT = {
   ] as TextPair,
   managementTitle: ["Weekly Reports", "周报管理"] as TextPair,
   managementDesc: [
-    "Edit weekly report lines by year, week, and area",
-    "按年、周、区域编辑周报事项",
+    "Edit weekly report lines by year, week, and report category",
+    "按年、周、汇报类别编辑周报事项",
   ] as TextPair,
   summaryTab: ["Summary", "汇总"] as TextPair,
   summaryFullView: ["Full View", "全屏查看"] as TextPair,
@@ -32,7 +32,7 @@ const REPORT_TEXT = {
   submittedAreas: ["Submitted", "已提交"] as TextPair,
   draftAreas: ["Draft", "草稿"] as TextPair,
   weeklyTrend: ["Weekly Trend", "周趋势"] as TextPair,
-  byArea: ["By Area", "按区域"] as TextPair,
+  byArea: ["By category", "按类别"] as TextPair,
   recentLines: ["Recent Reports", "最近周报"] as TextPair,
   viewAll: ["View all", "查看全部"] as TextPair,
   recentLinesSummary: [
@@ -41,7 +41,7 @@ const REPORT_TEXT = {
   ] as TextPair,
   year: ["Year", "年份"] as TextPair,
   week: ["Week", "周"] as TextPair,
-  area: ["Area", "区域"] as TextPair,
+  area: ["Category", "类别"] as TextPair,
   subItem: ["Sub-item", "子项"] as TextPair,
   target: ["Target", "考核目标"] as TextPair,
   targetEn: ["Target (EN)", "考核目标（英）"] as TextPair,
@@ -56,7 +56,7 @@ const REPORT_TEXT = {
   status: ["Status", "状态"] as TextPair,
   draft: ["Draft", "草稿"] as TextPair,
   submitted: ["Submitted", "已提交"] as TextPair,
-  submit: ["Submit Area", "提交本区域"] as TextPair,
+  submit: ["Submit category", "提交本类别"] as TextPair,
   reopen: ["Reopen for Edit", "重新打开编辑"] as TextPair,
   reopenConfirm: [
     "Reopen this report? It will return to draft and can be edited again.",
@@ -73,7 +73,7 @@ const REPORT_TEXT = {
   saveWeekReport: ["Save Week Report", "保存周报"] as TextPair,
   saveWeekSuccess: ["Week report saved.", "周报已保存。"] as TextPair,
   removeLine: ["Remove", "移除"] as TextPair,
-  module: ["Module", "模块"] as TextPair,
+  reportCategory: ["Report category", "汇报类别"] as TextPair,
   targetPlaceholderEn: [
     "Describe the target or objective for this item…",
     "Describe the target or objective for this item…",

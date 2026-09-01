@@ -1,5 +1,5 @@
 import type { ModuleCardData } from "@/data/overview";
-import { areaColor } from "./copy";
+import { areaColor, reportEnText } from "./copy";
 import type { ReportOverviewMetrics } from "./types";
 
 export function mapReportToOverview(
@@ -27,7 +27,7 @@ export function mapReportToOverview(
       })),
     },
     chart: {
-      title: "By Area",
+      title: reportEnText("byArea"),
       type: "donut",
       legend: metrics.byArea.map((a) => ({
         label: a.nameEn,

@@ -42,7 +42,7 @@ type ReportWeekFormModalProps = {
 };
 
 const field =
-  "w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent";
+  "w-full rounded-md border border-border bg-bg/40 px-3 py-1 text-sm text-text outline-none focus:border-accent";
 const label = "mb-1 block text-xs font-medium text-text-muted";
 const section =
   "rounded-lg border border-border-subtle bg-bg/30 p-3 space-y-3";
@@ -428,7 +428,7 @@ export function ReportWeekFormModal({
               </select>
             </div>
             <div>
-              <label className={label}>{reportText("module", language)}</label>
+              <label className={label}>{reportText("reportCategory", language)}</label>
               <select
                 className={field}
                 value={areaId}
