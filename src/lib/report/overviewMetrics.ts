@@ -40,6 +40,34 @@ function lineStatus(rate: number | null | undefined): "completed" | "in_progress
   return "in_progress";
 }
 
+function recentLineNeedsAttention(line: ReportLine): boolean {
+  const rate = line.weeklyCompletionRate;
+  if (rate == null || !Number.isFinite(rate)) return true;
+  return rate < 1;
+}
+
+function compareRecentLines(a: ReportLine, b: ReportLine): number {
+  const aAttention = recentLineNeedsAttention(a) ? 0 : 1;
+  const bAttention = recentLineNeedsAttention(b) ? 0 : 1;
+  if (aAttention !== bAttention) return aAttention - bAttention;
+
+  const aRate = a.weeklyCompletionRate ?? -1;
+  const bRate = b.weeklyCompletionRate ?? -1;
+  if (aRate !== bRate) return aRate - bRate;
+
+  return a.sortOrder - b.sortOrder || b.id - a.id;
+}
+
+function countRecentLineStats(lines: ReportLine[]): { onTrack: number; needsAttention: number } {
+  let onTrack = 0;
+  let needsAttention = 0;
+  for (const line of lines) {
+    if (recentLineNeedsAttention(line)) needsAttention += 1;
+    else onTrack += 1;
+  }
+  return { onTrack, needsAttention };
+}
+
 function weekStatus(achievement: number): "on_target" | "below_target" | "above_target" {
   if (achievement >= TARGET_THRESHOLD) return achievement >= 100 ? "above_target" : "on_target";
   return "below_target";
@@ -441,9 +469,8 @@ export function computeReportOverviewMetrics(input: {
   const lineDelta =
     prevWeekNumber != null ? Math.round((lines.length - prevLineCount) * 10) / 10 : null;
 
-  const recentLines: ReportLine[] = [...lines]
-    .sort((a, b) => a.sortOrder - b.sortOrder || b.id - a.id)
-    .slice(0, 8);
+  const recentLineStats = countRecentLineStats(lines);
+  const recentLines: ReportLine[] = [...lines].sort(compareRecentLines).slice(0, 8);
 
   const attention = buildAttentionItems({
     year,
@@ -495,5 +522,6 @@ export function computeReportOverviewMetrics(input: {
     safety,
     attention,
     recentLines,
+    recentLineStats,
   };
 }

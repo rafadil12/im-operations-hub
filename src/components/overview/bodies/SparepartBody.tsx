@@ -11,7 +11,7 @@ export function SparepartBody({ data, expanded }: { data: ModuleCardData; expand
         <section className="mb-4 flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
           <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">{data.bars.title}</h4>
 
-          <div className="min-h-0">
+          <div>
             <BarChartPlaceholder items={data.bars.items} />
           </div>
         </section>

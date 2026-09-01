@@ -1,12 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedField, localizedName, useLang } from "@/lib/i18n";
 import {
   areaColor,
+  isProjectLine,
+  projectStatus,
   reportText,
+  splitTargetLines,
   type ReportLanguage,
+  type ReportLine,
   type ReportOverviewMetrics,
 } from "@/lib/report";
 import { getWeekNumberForDate, weekLabel } from "@/lib/report/weekCalendar";
@@ -45,6 +50,89 @@ function StatRow({ label, value }: { label: string; value: number | string }) {
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-text-muted">{label}</span>
       <span className="font-semibold text-text">{value}</span>
+    </div>
+  );
+}
+
+type RecentLineStatusTier = "complete" | "warning" | "exception";
+
+function recentLineStatusTier(line: ReportLine): RecentLineStatusTier {
+  const rate = line.weeklyCompletionRate;
+  if (rate != null && Number.isFinite(rate) && rate >= 1) return "complete";
+  if (isProjectLine(line) && projectStatus(rate) === "delayed") return "exception";
+  if (rate == null || !Number.isFinite(rate)) return "exception";
+  return "warning";
+}
+
+function recentLineNeedsAttention(line: ReportLine): boolean {
+  const rate = line.weeklyCompletionRate;
+  if (rate == null || !Number.isFinite(rate)) return true;
+  return rate < 1;
+}
+
+const RECENT_TARGET_LINE_LIMIT = 2;
+
+function RecentTargetCell({ text, language }: { text: string; language: ReportLanguage }) {
+  const lines = splitTargetLines(text);
+  if (!lines.length) return <span className="text-text-dim">—</span>;
+
+  const visibleLines = lines.slice(0, RECENT_TARGET_LINE_LIMIT);
+  const hiddenCount = lines.length - RECENT_TARGET_LINE_LIMIT;
+
+  return (
+    <div>
+      <span className="block whitespace-pre-line text-sm leading-snug text-inherit">
+        {visibleLines.join("\n")}
+      </span>
+      {hiddenCount > 0 ? (
+        <span className="mt-0.5 block text-[11px] font-medium text-text-muted">
+          {reportText("showMore", language).replace("{n}", String(hiddenCount))}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function RecentLineStatusBadge({ line, language }: { line: ReportLine; language: ReportLanguage }) {
+  const rate = line.weeklyCompletionRate;
+  const pct = rate != null && Number.isFinite(rate) ? Math.round(rate * 100) : null;
+  const tier = recentLineStatusTier(line);
+
+  if (tier === "complete") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-emerald-400/20 bg-emerald-500/8 px-2 py-0.5 text-xs font-semibold tabular-nums text-emerald-300/90">
+        <span aria-hidden>✓</span>
+        100%
+      </span>
+    );
+  }
+
+  const isProject = isProjectLine(line);
+  const projectLabel =
+    isProject && rate != null && rate < 1
+      ? projectStatus(rate) === "delayed"
+        ? reportText("delayed", language)
+        : projectStatus(rate) === "at_risk"
+          ? reportText("atRisk", language)
+          : null
+      : null;
+
+  const badgeClass =
+    tier === "exception"
+      ? "border-amber-400/35 bg-amber-500/12 text-amber-300"
+      : "border-amber-400/25 bg-amber-500/8 text-amber-300/90";
+
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      <span
+        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold tabular-nums ${badgeClass}`}
+      >
+        {tier === "exception" ? <span aria-hidden>⚠</span> : null}
+        {pct != null ? `${pct}%` : "—"}
+      </span>
+      {projectLabel ? (
+        <span className="text-[10px] font-medium text-amber-300/80">{projectLabel}</span>
+      ) : null}
     </div>
   );
 }
@@ -541,45 +629,68 @@ export function ReportOverview() {
           </div>
 
           <section className="rounded-xl border border-border-subtle bg-surface p-4">
-            <h2 className="mb-3 text-sm font-medium text-text">
-              {reportText("recentLines", language)} — {weekLabel(metrics.weekNumber, language)}
-            </h2>
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-medium text-text">
+                  {reportText("recentLines", language)} — {weekLabel(metrics.weekNumber, language)}
+                </h2>
+                {metrics.recentLines.length > 0 ? (
+                  <p className="mt-1 text-xs text-text-muted">
+                    {reportText("recentLinesSummary", language)
+                      .replace("{onTrack}", String(metrics.recentLineStats.onTrack))
+                      .replace("{needs}", String(metrics.recentLineStats.needsAttention))}
+                  </p>
+                ) : null}
+              </div>
+              <Link
+                href="/report/summary"
+                className="shrink-0 text-xs font-medium text-accent transition hover:text-accent/80"
+              >
+                {reportText("viewAll", language)} →
+              </Link>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border-subtle text-xs text-text-dim">
-                    <th className="pb-2 pr-3 font-medium">{reportText("subItem", language)}</th>
-                    <th className="pb-2 pr-3 font-medium">{reportText("target", language)}</th>
-                    <th className="pb-2 pr-3 text-center font-medium">{reportText("rate", language)}</th>
-                    <th className="pb-2 font-medium">{reportText("summary", language)}</th>
+                    <th className="w-[22%] pb-2 pr-4 font-medium">{reportText("subItem", language)}</th>
+                    <th className="pb-2 pr-4 font-medium">{reportText("target", language)}</th>
+                    <th className="w-[20%] pb-2 text-right font-medium">{reportText("status", language)}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {metrics.recentLines.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-text-muted">
+                      <td colSpan={3} className="py-8 text-center text-text-muted">
                         {reportText("noLines", language)}
                       </td>
                     </tr>
                   ) : (
-                    metrics.recentLines.map((row) => (
-                      <tr key={row.id} className="border-b border-border-subtle/60">
-                        <td className="py-2.5 pr-3 text-text-muted">
-                          {localizedField(row.subItemNameEn, row.subItemNameCn, lang) || "—"}
-                        </td>
-                        <td className="max-w-xs py-2.5 pr-3 font-medium text-text">
-                          {localizedField(row.workTargetEn, row.workTargetCn, lang)}
-                        </td>
-                        <td className="py-2.5 pr-3 text-center">
-                          {row.weeklyCompletionRate != null
-                            ? `${Math.round(row.weeklyCompletionRate * 100)}%`
-                            : "—"}
-                        </td>
-                        <td className="max-w-md py-2.5 text-text-muted line-clamp-2">
-                          {localizedField(row.summaryEn, row.summaryCn, lang)}
-                        </td>
-                      </tr>
-                    ))
+                    metrics.recentLines.map((row) => {
+                      const needsAttention = recentLineNeedsAttention(row);
+                      const rowClass = needsAttention
+                        ? "border-b border-border-subtle/60 border-l-2 border-l-amber-400 bg-amber-500/5"
+                        : "border-b border-border-subtle/60";
+
+                      return (
+                        <tr key={row.id} className={rowClass}>
+                          <td
+                            className={`py-2.5 pr-4 pl-3 align-top text-xs ${needsAttention ? "text-text" : "text-text-muted"}`}
+                          >
+                            {localizedField(row.subItemNameEn, row.subItemNameCn, lang) || "—"}
+                          </td>
+                          <td className={`max-w-md py-2.5 pr-4 align-top ${needsAttention ? "font-medium text-text" : "font-medium text-text/85"}`}>
+                            <RecentTargetCell
+                              text={localizedField(row.workTargetEn, row.workTargetCn, lang)}
+                              language={language}
+                            />
+                          </td>
+                          <td className="py-2.5 pr-1 text-right align-top">
+                            <RecentLineStatusBadge line={row} language={language} />
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

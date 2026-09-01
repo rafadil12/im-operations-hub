@@ -6,3 +6,4 @@ export * from "./lineClassification";
 export * from "./overviewMetrics";
 export * from "./mapToOverview";
 export * from "./summaryGrouping";
+export * from "./targetLines";

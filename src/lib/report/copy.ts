@@ -33,7 +33,12 @@ const REPORT_TEXT = {
   draftAreas: ["Draft", "草稿"] as TextPair,
   weeklyTrend: ["Weekly Trend", "周趋势"] as TextPair,
   byArea: ["By Area", "按区域"] as TextPair,
-  recentLines: ["Recent Lines", "最近事项"] as TextPair,
+  recentLines: ["Recent Reports", "最近周报"] as TextPair,
+  viewAll: ["View all", "查看全部"] as TextPair,
+  recentLinesSummary: [
+    "{onTrack} on track · {needs} needs attention",
+    "{onTrack} 项正常 · {needs} 项需关注",
+  ] as TextPair,
   year: ["Year", "年份"] as TextPair,
   week: ["Week", "周"] as TextPair,
   area: ["Area", "区域"] as TextPair,

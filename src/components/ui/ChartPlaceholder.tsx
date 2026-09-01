@@ -2,14 +2,42 @@
 
 import { useEffect, useState } from "react";
 import type { BarItem } from "@/data/overview";
+import { useLang } from "@/lib/i18n";
+
+/** ~38px row (label + optional sublabel + bar) + 10px gap between rows. */
+const BAR_ROW_HEIGHT_PX = 38;
+const BAR_ROW_GAP_PX = 10;
+
+function barChartMinHeight(minRows: number): number {
+  return minRows * BAR_ROW_HEIGHT_PX + Math.max(0, minRows - 1) * BAR_ROW_GAP_PX;
+}
 
 type BarChartPlaceholderProps = {
   items: BarItem[];
+  /** Reserve vertical space for at least this many rows when data is sparse or empty. */
+  minRows?: number;
 };
 
-export function BarChartPlaceholder({ items }: BarChartPlaceholderProps) {
+export function BarChartPlaceholder({ items, minRows = 3 }: BarChartPlaceholderProps) {
+  const { t } = useLang();
+  const minHeight = barChartMinHeight(minRows);
+
+  if (items.length === 0) {
+    return (
+      <div
+        className="flex items-center justify-center text-sm text-text-muted"
+        style={{ minHeight }}
+      >
+        {t.common.noData}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col justify-between gap-2.5">
+    <div
+      className="flex h-full flex-col justify-between gap-2.5"
+      style={{ minHeight: items.length < minRows ? minHeight : undefined }}
+    >
       {items.map((item, index) => {
         const width = Math.max(8, Math.round((item.value / item.max) * 100));
         return (

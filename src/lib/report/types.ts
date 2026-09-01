@@ -184,6 +184,7 @@ export type ReportOverviewMetrics = {
   safety: ReportSafetyMetrics;
   attention: ReportAttentionItem[];
   recentLines: ReportLine[];
+  recentLineStats: { onTrack: number; needsAttention: number };
 };
 
 export type ReportLineInput = {
