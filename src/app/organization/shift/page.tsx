@@ -2199,16 +2199,16 @@ function ShiftManagementView() {
                       key={member.id}
                       className={`rounded-lg border p-3 ${
                         member.excluded
-                          ? "border-amber-500/50 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10"
+                          ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-400/50 dark:bg-amber-500/10"
                           : "border-border-subtle bg-surface"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-bold text-text">
+                          <p className="text-xs font-bold text-text dark:text-white">
                             {language === "cn" ? member.nameCn || member.name : member.name}
                           </p>
-                          <p className="mt-0.5 text-[10px] text-text-dim">{member.employeeId}</p>
+                          <p className="mt-0.5 text-[10px] text-text-dim dark:text-slate-300">{member.employeeId}</p>
                         </div>
                         {member.excluded ? (
                           <span className="inline-flex items-center rounded-md border border-amber-400 bg-amber-500 px-2.5 py-1 text-[9px] font-extrabold text-white shadow-sm dark:border-amber-400 dark:bg-amber-500 dark:text-white">

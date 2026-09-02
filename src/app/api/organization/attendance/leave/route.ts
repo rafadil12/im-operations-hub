@@ -4,20 +4,20 @@ import { execute, query } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 type LeaveType = "AL" | "MC" | "UPL" | "OT" | "ALPA" | "NO_ATTENDANCE";
+type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT" | "NO_CHECK_IN_OUT";
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
-type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT";
 
 type LeaveRequestRow = {
   id: number;
   employee_no: string;
   request_date: string;
   request_type: LeaveType;
-  oa_number: string | null;
-  no_attendance_type: NoAttendanceType | null;
   start_time: string | null;
   end_time: string | null;
   reason: string | null;
   status: LeaveStatus;
+  oa_number: string | null;
+  no_attendance_type: NoAttendanceType | null;
   created_by: string | null;
   approved_by: string | null;
   approved_at: string | null;
@@ -51,7 +51,11 @@ function isLeaveType(value: unknown): value is LeaveType {
 }
 
 function isNoAttendanceType(value: unknown): value is NoAttendanceType {
-  return value === "NO_CHECK_IN" || value === "NO_CHECK_OUT";
+  return (
+    value === "NO_CHECK_IN" ||
+    value === "NO_CHECK_OUT" ||
+    value === "NO_CHECK_IN_OUT"
+  );
 }
 
 function parseOaNumber(value: unknown): string | null {
@@ -220,12 +224,12 @@ export async function GET(request: NextRequest) {
           r.employee_no,
           r.request_date,
           r.request_type,
-          r.oa_number,
-          r.no_attendance_type,
           r.start_time,
           r.end_time,
           r.reason,
           r.status,
+          r.oa_number,
+          r.no_attendance_type,
           r.created_by,
           r.approved_by,
           r.approved_at,
@@ -359,7 +363,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error:
-              "noAttendanceType must be NO_CHECK_IN or NO_CHECK_OUT when requestType is NO_ATTENDANCE.",
+              "noAttendanceType must be NO_CHECK_IN, NO_CHECK_OUT, or NO_CHECK_IN_OUT when requestType is NO_ATTENDANCE.",
           },
           { status: 400 },
         );
@@ -374,49 +378,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!startTime) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "startTime must be in HH:mm format.",
-        },
-        { status: 400 },
-      );
-    }
+    if (requestType !== "NO_ATTENDANCE") {
+      if (!startTime) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "startTime must be in HH:mm format.",
+          },
+          { status: 400 },
+        );
+      }
 
-    if (!endTime) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "endTime must be in HH:mm format.",
-        },
-        { status: 400 },
-      );
-    }
+      if (!endTime) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "endTime must be in HH:mm format.",
+          },
+          { status: 400 },
+        );
+      }
 
-    const startMinutes = timeToMinutes(startTime);
-    const endMinutes = timeToMinutes(endTime);
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
 
-    // AL / MC / UPL / ALPA must stay within the same day.
-    // OT may cross midnight (e.g. 22:00 -> 02:00).
-    if (requestType !== "OT" && startMinutes >= endMinutes) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "End time must be later than start time.",
-        },
-        { status: 400 },
-      );
-    }
+      // AL / MC / UPL / ALPA must stay within the same day.
+      // OT may cross midnight (e.g. 22:00 -> 02:00).
+      if (requestType !== "OT" && startMinutes >= endMinutes) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "End time must be later than start time.",
+          },
+          { status: 400 },
+        );
+      }
 
-    if (requestType === "OT" && startMinutes === endMinutes) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "OT start time and end time cannot be the same.",
-        },
-        { status: 400 },
-      );
+      if (requestType === "OT" && startMinutes === endMinutes) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "OT start time and end time cannot be the same.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     if (!reason) {
@@ -496,8 +502,8 @@ export async function POST(request: NextRequest) {
         requestType,
         oaNumber,
         requestType === "NO_ATTENDANCE" ? noAttendanceType : null,
-        startTime,
-        endTime,
+        requestType === "NO_ATTENDANCE" ? null : startTime,
+        requestType === "NO_ATTENDANCE" ? null : endTime,
         reason,
         createdBy || employeeNo,
       ],
@@ -510,12 +516,12 @@ export async function POST(request: NextRequest) {
           employee_no,
           request_date,
           request_type,
-          oa_number,
-          no_attendance_type,
           start_time,
           end_time,
           reason,
           status,
+          oa_number,
+          no_attendance_type,
           created_by,
           approved_by,
           approved_at,
@@ -594,11 +600,17 @@ export async function PATCH(request: NextRequest) {
       id?: unknown;
       status?: unknown;
       approvedBy?: unknown;
+      oaNumber?: unknown;
     };
 
     const id = Number(body.id);
     const status = String(body.status ?? "").trim();
     const approvedBy = String(body.approvedBy ?? "").trim();
+    const hasOaNumber = Object.prototype.hasOwnProperty.call(body, "oaNumber");
+    const oaNumber =
+      body.oaNumber === null || body.oaNumber === undefined
+        ? ""
+        : String(body.oaNumber).trim();
 
     if (!Number.isInteger(id) || id <= 0) {
       return NextResponse.json(
@@ -608,6 +620,118 @@ export async function PATCH(request: NextRequest) {
         },
         { status: 400 },
       );
+    }
+
+    /*
+     * OA Number update:
+     * - Can only be changed after the request is Approved.
+     * - This branch is intentionally separate from approval/rejection so the
+     *   frontend can save Number OA without resending approvedBy.
+     */
+    if (hasOaNumber) {
+      if (status || approvedBy) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "OA Number update must only contain id and oaNumber.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const oaRows = await query<{ id: number; status: LeaveStatus }[]>(
+        `
+          SELECT id, status
+          FROM attendance_leave_requests
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [id],
+      );
+
+      const existingOa = oaRows[0];
+
+      if (!existingOa) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Leave request ${id} was not found.`,
+          },
+          { status: 404 },
+        );
+      }
+
+      if (existingOa.status !== "Approved") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Number OA can only be updated after the request is Approved.",
+          },
+          { status: 409 },
+        );
+      }
+
+      if (oaNumber.length > 100) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Number OA must not exceed 100 characters.",
+          },
+          { status: 400 },
+        );
+      }
+
+      await execute(
+        `
+          UPDATE attendance_leave_requests
+          SET oa_number = ?
+          WHERE id = ?
+            AND status = 'Approved'
+        `,
+        [oaNumber || null, id],
+      );
+
+      const savedOaRows = await query<LeaveRequestRow[]>(
+        `
+          SELECT
+            id,
+            employee_no,
+            request_date,
+            request_type,
+            start_time,
+            end_time,
+            reason,
+            status,
+            oa_number,
+            created_by,
+            approved_by,
+            approved_at,
+            created_at,
+            updated_at
+          FROM attendance_leave_requests
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [id],
+      );
+
+      const savedOa = savedOaRows[0];
+
+      if (!savedOa) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "OA Number was updated but could not be read back.",
+          },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Number OA updated successfully.",
+        data: savedOa,
+      });
     }
 
     if (status !== "Approved" && status !== "Rejected") {
@@ -645,12 +769,12 @@ export async function PATCH(request: NextRequest) {
           r.employee_no,
           r.request_date,
           r.request_type,
-          r.oa_number,
-          r.no_attendance_type,
           r.start_time,
           r.end_time,
           r.reason,
           r.status,
+          r.oa_number,
+          r.no_attendance_type,
           r.created_by,
           r.approved_by,
           r.approved_at,
@@ -828,12 +952,12 @@ export async function PATCH(request: NextRequest) {
           employee_no,
           request_date,
           request_type,
-          oa_number,
-          no_attendance_type,
           start_time,
           end_time,
           reason,
           status,
+          oa_number,
+          no_attendance_type,
           created_by,
           approved_by,
           approved_at,

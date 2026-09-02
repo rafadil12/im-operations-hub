@@ -3236,6 +3236,13 @@ export default function AttendanceOverviewPage() {
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
                        {language ===
                       "cn"
+                        ? "休息"
+                        : "OFF"}
+                    </th>
+
+                    <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
+                       {language ===
+                      "cn"
                         ? "出勤率"
                         : "Rate"}
                     </th>
@@ -3289,6 +3296,12 @@ export default function AttendanceOverviewPage() {
                         <td className="px-3 py-3 text-center text-xs font-semibold text-rose-400">
                           {
                             item.absent
+                          }
+                        </td>
+
+                        <td className="px-3 py-3 text-center text-xs font-semibold text-slate-400">
+                          {
+                            item.off
                           }
                         </td>
 
