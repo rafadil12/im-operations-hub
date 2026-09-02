@@ -50,6 +50,20 @@ function isLeaveType(value: unknown): value is LeaveType {
   );
 }
 
+function isNoAttendanceType(value: unknown): value is NoAttendanceType {
+  return (
+    value === "NO_CHECK_IN" ||
+    value === "NO_CHECK_OUT" ||
+    value === "NO_CHECK_IN_OUT"
+  );
+}
+
+function parseOaNumber(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
+}
+
 function isLeaveStatus(value: unknown): value is LeaveStatus {
   return value === "Pending" || value === "Approved" || value === "Rejected";
 }
@@ -296,24 +310,27 @@ export async function POST(request: NextRequest) {
       employeeNo?: unknown;
       date?: unknown;
       requestType?: unknown;
+      oaNumber?: unknown;
+      noAttendanceType?: unknown;
       startTime?: unknown;
       endTime?: unknown;
       reason?: unknown;
       createdBy?: unknown;
-      noAttendanceType?: unknown;
     };
 
     const employeeNo = String(body.employeeNo ?? "").trim();
     const date = String(body.date ?? "").trim();
     const requestType = String(body.requestType ?? "").trim();
+    const oaNumber = parseOaNumber(body.oaNumber);
+    const noAttendanceTypeRaw = body.noAttendanceType;
+    const noAttendanceType =
+      noAttendanceTypeRaw === undefined || noAttendanceTypeRaw === null
+        ? null
+        : String(noAttendanceTypeRaw).trim();
     const startTime = normalizeTime(body.startTime);
     const endTime = normalizeTime(body.endTime);
     const reason = String(body.reason ?? "").trim();
     const createdBy = String(body.createdBy ?? "").trim();
-    const noAttendanceType =
-      body.noAttendanceType === null || body.noAttendanceType === undefined
-        ? null
-        : String(body.noAttendanceType).trim();
 
     if (!employeeNo) {
       return NextResponse.json(
@@ -341,22 +358,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (requestType === "NO_ATTENDANCE") {
-      if (
-        noAttendanceType !== "NO_CHECK_IN" &&
-        noAttendanceType !== "NO_CHECK_OUT" &&
-        noAttendanceType !== "NO_CHECK_IN_OUT"
-      ) {
+      if (!isNoAttendanceType(noAttendanceType)) {
         return NextResponse.json(
           {
             success: false,
             error:
-              "noAttendanceType must be NO_CHECK_IN, NO_CHECK_OUT, or NO_CHECK_IN_OUT.",
+              "noAttendanceType must be NO_CHECK_IN, NO_CHECK_OUT, or NO_CHECK_IN_OUT when requestType is NO_ATTENDANCE.",
           },
           { status: 400 },
         );
       }
+    } else if (noAttendanceType) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "noAttendanceType is only allowed for NO_ATTENDANCE requests.",
+        },
+        { status: 400 },
+      );
     }
-
 
     if (requestType !== "NO_ATTENDANCE") {
       if (!startTime) {
@@ -466,22 +486,24 @@ export async function POST(request: NextRequest) {
           employee_no,
           request_date,
           request_type,
+          oa_number,
+          no_attendance_type,
           start_time,
           end_time,
-          no_attendance_type,
           reason,
           status,
           created_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
       `,
       [
         employeeNo,
         date,
         requestType,
+        oaNumber,
+        requestType === "NO_ATTENDANCE" ? noAttendanceType : null,
         requestType === "NO_ATTENDANCE" ? null : startTime,
         requestType === "NO_ATTENDANCE" ? null : endTime,
-        requestType === "NO_ATTENDANCE" ? noAttendanceType : null,
         reason,
         createdBy || employeeNo,
       ],

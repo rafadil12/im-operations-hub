@@ -71,6 +71,7 @@ const cn: Dict = {
     settingsRoles: "角色",
     settingsAccounts: "账号",
     shift: "班次",
+    attendance: "考勤管理",
     comingSoon: "即将推出",
     soon: "即将推出",
     expandSidebar: "展开侧边栏",

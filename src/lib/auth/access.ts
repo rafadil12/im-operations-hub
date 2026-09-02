@@ -49,6 +49,15 @@ export const PERMISSIONS = {
   sparepartMaterialsExport: "sparepart.materials.export",
   sparepartMaterialsTemplate: "sparepart.materials.template",
   sparepartLocationsManage: "sparepart.locations.manage",
+  organizationOverviewView: "organization.overview.view",
+  organizationEmployeeRead: "organization.employee.read",
+  organizationEmployeeCreate: "organization.employee.create",
+  organizationEmployeeUpdate: "organization.employee.update",
+  organizationEmployeeDelete: "organization.employee.delete",
+  organizationShiftRead: "organization.shift.read",
+  organizationShiftManage: "organization.shift.manage",
+  organizationAttendanceRead: "organization.attendance.read",
+  organizationAttendanceManage: "organization.attendance.manage",
   adminRolesManage: "admin.roles.manage",
   adminAccountsManage: "admin.accounts.manage",
 } as const;
@@ -143,6 +152,15 @@ export type RoleAccess = {
   canExportSparepartMaterials: boolean;
   canDownloadSparepartTemplate: boolean;
   canManageSparepartLocations: boolean;
+  canViewOrganizationOverview: boolean;
+  canViewOrganizationEmployees: boolean;
+  canCreateOrganizationEmployee: boolean;
+  canUpdateOrganizationEmployee: boolean;
+  canDeleteOrganizationEmployee: boolean;
+  canViewOrganizationShift: boolean;
+  canManageOrganizationShift: boolean;
+  canViewOrganizationAttendance: boolean;
+  canManageOrganizationAttendance: boolean;
   /** Enter Settings module (settings.access or roles/accounts manage). */
   canAccessSettings: boolean;
   canManageRoles: boolean;
@@ -243,6 +261,15 @@ export function getRoleAccess(account: AuthAccountPublic | null | undefined): Ro
     canExportSparepartMaterials: hasPermission(account, PERMISSIONS.sparepartMaterialsExport),
     canDownloadSparepartTemplate: hasPermission(account, PERMISSIONS.sparepartMaterialsTemplate),
     canManageSparepartLocations: hasPermission(account, PERMISSIONS.sparepartLocationsManage),
+    canViewOrganizationOverview: hasPermission(account, PERMISSIONS.organizationOverviewView),
+    canViewOrganizationEmployees: hasPermission(account, PERMISSIONS.organizationEmployeeRead),
+    canCreateOrganizationEmployee: hasPermission(account, PERMISSIONS.organizationEmployeeCreate),
+    canUpdateOrganizationEmployee: hasPermission(account, PERMISSIONS.organizationEmployeeUpdate),
+    canDeleteOrganizationEmployee: hasPermission(account, PERMISSIONS.organizationEmployeeDelete),
+    canViewOrganizationShift: hasPermission(account, PERMISSIONS.organizationShiftRead),
+    canManageOrganizationShift: hasPermission(account, PERMISSIONS.organizationShiftManage),
+    canViewOrganizationAttendance: hasPermission(account, PERMISSIONS.organizationAttendanceRead),
+    canManageOrganizationAttendance: hasPermission(account, PERMISSIONS.organizationAttendanceManage),
     canAccessSettings: hasSettingsModule || canManageRoles || canManageAccounts,
     canManageRoles,
     canManageAccounts,

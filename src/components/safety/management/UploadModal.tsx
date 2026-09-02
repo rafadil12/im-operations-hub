@@ -196,12 +196,12 @@ export function UploadModal({
               </label>
               {filePreviews.length > 0 && (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {filePreviews.map((file) => {
+                  {filePreviews.map((file, index) => {
                     const kind = getPreviewKind(file.name, file.type);
 
                     return (
                       <div
-                        key={`${file.name}-${file.url}`}
+                        key={`${file.url}-${file.name}-${index}`}
                         className="overflow-hidden rounded-xl border border-border-subtle bg-bg/30"
                       >
                         {kind === "image" ? (

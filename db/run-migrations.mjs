@@ -1351,5 +1351,37 @@ await applySqlFile(
   "Created report_week_attachments table.",
 );
 
+await applySqlFile(
+  "029_organization_permissions.sql",
+  readMigrationSql,
+  "Seeded organization module permissions.",
+);
+
+await applySqlFile(
+  "031_report_legacy_permissions.sql",
+  readMigrationSql,
+  "Retired legacy report permission codes.",
+);
+
+if (!(await columnExists("attendance_leave_requests", "oa_number"))) {
+  await conn.query(
+    `ALTER TABLE attendance_leave_requests
+       ADD COLUMN oa_number VARCHAR(64) NULL AFTER request_type`
+  );
+  console.log("Added attendance_leave_requests.oa_number.");
+} else {
+  console.log("attendance_leave_requests.oa_number already exists.");
+}
+
+if (!(await columnExists("attendance_leave_requests", "no_attendance_type"))) {
+  await conn.query(
+    `ALTER TABLE attendance_leave_requests
+       ADD COLUMN no_attendance_type VARCHAR(32) NULL AFTER oa_number`
+  );
+  console.log("Added attendance_leave_requests.no_attendance_type.");
+} else {
+  console.log("attendance_leave_requests.no_attendance_type already exists.");
+}
+
 await conn.end();
 console.log("Migrations complete.");

@@ -314,7 +314,7 @@ export async function GET(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeRead,
   );
 
   if (gate instanceof NextResponse) {
@@ -400,7 +400,7 @@ export async function PUT(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeUpdate,
   );
 
   if (gate instanceof NextResponse) {
@@ -772,7 +772,7 @@ export async function PATCH(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeUpdate,
   );
 
   if (gate instanceof NextResponse) {
@@ -927,7 +927,7 @@ export async function DELETE(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeDelete,
   );
 
   if (gate instanceof NextResponse) {

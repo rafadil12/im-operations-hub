@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
           FROM attendance_leave_requests
           WHERE request_date >= ?
             AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
-            AND request_type IN ('AL', 'MC', 'UPL', 'A', 'ALPA', 'OT')
+            AND request_type IN ('AL', 'MC', 'UPL', 'A', 'ALPA', 'OT', 'NO_ATTENDANCE')
           ORDER BY employee_no, request_date, id ASC
         `,
         [monthStart, monthStart],
