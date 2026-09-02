@@ -12,7 +12,6 @@ import {
   type SubmissionDetail,
   type SubmissionStatus,
   type UserOption,
-  type WeeklyDatabaseFile,
   type WeeklyDatabaseRow,
   type WeeklyRecord,
   INITIAL_MONTHLY_RECORD,
@@ -23,6 +22,7 @@ import {
   databaseActivityToUiActivity,
   formatDate,
   getFileMimeType,
+  mapStoredFileToPreview,
   getMonthlyEvidence,
   getWeekEvidence,
   uiActivityToDatabaseActivity,
@@ -206,20 +206,13 @@ export function useSafetyManagement() {
 
             const filePreviews: FilePreview[] =
               databaseFiles.length > 0
-                ? databaseFiles.map((file) => ({
-                    name: file.original_name,
-                    type: file.mime_type || getFileMimeType(file.original_name),
-                    url: file.file_url,
-                    size: Number(file.file_size) || 0,
-                  }))
+                ? databaseFiles.map(mapStoredFileToPreview)
                 : row.file_url
                   ? [
-                      {
+                      mapStoredFileToPreview({
                         name: row.file_name ?? "Attachment",
-                        type: getFileMimeType(row.file_name ?? ""),
                         url: row.file_url,
-                        size: 0,
-                      },
+                      }),
                     ]
                   : [];
 
@@ -311,30 +304,17 @@ export function useSafetyManagement() {
       }
 
       const buildDetail = (row: MonthlyDatabaseRow): SubmissionDetail => {
-        const files: WeeklyDatabaseFile[] = Array.isArray(row.files) ? row.files : [];
+        const files = Array.isArray(row.files) ? row.files : [];
 
         const previews: FilePreview[] =
           files.length > 0
-            ? files.map((file) => ({
-                name: file.original_name || "Attachment",
-
-                type: file.mime_type || getFileMimeType(file.original_name || ""),
-
-                url: file.file_url || "",
-
-                size: Number(file.file_size || 0),
-              }))
+            ? files.map(mapStoredFileToPreview)
             : row.file_url
               ? [
-                  {
+                  mapStoredFileToPreview({
                     name: row.file_name || "Attachment",
-
-                    type: getFileMimeType(row.file_name || ""),
-
                     url: row.file_url,
-
-                    size: 0,
-                  },
+                  }),
                 ]
               : [];
 

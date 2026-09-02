@@ -145,10 +145,10 @@ export function ViewSubmissionModal({
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {files.map((file) => (
+                {files.map((file, index) => (
                   <AttachmentPreview
                     language={language}
-                    key={`${file.name}-${file.url}`}
+                    key={`${file.url}-${file.name}-${index}`}
                     file={file}
                   />
                 ))}

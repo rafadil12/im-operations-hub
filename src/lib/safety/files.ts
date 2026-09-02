@@ -1,5 +1,27 @@
 import { safetyText } from "./copy";
-import type { SafetyLanguage } from "./types";
+import type { FilePreview, SafetyLanguage } from "./types";
+
+/** Weekly rows use original_name/file_url; monthly parseStoredFiles uses name/url. */
+export type StoredFileLike = {
+  original_name?: string | null;
+  name?: string | null;
+  file_url?: string | null;
+  url?: string | null;
+  mime_type?: string | null;
+  file_size?: number | null;
+};
+
+export function mapStoredFileToPreview(file: StoredFileLike): FilePreview {
+  const name = file.original_name || file.name || "Attachment";
+  const url = file.file_url || file.url || "";
+
+  return {
+    name,
+    type: file.mime_type || getFileMimeType(name),
+    url,
+    size: Number(file.file_size || 0),
+  };
+}
 
 export function getPreviewKind(
   name: string,
