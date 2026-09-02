@@ -529,28 +529,11 @@ export function useSafetyManagement() {
   function openMonthlyUpload(activity: ActivityType, submissionId?: number) {
     const config = MONTHLY_ACTIVITIES.find((a) => a.id === activity);
     if (!config) return;
-    const isUpdate =
-      Boolean(submissionId) ||
-      (() => {
-        const dataKey =
-          config.id === "fire-drill"
-            ? "fireDrillData"
-            : config.id === "monthly-meeting"
-              ? "monthlyMeetingData"
-              : config.id === "hazard-case"
-                ? "hazardCaseData"
-                : config.id === "safety-ppt"
-                  ? "safetyPptData"
-                  : "rewardFindingData";
-        const existing = monthly[dataKey as keyof MonthlyRecord];
-        return Boolean(existing && typeof existing === "object");
-      })();
-    if (isUpdate ? !canUpdateSafetySubmission : !canCreateSafetySubmission) {
-      return;
-    }
-    resetForm();
-    setSelectedActivity(activity);
-    setSelectedMonthlySubmissionId(activity === "reward-finding" ? (submissionId ?? null) : null);
+
+    const isRewardFinding = activity === "reward-finding";
+    const isNewRewardSubmission =
+      isRewardFinding && !submissionId && monthly.rewardSubmissions.length < 2;
+
     const dataKey =
       config.id === "fire-drill"
         ? "fireDrillData"
@@ -561,27 +544,51 @@ export function useSafetyManagement() {
             : config.id === "safety-ppt"
               ? "safetyPptData"
               : "rewardFindingData";
-    const rewardSubmission =
-      activity === "reward-finding" && submissionId
-        ? monthly.rewardSubmissions.find((submission) => submission.id === submissionId)
-        : undefined;
 
-    const existing = rewardSubmission?.detail ?? monthly[dataKey as keyof MonthlyRecord];
-    if (existing && typeof existing === "object") {
-      const detail = existing as SubmissionDetail;
-      setFileNames(detail.fileNames ?? []);
-      setFilePreviews(detail.filePreviews ?? []);
-      setDescriptionEn(detail.descriptionEn ?? detail.description ?? "");
-      setDescriptionCn(detail.descriptionCn ?? detail.description ?? "");
-      setLocation(detail.location ?? "");
+    const isUpdate = isNewRewardSubmission
+      ? false
+      : Boolean(submissionId) ||
+        (!isRewardFinding &&
+          Boolean(
+            monthly[dataKey as keyof MonthlyRecord] &&
+              typeof monthly[dataKey as keyof MonthlyRecord] === "object"
+          ));
+
+    if (isUpdate ? !canUpdateSafetySubmission : !canCreateSafetySubmission) {
+      return;
+    }
+    resetForm();
+    setSelectedActivity(activity);
+    setSelectedMonthlySubmissionId(isRewardFinding ? (submissionId ?? null) : null);
+
+    let existing: SubmissionDetail | undefined;
+    if (isRewardFinding) {
+      if (submissionId) {
+        existing = monthly.rewardSubmissions.find(
+          (submission) => submission.id === submissionId
+        )?.detail;
+      }
+    } else {
+      const record = monthly[dataKey as keyof MonthlyRecord];
+      if (record && typeof record === "object") {
+        existing = record as SubmissionDetail;
+      }
+    }
+
+    if (existing) {
+      setFileNames(existing.fileNames ?? []);
+      setFilePreviews(existing.filePreviews ?? []);
+      setDescriptionEn(existing.descriptionEn ?? existing.description ?? "");
+      setDescriptionCn(existing.descriptionCn ?? existing.description ?? "");
+      setLocation(existing.location ?? "");
       setPic(
         safetyLanguage === "cn"
-          ? detail.picCn || detail.picEn || detail.pic || ""
-          : detail.picEn || detail.picCn || detail.pic || ""
+          ? existing.picCn || existing.picEn || existing.pic || ""
+          : existing.picEn || existing.picCn || existing.pic || ""
       );
       setDate(
-        detail.date
-          ? convertDisplayDateToInput(detail.date, selectedMonthDefaultDate)
+        existing.date
+          ? convertDisplayDateToInput(existing.date, selectedMonthDefaultDate)
           : selectedMonthDefaultDate
       );
     }
