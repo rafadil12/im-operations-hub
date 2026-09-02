@@ -1548,7 +1548,8 @@ export default function AttendanceOverviewPage() {
 
             if (
               schedule?.schedule_type === "D" ||
-              schedule?.schedule_type === "D/S"
+              schedule?.schedule_type === "D/S"||
+              schedule?.schedule_type === "1"
             ) {
               dayShiftEmployees.push(employee);
             }
@@ -3059,7 +3060,7 @@ export default function AttendanceOverviewPage() {
                             </span>
 
                             <span className="ml-2 shrink-0 text-[9px] font-extrabold text-emerald-500">
-                              Present
+                              {language === "cn" ? "出勤" : "Present"}
                             </span>
                           </div>
                         </div>
@@ -3124,7 +3125,7 @@ export default function AttendanceOverviewPage() {
                             </span>
 
                             <span className="ml-2 shrink-0 text-[9px] font-extrabold text-emerald-500">
-                              Present
+                              {language === "cn" ? "出勤" : "Present"}
                             </span>
                           </div>
                         </div>
@@ -3193,17 +3194,11 @@ export default function AttendanceOverviewPage() {
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                      {language ===
-                      "cn"
-                        ? "部门"
-                        : "Department"}  Employees
+                     {language === "cn" ? "员工" : "Employees"}
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                       {language ===
-                      "cn"
-                        ? "部门"
-                        : "Department"} Present
+                        {language === "cn" ? "出勤" : "Present"}
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
