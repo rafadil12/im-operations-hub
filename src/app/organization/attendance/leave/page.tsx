@@ -6,7 +6,8 @@ import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
 
-type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA";
+type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA" | "NO_ATTENDANCE";
+type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT" | "NO_CHECK_IN_OUT";
 type RequestStatus = "Pending" | "Approved" | "Rejected";
 
 type Employee = {
@@ -33,6 +34,8 @@ type LeaveRequest = {
   createdAt: string;
   managerEmployeeNo?: string | null;
   managerName?: string;
+  noAttendanceType?: NoAttendanceType | null;
+  oaNumber?: string | null;
 };
 
 const TYPE_META: Record<
@@ -68,7 +71,13 @@ const TYPE_META: Record<
     labelCn: "旷工",
     className:
     "border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10",
-},
+  },
+  NO_ATTENDANCE: {
+    labelEn: "No Attendance",
+    labelCn: "未打卡",
+    className:
+      "border-rose-200 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/10",
+  },
 };
 
 const STATUS_META: Record<
@@ -116,6 +125,10 @@ type LeaveApiRow = {
   manager_employee_no: string | null;
   manager_name_en: string | null;
   manager_name_cn: string | null;
+  no_attendance_type?: NoAttendanceType | null;
+  noAttendanceType?: NoAttendanceType | null;
+  oa_number: string | null;
+  oaNumber?: string | null;
 };
 
 function employeeDisplayName(
@@ -200,6 +213,10 @@ export default function LeavePermissionPage() {
   const [isManager, setIsManager] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [approvalId, setApprovalId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [oaSavingId, setOaSavingId] = useState<string | null>(null);
+  const [oaDrafts, setOaDrafts] = useState<Record<string, string>>({});
+  const [oaEditingIds, setOaEditingIds] = useState<Record<string, boolean>>({});
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(true);
@@ -210,6 +227,7 @@ export default function LeavePermissionPage() {
   const [department, setDepartment] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<RequestType>("AL");
+  const [noAttendanceType, setNoAttendanceType] = useState<NoAttendanceType | null>(null);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [reason, setReason] = useState("");
@@ -219,6 +237,7 @@ export default function LeavePermissionPage() {
   const [dateFilter, setDateFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState<"" | RequestType>("");
   const [statusFilter, setStatusFilter] = useState<"" | RequestStatus>("");
+  const [oaNumberFilter, setOaNumberFilter] = useState<"" | "HAS_OA" | "NO_OA">("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -241,13 +260,19 @@ export default function LeavePermissionPage() {
           account?: {
             id?: number | null;
             employeeNo?: string | null;
+            employee_no?: string | null;
+            role?: string | null;
+            roleName?: string | null;
           } | null;
         };
 
         if (cancelled) return;
 
-        const employeeNo = payload.account?.employeeNo ?? null;
-        const userId = payload.account?.id ?? null;
+        const account = payload.account ?? null;
+        const employeeNo =
+          account?.employeeNo ?? account?.employee_no ?? null;
+        const userId = account?.id ?? null;
+        const role = account?.roleName ?? account?.role ?? null;
 
         setCurrentEmployeeNo(
           employeeNo ? String(employeeNo).trim() : null,
@@ -255,12 +280,16 @@ export default function LeavePermissionPage() {
         setCurrentUserId(
           typeof userId === "number" ? userId : null,
         );
+        setCurrentUserRole(
+          role ? String(role).trim().toLowerCase() : null,
+        );
       } catch (error) {
         if (!cancelled) {
           console.error("Failed to load current login account", error);
           setCurrentEmployeeNo(null);
         setCurrentUserId(null);
-        setIsManager(false);
+        setCurrentUserRole(null);
+          setIsManager(false);
         }
       } finally {
         if (!cancelled) {
@@ -372,8 +401,11 @@ export default function LeavePermissionPage() {
       startTime: row.start_time ? String(row.start_time).slice(0, 5) : "",
       endTime: row.end_time ? String(row.end_time).slice(0, 5) : "",
       reason: row.reason ?? "",
+      noAttendanceType:
+        row.no_attendance_type ?? row.noAttendanceType ?? null,
       status: row.status,
       createdAt: row.created_at,
+      oaNumber: row.oa_number ?? row.oaNumber ?? null,
     };
   };
 
@@ -534,6 +566,65 @@ export default function LeavePermissionPage() {
     }
   };
 
+  const noAttendanceLabel = (value: NoAttendanceType | null | undefined) => {
+    if (!value) return "—";
+    const labels: Record<NoAttendanceType, { en: string; cn: string }> = {
+      NO_CHECK_IN: { en: "No Check-in", cn: "未打上班卡" },
+      NO_CHECK_OUT: { en: "No Check-out", cn: "未打下班卡" },
+      NO_CHECK_IN_OUT: { en: "No Check-in & Check-out", cn: "上下班均未打卡" },
+    };
+    return language === "cn" ? labels[value].cn : labels[value].en;
+  };
+
+  const canEditOaNumber = (item: LeaveRequest) =>
+    item.status === "Approved" &&
+    String(currentUserRole ?? "").trim().toLowerCase() === "admin";
+
+  const updateOaNumber = async (request: LeaveRequest) => {
+    if (!canEditOaNumber(request) || oaSavingId) return;
+    const value = (oaDrafts[request.id] ?? request.oaNumber ?? "").trim();
+    setOaSavingId(request.id);
+    setRequestsError(null);
+    try {
+      const response = await fetch(API_LEAVE, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: Number(request.id), oaNumber: value || null }),
+      });
+      const payload = (await response.json()) as {
+        success?: boolean;
+        data?: LeaveApiRow;
+        error?: string;
+      };
+      if (!response.ok || payload.success === false || !payload.data) {
+        throw new Error(payload.error || `Leave API failed: ${response.status}`);
+      }
+      setRequests((current) =>
+        current.map((item) =>
+          item.id === request.id ? mapLeaveRow(payload.data as LeaveApiRow) : item,
+        ),
+      );
+      setOaDrafts((current) => {
+        const next = { ...current };
+        delete next[request.id];
+        return next;
+      });
+      setOaEditingIds((current) => ({
+        ...current,
+        [request.id]: false,
+      }));
+    } catch (error) {
+      setRequestsError(error instanceof Error ? error.message : "Failed to update OA Number.");
+    } finally {
+      setOaSavingId(null);
+    }
+  };
+
+  const totalRequestsCount = useMemo(
+    () => requests.length,
+    [requests],
+  );
+
   const pendingCount = useMemo(
     () => requests.filter((item) => item.status === "Pending").length,
     [requests],
@@ -544,13 +635,21 @@ export default function LeavePermissionPage() {
     [requests],
   );
 
-  const leaveCount = useMemo(
-    () => requests.filter((item) => item.type === "AL").length,
+  const rejectedCount = useMemo(
+    () => requests.filter((item) => item.status === "Rejected").length,
     [requests],
   );
 
-  const permissionCount = useMemo(
-    () => requests.filter((item) => item.type === "UPL").length,
+  const noAttendanceCount = useMemo(
+    () => requests.filter((item) => item.type === "NO_ATTENDANCE").length,
+    [requests],
+  );
+
+  const oaCompletedCount = useMemo(
+    () =>
+      requests.filter(
+        (item) => item.status === "Approved" && Boolean(item.oaNumber?.trim()),
+      ).length,
     [requests],
   );
 
@@ -561,6 +660,8 @@ export default function LeavePermissionPage() {
       if (dateFilter && item.date !== dateFilter) return false;
       if (typeFilter && item.type !== typeFilter) return false;
       if (statusFilter && item.status !== statusFilter) return false;
+      if (oaNumberFilter === "HAS_OA" && !item.oaNumber?.trim()) return false;
+      if (oaNumberFilter === "NO_OA" && item.oaNumber?.trim()) return false;
       return true;
     });
   }, [
@@ -570,6 +671,7 @@ export default function LeavePermissionPage() {
     dateFilter,
     typeFilter,
     statusFilter,
+    oaNumberFilter,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
@@ -587,6 +689,7 @@ export default function LeavePermissionPage() {
     dateFilter,
     typeFilter,
     statusFilter,
+    oaNumberFilter,
   ]);
 
   React.useEffect(() => {
@@ -618,6 +721,7 @@ export default function LeavePermissionPage() {
     );
     setDate("");
     setType("AL");
+    setNoAttendanceType(null);
     setStartTime("");
     setEndTime("");
     setReason("");
@@ -628,15 +732,15 @@ export default function LeavePermissionPage() {
       !employeeNo.trim() ||
       !employeeName.trim() ||
       !date ||
-      !startTime ||
-      !endTime ||
+      (type === "NO_ATTENDANCE" && !noAttendanceType) ||
+      (type !== "NO_ATTENDANCE" && (!startTime || !endTime)) ||
       !reason.trim() ||
       submitting
     ) {
       return;
     }
 
-    if (startTime >= endTime) {
+    if (type !== "NO_ATTENDANCE" && startTime >= endTime) {
       setRequestsError(
         language === "cn"
           ? "结束时间必须晚于开始时间。"
@@ -658,8 +762,9 @@ export default function LeavePermissionPage() {
           employeeNo: employeeNo.trim(),
           date,
           requestType: type,
-          startTime,
-          endTime,
+          noAttendanceType: type === "NO_ATTENDANCE" ? noAttendanceType : null,
+          startTime: type === "NO_ATTENDANCE" ? null : startTime,
+          endTime: type === "NO_ATTENDANCE" ? null : endTime,
           reason: reason.trim(),
           createdBy: employeeNo.trim(),
         }),
@@ -703,9 +808,18 @@ export default function LeavePermissionPage() {
       : STATUS_META[status].labelEn;
 
   const typeLabel = (value: RequestType) =>
-    language === "cn"
-      ? TYPE_META[value].labelCn
-      : TYPE_META[value].labelEn;
+    TYPE_META[value]?.[language === "cn" ? "labelCn" : "labelEn"] ?? String(value);
+
+  const requestTypeDisplayLabel = (item: LeaveRequest) => {
+    if (item.type === "NO_ATTENDANCE") {
+      const attendanceLabel = noAttendanceLabel(item.noAttendanceType);
+      return attendanceLabel === "—"
+        ? `${item.type} · ${typeLabel(item.type)}`
+        : `${item.type} · ${attendanceLabel}`;
+    }
+
+    return `${item.type} · ${typeLabel(item.type)}`;
+  };
 
   return (
     <AppShell
@@ -722,8 +836,69 @@ export default function LeavePermissionPage() {
           }
 
           [data-theme="dark"] .leave-page-text,
-          [data-theme="dark"] .leave-type-text {
-            color: #ffffff !important;
+          [data-theme="dark"] .leave-type-text,
+          [data-theme="dark"] .leave-status-pending,
+          [data-theme="dark"] .leave-status-approved,
+          [data-theme="dark"] .leave-status-rejected {
+            color: #f8fafc !important;
+          }
+
+          /* Dark mode: keep badges readable instead of using light-mode fills. */
+          [data-theme="dark"] .leave-type-pill {
+            color: #f8fafc !important;
+            background-color: #172033 !important;
+            border-color: #475569 !important;
+          }
+
+          [data-theme="dark"] .leave-type-pill[data-request-type="AL"] {
+            background-color: #172554 !important;
+            border-color: #3b82f6 !important;
+          }
+
+          [data-theme="dark"] .leave-type-pill[data-request-type="MC"] {
+            background-color: #2e1065 !important;
+            border-color: #8b5cf6 !important;
+          }
+
+          [data-theme="dark"] .leave-type-pill[data-request-type="UPL"] {
+            background-color: #1e1b4b !important;
+            border-color: #6366f1 !important;
+          }
+
+          [data-theme="dark"] .leave-type-pill[data-request-type="OT"] {
+            background-color: #431407 !important;
+            border-color: #f97316 !important;
+          }
+
+          [data-theme="dark"] .leave-type-pill[data-request-type="ALPA"] {
+            background-color: #450a0a !important;
+            border-color: #ef4444 !important;
+          }
+
+          [data-theme="dark"] .leave-type-pill[data-request-type="NO_ATTENDANCE"] {
+            background-color: #4c0519 !important;
+            border-color: #fb7185 !important;
+          }
+
+          [data-theme="dark"] .leave-status-pill {
+            color: #f8fafc !important;
+            background-color: #172033 !important;
+            border-color: #475569 !important;
+          }
+
+          [data-theme="dark"] .leave-status-pill[data-status="Pending"] {
+            background-color: #422006 !important;
+            border-color: #f59e0b !important;
+          }
+
+          [data-theme="dark"] .leave-status-pill[data-status="Approved"] {
+            background-color: #052e16 !important;
+            border-color: #34d399 !important;
+          }
+
+          [data-theme="dark"] .leave-status-pill[data-status="Rejected"] {
+            background-color: #450a0a !important;
+            border-color: #f87171 !important;
           }
 
           [data-theme="light"] .leave-status-pending {
@@ -796,7 +971,12 @@ export default function LeavePermissionPage() {
           </button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <MetricCard
+            label={language === "cn" ? "总申请数" : "Total Requests"}
+            value={totalRequestsCount}
+            tone="blue"
+          />
           <MetricCard
             label={language === "cn" ? "待审核" : "Pending"}
             value={pendingCount}
@@ -808,13 +988,18 @@ export default function LeavePermissionPage() {
             tone="emerald"
           />
           <MetricCard
-            label={language === "cn" ? "年假申请" : "Annual Leave"}
-            value={leaveCount}
-            tone="blue"
+            label={language === "cn" ? "已拒绝" : "Rejected"}
+            value={rejectedCount}
+            tone="red"
           />
           <MetricCard
-            label={language === "cn" ? "外出 / 事假" : "Permission"}
-            value={permissionCount}
+            label={language === "cn" ? "未打卡" : "No Attendance"}
+            value={noAttendanceCount}
+            tone="rose"
+          />
+          <MetricCard
+            label={language === "cn" ? "OA 已完成" : "OA Completed"}
+            value={oaCompletedCount}
             tone="indigo"
           />
         </div>
@@ -840,7 +1025,7 @@ export default function LeavePermissionPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 border-b border-border-subtle p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-3 border-b border-border-subtle p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <select
               value={employeeFilter}
               onChange={(event) => setEmployeeFilter(event.target.value)}
@@ -910,6 +1095,20 @@ export default function LeavePermissionPage() {
                 </option>
               ))}
             </select>
+
+            <select
+              value={oaNumberFilter}
+              onChange={(event) =>
+                setOaNumberFilter(
+                  event.target.value as "" | "HAS_OA" | "NO_OA",
+                )
+              }
+              className="leave-filter-input"
+            >
+              <option value="">{language === "cn" ? "所有 OA 编号" : "All OA Numbers"}</option>
+              <option value="HAS_OA">{language === "cn" ? "有 OA 编号" : "Has OA Number"}</option>
+              <option value="NO_OA">{language === "cn" ? "无 OA 编号" : "No OA Number"}</option>
+            </select>
           </div>
 
           {requestsError && (
@@ -954,6 +1153,9 @@ export default function LeavePermissionPage() {
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "状态" : "Status"}
                   </th>
+                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                    {language === "cn" ? "OA 编号" : "OA Number"}
+                  </th>
                   <th className="border-b border-border px-3 py-3 text-center text-[10px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "操作" : "Action"}
                   </th>
@@ -964,7 +1166,7 @@ export default function LeavePermissionPage() {
                 {requestsLoading ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
                     >
                       {language === "cn"
@@ -975,7 +1177,7 @@ export default function LeavePermissionPage() {
                 ) : requests.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
                     >
                       {language === "cn"
@@ -1008,10 +1210,11 @@ export default function LeavePermissionPage() {
 
                     <td className="px-3 py-3">
                       <span
-                        className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${TYPE_META[item.type].className}`}
+                        data-request-type={item.type}
+                        className={`leave-type-pill inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${TYPE_META[item.type]?.className ?? "border-slate-200 bg-slate-50"}`}
                       >
                         <span className="leave-type-text">
-                          {item.type} · {typeLabel(item.type)}
+                          {requestTypeDisplayLabel(item)}
                         </span>
                       </span>
                     </td>
@@ -1032,7 +1235,8 @@ export default function LeavePermissionPage() {
 
                     <td className="border-r border-border px-3 py-3">
                       <span
-                        className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${STATUS_META[item.status].className}`}
+                        data-status={item.status}
+                        className={`leave-status-pill inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${STATUS_META[item.status]?.className ?? "border-slate-200 bg-slate-50"}`}
                       >
                         <span
                           className={
@@ -1046,6 +1250,82 @@ export default function LeavePermissionPage() {
                           {statusLabel(item.status)}
                         </span>
                       </span>
+                    </td>
+
+                    <td className="border-r border-border px-3 py-3">
+                      {item.status === "Approved" ? (
+                        canEditOaNumber(item) ? (
+                          oaEditingIds[item.id] || !item.oaNumber ? (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                value={oaDrafts[item.id] ?? item.oaNumber ?? ""}
+                                onChange={(event) =>
+                                  setOaDrafts((current) => ({
+                                    ...current,
+                                    [item.id]: event.target.value,
+                                  }))
+                                }
+                                disabled={oaSavingId === item.id}
+                                className="w-32 rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-semibold text-text"
+                                placeholder={language === "cn" ? "OA 编号" : "OA Number"}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void updateOaNumber(item)}
+                                disabled={oaSavingId === item.id}
+                                className="rounded-lg bg-cyan-600 px-2 py-1.5 text-[10px] font-bold text-white disabled:opacity-50"
+                              >
+                                {oaSavingId === item.id ? "..." : language === "cn" ? "保存" : "Save"}
+                              </button>
+                              {oaEditingIds[item.id] && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setOaEditingIds((current) => ({
+                                      ...current,
+                                      [item.id]: false,
+                                    }))
+                                  }
+                                  disabled={oaSavingId === item.id}
+                                  className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-bold text-text disabled:opacity-50"
+                                >
+                                  {language === "cn" ? "取消" : "Cancel"}
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold text-text">
+                                {item.oaNumber}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOaDrafts((current) => ({
+                                    ...current,
+                                    [item.id]: item.oaNumber ?? "",
+                                  }));
+                                  setOaEditingIds((current) => ({
+                                    ...current,
+                                    [item.id]: true,
+                                  }));
+                                }}
+                                className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover"
+                              >
+                                {language === "cn" ? "编辑" : "Edit"}
+                              </button>
+                            </div>
+                          )
+                        ) : (
+                          <span className="text-[10px] font-semibold text-text-muted">
+                            {item.oaNumber || "—"}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-[10px] font-semibold text-text-muted">
+                          —
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-3 py-3">
@@ -1274,27 +1554,53 @@ export default function LeavePermissionPage() {
                     <option value="ALPA">
                       ALPA — {language === "cn" ? "旷工" : "Absent Without Leave"}
                     </option>
+                    <option value="NO_ATTENDANCE">
+                      {language === "cn" ? "未打卡" : "No Attendance"}
+                    </option>
                   </select>
                 </Field>
 
-                <Field label={language === "cn" ? "开始时间" : "Start Time"}>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
-                    className="field-input"
-                  />
-                </Field>
+                {type === "NO_ATTENDANCE" && (
+                  <Field label={language === "cn" ? "未打卡类型" : "No Attendance Type"}>
+                    <select
+                      value={noAttendanceType ?? ""}
+                      onChange={(event) =>
+                        setNoAttendanceType(
+                          (event.target.value || null) as NoAttendanceType | null,
+                        )
+                      }
+                      className="field-input"
+                    >
+                      <option value="">{language === "cn" ? "请选择" : "Select"}</option>
+                      <option value="NO_CHECK_IN">{language === "cn" ? "未打上班卡" : "No Check-in"}</option>
+                      <option value="NO_CHECK_OUT">{language === "cn" ? "未打下班卡" : "No Check-out"}</option>
+                      <option value="NO_CHECK_IN_OUT">{language === "cn" ? "上下班均未打卡" : "No Check-in & Check-out"}</option>
+                    </select>
+                  </Field>
+                )}
 
-                <Field label={language === "cn" ? "结束时间" : "End Time"}>
-                  <input
-                    type="time"
-                    value={endTime}
-                    min={startTime || undefined}
-                    onChange={(event) => setEndTime(event.target.value)}
-                    className="field-input"
-                  />
-                </Field>
+                {type !== "NO_ATTENDANCE" && (
+                  <>
+                    <Field label={language === "cn" ? "开始时间" : "Start Time"}>
+                      <input
+                        type="time"
+                        value={startTime}
+                        onChange={(event) => setStartTime(event.target.value)}
+                        className="field-input"
+                      />
+                    </Field>
+
+                    <Field label={language === "cn" ? "结束时间" : "End Time"}>
+                      <input
+                        type="time"
+                        value={endTime}
+                        min={startTime || undefined}
+                        onChange={(event) => setEndTime(event.target.value)}
+                        className="field-input"
+                      />
+                    </Field>
+                  </>
+                )}
 
                 <div className="md:col-span-2">
                   <Field label={language === "cn" ? "原因" : "Reason"}>
@@ -1330,8 +1636,9 @@ export default function LeavePermissionPage() {
                     submitting ||
                     !employeeNo ||
                     !date ||
-                    !startTime ||
-                    !endTime ||
+                    (type === "NO_ATTENDANCE"
+                      ? !noAttendanceType
+                      : !startTime || !endTime) ||
                     !reason.trim()
                   }
                   className="rounded-lg bg-cyan-600 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1360,7 +1667,7 @@ function MetricCard({
 }: {
   label: string;
   value: number;
-  tone: "amber" | "emerald" | "blue" | "indigo";
+  tone: "amber" | "emerald" | "blue" | "indigo" | "red" | "rose";
 }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.12)]">

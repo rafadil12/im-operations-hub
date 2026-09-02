@@ -158,41 +158,41 @@ function cellClass(
   language: OrganizationLanguage,
 ) {
   const base =
-    "h-10 min-w-[58px] border-r border-b px-2 text-center align-middle text-[10px] font-extrabold transition-all";
+    "h-10 min-w-[58px] border-r border-b px-2 text-center align-middle text-[10px] font-extrabold text-slate-800 transition-all dark:text-slate-100";
 
   if (value === "10.5") {
-    return `${base} border-cyan-200 bg-cyan-50 hover:bg-cyan-100 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/15`;
+    return `${base} border-cyan-200 bg-cyan-50 text-cyan-900 hover:bg-cyan-100 dark:border-cyan-400/40 dark:bg-cyan-500/20 dark:text-cyan-50 dark:hover:bg-cyan-500/30`;
   }
 
   if (value === "8") {
-    return `${base} border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15`;
+    return `${base} border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400/40 dark:bg-emerald-500/20 dark:text-emerald-50 dark:hover:bg-emerald-500/30`;
   }
 
   if (value === "4") {
-    return `${base} border-amber-300 bg-amber-100 hover:bg-amber-200 dark:border-amber-500/35 dark:bg-amber-500/10 dark:hover:bg-amber-500/15`;
+    return `${base} border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-400/40 dark:bg-amber-500/20 dark:text-amber-50 dark:hover:bg-amber-500/30`;
   }
 
   if (value === "OFF") {
-    return `${base} border-rose-300 bg-rose-100 hover:bg-rose-200 dark:border-rose-500/40 dark:bg-rose-500/10 dark:hover:bg-rose-500/15`;
+    return `${base} border-rose-300 bg-rose-100 text-rose-900 hover:bg-rose-200 dark:border-rose-400/40 dark:bg-rose-500/20 dark:text-rose-50 dark:hover:bg-rose-500/30`;
   }
 
   if (value === "AL") {
-    return `${base} border-blue-200 bg-blue-50 hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/15`;
+    return `${base} border-blue-200 bg-blue-50 text-blue-900 hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/20 dark:text-blue-50 dark:hover:bg-blue-500/30`;
   }
 
   if (value === "MC") {
-    return `${base} border-violet-200 bg-violet-50 hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-500/10 dark:hover:bg-violet-500/15`;
+    return `${base} border-violet-200 bg-violet-50 text-violet-900 hover:bg-violet-100 dark:border-violet-400/40 dark:bg-violet-500/20 dark:text-violet-50 dark:hover:bg-violet-500/30`;
   }
 
   if (value === "UPL") {
-    return `${base} border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/15`;
+    return `${base} border-indigo-200 bg-indigo-50 text-indigo-900 hover:bg-indigo-100 dark:border-indigo-400/40 dark:bg-indigo-500/20 dark:text-indigo-50 dark:hover:bg-indigo-500/30`;
   }
 
   if (value === "A") {
-    return `${base} border-red-300 bg-red-100 hover:bg-red-200 dark:border-red-500/40 dark:bg-red-500/10 dark:hover:bg-red-500/15`;
+    return `${base} border-red-300 bg-red-100 text-red-900 hover:bg-red-200 dark:border-red-400/40 dark:bg-red-500/20 dark:text-red-50 dark:hover:bg-red-500/30`;
   }
 
-  return `${base} border-border bg-surface hover:bg-surface-hover`;
+  return `${base} border-border bg-surface text-text hover:bg-surface-hover dark:text-slate-100`;
 }
 
 function LegendItem({
