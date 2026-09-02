@@ -108,7 +108,7 @@ export async function GET(
   request: NextRequest,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeRead,
   );
 
   if (gate instanceof NextResponse) {
@@ -406,7 +406,7 @@ export async function POST(
   request: NextRequest,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeCreate,
   );
 
   if (gate instanceof NextResponse) {

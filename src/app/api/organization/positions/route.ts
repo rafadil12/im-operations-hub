@@ -119,7 +119,7 @@ export async function GET(
    */
 
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeRead,
   );
 
   if (gate instanceof NextResponse) {

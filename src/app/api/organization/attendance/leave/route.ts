@@ -3,14 +3,17 @@ import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-type LeaveType = "AL" | "MC" | "UPL" | "OT" | "ALPA";
+type LeaveType = "AL" | "MC" | "UPL" | "OT" | "ALPA" | "NO_ATTENDANCE";
 type LeaveStatus = "Pending" | "Approved" | "Rejected";
+type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT";
 
 type LeaveRequestRow = {
   id: number;
   employee_no: string;
   request_date: string;
   request_type: LeaveType;
+  oa_number: string | null;
+  no_attendance_type: NoAttendanceType | null;
   start_time: string | null;
   end_time: string | null;
   reason: string | null;
@@ -42,8 +45,19 @@ function isLeaveType(value: unknown): value is LeaveType {
     value === "MC" ||
     value === "UPL" ||
     value === "OT" ||
-    value === "ALPA"
+    value === "ALPA" ||
+    value === "NO_ATTENDANCE"
   );
+}
+
+function isNoAttendanceType(value: unknown): value is NoAttendanceType {
+  return value === "NO_CHECK_IN" || value === "NO_CHECK_OUT";
+}
+
+function parseOaNumber(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
 }
 
 function isLeaveStatus(value: unknown): value is LeaveStatus {
@@ -206,6 +220,8 @@ export async function GET(request: NextRequest) {
           r.employee_no,
           r.request_date,
           r.request_type,
+          r.oa_number,
+          r.no_attendance_type,
           r.start_time,
           r.end_time,
           r.reason,
@@ -290,6 +306,8 @@ export async function POST(request: NextRequest) {
       employeeNo?: unknown;
       date?: unknown;
       requestType?: unknown;
+      oaNumber?: unknown;
+      noAttendanceType?: unknown;
       startTime?: unknown;
       endTime?: unknown;
       reason?: unknown;
@@ -299,6 +317,12 @@ export async function POST(request: NextRequest) {
     const employeeNo = String(body.employeeNo ?? "").trim();
     const date = String(body.date ?? "").trim();
     const requestType = String(body.requestType ?? "").trim();
+    const oaNumber = parseOaNumber(body.oaNumber);
+    const noAttendanceTypeRaw = body.noAttendanceType;
+    const noAttendanceType =
+      noAttendanceTypeRaw === undefined || noAttendanceTypeRaw === null
+        ? null
+        : String(noAttendanceTypeRaw).trim();
     const startTime = normalizeTime(body.startTime);
     const endTime = normalizeTime(body.endTime);
     const reason = String(body.reason ?? "").trim();
@@ -322,7 +346,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "requestType must be AL, MC, UPL, OT, or ALPA.",
+          error:
+            "requestType must be AL, MC, UPL, OT, ALPA, or NO_ATTENDANCE.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (requestType === "NO_ATTENDANCE") {
+      if (!isNoAttendanceType(noAttendanceType)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "noAttendanceType must be NO_CHECK_IN or NO_CHECK_OUT when requestType is NO_ATTENDANCE.",
+          },
+          { status: 400 },
+        );
+      }
+    } else if (noAttendanceType) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "noAttendanceType is only allowed for NO_ATTENDANCE requests.",
         },
         { status: 400 },
       );
@@ -434,18 +480,22 @@ export async function POST(request: NextRequest) {
           employee_no,
           request_date,
           request_type,
+          oa_number,
+          no_attendance_type,
           start_time,
           end_time,
           reason,
           status,
           created_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
       `,
       [
         employeeNo,
         date,
         requestType,
+        oaNumber,
+        requestType === "NO_ATTENDANCE" ? noAttendanceType : null,
         startTime,
         endTime,
         reason,
@@ -460,6 +510,8 @@ export async function POST(request: NextRequest) {
           employee_no,
           request_date,
           request_type,
+          oa_number,
+          no_attendance_type,
           start_time,
           end_time,
           reason,
@@ -593,6 +645,8 @@ export async function PATCH(request: NextRequest) {
           r.employee_no,
           r.request_date,
           r.request_type,
+          r.oa_number,
+          r.no_attendance_type,
           r.start_time,
           r.end_time,
           r.reason,
@@ -774,6 +828,8 @@ export async function PATCH(request: NextRequest) {
           employee_no,
           request_date,
           request_type,
+          oa_number,
+          no_attendance_type,
           start_time,
           end_time,
           reason,

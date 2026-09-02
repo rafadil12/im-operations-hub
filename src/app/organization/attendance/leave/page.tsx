@@ -6,8 +6,9 @@ import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
 
-type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA";
+type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA" | "NO_ATTENDANCE";
 type RequestStatus = "Pending" | "Approved" | "Rejected";
+type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT";
 
 type Employee = {
   id: number;
@@ -26,6 +27,8 @@ type LeaveRequest = {
   department: string;
   date: string;
   type: RequestType;
+  noAttendanceType?: NoAttendanceType | null;
+  oaNumber?: string | null;
   startTime: string;
   endTime: string;
   reason: string;
@@ -67,8 +70,28 @@ const TYPE_META: Record<
     labelEn: "Absent Without Leave",
     labelCn: "旷工",
     className:
-    "border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10",
-},
+      "border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10",
+  },
+  NO_ATTENDANCE: {
+    labelEn: "No Attendance",
+    labelCn: "未打卡",
+    className:
+      "border-slate-200 bg-slate-50 dark:border-slate-500/30 dark:bg-slate-500/10",
+  },
+};
+
+const NO_ATTENDANCE_SUB_META: Record<
+  NoAttendanceType,
+  { labelEn: string; labelCn: string }
+> = {
+  NO_CHECK_IN: {
+    labelEn: "No Check In",
+    labelCn: "未签到",
+  },
+  NO_CHECK_OUT: {
+    labelEn: "No Check Out",
+    labelCn: "未签退",
+  },
 };
 
 const STATUS_META: Record<
@@ -95,6 +118,23 @@ const STATUS_META: Record<
   },
 };
 
+function parseRequestType(value: unknown): RequestType {
+  const raw = String(value ?? "").trim();
+  if (raw in TYPE_META) {
+    return raw as RequestType;
+  }
+  // Legacy rows saved before request_type was enforced.
+  return "ALPA";
+}
+
+function parseNoAttendanceType(value: unknown): NoAttendanceType | null {
+  const raw = String(value ?? "").trim();
+  if (raw === "NO_CHECK_IN" || raw === "NO_CHECK_OUT") {
+    return raw;
+  }
+  return null;
+}
+
 const API_EMPLOYEES = "/api/organization/employees?limit=100";
 const API_LEAVE = "/api/organization/attendance/leave";
 
@@ -102,7 +142,9 @@ type LeaveApiRow = {
   id: number;
   employee_no: string;
   request_date: string;
-  request_type: RequestType;
+  request_type: RequestType | string;
+  oa_number: string | null;
+  no_attendance_type: NoAttendanceType | null;
   start_time: string | null;
   end_time: string | null;
   reason: string | null;
@@ -210,6 +252,9 @@ export default function LeavePermissionPage() {
   const [department, setDepartment] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<RequestType>("AL");
+  const [noAttendanceType, setNoAttendanceType] =
+    useState<NoAttendanceType>("NO_CHECK_IN");
+  const [oaNumber, setOaNumber] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [reason, setReason] = useState("");
@@ -368,7 +413,9 @@ export default function LeavePermissionPage() {
         language,
       ),
       date: String(row.request_date).slice(0, 10),
-      type: row.request_type,
+      type: parseRequestType(row.request_type),
+      noAttendanceType: parseNoAttendanceType(row.no_attendance_type),
+      oaNumber: row.oa_number?.trim() || null,
       startTime: row.start_time ? String(row.start_time).slice(0, 5) : "",
       endTime: row.end_time ? String(row.end_time).slice(0, 5) : "",
       reason: row.reason ?? "",
@@ -618,6 +665,8 @@ export default function LeavePermissionPage() {
     );
     setDate("");
     setType("AL");
+    setNoAttendanceType("NO_CHECK_IN");
+    setOaNumber("");
     setStartTime("");
     setEndTime("");
     setReason("");
@@ -658,6 +707,8 @@ export default function LeavePermissionPage() {
           employeeNo: employeeNo.trim(),
           date,
           requestType: type,
+          oaNumber: oaNumber.trim() || null,
+          noAttendanceType: type === "NO_ATTENDANCE" ? noAttendanceType : null,
           startTime,
           endTime,
           reason: reason.trim(),
@@ -702,10 +753,20 @@ export default function LeavePermissionPage() {
       ? STATUS_META[status].labelCn
       : STATUS_META[status].labelEn;
 
-  const typeLabel = (value: RequestType) =>
-    language === "cn"
-      ? TYPE_META[value].labelCn
-      : TYPE_META[value].labelEn;
+  const typeLabel = (value: RequestType, subType?: NoAttendanceType | null) => {
+    const base =
+      language === "cn" ? TYPE_META[value].labelCn : TYPE_META[value].labelEn;
+
+    if (value === "NO_ATTENDANCE" && subType) {
+      const sub =
+        language === "cn"
+          ? NO_ATTENDANCE_SUB_META[subType].labelCn
+          : NO_ATTENDANCE_SUB_META[subType].labelEn;
+      return `${base} · ${sub}`;
+    }
+
+    return base;
+  };
 
   return (
     <AppShell
@@ -943,6 +1004,9 @@ export default function LeavePermissionPage() {
                     {language === "cn" ? "类型" : "Type"}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                    {language === "cn" ? "OA 编号" : "OA Number"}
+                  </th>
+                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "开始" : "Start"}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
@@ -964,7 +1028,7 @@ export default function LeavePermissionPage() {
                 {requestsLoading ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
                     >
                       {language === "cn"
@@ -975,7 +1039,7 @@ export default function LeavePermissionPage() {
                 ) : requests.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
                     >
                       {language === "cn"
@@ -1011,9 +1075,13 @@ export default function LeavePermissionPage() {
                         className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${TYPE_META[item.type].className}`}
                       >
                         <span className="leave-type-text">
-                          {item.type} · {typeLabel(item.type)}
+                          {item.type} · {typeLabel(item.type, item.noAttendanceType)}
                         </span>
                       </span>
+                    </td>
+
+                    <td className="px-3 py-3 text-[10px] font-bold text-text">
+                      {item.oaNumber || "—"}
                     </td>
 
                     <td className="px-3 py-3 text-[10px] font-bold text-text">
@@ -1274,7 +1342,51 @@ export default function LeavePermissionPage() {
                     <option value="ALPA">
                       ALPA — {language === "cn" ? "旷工" : "Absent Without Leave"}
                     </option>
+                    <option value="NO_ATTENDANCE">
+                      NO_ATTENDANCE —{" "}
+                      {language === "cn" ? "未打卡" : "No Attendance"}
+                    </option>
                   </select>
+                </Field>
+
+                {type === "NO_ATTENDANCE" ? (
+                  <Field
+                    label={
+                      language === "cn" ? "未打卡类型" : "No Attendance Type"
+                    }
+                  >
+                    <select
+                      value={noAttendanceType}
+                      onChange={(event) =>
+                        setNoAttendanceType(
+                          event.target.value as NoAttendanceType,
+                        )
+                      }
+                      className="field-input"
+                    >
+                      <option value="NO_CHECK_IN">
+                        NO_CHECK_IN —{" "}
+                        {language === "cn" ? "未签到" : "No Check In"}
+                      </option>
+                      <option value="NO_CHECK_OUT">
+                        NO_CHECK_OUT —{" "}
+                        {language === "cn" ? "未签退" : "No Check Out"}
+                      </option>
+                    </select>
+                  </Field>
+                ) : null}
+
+                <Field label={language === "cn" ? "OA 编号" : "OA Number"}>
+                  <input
+                    value={oaNumber}
+                    onChange={(event) => setOaNumber(event.target.value)}
+                    placeholder={
+                      language === "cn"
+                        ? "可选，关联 OA 审批编号"
+                        : "Optional OA approval reference"
+                    }
+                    className="field-input"
+                  />
                 </Field>
 
                 <Field label={language === "cn" ? "开始时间" : "Start Time"}>

@@ -26,8 +26,8 @@ function monthRange() {
 
 export async function GET() {
   const gate = await requireAnyPermission([
+    PERMISSIONS.organizationOverviewView,
     PERMISSIONS.overviewView,
-    PERMISSIONS.dailyMasterManage,
   ]);
 
   if (gate instanceof NextResponse) {
