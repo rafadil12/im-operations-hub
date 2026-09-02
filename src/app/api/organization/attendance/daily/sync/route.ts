@@ -6,7 +6,14 @@ export const dynamic = "force-dynamic";
 
 type ScheduleType = "D" | "N" | "1" | "4" | "OFF";
 
-type LeaveType = "AL" | "MC" | "UPL" | "A" | "ALPA" | "OT";
+type LeaveType =
+  | "AL"
+  | "MC"
+  | "UPL"
+  | "A"
+  | "ALPA"
+  | "OT"
+  | "NO_ATTENDANCE";
 
 type AttendanceValue =
   | "10.5"
@@ -146,7 +153,6 @@ export async function POST(request: NextRequest) {
      * 1. LOAD EVERYTHING ONCE
      * -------------------------------------------------------
      */
-
     const [
       employees,
       schedules,
@@ -189,7 +195,15 @@ export async function POST(request: NextRequest) {
           FROM attendance_leave_requests
           WHERE request_date >= ?
             AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
-            AND request_type IN ('AL', 'MC', 'UPL', 'A', 'ALPA', 'OT', 'NO_ATTENDANCE')
+            AND request_type IN (
+              'AL',
+              'MC',
+              'UPL',
+              'A',
+              'ALPA',
+              'OT',
+              'NO_ATTENDANCE'
+            )
           ORDER BY employee_no, request_date, id ASC
         `,
         [monthStart, monthStart],
@@ -214,7 +228,6 @@ export async function POST(request: NextRequest) {
      * 2. BUILD MAPS IN MEMORY
      * -------------------------------------------------------
      */
-
     const scheduleMap = new Map<string, ScheduleType>();
 
     for (const row of schedules) {
@@ -228,12 +241,22 @@ export async function POST(request: NextRequest) {
       string,
       {
         id: number;
-        requestType: Exclude<LeaveType,"OT" | "ALPA">;
+        requestType: Exclude<LeaveType, "OT" | "ALPA" | "NO_ATTENDANCE">;
       }
     >();
 
     for (const row of leaveRows) {
-      if (row.request_type === "OT") {
+      /*
+       * NO_ATTENDANCE dan OT hanya diabaikan.
+       *
+       * NO_ATTENDANCE TIDAK dimasukkan ke leaveMap,
+       * sehingga tanggal tersebut tetap diproses oleh
+       * shiftResult() dan attendance tetap masuk dari SHIFT.
+       */
+      if (
+        row.request_type === "OT" ||
+        row.request_type === "NO_ATTENDANCE"
+      ) {
         continue;
       }
 
@@ -246,9 +269,10 @@ export async function POST(request: NextRequest) {
        */
       leaveMap.set(key, {
         id: row.id,
-        requestType: row.request_type === "ALPA"
-      ? "A"
-      : row.request_type,
+        requestType:
+          row.request_type === "ALPA"
+            ? "A"
+            : row.request_type,
       });
     }
 
@@ -266,7 +290,6 @@ export async function POST(request: NextRequest) {
      * 3. PREPARE BATCH VALUES
      * -------------------------------------------------------
      */
-
     const values: Array<
       [
         string,
@@ -313,6 +336,9 @@ export async function POST(request: NextRequest) {
 
         /*
          * Leave tetap memiliki prioritas.
+         *
+         * NO_ATTENDANCE tidak pernah masuk leaveMap,
+         * sehingga otomatis lanjut ke SHIFT.
          */
         if (leave) {
           value = leave.requestType;
@@ -351,7 +377,6 @@ export async function POST(request: NextRequest) {
      * 4. BATCH INSERT / UPDATE
      * -------------------------------------------------------
      */
-
     const CHUNK_SIZE = 500;
 
     for (
