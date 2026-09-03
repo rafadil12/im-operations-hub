@@ -1,6 +1,7 @@
 "use client";
 
 import { RouteErrorFallback } from "@/components/ui/RouteErrorFallback";
+import { fillTemplate, useLang } from "@/lib/i18n";
 
 export default function ItsmError({
   error,
@@ -9,10 +10,13 @@ export default function ItsmError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useLang();
   return (
     <RouteErrorFallback
-      title="ITSM module error"
-      message={error.message || "Failed to load the ITSM module."}
+      title={fillTemplate(t.common.moduleError, { module: t.nav.itsm })}
+      message={
+        error.message || fillTemplate(t.common.moduleLoadFailed, { module: t.nav.itsm })
+      }
       reset={reset}
     />
   );

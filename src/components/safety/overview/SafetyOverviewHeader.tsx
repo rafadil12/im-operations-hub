@@ -43,7 +43,7 @@ export function SafetyOverviewHeader({
             type="button"
             onClick={onPreviousMonth}
             className="rounded-md border border-border bg-surface px-2 py-2 text-xs text-text-muted transition hover:bg-surface-hover"
-            aria-label={safetyLanguage === "cn" ? "上个月" : "Previous month"}
+            aria-label={safetyText("previousMonth", safetyLanguage)}
           >
             ‹
           </button>
@@ -56,7 +56,7 @@ export function SafetyOverviewHeader({
             type="button"
             onClick={onNextMonth}
             className="rounded-md border border-border bg-surface px-2 py-2 text-xs text-text-muted transition hover:bg-surface-hover"
-            aria-label={safetyLanguage === "cn" ? "下个月" : "Next month"}
+            aria-label={safetyText("nextMonth", safetyLanguage)}
           >
             ›
           </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useLang } from "@/lib/i18n";
 
 type RouteErrorFallbackProps = {
   title: string;
@@ -13,8 +14,9 @@ export function RouteErrorFallback({
   title,
   message,
   reset,
-  resetLabel = "Try again",
+  resetLabel,
 }: RouteErrorFallbackProps) {
+  const { t } = useLang();
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-6">
       <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 text-center shadow-[0_12px_34px_var(--shadow-color-soft)]">
@@ -27,7 +29,7 @@ export function RouteErrorFallback({
           onClick={reset}
           className="mt-5 rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-300 transition hover:border-cyan-400/60 hover:bg-cyan-500/15"
         >
-          {resetLabel}
+          {resetLabel ?? t.common.tryAgain}
         </button>
       </div>
     </div>

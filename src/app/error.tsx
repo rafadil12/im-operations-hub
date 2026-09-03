@@ -1,6 +1,7 @@
 "use client";
 
 import { RouteErrorFallback } from "@/components/ui/RouteErrorFallback";
+import { useLang } from "@/lib/i18n";
 
 export default function Error({
   error,
@@ -9,10 +10,11 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useLang();
   return (
     <RouteErrorFallback
-      title="Something went wrong"
-      message={error.message || "An unexpected error occurred."}
+      title={t.common.error}
+      message={error.message || t.common.unexpectedError}
       reset={reset}
     />
   );
