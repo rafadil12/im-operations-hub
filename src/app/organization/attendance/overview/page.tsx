@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { organizationText } from "@/lib/organization/copy";
 
 type Employee = {
   id: number;
@@ -670,7 +671,10 @@ export default function AttendanceOverviewPage() {
                         colSpan={4}
                         className="px-5 py-12 text-center text-xs text-text-muted"
                       >
-                        No attendance records found
+                        {organizationText(
+                          "noAttendanceRecords",
+                          language === "cn" ? "cn" : "en",
+                        )}
                       </td>
                     </tr>
                   ) : (

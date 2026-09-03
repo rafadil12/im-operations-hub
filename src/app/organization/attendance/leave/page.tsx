@@ -7,8 +7,8 @@ import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useGuestWriteGuard } from "@/hooks/useGuestWriteGuard";
 import { useLang } from "@/lib/i18n";
 import { Skeleton } from "@/components/ui/Skeleton";
-
-type OrganizationLanguage = "en" | "cn";
+import { organizationText } from "@/lib/organization/copy";
+import type { OrganizationLanguage } from "@/lib/organization/copy";
 
 type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA" | "NO_ATTENDANCE";
 type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT" | "NO_CHECK_IN_OUT";
@@ -202,10 +202,9 @@ const DEMO_REQUESTS: LeaveRequest[] = [
 ];
 
 export default function LeavePermissionPage() {
-  const { t } = useLang();
+  const { lang } = useLang();
   const guardWrite = useGuestWriteGuard();
-  const language: OrganizationLanguage =
-    t.safety.management === "安全管理" ? "cn" : "en";
+  const language: OrganizationLanguage = lang === "cn" ? "cn" : "en";
 
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
@@ -1150,9 +1149,7 @@ export default function LeavePermissionPage() {
 
           {!authLoading && !currentEmployeeNo && (
             <div className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-              {language === "cn"
-                ? "无法识别当前登录账户，无法执行审核。"
-                : "Current login account could not be identified. Approval is disabled."}
+              {organizationText("accountNotIdentified", language)}
             </div>
           )}
 
@@ -1161,34 +1158,34 @@ export default function LeavePermissionPage() {
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-800">
                   <th className="border-b border-r border-border px-4 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "员工" : "Employee"}
+                    {organizationText("employee", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "部门" : "Department"}
+                    {organizationText("department", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "日期" : "Date"}
+                    {organizationText("date", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "类型" : "Type"}
+                    {organizationText("type", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "开始" : "Start"}
+                    {organizationText("start", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "结束" : "End"}
+                    {organizationText("end", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "原因" : "Reason"}
+                    {organizationText("reason", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "状态" : "Status"}
+                    {organizationText("status", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "OA 编号" : "OA Number"}
                   </th>
                   <th className="border-b border-border px-3 py-3 text-center text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "操作" : "Action"}
+                    {organizationText("action", language)}
                   </th>
                 </tr>
               </thead>
