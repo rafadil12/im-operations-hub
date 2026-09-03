@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type Employee = {
   id: number;
@@ -654,14 +655,15 @@ export default function AttendanceOverviewPage() {
 
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-5 py-12 text-center text-xs text-text-muted"
-                      >
-                        Loading...
-                      </td>
-                    </tr>
+                    Array.from({ length: 6 }, (_, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {Array.from({ length: 4 }, (_, cellIndex) => (
+                          <td key={cellIndex} className="px-5 py-3">
+                            <Skeleton className="h-3 w-20" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
                   ) : dailyRows.length === 0 ? (
                     <tr>
                       <td

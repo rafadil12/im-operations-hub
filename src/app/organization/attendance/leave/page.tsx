@@ -6,6 +6,7 @@ import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useGuestWriteGuard } from "@/hooks/useGuestWriteGuard";
 import { useLang } from "@/lib/i18n";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type OrganizationLanguage = "en" | "cn";
 
@@ -1194,16 +1195,15 @@ export default function LeavePermissionPage() {
 
               <tbody>
                 {requestsLoading ? (
-                  <tr>
-                    <td
-                      colSpan={10}
-                      className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
-                    >
-                      {language === "cn"
-                        ? "加载申请记录..."
-                        : "Loading requests..."}
-                    </td>
-                  </tr>
+                  Array.from({ length: 6 }, (_, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {Array.from({ length: 10 }, (_, cellIndex) => (
+                        <td key={cellIndex} className="px-4 py-3">
+                          <Skeleton className="h-3 w-16" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
                 ) : requests.length === 0 ? (
                   <tr>
                     <td

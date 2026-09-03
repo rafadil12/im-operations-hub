@@ -6,6 +6,7 @@ import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type OrganizationLanguage = "en" | "cn";
 
@@ -1465,18 +1466,15 @@ export default function DailyAttendancePage() {
 
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td
-                      colSpan={
-                        totalDays + 11
-                      }
-                      className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
-                    >
-                      {language === "cn"
-                        ? "加载中..."
-                        : "Loading attendance data..."}
-                    </td>
-                  </tr>
+                    Array.from({ length: 6 }, (_, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {Array.from({ length: Math.min(12, totalDays + 11) }, (_, cellIndex) => (
+                          <td key={cellIndex} className="px-3 py-3">
+                            <Skeleton className="h-3 w-12" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
                 ) : rows.length === 0 ? (
                   <tr>
                     <td

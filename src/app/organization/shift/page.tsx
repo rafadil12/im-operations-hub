@@ -6,6 +6,8 @@ import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { SkeletonKpiGrid } from "@/components/ui/skeletons";
 
 type ShiftCode = "D/S" | "N/S" | "1" | "4";
 
@@ -2922,9 +2924,7 @@ function ShiftManagementView() {
               />
 
               {loadingEmployees || loadingShiftData ? (
-                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
-                  {text("loading", language)}
-                </div>
+                <SkeletonKpiGrid count={5} />
               ) : filteredMembers.length === 0 ? (
                 <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
                   {text("noData", language)}
@@ -3571,11 +3571,18 @@ function ShiftManagementView() {
                 </thead>
                 <tbody>
                   {loadingEmployees || loadingShiftData ? (
-                    <tr>
-                      <td colSpan={daysInMonth + 1} className="px-4 py-10 text-center text-xs font-semibold text-text-dim">
-                        {text("loading", language)}
-                      </td>
-                    </tr>
+                    Array.from({ length: 6 }, (_, rowIndex) => (
+                      <tr key={rowIndex}>
+                        <td className="px-4 py-3">
+                          <Skeleton className="h-3 w-28" />
+                        </td>
+                        {Array.from({ length: Math.min(daysInMonth, 14) }, (_, cellIndex) => (
+                          <td key={cellIndex} className="px-2 py-3">
+                            <Skeleton className="h-3 w-8" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
                   ) : scheduleRows.filter((row) => {
                     const member = filteredMembers.find((item) => item.employeeId === row.employeeId);
                     return Boolean(member);
