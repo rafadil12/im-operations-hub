@@ -222,7 +222,7 @@ function LegendItem({
 
 export default function DailyAttendancePage() {
   const { t } = useLang();
-  const { isGuest } = useRoleAccess();
+  const { canManageOrganizationAttendance } = useRoleAccess();
 
   const language: OrganizationLanguage =
     t.safety.management === "安全管理"
@@ -259,7 +259,13 @@ export default function DailyAttendancePage() {
   const [loading, setLoading] =
     useState(true);
 
+  const [syncing, setSyncing] =
+    useState(false);
+
   const [error, setError] =
+    useState<string | null>(null);
+
+  const [syncError, setSyncError] =
     useState<string | null>(null);
 
   const year = selectedDate.getFullYear();
@@ -351,6 +357,7 @@ export default function DailyAttendancePage() {
     async function loadData() {
       setLoading(true);
       setError(null);
+      setSyncError(null);
 
       try {
         /*
@@ -453,98 +460,7 @@ export default function DailyAttendancePage() {
           attendancePayload.data ?? [],
         );
 
-        /*
-         * Jangan tunggu sync.
-         * Table langsung boleh dirender.
-         */
         setLoading(false);
-
-        /*
-         * --------------------------------------------------
-         * BACKGROUND SYNC
-         * --------------------------------------------------
-         *
-         * Sync berjalan setelah data sudah tampil.
-         */
-        if (!isGuest) {
-        void fetch(
-          API_ATTENDANCE_SYNC,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            cache: "no-store",
-            body: JSON.stringify({
-              year,
-              month: monthIndex + 1,
-            }),
-          },
-        )
-          .then(
-            async (syncResponse) => {
-              if (!syncResponse.ok) {
-                const syncPayload = (await syncResponse.json().catch(() => ({}))) as {
-                  error?: string;
-                };
-
-                if (handleGuestForbiddenResponse(syncResponse.status, syncPayload, "POST")) {
-                  return;
-                }
-
-                throw new Error(
-                  syncPayload.error ||
-                    `Attendance sync failed: ${syncResponse.status}`,
-                );
-              }
-
-              /*
-               * Setelah sync selesai,
-               * ambil attendance terbaru.
-               */
-              const refreshedResponse =
-                await fetch(
-                  `${API_ATTENDANCE_DAILY}?year=${year}&month=${
-                    monthIndex + 1
-                  }`,
-                  {
-                    cache: "no-store",
-                  },
-                );
-
-              if (!refreshedResponse.ok) {
-                throw new Error(
-                  `Attendance refresh failed: ${refreshedResponse.status}`,
-                );
-              }
-
-              const refreshedPayload =
-                (await refreshedResponse.json()) as {
-                  data?: AttendanceDailyApiRow[];
-                };
-
-              if (cancelled) {
-                return;
-              }
-
-              setAttendanceDaily(
-                refreshedPayload.data ?? [],
-              );
-            },
-          )
-          .catch((syncError) => {
-            /*
-             * Background sync gagal tidak membuat
-             * halaman utama menjadi error.
-             *
-             * Data awal tetap ditampilkan.
-             */
-            console.error(
-              "Background attendance sync failed:",
-              syncError,
-            );
-          });
-        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -570,6 +486,67 @@ export default function DailyAttendancePage() {
     monthIndex,
     language,
   ]);
+
+  async function runAttendanceSync() {
+    setSyncing(true);
+    setSyncError(null);
+
+    try {
+      const syncResponse = await fetch(API_ATTENDANCE_SYNC, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          year,
+          month: monthIndex + 1,
+        }),
+      });
+
+      if (!syncResponse.ok) {
+        const syncPayload = (await syncResponse.json().catch(() => ({}))) as {
+          error?: string;
+        };
+
+        if (handleGuestForbiddenResponse(syncResponse.status, syncPayload, "POST")) {
+          return;
+        }
+
+        throw new Error(
+          syncPayload.error ||
+            `Attendance sync failed: ${syncResponse.status}`,
+        );
+      }
+
+      const refreshedResponse = await fetch(
+        `${API_ATTENDANCE_DAILY}?year=${year}&month=${monthIndex + 1}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!refreshedResponse.ok) {
+        throw new Error(`Attendance refresh failed: ${refreshedResponse.status}`);
+      }
+
+      const refreshedPayload = (await refreshedResponse.json()) as {
+        data?: AttendanceDailyApiRow[];
+      };
+
+      setAttendanceDaily(refreshedPayload.data ?? []);
+    } catch (err) {
+      setSyncError(
+        err instanceof Error
+          ? err.message
+          : language === "cn"
+            ? "考勤同步失败。"
+            : "Attendance sync failed.",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   /*
    * ------------------------------------------------------
@@ -1035,6 +1012,28 @@ export default function DailyAttendancePage() {
             >
               →
             </button>
+
+            {canManageOrganizationAttendance ? (
+              <button
+                type="button"
+                onClick={() => void runAttendanceSync()}
+                disabled={syncing || loading}
+                className={[
+                  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-[10px] font-extrabold shadow-sm transition-all duration-200",
+                  syncing || loading
+                    ? "cursor-not-allowed border-border bg-surface text-text-dim opacity-60"
+                    : "border-cyan-400/40 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/60 hover:bg-cyan-500/15",
+                ].join(" ")}
+              >
+                {syncing
+                  ? language === "cn"
+                    ? "同步中..."
+                    : "Syncing..."
+                  : language === "cn"
+                    ? "同步考勤"
+                    : "Sync Attendance"}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -1304,13 +1303,27 @@ export default function DailyAttendancePage() {
                   : "Mode"}
               </p>
 
-              <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-300">
-                {language === "cn"
-                  ? "自动"
-                  : "Automatic"} 
+              <p className="mt-1 text-sm font-bold text-text-muted">
+                {canManageOrganizationAttendance
+                  ? syncing
+                    ? language === "cn"
+                      ? "同步中"
+                      : "Syncing"
+                    : language === "cn"
+                      ? "按需同步"
+                      : "On demand"
+                  : language === "cn"
+                    ? "只读"
+                    : "Read only"}
               </p>
             </div>
           </div>
+
+          {syncError ? (
+            <div className="border-b border-border-subtle px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-200">
+              {syncError}
+            </div>
+          ) : null}
 
           {/* ERROR */}
           {error && (
