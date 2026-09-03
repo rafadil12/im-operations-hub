@@ -1369,6 +1369,12 @@ await applySqlFile(
   "Indexed ITSM requests and normalized created/due dates.",
 );
 
+await applySqlFile(
+  "033_mes_record_start_time_index.sql",
+  readMigrationSql,
+  "Indexed mes_record by deleted_at and start_time.",
+);
+
 if (!(await columnExists("attendance_leave_requests", "oa_number"))) {
   await conn.query(
     `ALTER TABLE attendance_leave_requests
