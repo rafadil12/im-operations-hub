@@ -291,7 +291,7 @@ export default function StorageLocationsPage() {
         {loading ? (
           <SkeletonTable columns={4} />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
+          <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface">
             <table className="w-full border-collapse">
               <thead className="border-b border-border-subtle bg-bg/40">
                 <tr>

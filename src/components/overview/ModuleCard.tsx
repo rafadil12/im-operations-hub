@@ -168,7 +168,7 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
       <header className="mb-4 flex items-center gap-2.5">
         <CardIcon type={data.icon} color={data.accentColor} />
 
-        <h3 className="text-sm font-semibold tracking-wide text-text">
+        <h3 className="min-w-0 truncate text-sm font-semibold tracking-wide text-text">
           {data.number}. {data.title}
         </h3>
 
