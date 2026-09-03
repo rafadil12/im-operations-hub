@@ -6,6 +6,7 @@ import { localizedName, useLang } from "@/lib/i18n";
 import type { Division, Masters } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { MasterTabs } from "./MasterTabs";
 
 type PicRow = {
@@ -156,9 +157,7 @@ export function PicManager() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
+        <SkeletonTable />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface">
           <table className="w-full border-collapse">
