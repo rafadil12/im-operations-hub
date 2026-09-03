@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { ModuleCardData } from "@/data/overview";
 import { StatPill } from "@/components/ui/StatPill";
+import { useLang } from "@/lib/i18n";
 import { CardBody } from "./ModuleCardBodies";
 
 type ModuleCardProps = {
@@ -138,10 +139,12 @@ function CardIcon({ type, color }: { type: ModuleCardData["icon"]; color: string
 }
 
 export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) {
+  const { t } = useLang();
   return (
     <article
       role={onOpen ? "button" : undefined}
       tabIndex={onOpen ? 0 : undefined}
+      aria-label={onOpen ? `${t.common.expandDetails}: ${data.title}` : undefined}
       onClick={onOpen}
       onKeyDown={
         onOpen

@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useLang } from "@/lib/i18n";
 
 type ModalProps = {
   title: ReactNode;
@@ -53,6 +54,7 @@ export function Modal({
   size = "md",
   closeDisabled = false,
 }: ModalProps) {
+  const { t } = useLang();
   const mounted = useSyncExternalStore(
     subscribe,
     () => true,
@@ -78,7 +80,7 @@ export function Modal({
     <div className={SHELL_CLASS[size]}>
       <button
         type="button"
-        aria-label="Close overlay"
+        aria-label={t.common.closeOverlay}
         className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
         onClick={() => {
           if (!closeDisabled) onClose();
@@ -106,7 +108,7 @@ export function Modal({
               type="button"
               onClick={onClose}
               disabled={closeDisabled}
-              aria-label="Close"
+              aria-label={t.common.close}
               className="rounded-md px-2 py-1 text-sm leading-none text-text-muted transition-colors hover:bg-surface-hover hover:text-text disabled:pointer-events-none disabled:opacity-50"
             >
               ✕
