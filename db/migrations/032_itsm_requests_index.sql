@@ -1,5 +1,24 @@
--- ITSM requests: normalize dates, dedupe request_id, add indexes.
+-- ITSM requests: ensure row id, normalize dates, dedupe request_id, add indexes.
 -- Idempotent. Prefer: node --env-file=.env.local db/run-migrations.mjs
+
+-- Some legacy dumps have no surrogate key; add one before dedupe.
+SET @col_id := (
+  SELECT COUNT(1)
+  FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'itsm_requests'
+    AND column_name = 'id'
+);
+
+SET @sql_id := IF(
+  @col_id = 0,
+  'ALTER TABLE `itsm_requests` ADD COLUMN `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST',
+  'SELECT ''itsm_requests.id already exists'' AS info'
+);
+
+PREPARE stmt FROM @sql_id;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 DELETE t1
 FROM itsm_requests t1
