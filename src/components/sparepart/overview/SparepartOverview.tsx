@@ -12,6 +12,7 @@ import {
   type SparepartCategoryCode,
 } from "@/lib/sparepart/categories";
 import { overviewMatchesFilters, type SparepartOverviewData } from "@/lib/sparepart/overview";
+import { SkeletonChart, SkeletonKpiGrid } from "@/components/ui/skeletons";
 import {
   CategoryDonut,
   CategoryLocationHeatmap,
@@ -128,8 +129,16 @@ export function SparepartOverview({
       </div>
 
       {!ready ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
+        <div className="space-y-4">
+          <SkeletonKpiGrid count={5} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <SkeletonChart variant="donut" />
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <SkeletonChart variant="bar" />
+            </div>
+          </div>
         </div>
       ) : (
         <>

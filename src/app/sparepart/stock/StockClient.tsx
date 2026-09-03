@@ -9,6 +9,7 @@ import type { SparepartCategory, SparepartItem, SparepartStockBalanceRow } from 
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { ExportIcon, NotesIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
@@ -284,9 +285,7 @@ export default function StockOverviewPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-            {t.common.loading}
-          </div>
+          <SkeletonTable />
         ) : (
           <StockTable
             rows={pagedRows}

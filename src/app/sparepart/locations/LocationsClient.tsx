@@ -7,6 +7,7 @@ import type { SparepartStorageLocation } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Modal } from "@/components/ui/Modal";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { SkeletonTable } from "@/components/ui/skeletons";
 
 type ListResponse = { rows: SparepartStorageLocation[] };
 type LocationSortKey = "code" | "name" | "is_active";
@@ -288,9 +289,7 @@ export default function StorageLocationsPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-            {t.common.loading}
-          </div>
+          <SkeletonTable columns={4} />
         ) : (
           <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
             <table className="w-full border-collapse">
