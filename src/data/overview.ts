@@ -151,7 +151,7 @@ export type ModuleCardData = {
   loadError?: string;
 };
 
-const EMPTY = "â";
+const EMPTY = "—";
 
 export const dashboardModules: ModuleCardData[] = [
   {
