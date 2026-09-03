@@ -47,6 +47,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Clear local state when parent clears a selected value (e.g. form reset).
   // Do not clear query while searching (value is already empty).
@@ -107,6 +108,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       setSuggestions([]);
       setHighlight(0);
       setSearching(false);
+      setSearchError(null);
       return;
     }
 
@@ -125,11 +127,13 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       .then((data) => {
         setSuggestions(data.rows);
         setHighlight(0);
+        setSearchError(null);
       })
       .catch((err) => {
         if (isAbortError(err)) return;
         setSuggestions([]);
         setHighlight(0);
+        setSearchError(err instanceof Error ? err.message : t.common.error);
       })
       .finally(() => {
         if (!ac.signal.aborted) setSearching(false);
@@ -275,6 +279,9 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
             </li>
           ))}
         </ul>
+      ) : null}
+      {searchError ? (
+        <p className="mt-1 text-[11px] text-rose-400">{searchError}</p>
       ) : null}
       {selected ? (
         <p className="mt-1 text-[11px] text-text-dim">
