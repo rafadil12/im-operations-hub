@@ -100,6 +100,10 @@ export const GUEST_PERMISSIONS: readonly PermissionCode[] = [
   PERMISSIONS.sparepartOverviewView,
   PERMISSIONS.sparepartStockView,
   PERMISSIONS.sparepartDocumentRead,
+  PERMISSIONS.organizationOverviewView,
+  PERMISSIONS.organizationEmployeeRead,
+  PERMISSIONS.organizationShiftRead,
+  PERMISSIONS.organizationAttendanceRead,
 ] as const;
 
 export type RoleAccess = {
