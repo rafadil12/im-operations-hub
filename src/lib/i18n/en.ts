@@ -260,6 +260,8 @@ const en = {
   },
   auth: {
     guest: "Guest",
+    guestForbiddenTitle: "Not allowed",
+    guestForbiddenMessage: "Not allowed, please login.",
     signIn: "Sign in",
     logout: "Logout",
     changePassword: "Change Password",

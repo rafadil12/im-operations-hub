@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
+import { useGuestWriteGuard } from "@/hooks/useGuestWriteGuard";
 import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
@@ -200,6 +202,7 @@ const DEMO_REQUESTS: LeaveRequest[] = [
 
 export default function LeavePermissionPage() {
   const { t } = useLang();
+  const guardWrite = useGuestWriteGuard();
   const language: OrganizationLanguage =
     t.safety.management === "安全管理" ? "cn" : "en";
 
@@ -513,6 +516,10 @@ export default function LeavePermissionPage() {
     },
     status: "Approved" | "Rejected",
   ) => {
+    if (!guardWrite()) {
+      return;
+    }
+
     if (
       !currentEmployeeNo ||
       !canApproveRequest(request) ||
@@ -544,6 +551,9 @@ export default function LeavePermissionPage() {
       };
 
       if (!response.ok || payload.success === false || !payload.data) {
+        if (handleGuestForbiddenResponse(response.status, payload, "PATCH")) {
+          return;
+        }
         throw new Error(
           payload.error || `Leave API failed: ${response.status}`,
         );
@@ -582,6 +592,10 @@ export default function LeavePermissionPage() {
     String(currentUserRole ?? "").trim().toLowerCase() === "admin";
 
   const updateOaNumber = async (request: LeaveRequest) => {
+    if (!guardWrite()) {
+      return;
+    }
+
     if (!canEditOaNumber(request) || oaSavingId) return;
     const value = (oaDrafts[request.id] ?? request.oaNumber ?? "").trim();
     setOaSavingId(request.id);
@@ -598,6 +612,9 @@ export default function LeavePermissionPage() {
         error?: string;
       };
       if (!response.ok || payload.success === false || !payload.data) {
+        if (handleGuestForbiddenResponse(response.status, payload, "PATCH")) {
+          return;
+        }
         throw new Error(payload.error || `Leave API failed: ${response.status}`);
       }
       setRequests((current) =>
@@ -729,6 +746,10 @@ export default function LeavePermissionPage() {
   };
 
   const submitRequest = async () => {
+    if (!guardWrite()) {
+      return;
+    }
+
     if (
       !employeeNo.trim() ||
       !employeeName.trim() ||
@@ -778,6 +799,9 @@ export default function LeavePermissionPage() {
       };
 
       if (!response.ok || payload.success === false || !payload.data) {
+        if (handleGuestForbiddenResponse(response.status, payload, "POST")) {
+          return;
+        }
         throw new Error(
           payload.error || `Leave API failed: ${response.status}`,
         );

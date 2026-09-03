@@ -7,6 +7,8 @@ import React, {
 } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
@@ -1805,6 +1807,7 @@ function DaySelector({
 
 export default function AttendanceOverviewPage() {
   const { t } = useLang();
+  const { isGuest } = useRoleAccess();
 
   const language: OrganizationLanguage =
     t.safety.management ===
@@ -2009,6 +2012,7 @@ export default function AttendanceOverviewPage() {
          * BACKGROUND SYNC
          * -------------------------------------------------
          */
+        if (!isGuest) {
         setSyncing(true);
 
         void fetch(
@@ -2041,6 +2045,10 @@ export default function AttendanceOverviewPage() {
                     )) as {
                     error?: string;
                   };
+
+                if (handleGuestForbiddenResponse(syncResponse.status, syncPayload, "POST")) {
+                  return;
+                }
 
                 throw new Error(
                   syncPayload.error ||
@@ -2102,6 +2110,7 @@ export default function AttendanceOverviewPage() {
               );
             }
           });
+        }
       } catch (err) {
         if (!cancelled) {
           setError(

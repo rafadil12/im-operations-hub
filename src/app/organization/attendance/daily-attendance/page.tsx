@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
@@ -220,6 +222,7 @@ function LegendItem({
 
 export default function DailyAttendancePage() {
   const { t } = useLang();
+  const { isGuest } = useRoleAccess();
 
   const language: OrganizationLanguage =
     t.safety.management === "安全管理"
@@ -463,6 +466,7 @@ export default function DailyAttendancePage() {
          *
          * Sync berjalan setelah data sudah tampil.
          */
+        if (!isGuest) {
         void fetch(
           API_ATTENDANCE_SYNC,
           {
@@ -480,8 +484,17 @@ export default function DailyAttendancePage() {
           .then(
             async (syncResponse) => {
               if (!syncResponse.ok) {
+                const syncPayload = (await syncResponse.json().catch(() => ({}))) as {
+                  error?: string;
+                };
+
+                if (handleGuestForbiddenResponse(syncResponse.status, syncPayload, "POST")) {
+                  return;
+                }
+
                 throw new Error(
-                  `Attendance sync failed: ${syncResponse.status}`,
+                  syncPayload.error ||
+                    `Attendance sync failed: ${syncResponse.status}`,
                 );
               }
 
@@ -531,6 +544,7 @@ export default function DailyAttendancePage() {
               syncError,
             );
           });
+        }
       } catch (err) {
         if (!cancelled) {
           setError(

@@ -260,6 +260,8 @@ const cn: Dict = {
   },
   auth: {
     guest: "访客",
+    guestForbiddenTitle: "不允许",
+    guestForbiddenMessage: "不允许，请登录。",
     signIn: "登录",
     logout: "退出登录",
     changePassword: "修改密码",

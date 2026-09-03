@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 
 type ShiftCode = "D/S" | "N/S" | "1" | "4";
@@ -329,6 +330,9 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
+    if (handleGuestForbiddenResponse(response.status, payload, init?.method)) {
+      throw new Error("Not allowed, please login.");
+    }
     const error =
       typeof payload === "object" && payload !== null && "error" in payload
         ? String((payload as { error?: unknown }).error ?? "API request failed")
