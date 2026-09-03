@@ -259,7 +259,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 42 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(49);
+  it("has exactly 58 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(58);
   });
 });
