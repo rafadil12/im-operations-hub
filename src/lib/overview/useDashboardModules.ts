@@ -272,7 +272,7 @@ export function useDashboardModules() {
 
               case "training":
                 if (trainingResult.status === "ok") {
-                  return mapTrainingToOverview(mod, trainingResult.data);
+                  return mapTrainingToOverview(mod, trainingResult.data, lang);
                 }
                 return withLoadFailure(mod, trainingResult);
 
@@ -284,7 +284,7 @@ export function useDashboardModules() {
 
               case "organization":
                 if (organizationResult.status === "ok") {
-                  return mapOrganizationToOverview(mod, organizationResult.data);
+                  return mapOrganizationToOverview(mod, organizationResult.data, lang);
                 }
                 return withLoadFailure(mod, organizationResult);
 
