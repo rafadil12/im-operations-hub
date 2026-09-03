@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
+import { organizationLanguageValue } from "@/lib/organization/copy";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { organizationText } from "@/lib/organization/copy";
 
@@ -83,7 +84,7 @@ function cn(type: string, language: "en" | "cn") {
     ],
   };
 
-  return dict[type]?.[language === "cn" ? 1 : 0] ?? type;
+  return dict[type]?.[organizationLanguageValue(language, 0, 1)] ?? type;
 }
 
 function statusLabel(status: AttendanceStatus, language: "en" | "cn") {
@@ -96,7 +97,7 @@ function statusLabel(status: AttendanceStatus, language: "en" | "cn") {
     ABSENT: ["Absent", "缺勤"],
   };
 
-  return dict[status][language === "cn" ? 1 : 0];
+  return dict[status][organizationLanguageValue(language, 0, 1)];
 }
 
 function Badge({
@@ -146,9 +147,8 @@ function Card({
 }
 
 export default function AttendanceOverviewPage() {
-  const { t } = useLang();
-  const language: "en" | "cn" =
-    t.safety.management === "安全管理" ? "cn" : "en";
+  const { lang } = useLang();
+  const language: "en" | "cn" = lang === "cn" ? "cn" : "en";
 
   const [date, setDate] = useState(() => new Date());
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -261,9 +261,7 @@ export default function AttendanceOverviewPage() {
           employees
             .map(
               (employee) =>
-                language === "cn"
-                  ? employee.division_name_cn || employee.division_name_en
-                  : employee.division_name_en || employee.division_name_cn,
+                organizationLanguageValue(language, employee.division_name_en || employee.division_name_cn, employee.division_name_cn || employee.division_name_en),
             )
             .filter(Boolean),
         ),
@@ -276,9 +274,7 @@ export default function AttendanceOverviewPage() {
 
     return employees.filter((employee) => {
       const employeeDepartment =
-        language === "cn"
-          ? employee.division_name_cn || employee.division_name_en
-          : employee.division_name_en || employee.division_name_cn;
+        organizationLanguageValue(language, employee.division_name_en || employee.division_name_cn, employee.division_name_cn || employee.division_name_en);
 
       const matchesDepartment =
         department === "all" || employeeDepartment === department;
@@ -372,7 +368,7 @@ export default function AttendanceOverviewPage() {
   }, [dailyRows]);
 
   const monthLabel = date.toLocaleString(
-    language === "cn" ? "zh-CN" : "en-US",
+    organizationLanguageValue(language, "en-US", "zh-CN"),
     {
       month: "long",
       year: "numeric",
@@ -380,7 +376,7 @@ export default function AttendanceOverviewPage() {
   );
 
   const todayLabel = date.toLocaleDateString(
-    language === "cn" ? "zh-CN" : "en-US",
+    organizationLanguageValue(language, "en-US", "zh-CN"),
     {
       year: "numeric",
       month: "2-digit",
@@ -605,7 +601,7 @@ export default function AttendanceOverviewPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                    {language === "cn" ? "搜索员工" : "Search employee"}
+                    {organizationText("searchEmployee2", language)}
                   </label>
                   <input
                     value={search}
@@ -617,7 +613,7 @@ export default function AttendanceOverviewPage() {
 
                 <div>
                   <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                    {language === "cn" ? "部门" : "Department"}
+                    {organizationText("department", language)}
                   </label>
                   <select
                     value={department}
@@ -650,7 +646,7 @@ export default function AttendanceOverviewPage() {
                     <th className="px-4 py-3">
                       {cn("result", language)}
                     </th>
-                    <th className="px-4 py-3"> {language === "cn" ? "工时" : "Hours"}</th>
+                    <th className="px-4 py-3"> {organizationText("hours", language)}</th>
                   </tr>
                 </thead>
 
@@ -673,7 +669,7 @@ export default function AttendanceOverviewPage() {
                       >
                         {organizationText(
                           "noAttendanceRecords",
-                          language === "cn" ? "cn" : "en",
+                          language,
                         )}
                       </td>
                     </tr>
@@ -685,9 +681,7 @@ export default function AttendanceOverviewPage() {
                       >
                         <td className="px-5 py-3">
                           <p className="text-xs font-bold text-text">
-                            {language === "cn"
-                              ? row.employee.name_cn || row.employee.name_en
-                              : row.employee.name_en || row.employee.name_cn}
+                            {organizationLanguageValue(language, row.employee.name_en || row.employee.name_cn, row.employee.name_cn || row.employee.name_en)}
                           </p>
                           <p className="mt-0.5 text-[10px] text-text-dim">
                             {row.employee.employee_no}
@@ -717,15 +711,15 @@ export default function AttendanceOverviewPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-sm font-bold text-text">
-                  {language === "cn" ? "考勤规则" : "Attendance Rule"}
+                  {organizationText("attendanceRule", language)}
                 </h2>
                 <p className="mt-1 text-[10px] text-text-muted">
-                  {language === "cn" ? "自动考勤结果优先级" : "Automatic result priority"}
+                  {organizationText("automaticResultPriority", language)}
                 </p>
               </div>
 
               <span className="attendance-auto-badge rounded-sm border border-cyan-500 bg-cyan-500 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-sm">
-                {language === "cn" ? "自动" : "AUTO"}
+                {organizationText("auto", language)}
               </span>
             </div>
 
@@ -734,10 +728,10 @@ export default function AttendanceOverviewPage() {
                     ["D / N", "10.5 h"],
                     ["1", "8 h"],
                     ["4", "4 h"],
-                    ["OFF", language === "cn" ? "休息" : "OFF"],
+                    ["OFF", organizationText("off", language)],
                     [
                     "AL / MC / UPL",
-                    language === "cn" ? "覆盖结果" : "Override result",
+                    organizationText("overrideResult", language),
                     ],
                 ].map(([left, right]) => (
                 <div

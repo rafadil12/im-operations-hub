@@ -6,9 +6,11 @@ import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
+import { organizationLanguageValue } from "@/lib/organization/copy";
+import { organizationText } from "@/lib/organization/copy";
+import type { OrganizationLanguage } from "@/lib/organization/copy";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-type OrganizationLanguage = "en" | "cn";
 
 type RawScheduleType =
   | "D"
@@ -112,7 +114,7 @@ function weekdayLabel(
   language: OrganizationLanguage,
 ) {
   return new Date(year, monthIndex, day).toLocaleDateString(
-    language === "cn" ? "zh-CN" : "en-US",
+    organizationLanguageValue(language, "en-US", "zh-CN"),
     {
       weekday: "short",
     },
@@ -222,13 +224,10 @@ function LegendItem({
 }
 
 export default function DailyAttendancePage() {
-  const { t } = useLang();
+  const { lang } = useLang();
   const { canManageOrganizationAttendance } = useRoleAccess();
 
-  const language: OrganizationLanguage =
-    t.safety.management === "安全管理"
-      ? "cn"
-      : "en";
+  const language: OrganizationLanguage = lang === "cn" ? "cn" : "en";
 
   const [selectedDate, setSelectedDate] = useState(
     () => new Date(),
@@ -467,9 +466,7 @@ export default function DailyAttendancePage() {
           setError(
             err instanceof Error
               ? err.message
-              : language === "cn"
-                ? "加载考勤数据失败。"
-                : "Failed to load attendance data.",
+              : organizationText("failedToLoadAttendanceData", language),
           );
 
           setLoading(false);
@@ -540,9 +537,7 @@ export default function DailyAttendancePage() {
       setSyncError(
         err instanceof Error
           ? err.message
-          : language === "cn"
-            ? "考勤同步失败。"
-            : "Attendance sync failed.",
+          : organizationText("attendanceSyncFailed", language),
       );
     } finally {
       setSyncing(false);
@@ -601,11 +596,9 @@ export default function DailyAttendancePage() {
       new Set(
         employees
           .map((employee) =>
-            language === "cn"
-              ? employee.division_name_cn ||
-                employee.division_name_en
-              : employee.division_name_en ||
-                employee.division_name_cn,
+            organizationLanguageValue(language, employee.division_name_en ||
+                employee.division_name_cn, employee.division_name_cn ||
+                employee.division_name_en),
           )
           .filter(Boolean),
       ),
@@ -634,11 +627,9 @@ export default function DailyAttendancePage() {
     return employees
       .map((employee) => {
         const employeeDepartment =
-          (language === "cn"
-            ? employee.division_name_cn ||
-              employee.division_name_en
-            : employee.division_name_en ||
-              employee.division_name_cn) || "—";
+          (organizationLanguageValue(language, employee.division_name_en ||
+              employee.division_name_cn, employee.division_name_cn ||
+              employee.division_name_en)) || "—";
 
         /*
          * -----------------------------------------------
@@ -880,9 +871,7 @@ export default function DailyAttendancePage() {
    */
   const monthLabel =
     selectedDate.toLocaleDateString(
-      language === "cn"
-        ? "zh-CN"
-        : "en-US",
+      organizationLanguageValue(language, "en-US", "zh-CN"),
       {
         month: "long",
         year: "numeric",
@@ -919,13 +908,11 @@ export default function DailyAttendancePage() {
   const employeeName = (
     employee: OrganizationEmployee,
   ) =>
-    language === "cn"
-      ? employee.name_cn ||
-        employee.name_en ||
-        employee.employee_no
-      : employee.name_en ||
+    organizationLanguageValue(language, employee.name_en ||
         employee.name_cn ||
-        employee.employee_no;
+        employee.employee_no, employee.name_cn ||
+        employee.name_en ||
+        employee.employee_no);
 
   return (
     <OrganizationGate
@@ -935,9 +922,7 @@ export default function DailyAttendancePage() {
     >
     <AppShell
       title={
-        language === "cn"
-          ? "每日考勤"
-          : "Daily Attendance"
+        organizationText("dailyAttendance", language)
       }
     >
       <div className="min-h-full space-y-5 p-5 md:p-6 xl:p-8">
@@ -951,15 +936,11 @@ export default function DailyAttendancePage() {
 
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-text">
-                  {language === "cn"
-                    ? "每日考勤"
-                    : "Daily Attendance"}
+                  {organizationText("dailyAttendance", language)}
                 </h1>
 
                 <p className="mt-1 text-xs text-text-muted">
-                  {language === "cn"
-                    ? "按月份查看员工每日考勤结果与工时。"
-                    : "View employee attendance results and hours by day."}
+                  {organizationText("viewEmployeeAttendanceResultsAndHoursByDay", language)}
                 </p>
               </div>
             </div>
@@ -989,9 +970,7 @@ export default function DailyAttendancePage() {
               }
               className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[10px] font-extrabold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
             >
-              {language === "cn"
-                ? "本月"
-                : "This Month"}
+              {organizationText("thisMonth", language)}
             </button>
 
             <div className="inline-flex h-9 min-w-36 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500 px-4 text-[10px] font-extrabold text-white shadow-md shadow-cyan-500/20">
@@ -1027,12 +1006,8 @@ export default function DailyAttendancePage() {
                 ].join(" ")}
               >
                 {syncing
-                  ? language === "cn"
-                    ? "同步中..."
-                    : "Syncing..."
-                  : language === "cn"
-                    ? "同步考勤"
-                    : "Sync Attendance"}
+                  ? organizationText("syncing", language)
+                  : organizationText("syncAttendance", language)}
               </button>
             ) : null}
           </div>
@@ -1043,9 +1018,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="10.5"
             label={
-              language === "cn"
-                ? "D/S / N/S"
-                : "D/S / N/S"
+              organizationText("dSNS", language)
             }
             tone="bg-cyan-500"
           />
@@ -1053,9 +1026,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="8"
             label={
-              language === "cn"
-                ? "班次 1"
-                : "Shift 1"
+              organizationText("shift1", language)
             }
             tone="bg-emerald-500"
           />
@@ -1063,9 +1034,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="4"
             label={
-              language === "cn"
-                ? "班次 4"
-                : "Shift 4"
+              organizationText("shift4", language)
             }
             tone="bg-amber-500"
           />
@@ -1073,9 +1042,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="OFF"
             label={
-              language === "cn"
-                ? "休息"
-                : "Rest"
+              organizationText("rest", language)
             }
             tone="bg-slate-500"
           />
@@ -1083,9 +1050,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="AL"
             label={
-              language === "cn"
-                ? "年假"
-                : "Annual Leave"
+              organizationText("annualLeave", language)
             }
             tone="bg-blue-500"
           />
@@ -1093,9 +1058,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="MC"
             label={
-              language === "cn"
-                ? "病假"
-                : "Sick Leave"
+              organizationText("sickLeave", language)
             }
             tone="bg-violet-500"
           />
@@ -1103,9 +1066,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="UPL"
             label={
-              language === "cn"
-                ? "请假/外出"
-                : "Permission"
+              organizationText("permission2", language)
             }
             tone="bg-indigo-500"
           />
@@ -1117,9 +1078,7 @@ export default function DailyAttendancePage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {language === "cn"
-                    ? "搜索员工"
-                    : "Search Employee"}
+                  {organizationText("searchEmployee", language)}
                 </label>
 
                 <input
@@ -1130,9 +1089,7 @@ export default function DailyAttendancePage() {
                     )
                   }
                   placeholder={
-                    language === "cn"
-                      ? "姓名 / 工号..."
-                      : "Name / employee no..."
+                    organizationText("nameEmployeeNo", language)
                   }
                   className="cursor-text rounded-md border border-border bg-surface px-3 py-2 text-xs text-text outline-none transition focus:border-cyan-400/50"
                 />
@@ -1140,9 +1097,7 @@ export default function DailyAttendancePage() {
 
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {language === "cn"
-                    ? "部门"
-                    : "Department"}
+                  {organizationText("department", language)}
                 </label>
 
                 <select
@@ -1155,9 +1110,7 @@ export default function DailyAttendancePage() {
                   className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
-                    {language === "cn"
-                      ? "全部部门"
-                      : "All Departments"}
+                    {organizationText("allDepartments2", language)}
                   </option>
 
                   {departments.map(
@@ -1175,9 +1128,7 @@ export default function DailyAttendancePage() {
 
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {language === "cn"
-                    ? "班次"
-                    : "Shift"}
+                  {organizationText("shift", language)}
                 </label>
 
                 <select
@@ -1190,9 +1141,7 @@ export default function DailyAttendancePage() {
                   className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
-                    {language === "cn"
-                      ? "全部班次"
-                      : "All Shifts"}
+                    {organizationText("allShifts", language)}
                   </option>
 
                   <option value="D">
@@ -1227,9 +1176,7 @@ export default function DailyAttendancePage() {
                   }}
                   className="w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-extrabold text-text shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                 >
-                  {language === "cn"
-                    ? "重置筛选"
-                    : "Reset Filters"}
+                  {organizationText("resetFilters", language)}
                 </button>
               </div>
             </div>
@@ -1239,9 +1186,7 @@ export default function DailyAttendancePage() {
           <div className="grid grid-cols-3 border-b border-border-subtle md:grid-cols-6">
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "员工"
-                  : "Employees"}
+                {organizationText("employees", language)}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-text">
@@ -1251,9 +1196,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "计划工时"
-                  : "Planned Hours"}
+                {organizationText("plannedHours", language)}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-300">
@@ -1273,9 +1216,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "当前月份"
-                  : "Month"}
+                {organizationText("month", language)}
               </p>
 
               <p className="mt-1 text-sm font-bold text-text">
@@ -1285,37 +1226,25 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "数据来源"
-                  : "Source"}
+                {organizationText("source", language)}
               </p>
 
               <p className="mt-1 text-sm font-bold text-text">
-                {language === "cn"
-                  ? "班次接口"
-                  : "Shift API"}
+                {organizationText("shiftApi", language)}
               </p>
             </div>
 
             <div className="p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "状态"
-                  : "Mode"}
+                {organizationText("mode", language)}
               </p>
 
               <p className="mt-1 text-sm font-bold text-text-muted">
                 {canManageOrganizationAttendance
                   ? syncing
-                    ? language === "cn"
-                      ? "同步中"
-                      : "Syncing"
-                    : language === "cn"
-                      ? "按需同步"
-                      : "On demand"
-                  : language === "cn"
-                    ? "只读"
-                    : "Read only"}
+                    ? organizationText("syncing2", language)
+                    : organizationText("onDemand", language)
+                  : organizationText("readOnly", language)}
               </p>
             </div>
           </div>
@@ -1346,15 +1275,11 @@ export default function DailyAttendancePage() {
                   </th>
 
                   <th className="sticky left-[52px] z-20 min-w-[190px] border-r border-b border-border bg-surface-hover px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wide text-text-muted">
-                    {language === "cn"
-                      ? "员工"
-                      : "Employee"}
+                    {organizationText("employee", language)}
                   </th>
 
                   <th className="sticky left-[242px] z-20 min-w-[120px] border-r border-b border-border bg-surface-hover px-3 py-3 text-left text-[10px] font-extrabold uppercase tracking-wide text-text-muted">
-                    {language === "cn"
-                      ? "部门"
-                      : "Department"}
+                    {organizationText("department", language)}
                   </th>
 
                   {Array.from(
@@ -1419,9 +1344,7 @@ export default function DailyAttendancePage() {
                   )}
 
                   <th className="min-w-[90px] border-r-2 border-b border-l border-border bg-slate-100 px-3 py-3 text-center text-[10px] font-black text-slate-800 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "总工时"
-                      : "Total Hours"}
+                    {organizationText("totalHours", language)}
                   </th>
 
                   <th className="min-w-[50px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
@@ -1433,33 +1356,23 @@ export default function DailyAttendancePage() {
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "年假"
-                      : "AL"}
+                    {organizationText("al", language)}
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "病假"
-                      : "MC"}  
+                    {organizationText("mc", language)}
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "外出"
-                      : "UPL"}
+                    {organizationText("upl", language)}
                   </th> 
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "旷工"
-                      : "A"} 
+                    {organizationText("a", language)}
                   </th>
 
                   <th className="min-w-[55px] border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "休息"
-                      : "OFF"}   
+                    {organizationText("off", language)}
                   </th> 
                 </tr>
               </thead>
@@ -1483,9 +1396,7 @@ export default function DailyAttendancePage() {
                       }
                       className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
                     >
-                      {language === "cn"
-                        ? "没有找到考勤数据"
-                        : "No attendance data found"}
+                      {organizationText("noAttendanceDataFound", language)}
                     </td>
                   </tr>
                 ) : (
@@ -1572,9 +1483,7 @@ export default function DailyAttendancePage() {
                                 }`}
                               >
                                {value === "OFF"
-                                ? language === "cn"
-                                    ? "休息"
-                                    : "OFF"
+                                ? organizationText("off", language)
                                 : value || "—"}
                               </td>
                             );
@@ -1624,9 +1533,7 @@ export default function DailyAttendancePage() {
 
           {/* FOOTER NOTE */}
           <div className="border-t border-border-subtle bg-surface-hover px-5 py-3 text-[10px] font-medium text-text-muted">
-            {language === "cn"
-              ? "每日考勤数据保存于 attendance_daily；AL / MC / UPL / A 直接覆盖对应日期，OT 不影响每日考勤，未来日期保持空白。"
-              : "Daily Attendance is stored in attendance_daily. AL / MC / UPL / A immediately override the corresponding date; OT does not affect Daily Attendance; future dates remain blank."}
+            {organizationText("dailyAttendanceIsStoredInAttendanceDailyAlMcUpl", language)}
           </div>
         </Card>
       </div>
