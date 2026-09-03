@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ModuleId } from "@/data/overview";
+import { dashboardModules, type ModuleId } from "@/data/overview";
 import { getDict, useLang } from "@/lib/i18n";
 import { translateDashboardModule, useDashboardModules } from "@/lib/overview";
+import { SkeletonCard } from "@/components/ui/skeletons";
 import { ModuleCard } from "./ModuleCard";
 import { CardExpandModal } from "./CardExpandModal";
 
 export function OverviewGrid() {
   const { lang } = useLang();
   const t = getDict(lang);
-  const modules = useDashboardModules();
+  const { modules, isLoading } = useDashboardModules();
   const [expandedId, setExpandedId] = useState<ModuleId | null>(null);
 
   const translatedModules = useMemo(
@@ -29,20 +30,35 @@ export function OverviewGrid() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        {translatedModules.map((module) => (
-          <div
-            key={module.id}
-            className={
-              module.colSpan === 3
-                ? "col-span-full"
-                : module.colSpan === 2
-                  ? "xl:col-span-2"
-                  : undefined
-            }
-          >
-            <ModuleCard data={module} onOpen={() => setExpandedId(module.id)} />
-          </div>
-        ))}
+        {isLoading
+          ? dashboardModules.map((module) => (
+              <div
+                key={module.id}
+                className={
+                  module.colSpan === 3
+                    ? "col-span-full"
+                    : module.colSpan === 2
+                      ? "xl:col-span-2"
+                      : undefined
+                }
+              >
+                <SkeletonCard />
+              </div>
+            ))
+          : translatedModules.map((module) => (
+              <div
+                key={module.id}
+                className={
+                  module.colSpan === 3
+                    ? "col-span-full"
+                    : module.colSpan === 2
+                      ? "xl:col-span-2"
+                      : undefined
+                }
+              >
+                <ModuleCard data={module} onOpen={() => setExpandedId(module.id)} />
+              </div>
+            ))}
       </div>
 
       <p className="mt-4 text-[11px] text-text-dim">* {t.dashboard.clickDetails}</p>

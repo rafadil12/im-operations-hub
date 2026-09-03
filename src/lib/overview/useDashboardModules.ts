@@ -76,6 +76,7 @@ export function useDashboardModules() {
   } = useRoleAccess();
 
   const [modules, setModules] = useState<ModuleCardData[]>(dashboardModules);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
@@ -292,8 +293,10 @@ export function useDashboardModules() {
             }
           }),
         );
+        setIsLoading(false);
       } catch {
         /* keep existing modules if a request fails */
+        setIsLoading(false);
       }
     })();
 
@@ -315,5 +318,5 @@ export function useDashboardModules() {
     lang,
   ]);
 
-  return modules;
+  return { modules, isLoading: authLoading || isLoading };
 }
