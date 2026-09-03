@@ -33,13 +33,12 @@ export function SafetyOverview() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const periodKey = `${selectedYear}-${selectedMonth}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const loading = loadedKey !== periodKey;
 
   useEffect(() => {
     let active = true;
-
-    setLoadError(null);
-    setLoading(true);
 
     getSafetyData(selectedYear, selectedMonth)
       .then((data) => {
@@ -47,6 +46,8 @@ export function SafetyOverview() {
 
         setWeeklyRows(data.weeklyRows);
         setMonthlyRows(data.monthlyRows);
+        setLoadError(null);
+        setLoadedKey(periodKey);
       })
       .catch((error) => {
         if (!active) return;
@@ -60,15 +61,13 @@ export function SafetyOverview() {
               ? "加载安全概览失败。"
               : "Failed to load safety overview.",
         );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+        setLoadedKey(periodKey);
       });
 
     return () => {
       active = false;
     };
-  }, [selectedYear, selectedMonth, safetyLanguage]);
+  }, [periodKey, selectedYear, selectedMonth, safetyLanguage]);
 
   useEffect(() => {
     const elements = Array.from(document.querySelectorAll<HTMLElement>(".safety-scroll-animate"));

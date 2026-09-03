@@ -159,10 +159,7 @@ function normalizeSchedule(
   return null;
 }
 
-function cellClass(
-  value: AttendanceValue,
-  language: OrganizationLanguage,
-) {
+function cellClass(value: AttendanceValue) {
   const base =
     "h-10 min-w-[58px] border-r border-b px-2 text-center align-middle text-[10px] font-extrabold transition-all";
 
@@ -1471,7 +1468,6 @@ export default function DailyAttendancePage() {
                                 }
                                 className={`${cellClass(
                                   value,
-                                  language,
                                 )} ${
                                   isToday
                                     ? "bg-cyan-50/70 shadow-[inset_0_0_0_1px_rgb(34_211_238_/_0.18)] dark:bg-cyan-500/5 dark:shadow-[inset_0_0_18px_rgb(34_211_238_/_0.08)]"

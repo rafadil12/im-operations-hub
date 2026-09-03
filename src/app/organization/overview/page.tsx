@@ -614,7 +614,14 @@ function DonutChart({
   const circumference =
     2 * Math.PI * radius;
 
-  let accumulated = 0;
+  const segmentOffsets: number[] = [];
+  {
+    let accumulated = 0;
+    for (const item of values) {
+      segmentOffsets.push(accumulated);
+      accumulated += total > 0 ? item.value / total : 0;
+    }
+  }
 
   return (
     <div className="relative size-52">
@@ -645,11 +652,8 @@ function DonutChart({
             const gap = 3;
 
             const offset =
-              -accumulated *
+              -segmentOffsets[index] *
               circumference;
-
-            accumulated +=
-              percentage;
 
             return (
               <circle
@@ -3155,7 +3159,7 @@ export default function AttendanceOverviewPage() {
           continue;
         }
 
-        let start =
+        const start =
           sh * 60 + sm;
 
         let end =

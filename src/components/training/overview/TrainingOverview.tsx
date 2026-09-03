@@ -60,13 +60,13 @@ export function TrainingOverview() {
   const [range, setRange] = useState(defaultRange);
   const [draftRange, setDraftRange] = useState(defaultRange);
   const [metrics, setMetrics] = useState<TrainingOverviewMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const rangeKey = `${range.start}:${range.end}:${language}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const loading = loadedKey !== rangeKey;
 
   useEffect(() => {
     const ac = new AbortController();
-    setLoading(true);
-    setError(null);
 
     const qs = new URLSearchParams({
       start: range.start,
@@ -80,18 +80,18 @@ export function TrainingOverview() {
       .then((res) => {
         if (!res.success || !res.data) throw new Error(res.error ?? "Failed");
         setMetrics(res.data);
+        setError(null);
+        setLoadedKey(rangeKey);
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(getApiErrorMessage(err) || trainingText("errorLoad", language));
         setMetrics(null);
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setLoading(false);
+        setLoadedKey(rangeKey);
       });
 
     return () => ac.abort();
-  }, [range, language]);
+  }, [range, language, rangeKey]);
 
   return (
     <div className="space-y-5">
