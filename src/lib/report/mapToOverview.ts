@@ -80,6 +80,7 @@ export function mapReportToOverview(
         label: areaLabel(a.nameEn, a.nameCn),
         value: a.avgCompletionRate,
         color: areaColor(a.code),
+        code: a.code,
       })),
     },
   };

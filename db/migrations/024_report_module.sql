@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS `report_lines` (
 
 INSERT INTO `report_areas` (`code`, `name_en`, `name_cn`, `sort_order`)
 SELECT 'MES', 'MOM', 'MOM项', 1
-WHERE NOT EXISTS (SELECT 1 FROM `report_areas` WHERE `code` = 'MES');
+WHERE NOT EXISTS (SELECT 1 FROM `report_areas` WHERE `code` IN ('MES', 'MOM'));
 
 INSERT INTO `report_areas` (`code`, `name_en`, `name_cn`, `sort_order`)
 SELECT 'LOGISTICS', 'Smart Logistics', '智能物流', 2

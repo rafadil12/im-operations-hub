@@ -1381,6 +1381,12 @@ await applySqlFile(
   "Seeded default organization positions.",
 );
 
+await applySqlFile(
+  "035_report_area_mes_normalize.sql",
+  readMigrationSql,
+  "Normalized report area MES/MOM duplicates.",
+);
+
 if (!(await columnExists("attendance_leave_requests", "oa_number"))) {
   await conn.query(
     `ALTER TABLE attendance_leave_requests

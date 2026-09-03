@@ -52,6 +52,7 @@ export type ProgressRing = {
   label: string;
   value: number;
   color: string;
+  code?: string;
 };
 
 export type TrainingRow = {
