@@ -1363,6 +1363,12 @@ await applySqlFile(
   "Retired legacy report permission codes.",
 );
 
+await applySqlFile(
+  "032_itsm_requests_index.sql",
+  readMigrationSql,
+  "Indexed ITSM requests and normalized created/due dates.",
+);
+
 if (!(await columnExists("attendance_leave_requests", "oa_number"))) {
   await conn.query(
     `ALTER TABLE attendance_leave_requests
