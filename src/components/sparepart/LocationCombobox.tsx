@@ -89,8 +89,7 @@ export function LocationCombobox({
       });
 
     return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, lang]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {

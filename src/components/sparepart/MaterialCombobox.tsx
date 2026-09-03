@@ -79,9 +79,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       });
 
     return () => ac.abort();
-    // intentionally omit `selected` — only react to value changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, lang]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
