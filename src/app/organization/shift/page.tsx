@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
 
 type ShiftCode = "D/S" | "N/S" | "1" | "4";
@@ -2014,6 +2015,11 @@ function ShiftManagementView() {
   const todayKey = dateKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationShift || access.canManageOrganizationShift
+      }
+    >
     <AppShell title={text("title", language)}>
       <div className="shift-management-page min-h-full space-y-4 bg-slate-50/70 p-4 text-slate-800 dark:bg-slate-950 dark:text-slate-100 ">
         <style>{`
@@ -3632,6 +3638,7 @@ function ShiftManagementView() {
         )}
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

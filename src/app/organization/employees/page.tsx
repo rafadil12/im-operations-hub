@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
 
 /* =========================================================
@@ -1480,6 +1481,7 @@ export default function OrganizationManagementPage() {
   ======================================================= */
 
   return (
+    <OrganizationGate allow={(access) => access.canViewOrganizationEmployees}>
     <AppShell
       title={organizationText(
         "title",
@@ -2976,6 +2978,7 @@ export default function OrganizationManagementPage() {
         )}
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

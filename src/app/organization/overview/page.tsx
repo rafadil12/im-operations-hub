@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
@@ -3257,6 +3258,7 @@ export default function AttendanceOverviewPage() {
   ======================================================= */
 
   return (
+    <OrganizationGate allow={(access) => access.canViewOrganizationOverview}>
     <AppShell title="">
       <style>{`
         @keyframes attendanceOverviewFadeUp {
@@ -5628,5 +5630,6 @@ export default function AttendanceOverviewPage() {
         </div>
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }

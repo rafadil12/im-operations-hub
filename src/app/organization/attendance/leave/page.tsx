@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
@@ -822,6 +823,11 @@ export default function LeavePermissionPage() {
   };
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationAttendance || access.canManageOrganizationAttendance
+      }
+    >
     <AppShell
   title={
     language === "cn"
@@ -1657,6 +1663,7 @@ export default function LeavePermissionPage() {
         )}
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

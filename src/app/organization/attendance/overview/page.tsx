@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
 
 type Employee = {
@@ -386,6 +387,11 @@ export default function AttendanceOverviewPage() {
   );
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationAttendance || access.canManageOrganizationAttendance
+      }
+    >
     <AppShell title={cn("title", language)}>
       <div className="shift-management-page min-h-full space-y-5 p-5 md:p-6 xl:p-8 text-text">
         <style>{`
@@ -747,5 +753,6 @@ export default function AttendanceOverviewPage() {
         </div>
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }

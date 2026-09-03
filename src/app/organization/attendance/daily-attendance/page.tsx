@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
@@ -935,6 +936,11 @@ export default function DailyAttendancePage() {
         employee.employee_no;
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationAttendance || access.canManageOrganizationAttendance
+      }
+    >
     <AppShell
       title={
         language === "cn"
@@ -1600,6 +1606,7 @@ export default function DailyAttendancePage() {
         </Card>
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 
