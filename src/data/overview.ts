@@ -145,6 +145,9 @@ export type ModuleCardData = {
   recentRows?: TrainingRow[];
   /** Training division breakdown for expand-mode Recharts donut. */
   trainingByDivision?: TrainingOverviewMetrics["byDivision"];
+  /** Set when live API data failed to load for this card. */
+  loadFailed?: boolean;
+  loadError?: string;
 };
 
 const EMPTY = "â";

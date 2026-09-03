@@ -21,6 +21,44 @@ import type { TrainingOverviewMetrics } from "@/lib/training/types";
 import type { ReportOverviewMetrics } from "@/lib/report/types";
 import type { AnalysisResponse, SafetyApiResponse } from "@/lib/overview/types";
 
+type ModuleLoadResult<T> =
+  | { status: "skipped" }
+  | { status: "ok"; data: T }
+  | { status: "failed"; error: string };
+
+async function loadModuleData<T>(
+  enabled: boolean,
+  loader: () => Promise<T>,
+): Promise<ModuleLoadResult<T>> {
+  if (!enabled) {
+    return { status: "skipped" };
+  }
+
+  try {
+    return { status: "ok", data: await loader() };
+  } catch (err) {
+    return {
+      status: "failed",
+      error: err instanceof Error ? err.message : "Failed to load module data.",
+    };
+  }
+}
+
+function withLoadFailure(
+  mod: ModuleCardData,
+  result: ModuleLoadResult<unknown>,
+): ModuleCardData {
+  if (result.status === "failed") {
+    return {
+      ...mod,
+      loadFailed: true,
+      loadError: result.error,
+    };
+  }
+
+  return mod;
+}
+
 export function useDashboardModules() {
   const { lang } = useLang();
   const { loading: authLoading } = useAuth();
@@ -34,7 +72,7 @@ export function useDashboardModules() {
     canViewTrainingSessions,
     canViewReportOverview,
     canViewReportLines,
-    canViewOverview,
+    canViewOrganizationOverview,
   } = useRoleAccess();
 
   const [modules, setModules] = useState<ModuleCardData[]>(dashboardModules);
@@ -51,139 +89,122 @@ export function useDashboardModules() {
     (async () => {
       try {
         const [
-          dailyData,
-          itsmData,
-          sparepartData,
-          safetyWeeklyData,
-          safetyMonthlyData,
-          trainingData,
-          reportData,
-          organizationData,
-        ] =
-          await Promise.all([
-            canViewDailyAnalysis
-              ? apiGet<AnalysisResponse>(`/analysis?start=${start}&end=${end}`, "daily")
-              : Promise.resolve(null),
+          dailyResult,
+          itsmResult,
+          sparepartResult,
+          safetyWeeklyResult,
+          safetyMonthlyResult,
+          trainingResult,
+          reportResult,
+          organizationResult,
+        ] = await Promise.all([
+          loadModuleData(canViewDailyAnalysis, () =>
+            apiGet<AnalysisResponse>(`/analysis?start=${start}&end=${end}`, "daily"),
+          ),
 
-            canViewItsmAnalysis
-              ? apiGet<ItsmAnalysisResponse>(`/analysis?start=${start}&end=${end}`, "itsm")
-              : Promise.resolve(null),
+          loadModuleData(canViewItsmAnalysis, () =>
+            apiGet<ItsmAnalysisResponse>(`/analysis?start=${start}&end=${end}`, "itsm"),
+          ),
 
-            canViewSparepartStock
-              ? apiGet<SparepartAnalysisResponse>(
-                  `/analysis?start=${start}&end=${end}`,
-                  "sparepart"
-                )
-              : Promise.resolve(null),
+          loadModuleData(canViewSparepartStock, () =>
+            apiGet<SparepartAnalysisResponse>(
+              `/analysis?start=${start}&end=${end}`,
+              "sparepart",
+            ),
+          ),
 
-            canViewSafetyOverview || canViewSafetySubmissions
-              ? fetch(
-                  `/api/safety/weekly?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
-                  {
-                    method: "GET",
-                    cache: "no-store",
-                  }
-                )
-                  .then(async (response) => {
-                    const result = (await response.json()) as SafetyApiResponse;
+          loadModuleData(canViewSafetyOverview || canViewSafetySubmissions, async () => {
+            const response = await fetch(
+              `/api/safety/weekly?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
+              {
+                method: "GET",
+                cache: "no-store",
+              },
+            );
+            const result = (await response.json()) as SafetyApiResponse;
 
-                    if (!response.ok) {
-                      throw new Error(
-                        result.error ?? result.message ?? "Failed to load weekly safety data."
-                      );
-                    }
+            if (!response.ok) {
+              throw new Error(
+                result.error ?? result.message ?? "Failed to load weekly safety data.",
+              );
+            }
 
-                    return result;
-                  })
-                  .catch(() => null)
-              : Promise.resolve(null),
+            return result;
+          }),
 
-            canViewSafetyOverview || canViewSafetySubmissions
-              ? fetch(
-                  `/api/safety/monthly?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
-                  {
-                    method: "GET",
-                    cache: "no-store",
-                  }
-                )
-                  .then(async (response) => {
-                    const result = (await response.json()) as SafetyApiResponse;
+          loadModuleData(canViewSafetyOverview || canViewSafetySubmissions, async () => {
+            const response = await fetch(
+              `/api/safety/monthly?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`,
+              {
+                method: "GET",
+                cache: "no-store",
+              },
+            );
+            const result = (await response.json()) as SafetyApiResponse;
 
-                    if (!response.ok) {
-                      throw new Error(
-                        result.error ?? result.message ?? "Failed to load monthly safety data."
-                      );
-                    }
+            if (!response.ok) {
+              throw new Error(
+                result.error ?? result.message ?? "Failed to load monthly safety data.",
+              );
+            }
 
-                    return result;
-                  })
-                  .catch(() => null)
-              : Promise.resolve(null),
+            return result;
+          }),
 
-            canViewTrainingOverview || canViewTrainingSessions
-              ? fetch(
-                  (() => {
-                    const now = new Date();
-                    const start = formatDateOnly(new Date(now.getFullYear(), 0, 1));
-                    const end = formatDateOnly(now);
-                    return `/api/training/overview?start=${start}&end=${end}`;
-                  })(),
-                  { method: "GET", cache: "no-store" }
-                )
-                  .then(async (response) => {
-                    const result = (await response.json()) as {
-                      success?: boolean;
-                      data?: TrainingOverviewMetrics;
-                      error?: string;
-                    };
-                    if (!response.ok || !result.data) {
-                      throw new Error(result.error ?? "Failed to load training overview.");
-                    }
-                    return result.data;
-                  })
-                  .catch(() => null)
-              : Promise.resolve(null),
+          loadModuleData(canViewTrainingOverview || canViewTrainingSessions, async () => {
+            const now = new Date();
+            const trainingStart = formatDateOnly(new Date(now.getFullYear(), 0, 1));
+            const trainingEnd = formatDateOnly(now);
+            const response = await fetch(
+              `/api/training/overview?start=${trainingStart}&end=${trainingEnd}`,
+              { method: "GET", cache: "no-store" },
+            );
+            const result = (await response.json()) as {
+              success?: boolean;
+              data?: TrainingOverviewMetrics;
+              error?: string;
+            };
+            if (!response.ok || !result.data) {
+              throw new Error(result.error ?? "Failed to load training overview.");
+            }
+            return result.data;
+          }),
 
-            canViewReportOverview || canViewReportLines
-              ? fetch(
-                  `/api/report/overview?year=${new Date().getFullYear()}&week=${getWeekNumberForDate()}`,
-                  {
-                  method: "GET",
-                  cache: "no-store",
-                })
-                  .then(async (response) => {
-                    const result = (await response.json()) as {
-                      success?: boolean;
-                      data?: ReportOverviewMetrics;
-                      error?: string;
-                    };
-                    if (!response.ok || !result.data) {
-                      throw new Error(result.error ?? "Failed to load report overview.");
-                    }
-                    return result.data;
-                  })
-                  .catch(() => null)
-              : Promise.resolve(null),
+          loadModuleData(canViewReportOverview || canViewReportLines, async () => {
+            const response = await fetch(
+              `/api/report/overview?year=${new Date().getFullYear()}&week=${getWeekNumberForDate()}`,
+              {
+                method: "GET",
+                cache: "no-store",
+              },
+            );
+            const result = (await response.json()) as {
+              success?: boolean;
+              data?: ReportOverviewMetrics;
+              error?: string;
+            };
+            if (!response.ok || !result.data) {
+              throw new Error(result.error ?? "Failed to load report overview.");
+            }
+            return result.data;
+          }),
 
-            canViewOverview
-              ? fetch("/api/organization/overview", {
-                  method: "GET",
-                  cache: "no-store",
-                })
-                  .then(async (response) => {
-                    const result = (await response.json()) as {
-                      success?: boolean;
-                      data?: OrganizationOverviewMetrics;
-                      error?: string;
-                    };
-                    if (!response.ok || !result.data) {
-                      throw new Error(result.error ?? "Failed to load organization overview.");
-                    }
-                    return result.data;
-                  })
-                  .catch(() => null)
-              : Promise.resolve(null),
-          ]);
+          loadModuleData(canViewOrganizationOverview, async () => {
+            const response = await fetch("/api/organization/overview", {
+              method: "GET",
+              cache: "no-store",
+            });
+            const result = (await response.json()) as {
+              success?: boolean;
+              data?: OrganizationOverviewMetrics;
+              error?: string;
+            };
+            if (!response.ok || !result.data) {
+              throw new Error(result.error ?? "Failed to load organization overview.");
+            }
+            return result.data;
+          }),
+        ]);
 
         if (cancelled) return;
 
@@ -191,26 +212,57 @@ export function useDashboardModules() {
           prev.map((mod) => {
             switch (mod.id) {
               case "itsm":
-                return itsmData ? mapItsmToOverview(mod, itsmData.result, lang) : mod;
+                if (itsmResult.status === "ok") {
+                  return mapItsmToOverview(mod, itsmResult.data.result, lang);
+                }
+                return withLoadFailure(mod, itsmResult);
 
               case "daily-operation":
-                return dailyData ? mapAnalysisToOverview(mod, dailyData.result, lang) : mod;
+                if (dailyResult.status === "ok") {
+                  return mapAnalysisToOverview(mod, dailyResult.data.result, lang);
+                }
+                return withLoadFailure(mod, dailyResult);
 
               case "sparepart":
-                return sparepartData
-                  ? mapSparepartToOverview(mod, sparepartData.result, lang)
-                  : mod;
+                if (sparepartResult.status === "ok") {
+                  return mapSparepartToOverview(mod, sparepartResult.data.result, lang);
+                }
+                return withLoadFailure(mod, sparepartResult);
 
               case "safety": {
-                const weeklyRows: SafetyRow[] = Array.isArray(safetyWeeklyData?.data)
-                  ? safetyWeeklyData.data
-                  : [];
+                const weeklyFailed = safetyWeeklyResult.status === "failed";
+                const monthlyFailed = safetyMonthlyResult.status === "failed";
 
-                const monthlyRows: SafetyRow[] = Array.isArray(safetyMonthlyData?.data)
-                  ? safetyMonthlyData.data
-                  : [];
+                if (weeklyFailed || monthlyFailed) {
+                  return withLoadFailure(mod, {
+                    status: "failed",
+                    error:
+                      (weeklyFailed ? safetyWeeklyResult.error : undefined) ??
+                      (monthlyFailed ? safetyMonthlyResult.error : undefined) ??
+                      "Failed to load safety overview.",
+                  });
+                }
 
-                if (!safetyWeeklyData && !safetyMonthlyData) {
+                if (
+                  safetyWeeklyResult.status === "skipped" &&
+                  safetyMonthlyResult.status === "skipped"
+                ) {
+                  return mod;
+                }
+
+                const weeklyRows: SafetyRow[] =
+                  safetyWeeklyResult.status === "ok" &&
+                  Array.isArray(safetyWeeklyResult.data.data)
+                    ? safetyWeeklyResult.data.data
+                    : [];
+
+                const monthlyRows: SafetyRow[] =
+                  safetyMonthlyResult.status === "ok" &&
+                  Array.isArray(safetyMonthlyResult.data.data)
+                    ? safetyMonthlyResult.data.data
+                    : [];
+
+                if (!weeklyRows.length && !monthlyRows.length) {
                   return mod;
                 }
 
@@ -218,20 +270,27 @@ export function useDashboardModules() {
               }
 
               case "training":
-                return trainingData ? mapTrainingToOverview(mod, trainingData) : mod;
+                if (trainingResult.status === "ok") {
+                  return mapTrainingToOverview(mod, trainingResult.data);
+                }
+                return withLoadFailure(mod, trainingResult);
 
               case "report":
-                return reportData ? mapReportToOverview(mod, reportData, lang) : mod;
+                if (reportResult.status === "ok") {
+                  return mapReportToOverview(mod, reportResult.data, lang);
+                }
+                return withLoadFailure(mod, reportResult);
 
               case "organization":
-                return organizationData
-                  ? mapOrganizationToOverview(mod, organizationData)
-                  : mod;
+                if (organizationResult.status === "ok") {
+                  return mapOrganizationToOverview(mod, organizationResult.data);
+                }
+                return withLoadFailure(mod, organizationResult);
 
               default:
                 return mod;
             }
-          })
+          }),
         );
       } catch {
         /* keep existing modules if a request fails */
@@ -252,7 +311,7 @@ export function useDashboardModules() {
     canViewTrainingSessions,
     canViewReportOverview,
     canViewReportLines,
-    canViewOverview,
+    canViewOrganizationOverview,
     lang,
   ]);
 

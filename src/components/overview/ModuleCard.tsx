@@ -171,7 +171,19 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         <h3 className="text-sm font-semibold tracking-wide text-text">
           {data.number}. {data.title}
         </h3>
+
+        {data.loadFailed ? (
+          <span className="ml-auto rounded-md border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+            Failed to load
+          </span>
+        ) : null}
       </header>
+
+      {data.loadFailed ? (
+        <div className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          {data.loadError ?? "Live data could not be loaded for this module."}
+        </div>
+      ) : null}
 
       <div
         className={[
