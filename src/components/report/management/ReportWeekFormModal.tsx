@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertDialog } from "@/components/ui/AlertDialog";
+import { SkeletonForm } from "@/components/ui/skeletons";
 import { FullViewWorkspace } from "./FullViewWorkspace";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
@@ -411,7 +412,7 @@ export function ReportWeekFormModal({
         }
       >
       {loading ? (
-        <div className="py-12 text-center text-sm text-text-muted">{reportText("loading", language)}</div>
+        <SkeletonForm fields={4} />
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

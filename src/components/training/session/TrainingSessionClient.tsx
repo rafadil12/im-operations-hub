@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
+import { Spinner } from "@/components/ui/Skeleton";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { ExportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
@@ -369,9 +371,7 @@ export function TrainingSessionClient() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
+        <SkeletonTable />
       ) : sessions.length === 0 ? (
         <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
           {trainingText("noSessions", language)}
@@ -552,10 +552,7 @@ export function TrainingSessionClient() {
               >
                 {saving ? (
                   <>
-                    <span
-                      className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                      aria-hidden
-                    />
+                    <Spinner />
                     {t.common.loading}
                   </>
                 ) : (

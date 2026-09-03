@@ -17,6 +17,7 @@ import {
   type ReportWeek,
   type ReportWeekAttachment,
 } from "@/lib/report";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { buildAttachmentMap, getAttachmentsForWeekArea } from "@/lib/report/attachmentLookup";
 import { completionBarColor } from "@/lib/report/completionColor";
 import { getWeekNumberForDate } from "@/lib/report/weekCalendar";
@@ -652,9 +653,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {reportText("loading", language)}
-        </div>
+        <SkeletonTable />
       ) : null}
 
       {error ? (

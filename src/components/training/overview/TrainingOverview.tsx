@@ -10,6 +10,7 @@ import {
   type TrainingLanguage,
   type TrainingOverviewMetrics,
 } from "@/lib/training";
+import { SkeletonChart, SkeletonKpiGrid } from "@/components/ui/skeletons";
 import {
   TrainingCategoryDonut,
   TrainingTopicsByDivisionChart,
@@ -125,8 +126,11 @@ export function TrainingOverview() {
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {trainingText("loading", language)}
+        <div className="space-y-4">
+          <SkeletonKpiGrid count={4} />
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <SkeletonChart variant="donut" />
+          </div>
         </div>
       ) : null}
 

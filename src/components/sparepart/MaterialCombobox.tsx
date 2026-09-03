@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang, localizedName, localizedField } from "@/lib/i18n";
+import { SkeletonText } from "@/components/ui/Skeleton";
 import type { SparepartItem } from "@/lib/types";
 import {
   sparepartDropdownMenuClass,
@@ -249,7 +250,9 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
           className={`${sparepartDropdownMenuClass} z-20 max-h-56 overflow-auto`}
         >
           {searching && suggestions.length === 0 ? (
-            <li className="px-3 py-2 text-xs text-text-dim">{t.common.loading}</li>
+            <li className="px-3 py-2">
+              <SkeletonText lines={2} />
+            </li>
           ) : null}
           {suggestions.map((item, index) => (
             <li key={item.id} role="option" aria-selected={index === highlight}>
