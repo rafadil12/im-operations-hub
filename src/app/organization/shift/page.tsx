@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type ShiftCode = "D/S" | "N/S" | "1" | "4";
 
@@ -580,6 +581,7 @@ function MyOffCalendar({
   onPersonalOffDaysChange: (days: PersonalOffDay[]) => void;
   onScheduleChanged?: () => void;
 }) {
+  const { error: toastError } = useToast();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -795,8 +797,10 @@ function MyOffCalendar({
       onScheduleChanged?.();
       return true;
     } catch (error) {
-      console.error("Failed to save work schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to save work schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save work schedule.";
+      toastError(message);
+      setMessage(message);
       return false;
     }
   }
@@ -823,8 +827,10 @@ function MyOffCalendar({
       onScheduleChanged?.();
       return true;
     } catch (error) {
-      console.error("Failed to delete work schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to delete work schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to delete work schedule.";
+      toastError(message);
+      setMessage(message);
       return false;
     }
   }
@@ -910,8 +916,10 @@ function MyOffCalendar({
       // clear -> 1
       await saveWorkSchedule(key, "1");
     } catch (error) {
-      console.error("Failed to change calendar schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to change calendar schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to change calendar schedule.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -942,8 +950,10 @@ function MyOffCalendar({
         ),
       );
     } catch (error) {
-      console.error("Failed to reset OFF days", error);
-      setMessage(error instanceof Error ? error.message : "Failed to reset OFF days.");
+      const message =
+        error instanceof Error ? error.message : "Failed to reset OFF days.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -987,8 +997,10 @@ function MyOffCalendar({
       onPersonalOffDaysChange([...otherEmployees, ...fixedRows]);
       setMessage(text("saveSuccess", language));
     } catch (error) {
-      console.error("Failed to save personal OFF days", error);
-      setMessage(error instanceof Error ? error.message : "Failed to save personal OFF days.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save personal OFF days.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -1261,6 +1273,7 @@ function MyOffCalendar({
 
 function ShiftManagementView() {
   const { t } = useLang();
+  const { error: toastError } = useToast();
   const language: OrganizationLanguage = t.safety.management === "安全管理" ? "cn" : "en";
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
@@ -1742,16 +1755,13 @@ function ShiftManagementView() {
 
     return true;
   } catch (error) {
-    console.error(
-      "Failed to save rotation pairs",
-      error,
-    );
-
-    setShiftDataError(
+    const message =
       error instanceof Error
         ? error.message
-        : "Failed to save rotation pairs.",
-    );
+        : "Failed to save rotation pairs.";
+    toastError(message);
+
+    setShiftDataError(message);
 
     return false;
   } finally {
@@ -1794,8 +1804,10 @@ function ShiftManagementView() {
         [employeeId]: nextAssignment,
       }));
     } catch (error) {
-      console.error("Failed to save shift assignment", error);
-      setShiftDataError(error instanceof Error ? error.message : "Failed to save shift assignment.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save shift assignment.";
+      toastError(message);
+      setShiftDataError(message);
     } finally {
       setSavingEmployee(null);
     }
@@ -1927,12 +1939,12 @@ function ShiftManagementView() {
         window.URL.revokeObjectURL(blobUrl);
       }, 1000);
     } catch (error) {
-      console.error("Failed to export schedule", error);
-      setShiftDataError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Failed to export schedule.",
-      );
+          : "Failed to export schedule.";
+      toastError(message);
+      setShiftDataError(message);
     } finally {
       setExportingExcel(false);
     }
@@ -1967,10 +1979,10 @@ function ShiftManagementView() {
       setGenerated(true);
       setActiveTab("schedule");
     } catch (error) {
-      console.error("Failed to generate schedule", error);
-      setShiftDataError(
-        error instanceof Error ? error.message : "Failed to generate schedule.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Failed to generate schedule.";
+      toastError(message);
+      setShiftDataError(message);
     }
   }
 

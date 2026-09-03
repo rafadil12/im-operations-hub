@@ -601,6 +601,11 @@ export default function OrganizationManagementPage() {
   ] = useState(true);
 
   const [
+    positionsError,
+    setPositionsError,
+  ] = useState<string | null>(null);
+
+  const [
     saving,
     setSaving,
   ] = useState(false);
@@ -778,6 +783,7 @@ export default function OrganizationManagementPage() {
     useCallback(
       async () => {
         setLoadingPositions(true);
+        setPositionsError(null);
 
         try {
           const response =
@@ -813,9 +819,14 @@ export default function OrganizationManagementPage() {
               : [],
           );
         } catch (error) {
-          console.error(
-            "loadPositions failed",
-            error,
+          setPositions([]);
+          setPositionsError(
+            error instanceof Error
+              ? error.message
+              : organizationText(
+                  "loadingPositions",
+                  organizationLanguage,
+                ),
           );
         } finally {
           setLoadingPositions(false);
