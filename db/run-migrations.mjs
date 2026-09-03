@@ -1375,6 +1375,12 @@ await applySqlFile(
   "Indexed mes_record by deleted_at and start_time.",
 );
 
+await applySqlFile(
+  "034_organization_default_positions.sql",
+  readMigrationSql,
+  "Seeded default organization positions.",
+);
+
 if (!(await columnExists("attendance_leave_requests", "oa_number"))) {
   await conn.query(
     `ALTER TABLE attendance_leave_requests
