@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +105,9 @@ function nonFutureCutoff(today = new Date()) {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json().catch(() => ({}))) as {
       year?: unknown;
