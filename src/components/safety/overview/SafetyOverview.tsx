@@ -30,20 +30,38 @@ export function SafetyOverview() {
 
   const [monthlyRows, setMonthlyRows] = useState<SafetyRow[]>([]);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   useEffect(() => {
     let active = true;
 
-    getSafetyData(selectedYear, selectedMonth).then((data) => {
-      if (!active) return;
+    setLoadError(null);
 
-      setWeeklyRows(data.weeklyRows);
-      setMonthlyRows(data.monthlyRows);
-    });
+    getSafetyData(selectedYear, selectedMonth)
+      .then((data) => {
+        if (!active) return;
+
+        setWeeklyRows(data.weeklyRows);
+        setMonthlyRows(data.monthlyRows);
+      })
+      .catch((error) => {
+        if (!active) return;
+
+        setWeeklyRows([]);
+        setMonthlyRows([]);
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : safetyLanguage === "cn"
+              ? "加载安全概览失败。"
+              : "Failed to load safety overview.",
+        );
+      });
 
     return () => {
       active = false;
     };
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, safetyLanguage]);
 
   useEffect(() => {
     const elements = Array.from(document.querySelectorAll<HTMLElement>(".safety-scroll-animate"));
@@ -111,6 +129,12 @@ export function SafetyOverview() {
           onPreviousMonth={goToPreviousMonth}
           onNextMonth={goToNextMonth}
         />
+
+        {loadError ? (
+          <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-300">
+            {loadError}
+          </div>
+        ) : null}
 
         <SafetyOverviewKpiSection
           safetyLanguage={safetyLanguage}
