@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLang } from "@/lib/i18n";
 import { type SafetyLanguage, type SafetyRow, getSafetyData, safetyText } from "@/lib/safety";
 import { computeSafetyOverviewMetrics } from "@/lib/safety/overviewMetrics";
+import { SkeletonKpiGrid, SkeletonChart, SkeletonTable } from "@/components/ui/skeletons";
 import { SafetyOverviewStyles } from "./SafetyOverviewStyles";
 import { SafetyOverviewHeader } from "./SafetyOverviewHeader";
 import { SafetyOverviewKpiSection } from "./SafetyOverviewKpiSection";
@@ -32,10 +33,13 @@ export function SafetyOverview() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     let active = true;
 
     setLoadError(null);
+    setLoading(true);
 
     getSafetyData(selectedYear, selectedMonth)
       .then((data) => {
@@ -56,6 +60,9 @@ export function SafetyOverview() {
               ? "加载安全概览失败。"
               : "Failed to load safety overview.",
         );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
     return () => {
@@ -136,6 +143,21 @@ export function SafetyOverview() {
           </div>
         ) : null}
 
+        {loading ? (
+          <div className="space-y-5">
+            <SkeletonKpiGrid count={6} />
+            <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+              <div className="rounded-xl border border-border bg-surface p-4 md:p-5">
+                <SkeletonChart variant="line" />
+              </div>
+              <div className="rounded-xl border border-border bg-surface p-4 md:p-5">
+                <SkeletonChart variant="donut" />
+              </div>
+            </div>
+            <SkeletonTable rows={4} columns={4} />
+          </div>
+        ) : (
+          <>
         <SafetyOverviewKpiSection
           safetyLanguage={safetyLanguage}
           trainingCompleted={metrics.trainingCompleted}
@@ -198,6 +220,8 @@ export function SafetyOverview() {
           actionRows={metrics.actionRows}
           pic={metrics.pic}
         />
+          </>
+        )}
 
         <div className="pb-2 text-center text-[10px] text-text-dim">
           {safetyText("itSafetyManagementSystem", safetyLanguage)}
