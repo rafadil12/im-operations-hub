@@ -28,6 +28,10 @@
 .cursor/
 debug-*.log
 
+# local AI / developer instructions
+AGENTS.md
+COMMIT.md
+
 # debug
 npm-debug.log*
 yarn-debug.log*
