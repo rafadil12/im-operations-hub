@@ -56,6 +56,9 @@ export type ReportLine = {
   year?: number;
   weekNumber?: number;
   submissionStatus?: "draft" | "submitted" | null;
+  updatedAt?: string | null;
+  submittedAt?: string | null;
+  submittedByLabel?: string | null;
 };
 
 export type ReportLineRow = {
@@ -79,6 +82,9 @@ export type ReportLineRow = {
   area_name_en?: string;
   area_name_cn?: string;
   submission_status?: ReportSubmissionStatus | null;
+  line_updated_at?: string | Date | null;
+  submitted_at?: string | Date | null;
+  submitted_by_label?: string | null;
 };
 
 export type ReportAreaMetrics = {

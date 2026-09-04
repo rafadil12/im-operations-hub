@@ -35,7 +35,7 @@ import {
 
 type ReportWeekFormModalProps = {
   open: boolean;
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "view";
   initialYear: number;
   initialWeekNumber: number;
   initialAreaId: number;
@@ -250,14 +250,16 @@ export function ReportWeekFormModal({
     [subItems, areaId]
   );
 
-  const weekOptions = useMemo(
-    () =>
-      mergeSelectableWeekNumbers(
-        year,
-        weeks.filter((w) => w.year === year).map((w) => w.weekNumber)
-      ),
-    [year, weeks]
-  );
+  const weekOptions = useMemo(() => {
+    const options = mergeSelectableWeekNumbers(
+      year,
+      weeks.filter((w) => w.year === year).map((w) => w.weekNumber)
+    );
+    if (Number.isInteger(weekNumber) && !options.includes(weekNumber)) {
+      return [weekNumber, ...options].sort((a, b) => b - a);
+    }
+    return options;
+  }, [year, weeks, weekNumber]);
 
   useEffect(() => {
     if (!open) return;
@@ -272,6 +274,8 @@ export function ReportWeekFormModal({
 
     if (mode === "create") {
       setLines([newWeekLineDraft()]);
+      setSavedAttachments([]);
+      setIsSubmitted(false);
       setLoading(false);
       return;
     }
@@ -311,16 +315,10 @@ export function ReportWeekFormModal({
     })();
   }, [open, mode, initialYear, initialWeekNumber, initialAreaId, lang]);
 
-  useEffect(() => {
-    if (!weekOptions.length) return;
-    if (!weekOptions.includes(weekNumber)) {
-      setWeekNumber(weekOptions[0]);
-    }
-  }, [weekOptions, weekNumber]);
-
-  const readOnly = isSubmitted || !canSave;
+  const readOnly = mode === "view" || isSubmitted || !canSave;
 
   const handleSave = async () => {
+    if (readOnly) return;
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
       if (line.subItemId === "") {
@@ -341,7 +339,23 @@ export function ReportWeekFormModal({
         year,
         weekNumber,
         areaId,
-        lines: lines.map((line) => draftToPayload(line)),
+        mode: mode === "create" ? "create" : "update",
+        lines: lines.map((line) => {
+          const row = draftToPayload(line);
+          if (mode === "create") {
+            return {
+              subItemId: row.subItemId,
+              workTargetEn: row.workTargetEn,
+              workTargetCn: row.workTargetCn,
+              weeklyCompletionRate: row.weeklyCompletionRate,
+              summaryEn: row.summaryEn,
+              summaryCn: row.summaryCn,
+              planEn: row.planEn,
+              planCn: row.planCn,
+            };
+          }
+          return row;
+        }),
       };
       const res = await fetch("/api/report/week-lines", {
         method: "PUT",
@@ -349,6 +363,9 @@ export function ReportWeekFormModal({
         body: JSON.stringify(payload),
       });
       const json = await res.json();
+      if (res.status === 409) {
+        throw new Error(reportText("reportAlreadyExists", language));
+      }
       if (!res.ok || !json.success) throw new Error(json.error ?? "Save failed");
 
       if (pendingFiles.length) {
@@ -379,11 +396,23 @@ export function ReportWeekFormModal({
       <FullViewWorkspace
         language={language}
         title={
-          mode === "create" ? reportText("addReport", language) : reportText("editReport", language)
+          mode === "create"
+            ? reportText("addReport", language)
+            : mode === "view"
+              ? reportText("viewReport", language)
+              : reportText("editReport", language)
         }
-        subtitle={reportText("addReportSubtitle", language)}
+        subtitle={
+          mode === "view"
+            ? reportText("viewReportSubtitle", language)
+            : reportText("addReportSubtitle", language)
+        }
         ariaLabel={
-          mode === "create" ? reportText("addReport", language) : reportText("editReport", language)
+          mode === "create"
+            ? reportText("addReport", language)
+            : mode === "view"
+              ? reportText("viewReport", language)
+              : reportText("editReport", language)
         }
         onExit={onClose}
         exitDisabled={saving}
@@ -421,7 +450,7 @@ export function ReportWeekFormModal({
               <select
                 className={field}
                 value={year}
-                disabled={mode === "edit" || readOnly}
+                disabled
                 onChange={(e) => setYear(Number(e.target.value))}
               >
                 {[2025, 2026, 2027].map((y) => (
@@ -436,7 +465,7 @@ export function ReportWeekFormModal({
               <select
                 className={field}
                 value={weekNumber}
-                disabled={mode === "edit" || readOnly}
+                disabled
                 onChange={(e) => setWeekNumber(Number(e.target.value))}
               >
                 {weekOptions.map((w) => (
@@ -451,7 +480,7 @@ export function ReportWeekFormModal({
               <select
                 className={field}
                 value={areaId}
-                disabled={mode === "edit" || readOnly}
+                disabled
                 onChange={(e) => {
                   const nextAreaId = Number(e.target.value);
                   setAreaId(nextAreaId);

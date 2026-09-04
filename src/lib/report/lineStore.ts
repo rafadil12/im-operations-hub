@@ -162,7 +162,10 @@ export async function loadReportLines(filters: {
         ra.code AS area_code,
         ra.name_en AS area_name_en,
         ra.name_cn AS area_name_cn,
-        rws.status AS submission_status
+        rws.status AS submission_status,
+        rl.updated_at AS line_updated_at,
+        rws.submitted_at,
+        rws.submitted_by_label
       FROM report_lines rl
       JOIN report_weeks rw ON rw.id = rl.week_id
       JOIN report_areas ra ON ra.id = rl.area_id

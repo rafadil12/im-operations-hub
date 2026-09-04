@@ -9,6 +9,7 @@ import {
   getSubmissionStatus,
   loadReportLines,
 } from "./lineStore";
+import { createModeConflictMessage } from "./weekReportIdentity";
 
 export type ReportWeekLinePayload = {
   id?: number;
@@ -117,7 +118,8 @@ export async function saveReportWeekLines(
   weekNumber: number,
   areaId: number,
   lines: ReportWeekLinePayload[],
-  audit: SaveWeekReportAudit = {}
+  audit: SaveWeekReportAudit = {},
+  options: { create?: boolean } = {}
 ): Promise<ReportLine[]> {
   const validationError = validateWeekLines(lines);
   if (validationError) throw new Error(validationError);
@@ -128,9 +130,24 @@ export async function saveReportWeekLines(
     throw new Error("This week report is submitted and cannot be edited.");
   }
 
+  const existing = await loadReportLines({ weekId, areaId });
+  if (options.create) {
+    const conflict = createModeConflictMessage(existing.length);
+    if (conflict) throw new Error(conflict);
+    lines = lines.map((line) => ({
+      subItemId: line.subItemId,
+      workTargetEn: line.workTargetEn,
+      workTargetCn: line.workTargetCn,
+      weeklyCompletionRate: line.weeklyCompletionRate,
+      summaryEn: line.summaryEn,
+      summaryCn: line.summaryCn,
+      planEn: line.planEn,
+      planCn: line.planCn,
+    }));
+  }
+
   await ensureDraftSubmission(weekId, areaId);
 
-  const existing = await loadReportLines({ weekId, areaId });
   const existingById = new Map(existing.map((l) => [l.id, l]));
   const payloadIds = new Set(lines.filter((l) => l.id != null).map((l) => Number(l.id)));
 
