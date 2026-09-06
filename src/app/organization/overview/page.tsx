@@ -55,6 +55,34 @@ type ScheduleApiRow = {
     | null;
 };
 
+type ScheduleExceptionStatus =
+  | "MISSED"
+  | "LEAVE"
+  | "WORKED_ON_OFF"
+  | "UNSCHEDULED_PRESENT";
+
+type ScheduleException = {
+  employee: Employee;
+  date: string;
+  scheduleType: ScheduleApiRow["schedule_type"];
+  attendanceValue: AttendanceValue | null;
+  status: ScheduleExceptionStatus;
+};
+
+type DailyScheduleComparison = {
+  date: string;
+  day: number;
+  weekday: string;
+  scheduled: number;
+  actual: number;
+  rate: number;
+  leave: number;
+  missed: number;
+  workedOnOff: number;
+  unscheduledPresent: number;
+  exceptions: ScheduleException[];
+};
+
 type LeaveType =
   | "AL"
   | "MC"
@@ -116,6 +144,15 @@ type EmployeeAttendanceSummary = {
   upl: number;
   absent: number;
   off: number;
+};
+
+
+type EmployeeLeaveSummary = {
+  employee: Employee;
+  al: number;
+  mc: number;
+  upl: number;
+  total: number;
 };
 
 const API_EMPLOYEES =
@@ -233,6 +270,37 @@ function valueLabel(
   );
 }
 
+function isWorkScheduleType(
+  scheduleType: ScheduleApiRow["schedule_type"],
+) {
+  return (
+    scheduleType === "D" ||
+    scheduleType === "N" ||
+    scheduleType === "D/S" ||
+    scheduleType === "N/S" ||
+    scheduleType === "1" ||
+    scheduleType === "4"
+  );
+}
+
+function isLeaveAttendanceValue(
+  value: AttendanceValue | undefined,
+) {
+  return value === "AL" || value === "MC" || value === "UPL";
+}
+
+function scheduleLabel(
+  value: ScheduleApiRow["schedule_type"],
+  language: OrganizationLanguage,
+) {
+  if (!value) return language === "cn" ? "无排班" : "No schedule";
+  if (value === "D" || value === "D/S") return language === "cn" ? "白班" : "Day";
+  if (value === "N" || value === "N/S") return language === "cn" ? "夜班" : "Night";
+  if (value === "1") return language === "cn" ? "8小时" : "8 Hours";
+  if (value === "4") return language === "cn" ? "4小时" : "4 Hours";
+  return language === "cn" ? "休息" : "OFF";
+}
+
 /* =========================================================
    CARD
 ========================================================= */
@@ -326,7 +394,7 @@ function KpiCard({
         </div>
       </div>
 
-      <p className="mt-3 text-2xl font-semibold text-text">
+      <p className="mt-2 text-2xl font-semibold text-text">
         {value}
       </p>
 
@@ -387,11 +455,11 @@ function ScoreCard({
         </span>
       </div>
 
-      <p className="mt-3 text-[10px] uppercase tracking-wide text-text-dim">
+      <p className="mt-2 text-[10px] uppercase tracking-wide text-text-dim">
         {title}
       </p>
 
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-bg">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg">
         <div
           className={`h-full rounded-full ${toneClass.bar}`}
           style={{
@@ -414,6 +482,7 @@ function LegendStat({
   label,
   value,
   tone,
+  onClick,
 }: {
   label: string;
   value: number;
@@ -423,6 +492,7 @@ function LegendStat({
     | "danger"
     | "accent"
     | "info";
+  onClick?: () => void;
 }) {
   const classes = {
     success:
@@ -438,7 +508,17 @@ function LegendStat({
   };
 
   return (
-    <div className="rounded-lg border border-border-subtle bg-bg/30 p-3 text-center">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={[
+        "w-full rounded-lg border border-border-subtle bg-bg/30 p-3 text-center transition-all duration-200",
+        onClick
+          ? "cursor-pointer hover:border-rose-400/30 hover:bg-rose-500/5 focus:outline-none focus:ring-2 focus:ring-rose-400/20"
+          : "cursor-default",
+      ].join(" ")}
+    >
       <p
         className={`text-lg font-semibold ${
           classes[tone].split(" ")[1]
@@ -450,7 +530,7 @@ function LegendStat({
       <p className="mt-1 text-[9px] text-text-dim">
         {label}
       </p>
-    </div>
+    </button>
   );
 }
 
@@ -773,6 +853,409 @@ function LineChart({
 }
 
 /* =========================================================
+   SCHEDULE VS ACTUAL CHART
+========================================================= */
+function ScheduleVsActualChart({
+  data,
+  selectedDate,
+  onSelectDate,
+  language,
+}: {
+  data: DailyScheduleComparison[];
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
+  language: OrganizationLanguage;
+}) {
+  const width = 900;
+  const height = 330;
+  const left = 46;
+  const right = 52;
+  const top = 24;
+  const bottom = 44;
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+  const maxCount = Math.max(
+    1,
+    ...data.map((item) => Math.max(item.scheduled, item.actual)),
+  );
+  const step = chartWidth / Math.max(data.length, 1);
+  const barWidth = Math.min(12, Math.max(4, step * 0.28));
+  const points = data.map((item, index) => {
+    const x = left + (index / Math.max(data.length - 1, 1)) * chartWidth;
+    const scheduledY = top + chartHeight - (item.scheduled / maxCount) * chartHeight;
+    const actualY = top + chartHeight - (item.actual / maxCount) * chartHeight;
+    const rateY = top + chartHeight - (Math.min(item.rate, 100) / 100) * chartHeight;
+    return { ...item, x, scheduledY, actualY, rateY };
+  });
+
+  const ratePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.rateY}`)
+    .join(" ");
+
+  const animationMs = 1800;
+  const barDelay = 0.045;
+  const actualOffset = 0.08;
+  const rateStart = Math.min(data.length * barDelay + 0.15, 1.5);
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <style>{`
+        @keyframes scheduleBarGrow {
+          0% {
+            transform: scaleY(0);
+            opacity: 0;
+          }
+          100% {
+            transform: scaleY(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes actualBarGrow {
+          0% {
+            transform: scaleY(0);
+            opacity: 0;
+          }
+          100% {
+            transform: scaleY(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes attendanceLineDraw {
+          0% {
+            stroke-dashoffset: 1;
+            opacity: 0.15;
+          }
+          100% {
+            stroke-dashoffset: 0;
+            opacity: 1;
+          }
+        }
+
+        @keyframes attendancePointReveal {
+          0% {
+            opacity: 0;
+            transform: scale(0.2);
+          }
+          70% {
+            opacity: 1;
+            transform: scale(1.18);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes varianceDotReveal {
+          0% {
+            opacity: 0;
+            transform: scale(0.15);
+          }
+          55% {
+            opacity: 1;
+            transform: scale(1.4);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes varianceDotPulse {
+          0%, 100% {
+            filter: drop-shadow(0 0 0 rgba(244,63,94,0));
+          }
+          50% {
+            filter: drop-shadow(0 0 5px rgba(244,63,94,0.55));
+          }
+        }
+
+        .schedule-bar-grow {
+          transform-box: fill-box;
+          transform-origin: bottom;
+          animation-name: scheduleBarGrow;
+          animation-duration: 700ms;
+          animation-timing-function: ease-out;
+          animation-fill-mode: both;
+        }
+
+        .actual-bar-grow {
+          transform-box: fill-box;
+          transform-origin: bottom;
+          animation-name: actualBarGrow;
+          animation-duration: 700ms;
+          animation-timing-function: ease-out;
+          animation-fill-mode: both;
+        }
+
+        .attendance-line-draw {
+          pathLength: 1;
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+          animation-name: attendanceLineDraw;
+          animation-duration: 1800ms;
+          animation-timing-function: ease-out;
+          animation-fill-mode: forwards;
+        }
+
+        .attendance-point-reveal {
+          transform-box: fill-box;
+          transform-origin: center;
+          animation-name: attendancePointReveal;
+          animation-duration: 420ms;
+          animation-timing-function: ease-out;
+          animation-fill-mode: both;
+        }
+
+        .variance-dot-reveal {
+          transform-box: fill-box;
+          transform-origin: center;
+          animation-name: varianceDotReveal;
+          animation-duration: 420ms;
+          animation-timing-function: ease-out;
+          animation-fill-mode: both;
+        }
+
+        .variance-dot-pulse {
+          animation-name: varianceDotPulse;
+          animation-duration: 1400ms;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: 2;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .schedule-bar-grow,
+          .actual-bar-grow,
+          .attendance-line-draw,
+          .attendance-point-reveal,
+          .variance-dot-reveal,
+          .variance-dot-pulse {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
+      <svg viewBox={`0 0 ${width} ${height}`} className="min-w-[760px] w-full">
+        {[0, 25, 50, 75, 100].map((percent) => {
+          const y = top + chartHeight - (percent / 100) * chartHeight;
+          const count = Math.round((percent / 100) * maxCount);
+          return (
+            <g key={percent}>
+              <line
+                x1={left}
+                x2={width - right}
+                y1={y}
+                y2={y}
+                className="stroke-border-subtle"
+              />
+              <text
+                x={left - 8}
+                y={y + 4}
+                textAnchor="end"
+                className="fill-text-dim text-[9px]"
+              >
+                {count}
+              </text>
+              <text
+                x={width - right + 9}
+                y={y + 4}
+                className="fill-text-dim text-[9px]"
+              >
+                {percent}%
+              </text>
+            </g>
+          );
+        })}
+
+        {points.map((point, index) => {
+          const selected = point.date === selectedDate;
+          const hasVariance =
+            point.missed + point.workedOnOff + point.unscheduledPresent > 0;
+
+          const sequenceDelay = `${(index * barDelay).toFixed(2)}s`;
+          const actualDelay = `${(index * barDelay + actualOffset).toFixed(2)}s`;
+          const pointDelay = `${(rateStart + index * 0.045).toFixed(2)}s`;
+          const varianceDelay = `${(rateStart + index * 0.04 + 0.08).toFixed(2)}s`;
+
+          return (
+            <g
+              key={`bar-${point.date}`}
+              onClick={() => onSelectDate(point.date)}
+              className="cursor-pointer"
+            >
+              {selected && (
+                <rect
+                  x={point.x - step / 2}
+                  y={top}
+                  width={step}
+                  height={chartHeight}
+                  rx="8"
+                  className="fill-cyan-500/5"
+                />
+              )}
+
+              {hasVariance && !selected && (
+                <circle
+                  cx={point.x}
+                  cy={top - 11}
+                  r="3"
+                  className="fill-rose-400 variance-dot-reveal variance-dot-pulse"
+                  style={{ animationDelay: varianceDelay }}
+                />
+              )}
+
+              <rect
+                x={point.x - barWidth - 2}
+                y={point.scheduledY}
+                width={barWidth}
+                height={top + chartHeight - point.scheduledY}
+                rx="3"
+                className="fill-slate-400 schedule-bar-grow"
+                style={{ animationDelay: sequenceDelay }}
+              />
+
+              <rect
+                x={point.x + 2}
+                y={point.actualY}
+                width={barWidth}
+                height={top + chartHeight - point.actualY}
+                rx="3"
+                className="fill-cyan-400 actual-bar-grow"
+                style={{ animationDelay: actualDelay }}
+              />
+
+              {(data.length <= 15 || Number(point.day) % 4 === 1 || point.day === data.length) && (
+                <text
+                  x={point.x}
+                  y={height - 18}
+                  textAnchor="middle"
+                  className={
+                    selected
+                      ? "fill-cyan-400 text-[9px]"
+                      : "fill-text-dim text-[9px]"
+                  }
+                >
+                  {String(point.day).padStart(2, "0")}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        <path
+          d={ratePath}
+          fill="none"
+          className="stroke-emerald-400 attendance-line-draw"
+          style={{ animationDelay: `${rateStart.toFixed(2)}s` }}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {points.map((point, index) => {
+          const selected = point.date === selectedDate;
+          const pointDelay = `${(rateStart + index * 0.045 + 0.08).toFixed(2)}s`;
+
+          return (
+            <g
+              key={`rate-${point.date}`}
+              onClick={() => onSelectDate(point.date)}
+              className="cursor-pointer"
+            >
+              <circle
+                cx={point.x}
+                cy={point.rateY}
+                r={selected ? 6 : 4}
+                className="fill-emerald-400 stroke-surface attendance-point-reveal"
+                style={{ animationDelay: pointDelay }}
+                strokeWidth="2"
+              />
+
+              {(selected || point.rate < 100 || data.length <= 10) && (
+                <text
+                  x={point.x}
+                  y={point.rateY - 9}
+                  textAnchor="middle"
+                  className="fill-emerald-400 text-[8px] font-semibold"
+                >
+                  {point.rate.toFixed(0)}%
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-5 text-[10px]">
+        <span className="flex items-center gap-1.5">
+          <span className="size-3 rounded-sm bg-slate-400" />
+          {language === "cn" ? "应出勤" : "Scheduled"}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-3 rounded-sm bg-cyan-400" />
+          {language === "cn" ? "实际出勤" : "Actual"}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-0.5 w-4 bg-emerald-400" />
+          {language === "cn" ? "出勤率" : "Attendance Rate"}
+        </span>
+        <span className="text-text-dim">
+          {language === "cn"
+            ? "红点 = 存在排班偏差"
+            : "Red dot = schedule variance"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SimpleDonut({
+  values,
+  centerLabel,
+}: {
+  values: { label: string; value: number; className: string }[];
+  centerLabel: string;
+}) {
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  const radius = 56;
+  const circumference = 2 * Math.PI * radius;
+  let accumulated = 0;
+
+  return (
+    <div className="relative size-[clamp(9rem,15vw,13rem)] shrink-0">
+      <svg viewBox="0 0 140 140" className="size-full -rotate-90">
+        <circle cx="70" cy="70" r={radius} fill="none" className="stroke-bg" strokeWidth="18" />
+        {values.map((item, index) => {
+          const percentage = total > 0 ? item.value / total : 0;
+          const dash = percentage * circumference;
+          const offset = -accumulated * circumference;
+          accumulated += percentage;
+          return (
+            <circle
+              key={item.label}
+              cx="70"
+              cy="70"
+              r={radius}
+              fill="none"
+              className={item.className}
+              strokeWidth="18"
+              strokeDasharray={`${Math.max(dash - 2, 0)} ${circumference}`}
+              strokeDashoffset={offset}
+            />
+          );
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-semibold text-text">{centerLabel}</span>
+        <span className="mt-1 text-[9px] text-text-dim">{total}</span>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    HORIZONTAL BAR
 ========================================================= */
 
@@ -829,6 +1312,180 @@ function HorizontalBarChart({
           </div>
         ),
       )}
+    </div>
+  );
+}
+
+/* =========================================================
+   EMPLOYEE LEAVE BY PERSON
+========================================================= */
+
+function EmployeeLeaveChart({
+  data,
+  language,
+}: {
+  data: EmployeeLeaveSummary[];
+  language: OrganizationLanguage;
+}) {
+  if (data.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-xs text-text-muted">
+        {language === "cn"
+          ? "本月没有已批准的请假记录"
+          : "No approved leave records this month"}
+      </div>
+    );
+  }
+
+  const maxTotal = Math.max(
+    ...data.map((item) => item.total),
+    1,
+  );
+
+  const chartHeight = 260;
+  const barMaxHeight = 190;
+  const yTicks = Array.from(
+    { length: 5 },
+    (_, index) =>
+      Math.ceil((maxTotal * (4 - index)) / 4),
+  );
+
+  return (
+    <div className="rounded-lg border border-border-subtle bg-bg/20 p-2.5">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+            {language === "cn" ? "员工请假" : "Leave by Employee"}
+          </p>
+          <p className="mt-0.5 text-[8px] text-text-dim">
+            {language === "cn"
+              ? "仅显示本月有已批准请假的员工"
+              : "Only employees with approved leave are shown"}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3 text-[8px]">
+          <span className="flex items-center gap-1 font-semibold text-blue-400">
+            <span className="size-2 rounded-sm bg-blue-500" />
+            AL
+          </span>
+          <span className="flex items-center gap-1 font-semibold text-violet-400">
+            <span className="size-2 rounded-sm bg-violet-500" />
+            MC
+          </span>
+          <span className="flex items-center gap-1 font-semibold text-indigo-400">
+            <span className="size-2 rounded-sm bg-indigo-500" />
+            UPL
+          </span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto pb-1">
+        <div
+          className="relative min-w-max"
+          style={{
+            height: `${chartHeight + 74}px`,
+            minWidth: `${Math.max(data.length * 82 + 58, 520)}px`,
+          }}
+        >
+          <div className="absolute left-8 right-2 top-1" style={{ height: `${chartHeight}px` }}>
+            {yTicks.map((tick) => {
+              const top =
+                maxTotal > 0
+                  ? ((maxTotal - tick) / maxTotal) * barMaxHeight + 8
+                  : 8;
+
+              return (
+                <div
+                  key={tick}
+                  className="pointer-events-none absolute left-0 right-0 flex items-center"
+                  style={{ top: `${top}px` }}
+                >
+                  <span className="absolute -left-7 -translate-y-1/2 text-[8px] text-text-dim">
+                    {tick}
+                  </span>
+                  <div className="h-px flex-1 bg-border-subtle/70" />
+                </div>
+              );
+            })}
+
+            <div className="absolute inset-x-0 bottom-[30px] top-2 flex items-end justify-start gap-2.5 px-2">
+              {data.map((item) => {
+                const totalHeight =
+                  maxTotal > 0
+                    ? Math.max(
+                        (item.total / maxTotal) * barMaxHeight,
+                        item.total > 0 ? 6 : 0,
+                      )
+                    : 0;
+
+                const alHeight =
+                  item.total > 0
+                    ? (item.al / item.total) * totalHeight
+                    : 0;
+                const mcHeight =
+                  item.total > 0
+                    ? (item.mc / item.total) * totalHeight
+                    : 0;
+                const uplHeight =
+                  item.total > 0
+                    ? (item.upl / item.total) * totalHeight
+                    : 0;
+
+                return (
+                  <div
+                    key={item.employee.employee_no}
+                    className="flex h-full w-16 shrink-0 flex-col items-center justify-end"
+                  >
+                    <div className="mb-1 text-[10px] font-extrabold text-text">
+                      {item.total}
+                    </div>
+
+                    <div
+                      className="flex w-9 flex-col justify-end overflow-hidden rounded-t-md bg-bg/50 ring-1 ring-inset ring-border-subtle"
+                      style={{ height: `${totalHeight}px` }}
+                      title={`${employeeName(item.employee, language)} — ${item.total} approved leave`}
+                    >
+                      {item.upl > 0 ? (
+                        <div
+                          className="w-full bg-indigo-500 transition-all duration-300"
+                          style={{ height: `${uplHeight}px` }}
+                          title={`UPL: ${item.upl}`}
+                        />
+                      ) : null}
+
+                      {item.mc > 0 ? (
+                        <div
+                          className="w-full bg-violet-500 transition-all duration-300"
+                          style={{ height: `${mcHeight}px` }}
+                          title={`MC: ${item.mc}`}
+                        />
+                      ) : null}
+
+                      {item.al > 0 ? (
+                        <div
+                          className="w-full bg-blue-500 transition-all duration-300"
+                          style={{ height: `${alHeight}px` }}
+                          title={`AL: ${item.al}`}
+                        />
+                      ) : null}
+                    </div>
+
+                    <div className="mt-2 w-20 text-center">
+                      <p className="truncate text-[8px] font-semibold text-text">
+                        {employeeName(item.employee, language)}
+                      </p>
+                      <p className="mt-0.5 truncate text-[7px] text-text-dim">
+                        {item.employee.employee_no}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -892,41 +1549,54 @@ function EmployeeMonthlyAttendance({
                   </span>
                 </div>
 
-                <div className="mt-2 flex h-2.5 w-full overflow-hidden rounded-full bg-bg">
+                <div
+                  className="mt-2 flex h-3.5 w-full overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-800/90 ring-1 ring-inset ring-black/5 dark:ring-white/5"
+                >
                   {item.present > 0 && (
                     <div
-                      className="h-full bg-emerald-500"
+                      className="h-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.35)] transition-all duration-500"
                       style={{ width: segmentWidth(item.present) }}
+                      title={`Present: ${item.present}`}
                     />
                   )}
+
                   {item.leave > 0 && (
                     <div
-                      className="h-full bg-blue-500"
+                      className="h-full border-l border-white/20 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.30)] transition-all duration-500"
                       style={{ width: segmentWidth(item.leave) }}
+                      title={`AL: ${item.leave}`}
                     />
                   )}
+
                   {item.mc > 0 && (
                     <div
-                      className="h-full bg-violet-500"
+                      className="h-full border-l border-white/20 bg-gradient-to-r from-fuchsia-400 via-purple-500 to-purple-600 shadow-[0_0_8px_rgba(168,85,247,0.30)] transition-all duration-500"
                       style={{ width: segmentWidth(item.mc) }}
+                      title={`MC: ${item.mc}`}
                     />
                   )}
+
                   {item.upl > 0 && (
                     <div
-                      className="h-full bg-indigo-500"
+                      className="h-full border-l border-white/20 bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 shadow-[0_0_8px_rgba(249,115,22,0.35)] transition-all duration-500"
                       style={{ width: segmentWidth(item.upl) }}
+                      title={`UPL: ${item.upl}`}
                     />
                   )}
+
                   {item.absent > 0 && (
                     <div
-                      className="h-full bg-rose-500"
+                      className="h-full border-l border-white/20 bg-gradient-to-r from-red-400 via-rose-500 to-red-600 shadow-[0_0_8px_rgba(244,63,94,0.35)] transition-all duration-500"
                       style={{ width: segmentWidth(item.absent) }}
+                      title={`Absent: ${item.absent}`}
                     />
                   )}
+
                   {item.off > 0 && (
                     <div
-                      className="h-full bg-slate-500"
+                      className="h-full border-l border-white/20 bg-gradient-to-r from-slate-400 via-slate-500 to-slate-600 transition-all duration-500"
                       style={{ width: segmentWidth(item.off) }}
+                      title={`OFF: ${item.off}`}
                     />
                   )}
                 </div>
@@ -938,10 +1608,10 @@ function EmployeeMonthlyAttendance({
                   <span className="text-blue-400">
                     {language === "cn" ? "年假" : "AL"} {item.leave}
                   </span>
-                  <span className="text-violet-400">
+                  <span className="text-purple-400">
                     {language === "cn" ? "病假" : "MC"} {item.mc}
                   </span>
-                  <span className="text-indigo-400">
+                  <span className="text-orange-400">
                     {language === "cn" ? "外出" : "UPL"} {item.upl}
                   </span>
                   <span className="text-rose-400">
@@ -1075,6 +1745,9 @@ export default function AttendanceOverviewPage() {
   ] = useState(
     () => new Date(),
   );
+
+  const [showAllScheduleVariance, setShowAllScheduleVariance] = useState(true);
+  const [showScheduleVarianceZoom, setShowScheduleVarianceZoom] = useState(false);
 
   const [
     employees,
@@ -1486,6 +2159,118 @@ export default function AttendanceOverviewPage() {
   ]);
 
   /* =======================================================
+     SCHEDULE COMPARISON
+  ======================================================= */
+
+  const todayKey = dateKey(startOfDay(new Date()));
+
+  const dailyScheduleComparison = useMemo<DailyScheduleComparison[]>(() => {
+    return monthDays.map((dayInfo) => {
+      let scheduled = 0;
+      let actual = 0;
+      let leave = 0;
+      let missed = 0;
+      let workedOnOff = 0;
+      let unscheduledPresent = 0;
+
+      const exceptions: ScheduleException[] = [];
+      const isFuture = dayInfo.dateKey > todayKey;
+
+      for (const employee of employees) {
+        const key = `${employee.employee_no}|${dayInfo.dateKey}`;
+        const schedule = scheduleMap.get(key);
+        const attendance = attendanceMap.get(key);
+        const scheduleType = schedule?.schedule_type ?? null;
+        const value = attendance?.attendance_value;
+
+        if (isWorkScheduleType(scheduleType)) {
+          scheduled++;
+
+          if (isFuture) continue;
+
+          if (!attendance) {
+            missed++;
+            exceptions.push({
+              employee,
+              date: dayInfo.dateKey,
+              scheduleType,
+              attendanceValue: null,
+              status: "MISSED",
+            });
+            continue;
+          }
+
+          if (isPresent(value)) {
+            actual++;
+            continue;
+          }
+
+          if (isLeaveAttendanceValue(value)) {
+            leave++;
+            exceptions.push({
+              employee,
+              date: dayInfo.dateKey,
+              scheduleType,
+              attendanceValue: value ?? null,
+              status: "LEAVE",
+            });
+            continue;
+          }
+
+          missed++;
+          exceptions.push({
+            employee,
+            date: dayInfo.dateKey,
+            scheduleType,
+            attendanceValue: value ?? null,
+            status: "MISSED",
+          });
+          continue;
+        }
+
+        if (scheduleType === "OFF") {
+          if (!isFuture && isPresent(value)) {
+            workedOnOff++;
+            exceptions.push({
+              employee,
+              date: dayInfo.dateKey,
+              scheduleType,
+              attendanceValue: value ?? null,
+              status: "WORKED_ON_OFF",
+            });
+          }
+          continue;
+        }
+
+        if (!isFuture && isPresent(value)) {
+          unscheduledPresent++;
+          exceptions.push({
+            employee,
+            date: dayInfo.dateKey,
+            scheduleType: null,
+            attendanceValue: value,
+            status: "UNSCHEDULED_PRESENT",
+          });
+        }
+      }
+
+      return {
+        date: dayInfo.dateKey,
+        day: dayInfo.day,
+        weekday: dayInfo.weekday,
+        scheduled,
+        actual,
+        rate: scheduled > 0 ? Math.min(100, (actual / scheduled) * 100) : 0,
+        leave,
+        missed,
+        workedOnOff,
+        unscheduledPresent,
+        exceptions,
+      };
+    });
+  }, [monthDays, employees, attendanceMap, scheduleMap, todayKey]);
+
+  /* =======================================================
      SELECTED DATE
   ======================================================= */
 
@@ -1495,6 +2280,182 @@ export default function AttendanceOverviewPage() {
         selectedDate,
       ),
     );
+
+  const selectedScheduleDay =
+    dailyScheduleComparison.find((item) => item.date === currentDateKey) ?? null;
+
+  const scheduleMonthlySummary = useMemo(() => {
+    let scheduled = 0;
+    let actual = 0;
+    let leave = 0;
+    let missed = 0;
+    let workedOnOff = 0;
+    let unscheduledPresent = 0;
+
+    for (const day of dailyScheduleComparison) {
+      scheduled += day.scheduled;
+      actual += day.actual;
+      leave += day.leave;
+      missed += day.missed;
+      workedOnOff += day.workedOnOff;
+      unscheduledPresent += day.unscheduledPresent;
+    }
+
+    return {
+      scheduled,
+      actual,
+      leave,
+      missed,
+      workedOnOff,
+      unscheduledPresent,
+      rate: scheduled > 0 ? (actual / scheduled) * 100 : 0,
+      variance: missed + workedOnOff + unscheduledPresent,
+    };
+  }, [dailyScheduleComparison]);
+
+  const allScheduleVarianceExceptions = useMemo(() => {
+    return dailyScheduleComparison
+      .filter((day) => day.exceptions.some((item) => item.status !== "LEAVE"))
+      .flatMap((day) =>
+        day.exceptions
+          .filter((item) => item.status !== "LEAVE")
+          .map((item) => ({
+            ...item,
+            day: day.day,
+            weekday: day.weekday,
+          })),
+      );
+  }, [dailyScheduleComparison]);
+
+  const employeeScheduleSummary = useMemo(() => {
+    const map = new Map<string, {
+      employee: Employee;
+      scheduled: number;
+      actual: number;
+      leave: number;
+      mismatch: number;
+    }>();
+
+    for (const day of dailyScheduleComparison) {
+      for (const employee of employees) {
+        const key = `${employee.employee_no}|${day.date}`;
+        const schedule = scheduleMap.get(key)?.schedule_type ?? null;
+        const attendance = attendanceMap.get(key)?.attendance_value;
+        const current = map.get(employee.employee_no) ?? {
+          employee,
+          scheduled: 0,
+          actual: 0,
+          leave: 0,
+          mismatch: 0,
+        };
+
+        if (isWorkScheduleType(schedule)) {
+          current.scheduled++;
+          if (day.date > todayKey) continue;
+
+          if (isPresent(attendance)) current.actual++;
+          else if (isLeaveAttendanceValue(attendance)) current.leave++;
+          else current.mismatch++;
+        } else if (
+          schedule === "OFF" &&
+          day.date <= todayKey &&
+          isPresent(attendance)
+        ) {
+          current.mismatch++;
+        } else if (
+          !schedule &&
+          day.date <= todayKey &&
+          isPresent(attendance)
+        ) {
+          current.mismatch++;
+        }
+
+        map.set(employee.employee_no, current);
+      }
+    }
+
+    return Array.from(map.values())
+      .map((item) => ({
+        ...item,
+        rate: item.scheduled > 0 ? (item.actual / item.scheduled) * 100 : 100,
+      }))
+      .filter((item) => item.scheduled > 0 || item.mismatch > 0)
+      .sort((a, b) => b.mismatch - a.mismatch || a.rate - b.rate);
+  }, [dailyScheduleComparison, employees, scheduleMap, attendanceMap, todayKey]);
+
+  const departmentScheduleSummary = useMemo(() => {
+    const map = new Map<string, {
+      department: string;
+      scheduled: number;
+      actual: number;
+      mismatch: number;
+    }>();
+
+    for (const employee of employees) {
+      const department = departmentName(employee, language);
+      const current = map.get(department) ?? {
+        department,
+        scheduled: 0,
+        actual: 0,
+        mismatch: 0,
+      };
+
+      for (const day of dailyScheduleComparison) {
+        const key = `${employee.employee_no}|${day.date}`;
+        const schedule = scheduleMap.get(key)?.schedule_type ?? null;
+        const attendance = attendanceMap.get(key)?.attendance_value;
+        if (isWorkScheduleType(schedule)) {
+          current.scheduled++;
+          if (day.date <= todayKey) {
+            if (isPresent(attendance)) current.actual++;
+            else if (!isLeaveAttendanceValue(attendance)) current.mismatch++;
+          }
+        } else if (
+          day.date <= todayKey &&
+          ((schedule === "OFF" || !schedule) && isPresent(attendance))
+        ) {
+          current.mismatch++;
+        }
+      }
+
+      map.set(department, current);
+    }
+
+    return Array.from(map.values())
+      .map((item) => ({
+        ...item,
+        rate: item.scheduled > 0 ? (item.actual / item.scheduled) * 100 : 0,
+      }))
+      .sort((a, b) => b.rate - a.rate);
+  }, [employees, dailyScheduleComparison, scheduleMap, attendanceMap, language, todayKey]);
+
+  const shiftHealthSummary = useMemo(() => {
+    const groups: Record<string, { label: string; scheduled: number; actual: number }> = {
+      day: { label: language === "cn" ? "白班" : "Day Shift", scheduled: 0, actual: 0 },
+      night: { label: language === "cn" ? "夜班" : "Night Shift", scheduled: 0, actual: 0 },
+      four: { label: language === "cn" ? "4小时" : "4 Hours", scheduled: 0, actual: 0 },
+      eight: { label: language === "cn" ? "8小时" : "8 Hours", scheduled: 0, actual: 0 },
+    };
+
+    for (const employee of employees) {
+      for (const day of dailyScheduleComparison) {
+        const schedule = scheduleMap.get(`${employee.employee_no}|${day.date}`)?.schedule_type ?? null;
+        const attendance = attendanceMap.get(`${employee.employee_no}|${day.date}`)?.attendance_value;
+        if (!isWorkScheduleType(schedule)) continue;
+        const target =
+          schedule === "D" || schedule === "D/S" ? groups.day :
+          schedule === "N" || schedule === "N/S" ? groups.night :
+          schedule === "4" ? groups.four : groups.eight;
+        target.scheduled++;
+        if (day.date <= todayKey && isPresent(attendance)) target.actual++;
+      }
+    }
+
+    return Object.values(groups).map((item) => ({
+      ...item,
+      rate: item.scheduled > 0 ? (item.actual / item.scheduled) * 100 : 0,
+    }));
+  }, [employees, dailyScheduleComparison, scheduleMap, attendanceMap, language, todayKey]);
 
   /* =======================================================
      DAILY MONTH STATS
@@ -1521,6 +2482,38 @@ export default function AttendanceOverviewPage() {
             attendanceMap.get(
               `${employee.employee_no}|${dayInfo.dateKey}`,
             );
+
+          const approvedLeave = leaveRows.find(
+            (row) =>
+              row.status === "Approved" &&
+              row.employee_no === employee.employee_no &&
+              String(row.request_date).slice(0, 10) ===
+                dayInfo.dateKey &&
+              (row.request_type === "AL" ||
+                row.request_type === "MC" ||
+                row.request_type === "UPL"),
+          );
+
+          // Approved leave requests are the source of truth for AL / MC / UPL.
+          // Count them even when attendance_daily has no row for the employee.
+          if (approvedLeave) {
+            if (approvedLeave.request_type === "AL") {
+              leave++;
+            } else if (approvedLeave.request_type === "MC") {
+              mc++;
+            } else if (approvedLeave.request_type === "UPL") {
+              upl++;
+            }
+
+            // Do not let an attendance_daily leave value duplicate the request count.
+            if (
+              attendance?.attendance_value === "AL" ||
+              attendance?.attendance_value === "MC" ||
+              attendance?.attendance_value === "UPL"
+            ) {
+              continue;
+            }
+          }
 
           if (!attendance) {
             continue;
@@ -1616,6 +2609,7 @@ export default function AttendanceOverviewPage() {
     employees,
     attendanceMap,
     scheduleMap,
+    leaveRows,
   ]);
 
   /* =======================================================
@@ -1719,6 +2713,109 @@ export default function AttendanceOverviewPage() {
     ]);
 
   /* =======================================================
+     APPROVED LEAVE REQUEST SUMMARY
+     Keep KPI / leave-request totals consistent with
+     "Recent Requests" by using approved leaveRows.
+  ======================================================= */
+
+  const approvedLeaveRequestStats = useMemo(() => {
+    const approved = leaveRows.filter(
+      (row) => row.status === "Approved",
+    );
+
+    return {
+      al: approved.filter(
+        (row) => row.request_type === "AL",
+      ).length,
+      mc: approved.filter(
+        (row) => row.request_type === "MC",
+      ).length,
+      upl: approved.filter(
+        (row) => row.request_type === "UPL",
+      ).length,
+    };
+  }, [leaveRows]);
+
+  /* =======================================================
+     APPROVED LEAVE COUNTS BY EMPLOYEE
+     Used by department summary so AL / MC / UPL are sourced
+     from the same approved leave requests as the KPI cards.
+  ======================================================= */
+
+  const approvedLeaveByEmployee = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        al: number;
+        mc: number;
+        upl: number;
+      }
+    >();
+
+    for (const row of leaveRows) {
+      if (row.status !== "Approved") continue;
+
+      const current = map.get(row.employee_no) ?? {
+        al: 0,
+        mc: 0,
+        upl: 0,
+      };
+
+      if (row.request_type === "AL") current.al++;
+      else if (row.request_type === "MC") current.mc++;
+      else if (row.request_type === "UPL") current.upl++;
+
+      map.set(row.employee_no, current);
+    }
+
+    return map;
+  }, [leaveRows]);
+
+  const employeeLeaveSummary = useMemo<EmployeeLeaveSummary[]>(() => {
+    const map = new Map<string, EmployeeLeaveSummary>();
+
+    for (const row of leaveRows) {
+      if (row.status !== "Approved") continue;
+      if (
+        row.request_type !== "AL" &&
+        row.request_type !== "MC" &&
+        row.request_type !== "UPL"
+      ) {
+        continue;
+      }
+
+      const employee = employeeMap.get(row.employee_no);
+      if (!employee) continue;
+
+      const current =
+        map.get(row.employee_no) ?? {
+          employee,
+          al: 0,
+          mc: 0,
+          upl: 0,
+          total: 0,
+        };
+
+      if (row.request_type === "AL") current.al++;
+      else if (row.request_type === "MC") current.mc++;
+      else current.upl++;
+
+      current.total =
+        current.al + current.mc + current.upl;
+
+      map.set(row.employee_no, current);
+    }
+
+    return Array.from(map.values()).sort(
+      (a, b) =>
+        b.total - a.total ||
+        employeeName(a.employee, language).localeCompare(
+          employeeName(b.employee, language),
+        ),
+    );
+  }, [leaveRows, employeeMap, language]);
+
+  /* =======================================================
      DEPARTMENT SUMMARY
   ======================================================= */
 
@@ -1764,6 +2861,15 @@ export default function AttendanceOverviewPage() {
 
         current.employees++;
 
+        const approvedLeave =
+          approvedLeaveByEmployee.get(
+            employee.employee_no,
+          );
+
+        current.leave += approvedLeave?.al ?? 0;
+        current.mc += approvedLeave?.mc ?? 0;
+        current.upl += approvedLeave?.upl ?? 0;
+
         for (const day of monthDays) {
           const attendance =
             attendanceMap.get(
@@ -1781,18 +2887,6 @@ export default function AttendanceOverviewPage() {
             isPresent(value)
           ) {
             current.present++;
-          } else if (
-            value === "AL"
-          ) {
-            current.leave++;
-          } else if (
-            value === "MC"
-          ) {
-            current.mc++;
-          } else if (
-            value === "UPL"
-          ) {
-            current.upl++;
           } else if (
             value === "A"
           ) {
@@ -1836,6 +2930,7 @@ export default function AttendanceOverviewPage() {
       monthDays,
       attendanceMap,
       totalDays,
+      approvedLeaveByEmployee,
     ]);
 
   /* =======================================================
@@ -1848,12 +2943,28 @@ export default function AttendanceOverviewPage() {
     return employees
       .map((employee) => {
         let present = 0;
-        let leave = 0;
-        let mc = 0;
-        let upl = 0;
         let absent = 0;
         let off = 0;
 
+        /*
+         * AL / MC / UPL must come from approved leave requests.
+         * This is the source of truth for leave and also fixes cases
+         * where attendance_daily has no AL/MC/UPL row.
+         */
+        const approvedLeave =
+          approvedLeaveByEmployee.get(
+            employee.employee_no,
+          );
+
+        const leave = approvedLeave?.al ?? 0;
+        const mc = approvedLeave?.mc ?? 0;
+        const upl = approvedLeave?.upl ?? 0;
+
+        /*
+         * Present / A / OFF continue to come from attendance_daily.
+         * AL / MC / UPL are intentionally not counted here to avoid
+         * double-counting leave that is already taken from leaveRows.
+         */
         for (const day of monthDays) {
           const attendance = attendanceMap.get(
             `${employee.employee_no}|${day.dateKey}`,
@@ -1862,12 +2973,14 @@ export default function AttendanceOverviewPage() {
           if (!attendance) continue;
 
           const value = attendance.attendance_value;
-          if (isPresent(value)) present++;
-          else if (value === "AL") leave++;
-          else if (value === "MC") mc++;
-          else if (value === "UPL") upl++;
-          else if (value === "A") absent++;
-          else if (value === "OFF") off++;
+
+          if (isPresent(value)) {
+            present++;
+          } else if (value === "A") {
+            absent++;
+          } else if (value === "OFF") {
+            off++;
+          }
         }
 
         return {
@@ -1881,12 +2994,25 @@ export default function AttendanceOverviewPage() {
         };
       })
       .sort((a, b) => {
-        const aRate = totalDays > 0 ? a.present / totalDays : 0;
-        const bRate = totalDays > 0 ? b.present / totalDays : 0;
+        const aRate =
+          totalDays > 0
+            ? a.present / totalDays
+            : 0;
+        const bRate =
+          totalDays > 0
+            ? b.present / totalDays
+            : 0;
+
         return (
           aRate - bRate ||
-          employeeName(a.employee, language).localeCompare(
-            employeeName(b.employee, language),
+          employeeName(
+            a.employee,
+            language,
+          ).localeCompare(
+            employeeName(
+              b.employee,
+              language,
+            ),
           )
         );
       });
@@ -1894,6 +3020,7 @@ export default function AttendanceOverviewPage() {
     employees,
     monthDays,
     attendanceMap,
+    approvedLeaveByEmployee,
     totalDays,
     language,
   ]);
@@ -2252,14 +3379,14 @@ export default function AttendanceOverviewPage() {
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="flex items-center gap-1.5.5">
             <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/40 bg-cyan-500/10 text-2xl font-black text-cyan-500 dark:text-cyan-300">
               ◫
             </div>
 
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase tracking-wide text-text-dim">
                   {language === "cn"
                     ? "考勤管理"
@@ -2346,7 +3473,7 @@ export default function AttendanceOverviewPage() {
 
             <div
               className={[
-                "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold",
+                "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold",
                 syncing
                   ? "border border-cyan-400/30 bg-cyan-500/10 text-cyan-300"
                   : "border border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
@@ -2493,12 +3620,12 @@ export default function AttendanceOverviewPage() {
                 : "Annual Leave"
             }
             value={String(
-              monthStats.leave,
+              approvedLeaveRequestStats.al,
             )}
             subtitle={
                 language === "cn"
-                  ? "年假 · AL"
-                  : "AL"
+                  ? "已批准申请 · AL"
+                  : "Approved requests · AL"
               }
             icon="A"
             tone="info"
@@ -2512,12 +3639,12 @@ export default function AttendanceOverviewPage() {
                 : "Sick Leave"
             }
             value={String(
-              monthStats.mc,
+              approvedLeaveRequestStats.mc,
             )}
             subtitle={
               language === "cn"
-                ? "病假 · MC"
-                : "MC"
+                ? "已批准申请 · MC"
+                : "Approved requests · MC"
             }
             icon="M"
             tone="info"
@@ -2531,12 +3658,12 @@ export default function AttendanceOverviewPage() {
                 : "Permission"
             }
             value={String(
-              monthStats.upl,
+              approvedLeaveRequestStats.upl,
             )}
             subtitle={
               language === "cn"
-                ? "外出 · UPL"
-                : "UPL"
+                ? "已批准申请 · UPL"
+                : "Approved requests · UPL"
             }
             icon="↗"
             tone="accent"
@@ -2583,255 +3710,394 @@ export default function AttendanceOverviewPage() {
         </div>
 
         {/* =================================================
-            MAIN CHARTS
+            ATTENDANCE VS SCHEDULE DASHBOARD
         ================================================= */}
-
-        <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-          <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
+        <div className="grid items-stretch gap-5 xl:grid-cols-[1.55fr_0.75fr]">
+          <section className="attendance-section h-full rounded-xl border border-border bg-surface p-4 md:p-5">
             <SectionHeader
-              title={
-                language ===
-                "cn"
-                  ? "月度出勤趋势"
-                  : "Monthly Attendance Trend"
-              }
-              description={
-                language ===
-                "cn"
-                  ? "按照所选月份逐日显示员工出勤率。"
-                  : "Daily attendance rate across the selected month."
-              }
+              title={language === "cn" ? "每日出勤 vs 排班（排班达成走势）" : "Daily Attendance vs Schedule"}
+              description={language === "cn" ? "灰柱=排班计划应出勤人数；蓝柱=实际到岗人数；绿线=当日出勤率。红点表示存在排班偏差。" : "Scheduled employees vs actual attendance by day. Red dots indicate schedule variance."}
             />
 
-            <div className="mt-5">
+            <div className="mt-2.5">
               {loading ? (
-                <div className="flex h-[260px] items-center justify-center text-xs text-text-muted">
-                  {language ===
-                  "cn"
-                    ? "加载中..."
-                    : "Loading..."}
+                <div className="flex h-[330px] items-center justify-center text-xs text-text-muted">
+                  {language === "cn" ? "加载中..." : "Loading..."}
                 </div>
               ) : (
-                <LineChart
-                  data={dailyStats.map(
-                    (
-                      item,
-                    ) => ({
-                      label:
-                        String(
-                          item.day,
-                        ),
-                      value:
-                        item.rate,
-                    }),
-                  )}
+                <ScheduleVsActualChart
+                  data={dailyScheduleComparison}
+                  selectedDate={currentDateKey}
+                  language={language}
+                  onSelectDate={(date) => {
+                    // Clicking any chart point always switches back to the
+                    // selected-date variance view.
+                    setSelectedDate(new Date(`${date}T00:00:00`));
+                    setShowAllScheduleVariance(false);
+                  }}
                 />
               )}
             </div>
 
-            <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-3">
-              <span className="text-[10px] text-text-dim">
-                {language ===
-                "cn"
-                  ? "月度平均"
-                  : "Monthly Average"}
-              </span>
-
-              <span className="text-xs font-semibold text-cyan-300">
-                {monthStats.attendanceRate.toFixed(
-                  1,
-                )}
-                %
-              </span>
+            <div className="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4">
+              <LegendStat label={language === "cn" ? "计划工作日次" : "Scheduled Workdays"} value={scheduleMonthlySummary.scheduled} tone="info" />
+              <LegendStat label={language === "cn" ? "实际出勤" : "Scheduled Actual"} value={scheduleMonthlySummary.actual} tone="success" />
+              <LegendStat label={language === "cn" ? "月度出勤率" : "Monthly Rate"} value={Number(scheduleMonthlySummary.rate.toFixed(1))} tone="accent" />
+              <LegendStat
+                label={language === "cn" ? "排班偏差" : "Schedule Variance"}
+                value={scheduleMonthlySummary.variance}
+                tone="danger"
+                onClick={() => setShowAllScheduleVariance((value) => !value)}
+              />
             </div>
           </section>
 
-          <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
-            <SectionHeader
-              title={
-                language ===
-                "cn"
-                  ? "月度状态分布"
-                  : "Monthly Status Distribution"
-              }
-              description={
-                language ===
-                "cn"
-                  ? "整个月份的 每日考勤状态统计。"
-                  : "Full-month attendance_daily status distribution."
-              }
-            />
-
-            <div className="mt-3 flex items-center justify-center">
-              <DonutChart
-                values={[
-                  {
-                    label: "Present",
-                    value:
-                      monthStats.present,
-                    className:
-                      "stroke-emerald-500",
-                  },
-                  {
-                    label: "AL",
-                    value:
-                      monthStats.leave,
-                    className:
-                      "stroke-blue-500",
-                  },
-                  {
-                    label: "MC",
-                    value:
-                      monthStats.mc,
-                    className:
-                      "stroke-violet-500",
-                  },
-                  {
-                    label: "UPL",
-                    value:
-                      monthStats.upl,
-                    className:
-                      "stroke-indigo-500",
-                  },
-                  {
-                    label: "A",
-                    value:
-                      monthStats.absent,
-                    className:
-                      "stroke-rose-500",
-                  },
-                  {
-                    label: "OFF",
-                    value:
-                      monthStats.off,
-                    className:
-                      "stroke-slate-500",
-                  },
-                ]}
+          <section className="attendance-section flex h-full min-h-0 flex-col rounded-xl border border-border bg-surface p-4 md:p-5">
+            <div className="flex items-start justify-between gap-3 shrink-0">
+              <SectionHeader
+                title={language === "cn" ? "出勤排班差异" : "Attendance Variance"}
+                description={language === "cn" ? "查看本月排班与实际出勤之间的主要差异原因。" : "Understand why scheduled and actual attendance differ this month."}
               />
+
+              <div className="rounded-lg border border-cyan-400/15 bg-cyan-500/5 px-2.5 py-1.5 text-right">
+                <p className="text-[8px] uppercase tracking-wide text-text-dim">Rate</p>
+                <p className="mt-0.5 text-sm font-extrabold text-cyan-300">
+                  {scheduleMonthlySummary.rate.toFixed(1)}%
+                </p>
+              </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              <LegendStat
-                label={
-                  language ===
-                  "cn"
-                    ? "出勤"
-                    : "Present"
-                }
-                value={
-                  monthStats.present
-                }
-                tone="success"
-              />
+            <div className="mt-2.5 flex min-h-0 flex-1 items-center gap-2.5 rounded-lg border border-border-subtle bg-bg/20 p-2.5">
+              <div className="shrink-0">
+                <SimpleDonut
+                  centerLabel={`${scheduleMonthlySummary.rate.toFixed(1)}%`}
+                  values={[
+                    { label: "Match", value: scheduleMonthlySummary.actual, className: "stroke-emerald-500" },
+                    { label: "Leave", value: scheduleMonthlySummary.leave, className: "stroke-amber-400" },
+                    { label: "Missed", value: scheduleMonthlySummary.missed, className: "stroke-rose-500" },
+                    { label: "OFF Work", value: scheduleMonthlySummary.workedOnOff, className: "stroke-orange-400" },
+                    { label: "Unscheduled", value: scheduleMonthlySummary.unscheduledPresent, className: "stroke-violet-500" },
+                  ]}
+                />
+              </div>
 
-              <LegendStat
-                label={
-                  language === "cn"
-                    ? "年假"
-                    : "AL"
-                }
-                value={
-                  monthStats.leave
-                }
-                tone="accent"
-              />
+              <div className="min-w-0 flex-1 space-y-2">
+                {[
+                  { label: language === "cn" ? "正常出勤" : "Scheduled Present", value: scheduleMonthlySummary.actual, tone: "text-emerald-400", dot: "bg-emerald-400" },
+                  { label: language === "cn" ? "请假" : "Leave", value: scheduleMonthlySummary.leave, tone: "text-amber-400", dot: "bg-amber-400" },
+                  { label: language === "cn" ? "应到未到" : "Missed", value: scheduleMonthlySummary.missed, tone: "text-rose-400", dot: "bg-rose-400" },
+                  { label: language === "cn" ? "休息日出勤" : "Worked on OFF", value: scheduleMonthlySummary.workedOnOff, tone: "text-orange-400", dot: "bg-orange-400" },
+                  { label: language === "cn" ? "无排班出勤" : "Unscheduled", value: scheduleMonthlySummary.unscheduledPresent, tone: "text-violet-400", dot: "bg-violet-400" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={`size-2 shrink-0 rounded-full ${item.dot}`} />
+                      <span className={`truncate text-[10px] font-semibold ${item.tone}`}>{item.label}</span>
+                    </div>
+                    <span className="shrink-0 text-xs font-extrabold text-text">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              <LegendStat
-                label={
-                  language === "cn"
-                    ? "病假"
-                    : "MC"
-                }
-                value={
-                  monthStats.mc
-                }
-                tone="info"
-              />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-rose-400/15 bg-rose-500/5 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-semibold uppercase tracking-wide text-rose-300">
+                    {language === "cn" ? "需处理" : "Needs Attention"}
+                  </span>
+                  <span className="text-sm font-extrabold text-rose-400">
+                    {scheduleMonthlySummary.missed}
+                  </span>
+                </div>
+                <p className="mt-1 text-[8px] leading-4 text-text-dim">
+                  {language === "cn" ? "排班工作日未出勤" : "Scheduled workdays without matching attendance."}
+                </p>
+              </div>
 
-              <LegendStat
-                label="UPL"
-                value={
-                  monthStats.upl
-                }
-                tone="accent"
-              />
+              <div className="rounded-lg border border-amber-400/15 bg-amber-500/5 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300">
+                    {language === "cn" ? "休息日出勤" : "OFF Work"}
+                  </span>
+                  <span className="text-sm font-extrabold text-amber-400">
+                    {scheduleMonthlySummary.workedOnOff}
+                  </span>
+                </div>
+                <p className="mt-1 text-[8px] leading-4 text-text-dim">
+                  {language === "cn" ? "休息日仍有出勤记录" : "Employees recorded as present on OFF days."}
+                </p>
+              </div>
+            </div>
 
-              <LegendStat
-                label="A"
-                value={
-                  monthStats.absent
-                }
-                tone="danger"
-              />
-
-              <LegendStat
-                label="OFF"
-                value={
-                  monthStats.off
-                }
-                tone="warning"
-              />
+            <div className="mt-2 rounded-lg border border-cyan-400/10 bg-cyan-500/5 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-semibold text-cyan-300">
+                    {language === "cn" ? "排班完成度" : "Schedule adherence"}
+                  </p>
+                  <p className="mt-0.5 text-[8px] text-text-dim">
+                    {language === "cn" ? "实际出勤 / 应出勤" : "Actual attendance divided by scheduled attendance."}
+                  </p>
+                </div>
+                <span className="text-base font-black text-text">
+                  {scheduleMonthlySummary.actual} / {scheduleMonthlySummary.scheduled}
+                </span>
+              </div>
             </div>
           </section>
         </div>
 
         {/* =================================================
-            EMPLOYEE MONTHLY ATTENDANCE
+            SELECTED DATE SCHEDULE VARIANCE
         ================================================= */}
-
         <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
-          <SectionHeader
-            title={
-              language === "cn"
-                ? "员工月度考勤"
-                : "Employee Monthly Attendance"
-            }
-            description={
-              language === "cn"
-                ? "每位员工整个月份的出勤及状态构成。"
-                : "Monthly attendance rate and status breakdown for each employee."
-            }
-          />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-text-dim">{language === "cn" ? "排班偏差" : "Schedule Variance"}</p>
+              <h2 className="mt-1 text-base font-semibold text-text">
+                {showAllScheduleVariance
+                  ? language === "cn"
+                    ? `${monthLabel} · 全部排班偏差`
+                    : `All Schedule Variances · ${monthLabel}`
+                  : selectedDateLabel}
+              </h2>
+            </div>
 
-          <div className="mt-4">
-            {loading ? (
-              <div className="flex h-[160px] items-center justify-center text-xs text-text-muted">
-                {language === "cn" ? "加载中..." : "Loading..."}
+            <div className="grid grid-cols-3 gap-2">
+              <KpiCard
+                title={language === "cn" ? "应出勤" : "Scheduled"}
+                value={String(showAllScheduleVariance ? scheduleMonthlySummary.scheduled : selectedScheduleDay?.scheduled ?? 0)}
+                subtitle=""
+                icon=""
+                tone="info"
+              />
+              <KpiCard
+                title={language === "cn" ? "实际" : "Actual"}
+                value={String(showAllScheduleVariance ? scheduleMonthlySummary.actual : selectedScheduleDay?.actual ?? 0)}
+                subtitle=""
+                icon=""
+                tone="success"
+              />
+              <KpiCard
+                title={language === "cn" ? "差异" : "Variance"}
+                value={String(showAllScheduleVariance
+                  ? scheduleMonthlySummary.variance
+                  : (selectedScheduleDay?.missed ?? 0) + (selectedScheduleDay?.workedOnOff ?? 0) + (selectedScheduleDay?.unscheduledPresent ?? 0))}
+                subtitle=""
+                icon=""
+                tone="danger"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5">
+            {showAllScheduleVariance ? (
+              allScheduleVarianceExceptions.length > 0 ? (
+                <div className="space-y-3">
+                  {allScheduleVarianceExceptions.slice(0, 2).map((item, index) => (
+                    <button
+                      key={`${item.date}-${item.employee.employee_no}-${item.status}-${index}`}
+                      type="button"
+                      onClick={() => setShowScheduleVarianceZoom(true)}
+                      className="group flex w-full flex-col gap-3 rounded-lg border border-border-subtle bg-bg/20 p-3 text-left transition-all duration-200 hover:border-cyan-400/25 hover:bg-cyan-500/[0.03] hover:shadow-[0_8px_24px_rgba(8,47,73,0.08)] md:flex-row md:items-center md:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-bold text-rose-500 dark:text-rose-300">
+                            {String(item.day).padStart(2, "0")} {item.weekday}
+                          </span>
+                          <p className="truncate text-xs font-semibold text-text">
+                            {employeeName(item.employee, language)}
+                          </p>
+                        </div>
+                        <p className="mt-1 text-[9px] text-text-dim">
+                          {item.date} · {item.employee.employee_no} · {departmentName(item.employee, language)}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-[9px]">
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                          {scheduleLabel(item.scheduleType, language)}
+                        </span>
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                          {item.attendanceValue
+                            ? valueLabel(item.attendanceValue, language)
+                            : language === "cn"
+                              ? "无考勤"
+                              : "No attendance"}
+                        </span>
+                        <span
+                          className={[
+                            "rounded-md px-2 py-1 font-semibold",
+                            item.status === "WORKED_ON_OFF"
+                              ? "bg-amber-500/10 text-amber-400"
+                              : "bg-rose-500/10 text-rose-400",
+                          ].join(" ")}
+                        >
+                          {item.status === "WORKED_ON_OFF"
+                            ? language === "cn"
+                              ? "休息日出勤"
+                              : "Worked on OFF"
+                            : item.status === "UNSCHEDULED_PRESENT"
+                              ? language === "cn"
+                                ? "无排班出勤"
+                                : "Unscheduled Present"
+                              : language === "cn"
+                                ? "应到未到"
+                                : "Missed"}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+
+                  {allScheduleVarianceExceptions.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowScheduleVarianceZoom(true)}
+                      className="group flex w-full cursor-pointer items-center justify-between rounded-lg border border-rose-400/25 bg-rose-500/5 px-3 py-2.5 text-left transition-all duration-200 hover:border-rose-400/50 hover:bg-rose-500/10"
+                    >
+                      <span className="text-[10px] font-semibold text-rose-500 dark:text-rose-300">
+                        {language === "cn"
+                          ? `点击查看全部 ${allScheduleVarianceExceptions.length} 条偏差`
+                          : `View all ${allScheduleVarianceExceptions.length} schedule variances`}
+                      </span>
+                      <span className="rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-bold text-rose-500 dark:text-rose-300 transition-transform duration-200 group-hover:scale-105">
+                        ↗
+                      </span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-4 py-4 text-sm text-emerald-400">
+                  {language === "cn" ? "本月没有排班偏差。" : "No schedule variance found for this month."}
+                </div>
+              )
+            ) : selectedScheduleDay && selectedScheduleDay.exceptions.filter((item) => item.status !== "LEAVE").length > 0 ? (
+              <div className="space-y-2">
+                {selectedScheduleDay.exceptions
+                  .filter((item) => item.status !== "LEAVE")
+                  .map((item, index) => (
+                    <div key={`${item.employee.employee_no}-${item.status}-${index}`} className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-bg/20 p-3 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-text">{employeeName(item.employee, language)}</p>
+                        <p className="mt-0.5 text-[9px] text-text-dim">{item.employee.employee_no} · {departmentName(item.employee, language)}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-[9px]">
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{scheduleLabel(item.scheduleType, language)}</span>
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{item.attendanceValue ? valueLabel(item.attendanceValue, language) : (language === "cn" ? "无考勤" : "No attendance")}</span>
+                        <span className={[
+                          "rounded-md px-2 py-1 font-semibold",
+                          item.status === "WORKED_ON_OFF" ? "bg-amber-500/10 text-amber-400" : "bg-rose-500/10 text-rose-400",
+                        ].join(" ")}>{item.status === "WORKED_ON_OFF" ? (language === "cn" ? "休息日出勤" : "Worked on OFF") : item.status === "UNSCHEDULED_PRESENT" ? (language === "cn" ? "无排班出勤" : "Unscheduled Present") : (language === "cn" ? "应到未到" : "Missed")}</span>
+                      </div>
+                    </div>
+                  ))}
               </div>
             ) : (
-              <EmployeeMonthlyAttendance
-                data={employeeAttendanceSummary}
-                totalDays={totalDays}
-                language={language}
-              />
+              <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-4 py-4 text-sm text-emerald-400">
+                {selectedScheduleDay?.exceptions.some((item) => item.status === "LEAVE")
+                  ? language === "cn" ? "没有实际缺勤偏差；当天差异来自已记录的请假。" : "No attendance mismatch; the variance is explained by recorded leave."
+                  : language === "cn" ? "当天没有排班偏差。" : "No schedule variance found for this date."}
+              </div>
             )}
           </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border-subtle pt-3 text-[9px] text-text-dim">
-            <span className="font-semibold text-text-muted">
-              {language === "cn" ? "图例" : "Legend"}
-            </span>
-            <span className="text-emerald-400">
-              {language === "cn" ? "出勤" : "P / Present"}
-            </span>
-            <span className="text-blue-400">
-              {language === "cn" ? "年假" : "AL"}
-            </span>
-            <span className="text-violet-400">
-              {language === "cn" ? "病假" : "MC"}
-            </span>
-            <span className="text-indigo-400">
-              {language === "cn" ? "外出" : "UPL"}
-            </span>
-            <span className="text-rose-400">
-              {language === "cn" ? "缺勤" : "A"}
-            </span>
-            <span className="text-slate-400">
-              {language === "cn" ? "休息" : "OFF"}
-            </span>
-          </div>
         </section>
+
+        {showScheduleVarianceZoom && showAllScheduleVariance && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm md:p-6">
+            <div
+              className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+              role="dialog"
+              aria-modal="true"
+              aria-label={language === "cn" ? "全部排班偏差" : "All Schedule Variances"}
+            >
+              <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
+                    {language === "cn" ? "排班偏差" : "Schedule Variance"}
+                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <h3 className="truncate text-base font-semibold text-text md:text-lg">
+                      {language === "cn" ? "全部排班偏差" : "All Schedule Variances"}
+                    </h3>
+                    <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
+                      {allScheduleVarianceExceptions.length}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleVarianceZoom(false)}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                  aria-label={language === "cn" ? "关闭" : "Close"}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-3 md:p-5">
+                <div className="space-y-3">
+                  {allScheduleVarianceExceptions.map((item, index) => (
+                    <div
+                      key={`zoom-${item.date}-${item.employee.employee_no}-${item.status}-${index}`}
+                      className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-bg/20 p-3 transition-colors duration-200 hover:border-cyan-400/15 hover:bg-surface-hover md:flex-row md:items-center md:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-bold text-rose-500 dark:text-rose-300">
+                            {String(item.day).padStart(2, "0")} {item.weekday}
+                          </span>
+                          <p className="truncate text-xs font-semibold text-text">
+                            {employeeName(item.employee, language)}
+                          </p>
+                        </div>
+                        <p className="mt-1 text-[9px] text-text-dim">
+                          {item.date} · {item.employee.employee_no} · {departmentName(item.employee, language)}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-[9px]">
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                          {scheduleLabel(item.scheduleType, language)}
+                        </span>
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                          {item.attendanceValue
+                            ? valueLabel(item.attendanceValue, language)
+                            : language === "cn"
+                              ? "无考勤"
+                              : "No attendance"}
+                        </span>
+                        <span
+                          className={[
+                            "rounded-md px-2 py-1 font-semibold",
+                            item.status === "WORKED_ON_OFF"
+                              ? "bg-amber-500/10 text-amber-400"
+                              : "bg-rose-500/10 text-rose-400",
+                          ].join(" ")}
+                        >
+                          {item.status === "WORKED_ON_OFF"
+                            ? language === "cn"
+                              ? "休息日出勤"
+                              : "Worked on OFF"
+                            : item.status === "UNSCHEDULED_PRESENT"
+                              ? language === "cn"
+                                ? "无排班出勤"
+                                : "Unscheduled Present"
+                              : language === "cn"
+                                ? "应到未到"
+                                : "Missed"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* =================================================
             DAILY ATTENDANCE
@@ -3011,7 +4277,7 @@ export default function AttendanceOverviewPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-[1.6fr_1fr]">
+              <div className="grid gap-2.5 md:grid-cols-[1.6fr_1fr]">
                 {/* DAY SHIFT */}
                 <div className="rounded-xl border border-border-subtle bg-surface-hover p-4">
                   <div className="mb-3 flex items-center justify-between">
@@ -3054,7 +4320,7 @@ export default function AttendanceOverviewPage() {
                             </div>
                           </div>
 
-                          <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-2">
+                          <div className="mt-2 flex items-center justify-between border-t border-border-subtle pt-2">
                             <span className="truncate text-[9px] text-text-dim">
                               {departmentName(employee, language)}
                             </span>
@@ -3119,7 +4385,7 @@ export default function AttendanceOverviewPage() {
                             </div>
                           </div>
 
-                          <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-2">
+                          <div className="mt-2 flex items-center justify-between border-t border-border-subtle pt-2">
                             <span className="truncate text-[9px] text-text-dim">
                               {departmentName(employee, language)}
                             </span>
@@ -3149,6 +4415,409 @@ export default function AttendanceOverviewPage() {
         {/* =================================================
             DEPARTMENT + OT
         ================================================= */}
+
+        {/* =================================================
+            EMPLOYEE MONTHLY ATTENDANCE
+        ================================================= */}
+
+        <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
+          <SectionHeader
+            title={
+              language === "cn"
+                ? "员工月度考勤"
+                : "Employee Monthly Attendance"
+            }
+            description={
+              language === "cn"
+                ? "每位员工整个月份的出勤及状态构成。"
+                : "Monthly attendance rate and status breakdown for each employee."
+            }
+          />
+          <div className="mt-2.5">
+            {loading ? (
+              <div className="flex h-[160px] items-center justify-center text-xs text-text-muted">
+                {language === "cn" ? "加载中..." : "Loading..."}
+              </div>
+            ) : (
+              <EmployeeMonthlyAttendance
+                data={employeeAttendanceSummary}
+                totalDays={totalDays}
+                language={language}
+              />
+            )}
+          </div>
+          <div className="mt-2.5 flex flex-wrap items-center gap-3 border-t border-border-subtle pt-3 text-[9px] text-text-dim">
+            <span className="font-semibold text-text-muted">
+              {language === "cn" ? "图例" : "Legend"}
+            </span>
+            <span className="text-emerald-400">
+              {language === "cn" ? "出勤" : "P / Present"}
+            </span>
+            <span className="text-blue-400">
+              {language === "cn" ? "年假" : "AL"}
+            </span>
+            <span className="text-violet-400">
+              {language === "cn" ? "病假" : "MC"}
+            </span>
+            <span className="text-indigo-400">
+              {language === "cn" ? "外出" : "UPL"}
+            </span>
+            <span className="text-rose-400">
+              {language === "cn" ? "缺勤" : "A"}
+            </span>
+            <span className="text-slate-400">
+              {language === "cn" ? "休息" : "OFF"}
+            </span>
+          </div>
+        </section>
+
+        <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+
+          {/* =========================================================
+              DEPARTMENT PLANNED VS ACTUAL
+          ========================================================= */}
+          <section className="attendance-section overflow-hidden rounded-xl border border-border bg-surface p-4 md:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <SectionHeader
+                title={
+                  language === "cn"
+                    ? "班组维度比较（应出勤 vs 实际出勤）"
+                    : "Department Planned vs Actual"
+                }
+                description={
+                  language === "cn"
+                    ? "按部门比较排班计划与实际出勤，并显示排班偏差数量。"
+                    : "Compare scheduled headcount with actual attendance by department."
+                }
+              />
+
+              <div className="hidden shrink-0 rounded-lg border border-border-subtle bg-bg/40 px-2.5 py-1.5 text-right sm:block">
+                <p className="text-[8px] uppercase tracking-wide text-text-dim">
+                  {language === "cn" ? "部门" : "Departments"}
+                </p>
+                <p className="text-sm font-black text-text">
+                  {departmentScheduleSummary.length}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-2.5">
+              {departmentScheduleSummary.map((item, index) => {
+                const rate = Math.min(item.rate, 100);
+                const isPerfect = rate >= 100;
+                const hasVariance = item.mismatch > 0;
+                const rank = String(index + 1).padStart(2, "0");
+
+                return (
+                  <div
+                    key={item.department}
+                    className="relative overflow-hidden rounded-xl border border-border-subtle bg-bg/25 p-3 transition-all duration-200 hover:-translate-y-px hover:border-cyan-400/25 hover:bg-bg/40"
+                  >
+                    <div
+                      className={[
+                        "absolute inset-y-0 left-0 w-1",
+                        hasVariance ? "bg-amber-400" : "bg-emerald-400",
+                      ].join(" ")}
+                    />
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface text-[9px] font-black text-text-dim ring-1 ring-inset ring-border-subtle">
+                        {rank}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="truncate text-[11px] font-bold text-text">
+                            {item.department}
+                          </p>
+
+                          <span
+                            className={[
+                              "shrink-0 text-sm font-black",
+                              isPerfect
+                                ? "text-emerald-400"
+                                : rate >= 90
+                                  ? "text-cyan-400"
+                                  : "text-amber-400",
+                            ].join(" ")}
+                          >
+                            {rate.toFixed(1)}%
+                          </span>
+                        </div>
+
+                        <div className="mt-1.5 flex items-center gap-2 text-[8px] text-text-dim">
+                          <span className="font-semibold text-text-muted">
+                            {item.actual}/{item.scheduled}
+                          </span>
+                          <span>
+                            {language === "cn" ? "实际 / 计划" : "Actual / Scheduled"}
+                          </span>
+
+                          <span className="ml-auto">
+                            {hasVariance
+                              ? `${language === "cn" ? "偏差" : "Variance"} ${item.mismatch}`
+                              : language === "cn"
+                                ? "完全匹配"
+                                : "Perfect match"}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg">
+                            <div
+                              className={[
+                                "h-full rounded-full transition-all duration-700",
+                                isPerfect
+                                  ? "bg-emerald-400"
+                                  : rate >= 90
+                                    ? "bg-cyan-400"
+                                    : rate >= 70
+                                      ? "bg-amber-400"
+                                      : "bg-rose-400",
+                              ].join(" ")}
+                              style={{ width: `${rate}%` }}
+                            />
+                          </div>
+
+                          <span
+                            className={[
+                              "rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide",
+                              hasVariance
+                                ? "bg-amber-500/10 text-amber-400"
+                                : "bg-emerald-500/10 text-emerald-400",
+                            ].join(" ")}
+                          >
+                            {hasVariance ? "Gap" : "Match"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {departmentScheduleSummary.length === 0 && (
+                <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
+                  {language === "cn" ? "暂无数据" : "No department data"}
+                </div>
+              )}
+            </div>
+
+            {/* SIMPLE DEPARTMENT SUMMARY */}
+            {departmentScheduleSummary.length > 0 && (
+              <div className="mt-3 flex items-center justify-center gap-4 rounded-lg border border-border-subtle bg-bg/20 px-3 py-2 text-[9px]">
+                <span className="text-text-dim">
+                  {language === "cn" ? "计划" : "Scheduled"}
+                  <span className="ml-1 font-bold text-violet-400">
+                    {scheduleMonthlySummary.scheduled}
+                  </span>
+                </span>
+
+                <span className="text-text-dim">
+                  {language === "cn" ? "实际" : "Actual"}
+                  <span className="ml-1 font-bold text-emerald-400">
+                    {scheduleMonthlySummary.actual}
+                  </span>
+                </span>
+
+                <span className="text-text-dim">
+                  {language === "cn" ? "缺口" : "Gap"}
+                  <span className="ml-1 font-bold text-rose-400">
+                    {scheduleMonthlySummary.variance}
+                  </span>
+                </span>
+              </div>
+            )}
+          </section>
+
+          {/* =========================================================
+              SHIFT HEALTH
+          ========================================================= */}
+          <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <SectionHeader
+                title={
+                  language === "cn"
+                    ? "班次类型健康度"
+                    : "Shift Health"
+                }
+                description={
+                  language === "cn"
+                    ? "按排班类型查看计划出勤与实际到岗。"
+                    : "Planned vs actual attendance by schedule type."
+                }
+              />
+
+              <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold text-emerald-400">
+                {shiftHealthSummary.length} {language === "cn" ? "班次" : "Shifts"}
+              </span>
+            </div>
+
+            <div className="grid gap-2.5">
+              {shiftHealthSummary.map((item) => {
+                const rate = Math.min(item.rate, 100);
+                const isPerfect = rate >= 100;
+                const hasGap = item.actual < item.scheduled;
+                const icon =
+                  item.label === "Day Shift"
+                    ? "☀"
+                    : item.label === "Night Shift"
+                      ? "☾"
+                      : "◷";
+
+                return (
+                  <div
+                    key={item.label}
+                    className="rounded-xl border border-border-subtle bg-bg/25 p-3 transition-all duration-200 hover:border-cyan-400/20 hover:bg-bg/40"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={[
+                          "flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-black",
+                          isPerfect
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : "bg-cyan-500/10 text-cyan-400",
+                        ].join(" ")}
+                      >
+                        {icon}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-[10px] font-bold text-text">
+                            {item.label}
+                          </p>
+                          <p
+                            className={[
+                              "text-sm font-black",
+                              isPerfect
+                                ? "text-emerald-400"
+                                : rate >= 90
+                                  ? "text-cyan-400"
+                                  : "text-amber-400",
+                            ].join(" ")}
+                          >
+                            {rate.toFixed(1)}%
+                          </p>
+                        </div>
+
+                        <div className="mt-1 flex items-center justify-between text-[8px] text-text-dim">
+                          <span>
+                            {language === "cn" ? "计划" : "Scheduled"} {item.scheduled}
+                            <span className="mx-1 text-text-dim/50">•</span>
+                            {language === "cn" ? "实际" : "Actual"} {item.actual}
+                          </span>
+
+                          <span
+                            className={
+                              hasGap
+                                ? "text-amber-400"
+                                : "text-emerald-400"
+                            }
+                          >
+                            {hasGap
+                              ? `${item.scheduled - item.actual} ${language === "cn" ? "差异" : "gap"}`
+                              : "✓"}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg">
+                          <div
+                            className={[
+                              "h-full rounded-full transition-all duration-700",
+                              isPerfect
+                                ? "bg-emerald-400"
+                                : rate >= 90
+                                  ? "bg-cyan-400"
+                                  : rate >= 70
+                                    ? "bg-amber-400"
+                                    : "bg-rose-400",
+                            ].join(" ")}
+                            style={{ width: `${rate}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {shiftHealthSummary.length === 0 && (
+                <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
+                  {language === "cn"
+                    ? "暂无班次数据"
+                    : "No shift data"}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+          <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <SectionHeader
+                title={language === "cn" ? "员工请假情况" : "Leave by Employee"}
+                description={language === "cn" ? "只显示本月有已批准请假的员工。" : "Only employees with approved leave this month are shown."}
+              />
+              <div className="flex shrink-0 items-center gap-2 text-[8px]">
+                <span className="font-semibold text-blue-400">AL</span>
+                <span className="font-semibold text-violet-400">MC</span>
+                <span className="font-semibold text-indigo-400">UPL</span>
+              </div>
+            </div>
+
+            <div className="mt-2.5 max-h-[360px] overflow-y-auto pr-1">
+              <EmployeeLeaveChart
+                data={employeeLeaveSummary}
+                language={language}
+              />
+            </div>
+          </section>
+
+          <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
+            <div className="flex items-end justify-between gap-2.5">
+              <SectionHeader
+                title={language === "cn" ? "排班异常 · Top 人员" : "Top Schedule Mismatch Employees"}
+                description={language === "cn" ? "优先显示本月最常发生排班偏差的员工。" : "Employees with the most schedule variance in the selected month."}
+              />
+              <span className="text-[10px] text-text-dim">Top 5</span>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              {employeeScheduleSummary.slice(0, 5).map((item) => {
+                const maxMismatch = Math.max(...employeeScheduleSummary.map((x) => x.mismatch), 1);
+                return (
+                  <div key={item.employee.employee_no}>
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="truncate text-[10px] font-semibold text-text">{employeeName(item.employee, language)}</span>
+                        <span className="ml-2 text-[8px] text-text-dim">{item.employee.employee_no}</span>
+                      </div>
+                      <span className="text-xs font-extrabold text-rose-400">{item.mismatch}</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-bg">
+                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${(item.mismatch / maxMismatch) * 100}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {employeeScheduleSummary.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
+                  {language === "cn" ? "暂无排班偏差" : "No schedule variance"}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-2.5 border-t border-border-subtle pt-4">
+              <p className="text-[9px] text-text-dim">
+                {language === "cn" ? "点击上方日柱可查看当天具体员工的排班偏差。" : "Click a day in the chart above to inspect the employees behind that variance."}
+              </p>
+            </div>
+          </section>
+        </div>
+
 
         <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
@@ -3522,7 +5191,7 @@ export default function AttendanceOverviewPage() {
                         </span>
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-2">
+                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-border-subtle pt-2">
                         <span className="truncate text-[10px] text-text-muted">
                           {label}
                         </span>
@@ -3583,7 +5252,7 @@ export default function AttendanceOverviewPage() {
             }
           />
 
-          <div className="mt-5 grid gap-4 md:grid-cols-4">
+          <div className="mt-5 grid gap-2.5 md:grid-cols-4">
             <ScoreCard
               title={
                 language ===
