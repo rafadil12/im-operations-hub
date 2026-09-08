@@ -66,12 +66,12 @@ function formatRange(startsOn: string, endsOn: string, lang: "en" | "cn"): strin
   return `${monthsEn[start.month - 1]} ${start.day} – ${monthsEn[end.month - 1]} ${end.day}, ${end.year}`;
 }
 
-function formatLastUpdated(row: AreaWeekReportRow): string {
-  if (row.status === "none") return "—";
-  const raw = row.lastUpdatedAt;
-  if (!raw) return "—";
-  const stamp = raw.replace("T", " ").replace("Z", "").slice(0, 16);
-  return row.lastUpdatedBy ? `${stamp} ${row.lastUpdatedBy}` : stamp;
+function formatActorCell(at: string | null, by: string | null, status: WeekReportUiStatus): string {
+  if (status === "none") return "—";
+  if (!at && !by) return "—";
+  const stamp = at ? at.replace("T", " ").replace("Z", "").slice(0, 16) : "";
+  if (stamp && by) return `${stamp} ${by}`;
+  return stamp || by || "—";
 }
 
 function lineCountLabel(count: number, language: ReportLanguage): string {
@@ -112,14 +112,15 @@ export function WeekReportList({
           ))}
         </div>
       </div>
-      <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
         <thead>
           <tr>
             <th className={reportTh}>{reportText("week", language)}</th>
             <th className={reportTh}>{reportText("dateRange", language)}</th>
             <th className={reportTh}>{reportText("status", language)}</th>
             <th className={reportTh}>{reportText("subItemCount", language)}</th>
-            <th className={reportTh}>{reportText("lastUpdated", language)}</th>
+            <th className={reportTh}>{reportText("createdBy", language)}</th>
+            <th className={reportTh}>{reportText("updatedBy", language)}</th>
             <th className={stickyTh}>{reportText("actions", language)}</th>
           </tr>
         </thead>
@@ -127,7 +128,7 @@ export function WeekReportList({
           {rows.length === 0 ? (
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className={`${reportTd} py-12 text-text-muted`}
               >
                 {reportText("noLines", language)}
@@ -151,7 +152,10 @@ export function WeekReportList({
                   </td>
                   <td className={reportTd}>{lineCountLabel(row.lineCount, language)}</td>
                   <td className={`${reportTd} whitespace-nowrap text-text-muted`}>
-                    {formatLastUpdated(row)}
+                    {formatActorCell(row.createdAt, row.createdByLabel, row.status)}
+                  </td>
+                  <td className={`${reportTd} whitespace-nowrap text-text-muted`}>
+                    {formatActorCell(row.updatedAt, row.updatedByLabel, row.status)}
                   </td>
                   <td className={stickyTd}>
                       <div className="flex flex-wrap items-center justify-center gap-1.5">

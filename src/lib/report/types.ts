@@ -59,6 +59,10 @@ export type ReportLine = {
   updatedAt?: string | null;
   submittedAt?: string | null;
   submittedByLabel?: string | null;
+  createdByLabel?: string | null;
+  updatedByLabel?: string | null;
+  reportCreatedAt?: string | null;
+  reportUpdatedAt?: string | null;
 };
 
 export type ReportLineRow = {
@@ -85,6 +89,10 @@ export type ReportLineRow = {
   line_updated_at?: string | Date | null;
   submitted_at?: string | Date | null;
   submitted_by_label?: string | null;
+  created_by_label?: string | null;
+  updated_by_label?: string | null;
+  report_created_at?: string | Date | null;
+  report_updated_at?: string | Date | null;
 };
 
 export type ReportAreaMetrics = {

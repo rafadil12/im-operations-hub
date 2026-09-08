@@ -24,7 +24,6 @@ import {
   type ReportWeek,
   type ReportWeekAttachment,
 } from "@/lib/report";
-import { mergeSelectableWeekNumbers } from "@/lib/report/weekCalendar";
 import {
   ReportWeekAttachments,
   uploadPendingReportAttachments,
@@ -46,18 +45,17 @@ type ReportWeekFormModalProps = {
 };
 
 const field =
-  "w-full rounded-md border border-border bg-bg/40 px-3 py-1 text-sm text-text outline-none focus:border-accent";
+  "w-full rounded-md border border-border bg-bg/40 px-3 py-1 text-sm text-text outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70";
 const label = "mb-1 block text-xs font-medium text-text-muted";
 
 export function ReportWeekFormModal({
   open,
-  mode,
+  mode: initialMode,
   initialYear,
   initialWeekNumber,
   initialAreaId,
   areas,
   subItems,
-  weeks,
   canSave,
   onClose,
   onSaved,
@@ -66,6 +64,7 @@ export function ReportWeekFormModal({
   const { lang } = useLang();
   const language = lang as ReportLanguage;
 
+  const [mode, setMode] = useState(initialMode);
   const [year, setYear] = useState(initialYear);
   const [weekNumber, setWeekNumber] = useState(initialWeekNumber);
   const [areaId, setAreaId] = useState(initialAreaId);
@@ -83,19 +82,18 @@ export function ReportWeekFormModal({
     [subItems, areaId]
   );
 
-  const weekOptions = useMemo(() => {
-    const options = mergeSelectableWeekNumbers(
-      year,
-      weeks.filter((w) => w.year === year).map((w) => w.weekNumber)
-    );
-    if (Number.isInteger(weekNumber) && !options.includes(weekNumber)) {
-      return [weekNumber, ...options].sort((a, b) => b - a);
-    }
-    return options;
-  }, [year, weeks, weekNumber]);
+  const areaLabel = useMemo(() => {
+    const area = areas.find((a) => a.id === areaId);
+    return area
+      ? localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, lang)
+      : String(areaId);
+  }, [areas, areaId, lang]);
 
   useEffect(() => {
     if (!open) return;
+    // Reset form identity when the modal opens for a different week/area/mode.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync props into local draft state on open
+    setMode(initialMode);
     setYear(initialYear);
     setWeekNumber(initialWeekNumber);
     setAreaId(initialAreaId);
@@ -105,7 +103,7 @@ export function ReportWeekFormModal({
     setPendingFiles([]);
     setAttachmentUploading(false);
 
-    if (mode === "create") {
+    if (initialMode === "create") {
       setLines([newWeekLineDraft()]);
       setSavedAttachments([]);
       setIsSubmitted(false);
@@ -146,7 +144,7 @@ export function ReportWeekFormModal({
         setLoading(false);
       }
     })();
-  }, [open, mode, initialYear, initialWeekNumber, initialAreaId, lang]);
+  }, [open, initialMode, initialYear, initialWeekNumber, initialAreaId, lang]);
 
   const readOnly = mode === "view" || isSubmitted || !canSave;
 
@@ -210,8 +208,32 @@ export function ReportWeekFormModal({
       }
       if (!res.ok || !json.success) throw new Error(json.error ?? "Save failed");
 
+      // Lines are persisted — switch create → edit so attachment retry cannot 409.
+      if (mode === "create") {
+        setMode("edit");
+      }
+
       if (pendingFiles.length) {
-        await uploadPendingReportAttachments(year, weekNumber, areaId, pendingFiles);
+        setAttachmentUploading(true);
+        const { succeeded, failed } = await uploadPendingReportAttachments(
+          year,
+          weekNumber,
+          areaId,
+          pendingFiles
+        );
+        if (succeeded.length) {
+          setSavedAttachments((prev) => [...prev, ...succeeded]);
+        }
+        setPendingFiles(failed);
+        setAttachmentUploading(false);
+
+        onSaved();
+        if (failed.length) {
+          setError(reportText("attachmentPartialFail", language));
+          return;
+        }
+        onClose();
+        return;
       }
 
       onSaved();
@@ -220,6 +242,7 @@ export function ReportWeekFormModal({
       setError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
+      setAttachmentUploading(false);
     }
   };
 
@@ -289,54 +312,15 @@ export function ReportWeekFormModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className={label}>{reportText("year", language)}</label>
-                <select
-                  className={field}
-                  value={year}
-                  disabled
-                  onChange={(e) => setYear(Number(e.target.value))}
-                >
-                  {[2025, 2026, 2027].map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                <input className={field} value={year} disabled readOnly />
               </div>
               <div>
                 <label className={label}>{reportText("week", language)}</label>
-                <select
-                  className={field}
-                  value={weekNumber}
-                  disabled
-                  onChange={(e) => setWeekNumber(Number(e.target.value))}
-                >
-                  {weekOptions.map((w) => (
-                    <option key={w} value={w}>
-                      Week {w}
-                    </option>
-                  ))}
-                </select>
+                <input className={field} value={`Week ${weekNumber}`} disabled readOnly />
               </div>
               <div>
                 <label className={label}>{reportText("reportCategory", language)}</label>
-                <select
-                  className={field}
-                  value={areaId}
-                  disabled
-                  onChange={(e) => {
-                    const nextAreaId = Number(e.target.value);
-                    setAreaId(nextAreaId);
-                    setLines((prev) =>
-                      prev.map((l) => ({ ...l, subItemId: "", subItemLabel: "" }))
-                    );
-                  }}
-                >
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {localizedName({ name_en: a.nameEn, name_cn: a.nameCn }, lang)}
-                    </option>
-                  ))}
-                </select>
+                <input className={field} value={areaLabel} disabled readOnly />
               </div>
             </div>
 

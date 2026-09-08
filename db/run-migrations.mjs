@@ -34,7 +34,9 @@ const { tryAddFk, tryAddConstraint, applySqlFile } = createMigrationHelpers(conn
 // ---------------------------------------------------------------------------
 // 001: mes_data.deleted_at
 // ---------------------------------------------------------------------------
-if (await columnExists("mes_data", "deleted_at")) {
+if (!(await tableExists("mes_data"))) {
+  console.log("mes_data no longer exists; skipped legacy deleted_at migration.");
+} else if (await columnExists("mes_data", "deleted_at")) {
   console.log("mes_data.deleted_at already exists.");
 } else {
   await conn.query(readMigrationSql("001_add_deleted_at.sql"));
@@ -1405,6 +1407,77 @@ if (!(await columnExists("attendance_leave_requests", "no_attendance_type"))) {
   console.log("Added attendance_leave_requests.no_attendance_type.");
 } else {
   console.log("attendance_leave_requests.no_attendance_type already exists.");
+}
+
+// ---------------------------------------------------------------------------
+// 036: report_week_submissions created/updated actor audit + allow duplicate sub-items
+// ---------------------------------------------------------------------------
+if (await tableExists("report_week_submissions")) {
+  if (!(await columnExists("report_week_submissions", "created_by_system_user_id"))) {
+    await conn.query(
+      `ALTER TABLE report_week_submissions
+         ADD COLUMN created_by_system_user_id INT NULL AFTER submitted_by_label,
+         ADD COLUMN created_by_label VARCHAR(255) NULL AFTER created_by_system_user_id,
+         ADD COLUMN updated_by_system_user_id INT NULL AFTER created_by_label,
+         ADD COLUMN updated_by_label VARCHAR(255) NULL AFTER updated_by_system_user_id`
+    );
+    console.log("Added report_week_submissions created/updated audit columns.");
+  } else {
+    console.log("report_week_submissions created/updated audit columns already exist.");
+  }
+
+  await conn.query(
+    `UPDATE report_week_submissions
+       SET created_by_system_user_id = COALESCE(created_by_system_user_id, submitted_by_system_user_id),
+           created_by_label          = COALESCE(created_by_label, submitted_by_label),
+           updated_by_system_user_id = COALESCE(updated_by_system_user_id, submitted_by_system_user_id),
+           updated_by_label          = COALESCE(updated_by_label, submitted_by_label)`
+  );
+  console.log("Backfilled report_week_submissions created/updated from submitter (best-effort).");
+
+  if (!(await indexExists("report_week_submissions", "idx_report_submission_created_by"))) {
+    await conn.query(
+      `ALTER TABLE report_week_submissions
+         ADD INDEX idx_report_submission_created_by (created_by_system_user_id)`
+    );
+    console.log("Added idx_report_submission_created_by.");
+  } else {
+    console.log("idx_report_submission_created_by already exists.");
+  }
+
+  if (!(await indexExists("report_week_submissions", "idx_report_submission_updated_by"))) {
+    await conn.query(
+      `ALTER TABLE report_week_submissions
+         ADD INDEX idx_report_submission_updated_by (updated_by_system_user_id)`
+    );
+    console.log("Added idx_report_submission_updated_by.");
+  } else {
+    console.log("idx_report_submission_updated_by already exists.");
+  }
+
+  await tryAddFk(
+    `ALTER TABLE report_week_submissions
+       ADD CONSTRAINT fk_report_submission_created_by_su
+       FOREIGN KEY (created_by_system_user_id) REFERENCES system_users (id)
+       ON DELETE SET NULL ON UPDATE CASCADE`,
+    "fk_report_submission_created_by_su"
+  );
+  await tryAddFk(
+    `ALTER TABLE report_week_submissions
+       ADD CONSTRAINT fk_report_submission_updated_by_su
+       FOREIGN KEY (updated_by_system_user_id) REFERENCES system_users (id)
+       ON DELETE SET NULL ON UPDATE CASCADE`,
+    "fk_report_submission_updated_by_su"
+  );
+} else {
+  console.log("report_week_submissions missing; skipped 036 actor audit columns.");
+}
+
+if (await indexExists("report_lines", "uk_report_lines_week_area_subitem")) {
+  await conn.query(`ALTER TABLE report_lines DROP INDEX uk_report_lines_week_area_subitem`);
+  console.log("Dropped uk_report_lines_week_area_subitem (duplicate sub-items allowed).");
+} else {
+  console.log("uk_report_lines_week_area_subitem already absent.");
 }
 
 await conn.end();

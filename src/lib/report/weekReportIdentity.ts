@@ -14,8 +14,10 @@ export type AreaWeekReportRow = {
   status: WeekReportUiStatus;
   lineCount: number;
   weekId: number | null;
-  lastUpdatedAt: string | null;
-  lastUpdatedBy: string | null;
+  createdAt: string | null;
+  createdByLabel: string | null;
+  updatedAt: string | null;
+  updatedByLabel: string | null;
   lines: ReportLine[];
 };
 
@@ -61,6 +63,7 @@ export function buildAreaWeekReportRows(args: {
     const lines = (linesByWeek.get(weekNumber) ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder);
     const range = weekDateRange(args.year, weekNumber);
     const status = weekReportStatusFromLines(lines);
+    const first = lines[0];
     return {
       year: args.year,
       weekNumber,
@@ -68,12 +71,14 @@ export function buildAreaWeekReportRows(args: {
       endsOn: range.endsOn,
       status,
       lineCount: lines.length,
-      weekId: lines[0]?.weekId ?? null,
-      lastUpdatedAt: latestTimestamp([
+      weekId: first?.weekId ?? null,
+      createdAt: first?.reportCreatedAt ?? null,
+      createdByLabel: first?.createdByLabel ?? null,
+      updatedAt: latestTimestamp([
         ...lines.map((line) => line.updatedAt),
-        ...lines.map((line) => line.submittedAt),
+        first?.reportUpdatedAt,
       ]),
-      lastUpdatedBy: lines.find((line) => line.submittedByLabel)?.submittedByLabel ?? null,
+      updatedByLabel: first?.updatedByLabel ?? null,
       lines,
     };
   });

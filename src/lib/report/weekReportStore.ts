@@ -1,6 +1,5 @@
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { withTransaction } from "@/lib/db";
-import { mapReportLineRow } from "./apiHelpers";
 import type { ReportLine, ReportLineInput, ReportLineRow } from "./types";
 import { validateWeekLinePayload } from "./weekFormValidation";
 import {
@@ -8,6 +7,8 @@ import {
   ensureReportWeek,
   getSubmissionStatus,
   loadReportLines,
+  lockSubmissionRow,
+  stampSubmissionActors,
 } from "./lineStore";
 import { createModeConflictMessage } from "./weekReportIdentity";
 
@@ -122,16 +123,10 @@ export async function saveReportWeekLines(
   if (validationError) throw new Error(validationError);
 
   const weekId = await ensureReportWeek(year, weekNumber);
-  const submission = await getSubmissionStatus(weekId, areaId);
-  if (submission?.status === "submitted") {
-    throw new Error("This week report is submitted and cannot be edited.");
-  }
 
-  const existing = await loadReportLines({ weekId, areaId });
+  let workingLines = lines;
   if (options.create) {
-    const conflict = createModeConflictMessage(existing.length);
-    if (conflict) throw new Error(conflict);
-    lines = lines.map((line) => ({
+    workingLines = lines.map((line) => ({
       subItemId: line.subItemId,
       workTargetEn: line.workTargetEn,
       workTargetCn: line.workTargetCn,
@@ -143,19 +138,38 @@ export async function saveReportWeekLines(
     }));
   }
 
-  await ensureDraftSubmission(weekId, areaId);
-
-  const existingById = new Map(existing.map((l) => [l.id, l]));
-  const payloadIds = new Set(lines.filter((l) => l.id != null).map((l) => Number(l.id)));
-
-  for (const id of payloadIds) {
-    const row = existingById.get(id);
-    if (!row || row.weekId !== weekId || row.areaId !== areaId) {
-      throw new Error(`Line ${id} does not belong to this week report.`);
-    }
-  }
-
   await withTransaction(async (conn) => {
+    await ensureDraftSubmission(weekId, areaId, conn, {
+      createdBySystemUserId: audit.changedBySystemUserId,
+      createdByLabel: audit.changedByLabel,
+    });
+
+    const locked = await lockSubmissionRow(conn, weekId, areaId);
+    if (!locked) {
+      throw new Error("Failed to lock week report submission.");
+    }
+    if (locked.status === "submitted") {
+      throw new Error("This week report is submitted and cannot be edited.");
+    }
+
+    const existing = await loadReportLines({ weekId, areaId }, conn);
+    if (options.create) {
+      const conflict = createModeConflictMessage(existing.length);
+      if (conflict) throw new Error(conflict);
+    }
+
+    const existingById = new Map(existing.map((l) => [l.id, l]));
+    const payloadIds = new Set(
+      workingLines.filter((l) => l.id != null).map((l) => Number(l.id))
+    );
+
+    for (const id of payloadIds) {
+      const row = existingById.get(id);
+      if (!row || row.weekId !== weekId || row.areaId !== areaId) {
+        throw new Error(`Line ${id} does not belong to this week report.`);
+      }
+    }
+
     for (const old of existing) {
       if (payloadIds.has(old.id)) continue;
       const row = await fetchLineRow(conn, old.id);
@@ -166,7 +180,7 @@ export async function saveReportWeekLines(
     }
 
     let sortOrder = 0;
-    for (const line of lines) {
+    for (const line of workingLines) {
       const input: ReportLineInput = {
         weekId,
         areaId,
@@ -235,6 +249,8 @@ export async function saveReportWeekLines(
         );
       }
     }
+
+    await stampSubmissionActors(conn, weekId, areaId, audit);
   });
 
   return loadReportLines({ weekId, areaId });

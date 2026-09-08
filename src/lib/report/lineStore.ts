@@ -1,3 +1,4 @@
+import type { PoolConnection } from "mysql2/promise";
 import { execute, query } from "@/lib/db";
 import { isValidCnText, isValidEnText } from "@/lib/daily-operation/mesRecordValidation";
 import { mapReportLineRow } from "./apiHelpers";
@@ -11,6 +12,30 @@ import type {
   ReportWeekSubmission,
 } from "./types";
 import { formatDateOnly, getSaturdayForWeek, weekLabel } from "./weekCalendar";
+
+type Queryable = {
+  query: PoolConnection["query"];
+};
+
+async function runQuery<T>(conn: Queryable | null | undefined, sql: string, params?: unknown[]): Promise<T> {
+  if (conn) {
+    const [rows] = await conn.query(sql, params);
+    return rows as T;
+  }
+  return query<T>(sql, params);
+}
+
+async function runExecute(
+  conn: Queryable | null | undefined,
+  sql: string,
+  params?: unknown[]
+): Promise<void> {
+  if (conn) {
+    await conn.query(sql, params);
+    return;
+  }
+  await execute(sql, params);
+}
 
 export async function loadReportAreas(): Promise<ReportArea[]> {
   const rows = await query<
@@ -165,12 +190,15 @@ export async function loadReportWeeks(year?: number): Promise<ReportWeek[]> {
   }));
 }
 
-export async function loadReportLines(filters: {
-  year?: number;
-  weekNumber?: number;
-  weekId?: number;
-  areaId?: number;
-}): Promise<ReportLine[]> {
+export async function loadReportLines(
+  filters: {
+    year?: number;
+    weekNumber?: number;
+    weekId?: number;
+    areaId?: number;
+  },
+  conn?: Queryable | null
+): Promise<ReportLine[]> {
   const clauses: string[] = [];
   const params: (number | string)[] = [];
 
@@ -193,7 +221,8 @@ export async function loadReportLines(filters: {
 
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
-  const rows = await query<ReportLineRow[]>(
+  const rows = await runQuery<ReportLineRow[]>(
+    conn,
     `
       SELECT
         rl.id,
@@ -218,7 +247,11 @@ export async function loadReportLines(filters: {
         rws.status AS submission_status,
         rl.updated_at AS line_updated_at,
         rws.submitted_at,
-        rws.submitted_by_label
+        rws.submitted_by_label,
+        rws.created_by_label,
+        rws.updated_by_label,
+        rws.created_at AS report_created_at,
+        rws.updated_at AS report_updated_at
       FROM report_lines rl
       JOIN report_weeks rw ON rw.id = rl.week_id
       JOIN report_areas ra ON ra.id = rl.area_id
@@ -336,9 +369,10 @@ export async function loadReportSubmissions(filters: {
 
 export async function getSubmissionStatus(
   weekId: number,
-  areaId: number
+  areaId: number,
+  conn?: Queryable | null
 ): Promise<ReportWeekSubmission | null> {
-  const rows = await query<
+  const rows = await runQuery<
     {
       id: number;
       week_id: number;
@@ -349,6 +383,7 @@ export async function getSubmissionStatus(
       submitted_by_label: string | null;
     }[]
   >(
+    conn,
     `SELECT id, week_id, area_id, status, submitted_at,
             submitted_by_system_user_id, submitted_by_label
      FROM report_week_submissions
@@ -369,6 +404,26 @@ export async function getSubmissionStatus(
         : null,
     submittedByLabel: rows[0].submitted_by_label,
   };
+}
+
+export async function lockSubmissionRow(
+  conn: Queryable,
+  weekId: number,
+  areaId: number
+): Promise<{ id: number; status: "draft" | "submitted" } | null> {
+  const rows = await runQuery<
+    { id: number; status: "draft" | "submitted" }[]
+  >(
+    conn,
+    `SELECT id, status
+     FROM report_week_submissions
+     WHERE week_id = ? AND area_id = ?
+     LIMIT 1
+     FOR UPDATE`,
+    [weekId, areaId]
+  );
+  if (!rows[0]) return null;
+  return { id: Number(rows[0].id), status: rows[0].status };
 }
 
 export async function insertReportLine(input: ReportLineInput): Promise<number> {
@@ -426,14 +481,63 @@ export async function deleteReportLine(id: number): Promise<void> {
   await execute(`DELETE FROM report_lines WHERE id = ?`, [id]);
 }
 
-export async function ensureDraftSubmission(weekId: number, areaId: number): Promise<void> {
-  await execute(
+export async function ensureDraftSubmission(
+  weekId: number,
+  areaId: number,
+  conn?: Queryable | null,
+  audit?: {
+    createdBySystemUserId?: number | null;
+    createdByLabel?: string | null;
+  }
+): Promise<void> {
+  await runExecute(
+    conn,
     `
-      INSERT INTO report_week_submissions (week_id, area_id, status)
-      VALUES (?, ?, 'draft')
+      INSERT INTO report_week_submissions
+        (week_id, area_id, status, created_by_system_user_id, created_by_label,
+         updated_by_system_user_id, updated_by_label)
+      VALUES (?, ?, 'draft', ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE week_id = week_id
     `,
-    [weekId, areaId]
+    [
+      weekId,
+      areaId,
+      audit?.createdBySystemUserId ?? null,
+      audit?.createdByLabel ?? null,
+      audit?.createdBySystemUserId ?? null,
+      audit?.createdByLabel ?? null,
+    ]
+  );
+}
+
+export async function stampSubmissionActors(
+  conn: Queryable,
+  weekId: number,
+  areaId: number,
+  audit: {
+    changedBySystemUserId?: number | null;
+    changedByLabel?: string | null;
+  }
+): Promise<void> {
+  await runExecute(
+    conn,
+    `
+      UPDATE report_week_submissions
+      SET
+        created_by_system_user_id = COALESCE(created_by_system_user_id, ?),
+        created_by_label = COALESCE(created_by_label, ?),
+        updated_by_system_user_id = ?,
+        updated_by_label = ?
+      WHERE week_id = ? AND area_id = ?
+    `,
+    [
+      audit.changedBySystemUserId ?? null,
+      audit.changedByLabel ?? null,
+      audit.changedBySystemUserId ?? null,
+      audit.changedByLabel ?? null,
+      weekId,
+      areaId,
+    ]
   );
 }
 

@@ -24,7 +24,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - Weekly report attachments (PPT, Excel, PDF, PNG, JPEG) on Add/Edit Week Report form; stored in `report_week_attachments` (week × area).
 - Uploads: set `REPORT_UPLOAD_DIR` in `.env.local` (served via `/api/report/files/...`).
+- Report identity is one `report_week_submissions` row per `(week_id, area_id)` (unique). Actor audit: `created_by_*` / `updated_by_*` / `submitted_by_*` on that row (migration 036).
+- Same sub-item may appear on multiple lines in one week report (duplicate targets); `uk_report_lines_week_area_subitem` is dropped by migration 036.
 - Run migrations: `node --env-file=.env.local db/run-migrations.mjs`
+- Apply the same runner to production (after backup; never set `ALLOW_DEV_PASSWORD_RESET` on prod):
+  1. `mysqldump -h <host> -u <user> -p --single-transaction --routines --triggers <db> > backup_prod_YYYYMMDD.sql`
+  2. Prefer dry-run on a clone of that dump.
+  3. `node --env-file=.env.production.local db/run-migrations.mjs`
+  4. Verify: `SHOW COLUMNS FROM report_week_submissions LIKE '%_by%';` and confirm `uk_report_lines_week_area_subitem` is gone (`SHOW INDEX FROM report_lines WHERE Key_name = 'uk_report_lines_week_area_subitem'` empty).
+  5. Deploy application code only after migration succeeds.
 
 ## Safety module
 

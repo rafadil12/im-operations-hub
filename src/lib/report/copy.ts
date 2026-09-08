@@ -75,6 +75,8 @@ const REPORT_TEXT = {
   dateRange: ["Date range", "日期范围"] as TextPair,
   subItemCount: ["Sub-items (lines)", "子项（行数）"] as TextPair,
   lastUpdated: ["Last updated", "最近更新"] as TextPair,
+  createdBy: ["Created by", "创建人"] as TextPair,
+  updatedBy: ["Updated by", "更新人"] as TextPair,
   linesCount: ["{n} lines", "{n} 项"] as TextPair,
   lineCountOne: ["1 line", "1 项"] as TextPair,
   weeklyReportsFor: ["Weekly Reports — {area} ({year})", "周报 — {area}（{year}）"] as TextPair,
@@ -226,6 +228,10 @@ const REPORT_TEXT = {
   attachmentInvalidType: [
     "Unsupported file type. Allowed: PPT, Excel, PDF, PNG, JPEG.",
     "不支持的文件类型。允许：PPT、Excel、PDF、PNG、JPEG。",
+  ] as TextPair,
+  attachmentPartialFail: [
+    "Report saved. Some attachments failed to upload — retry from Edit.",
+    "周报已保存。部分附件上传失败，请在编辑中重试。",
   ] as TextPair,
   viewFiles: ["View files", "查看附件"] as TextPair,
   viewFilesCount: ["{n} file(s)", "{n} 个文件"] as TextPair,

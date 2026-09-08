@@ -28,6 +28,10 @@ export function mapReportLineRow(row: ReportLineRow): ReportLine {
     updatedAt: row.line_updated_at != null ? String(row.line_updated_at) : null,
     submittedAt: row.submitted_at != null ? String(row.submitted_at) : null,
     submittedByLabel: row.submitted_by_label ?? null,
+    createdByLabel: row.created_by_label ?? null,
+    updatedByLabel: row.updated_by_label ?? null,
+    reportCreatedAt: row.report_created_at != null ? String(row.report_created_at) : null,
+    reportUpdatedAt: row.report_updated_at != null ? String(row.report_updated_at) : null,
   };
 }
 

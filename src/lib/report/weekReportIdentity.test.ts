@@ -70,7 +70,10 @@ describe("buildAreaWeekReportRows", () => {
           weekNumber: 34,
           weekId: 11,
           submissionStatus: "submitted",
-          submittedByLabel: "Super Admin",
+          createdByLabel: "Creator",
+          updatedByLabel: "Editor",
+          reportCreatedAt: "2026-08-28 09:00:00",
+          reportUpdatedAt: "2026-08-29 14:40:00",
         }),
       ],
     });
@@ -81,7 +84,8 @@ describe("buildAreaWeekReportRows", () => {
       [33, "none", 0],
     ]);
     expect(rows[0].lines.map((item) => item.id)).toEqual([2, 1]);
-    expect(rows[1].lastUpdatedBy).toBe("Super Admin");
+    expect(rows[1].createdByLabel).toBe("Creator");
+    expect(rows[1].updatedByLabel).toBe("Editor");
     expect(rows[2].weekId).toBeNull();
   });
 
@@ -103,7 +107,7 @@ describe("buildAreaWeekReportRows", () => {
     expect(itRows[0].lineCount).toBe(0);
   });
 
-  it("keeps lastUpdatedAt as the database wall-clock time (not UTC ISO)", () => {
+  it("keeps updatedAt as the database wall-clock time (not UTC ISO)", () => {
     const rows = buildAreaWeekReportRows({
       year: 2026,
       weekNumbers: [37],
@@ -112,10 +116,30 @@ describe("buildAreaWeekReportRows", () => {
           id: 1,
           weekNumber: 37,
           updatedAt: "2026-09-08 16:47:12",
-          submittedAt: "2026-09-08 10:00:00",
+          reportUpdatedAt: "2026-09-08 10:00:00",
+          createdByLabel: "A",
+          updatedByLabel: "B",
+          reportCreatedAt: "2026-09-07 08:00:00",
         }),
       ],
     });
-    expect(rows[0].lastUpdatedAt).toBe("2026-09-08 16:47:12");
+    expect(rows[0].updatedAt).toBe("2026-09-08 16:47:12");
+    expect(rows[0].createdAt).toBe("2026-09-07 08:00:00");
+    expect(rows[0].createdByLabel).toBe("A");
+    expect(rows[0].updatedByLabel).toBe("B");
+  });
+
+  it("allows the same sub-item on multiple lines in one week", () => {
+    const rows = buildAreaWeekReportRows({
+      year: 2026,
+      weekNumbers: [37],
+      lines: [
+        line({ id: 1, weekNumber: 37, subItemId: 5, sortOrder: 0, workTargetEn: "Target A" }),
+        line({ id: 2, weekNumber: 37, subItemId: 5, sortOrder: 1, workTargetEn: "Target B" }),
+        line({ id: 3, weekNumber: 37, subItemId: 5, sortOrder: 2, workTargetEn: "Target C" }),
+      ],
+    });
+    expect(rows[0].lineCount).toBe(3);
+    expect(rows[0].lines.every((l) => l.subItemId === 5)).toBe(true);
   });
 });
