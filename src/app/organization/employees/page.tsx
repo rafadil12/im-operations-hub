@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -627,6 +628,9 @@ export default function OrganizationManagementPage() {
     null,
   );
 
+  const [openActionEmployeeId, setOpenActionEmployeeId] =
+    useState<number | null>(null);
+
   const [
     showForm,
     setShowForm,
@@ -645,6 +649,44 @@ export default function OrganizationManagementPage() {
   ] = useState<FormState>(
     EMPTY_FORM,
   );
+
+  const [
+    confirmDialog,
+    setConfirmDialog,
+  ] = useState<{
+    action: "deactivate" | "reactivate";
+    employee: Employee;
+  } | null>(null);
+
+  const [
+    noticeDialog,
+    setNoticeDialog,
+  ] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (openActionEmployeeId === null) {
+      return;
+    }
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target;
+
+      if (target instanceof Element && target.closest("[data-employee-actions]")) {
+        return;
+      }
+
+      setOpenActionEmployeeId(null);
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [openActionEmployeeId]);
 
   /* =======================================================
      LOAD EMPLOYEES
@@ -707,12 +749,16 @@ export default function OrganizationManagementPage() {
             error,
           );
 
-          window.alert(
-            organizationText(
+          setNoticeDialog({
+            title:
+              organizationLanguage === "cn"
+                ? "加载失败"
+                : "Loading failed",
+            message: organizationText(
               "loadingError",
               organizationLanguage,
             ),
-          );
+          });
         } finally {
           setLoadingEmployees(false);
         }
@@ -1227,59 +1273,52 @@ export default function OrganizationManagementPage() {
         error,
       );
 
-      window.alert(
-        error instanceof Error
-          ? error.message
-          : organizationText(
-              "saveError",
-              organizationLanguage,
-            ),
-      );
+      setNoticeDialog({
+        title:
+          organizationLanguage === "cn"
+            ? "保存失败"
+            : "Save failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : organizationText(
+                "saveError",
+                organizationLanguage,
+              ),
+      });
     } finally {
       setSaving(false);
     }
   }
 
   /* =======================================================
-     DEACTIVATE
+     DEACTIVATE / REACTIVATE CONFIRMATION
   ======================================================= */
 
-  async function deactivateEmployee(
-    employee: Employee,
-  ) {
-    const confirmed =
-      window.confirm(
-        organizationText(
-          "confirmDeactivate",
-          organizationLanguage,
-        ),
-      );
+  function deactivateEmployee(employee: Employee) {
+    setConfirmDialog({
+      action: "deactivate",
+      employee,
+    });
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
+  async function performDeactivate(employee: Employee) {
     try {
       const response =
         await fetch(
           `/api/organization/employees/${employee.id}`,
           {
             method: "PATCH",
-
             headers: {
-              "Content-Type":
-                "application/json",
+              "Content-Type": "application/json",
             },
-
             body: JSON.stringify({
-              employment_status:
-                "Inactive",
+              employment_status: "Inactive",
             }),
           },
         );
 
-      const payload =
-        await response.json();
+      const payload = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -1291,53 +1330,39 @@ export default function OrganizationManagementPage() {
         );
       }
 
-      setSelectedEmployee(
-        (current) =>
-          current
-            ? {
-                ...current,
-                status:
-                  "Inactive",
-              }
-            : null,
+      setSelectedEmployee((current) =>
+        current
+          ? { ...current, status: "Inactive" }
+          : null,
       );
 
       await loadEmployees();
     } catch (error) {
-      console.error(
-        "deactivateEmployee failed",
-        error,
-      );
-
-      window.alert(
-        error instanceof Error
-          ? error.message
-          : organizationText(
-              "deactivateError",
-              organizationLanguage,
-            ),
-      );
+      console.error("deactivateEmployee failed", error);
+      setNoticeDialog({
+        title:
+          organizationLanguage === "cn"
+            ? "操作失败"
+            : "Action failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : organizationText(
+                "deactivateError",
+                organizationLanguage,
+              ),
+      });
     }
   }
 
-  /* =======================================================
-     REACTIVATE
-  ======================================================= */
+  function reactivateEmployee(employee: Employee) {
+    setConfirmDialog({
+      action: "reactivate",
+      employee,
+    });
+  }
 
-  async function reactivateEmployee(
-    employee: Employee,
-  ) {
-    const confirmed =
-      window.confirm(
-        organizationLanguage === "cn"
-          ? `确定要重新启用员工 ${employee.name} 吗？`
-          : `Are you sure you want to reactivate ${employee.name}?`,
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
+  async function performReactivate(employee: Employee) {
     try {
       const response =
         await fetch(
@@ -1345,8 +1370,7 @@ export default function OrganizationManagementPage() {
           {
             method: "PATCH",
             headers: {
-              "Content-Type":
-                "application/json",
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               employment_status: "Active",
@@ -1354,8 +1378,7 @@ export default function OrganizationManagementPage() {
           },
         );
 
-      const payload =
-        await response.json();
+      const payload = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -1366,31 +1389,44 @@ export default function OrganizationManagementPage() {
         );
       }
 
-      setSelectedEmployee(
-        (current) =>
-          current
-            ? {
-                ...current,
-                status: "Active",
-              }
-            : null,
+      setSelectedEmployee((current) =>
+        current
+          ? { ...current, status: "Active" }
+          : null,
       );
 
       await loadEmployees();
     } catch (error) {
-      console.error(
-        "reactivateEmployee failed",
-        error,
-      );
-
-      window.alert(
-        error instanceof Error
-          ? error.message
-          : organizationLanguage === "cn"
-            ? "员工重新启用失败。"
-            : "Failed to reactivate employee.",
-      );
+      console.error("reactivateEmployee failed", error);
+      setNoticeDialog({
+        title:
+          organizationLanguage === "cn"
+            ? "操作失败"
+            : "Action failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : organizationLanguage === "cn"
+              ? "员工重新启用失败。"
+              : "Failed to reactivate employee.",
+      });
     }
+  }
+
+  async function confirmEmployeeAction() {
+    if (!confirmDialog) {
+      return;
+    }
+
+    const { action, employee } = confirmDialog;
+    setConfirmDialog(null);
+
+    if (action === "deactivate") {
+      await performDeactivate(employee);
+      return;
+    }
+
+    await performReactivate(employee);
   }
 
   /* =======================================================
@@ -1507,7 +1543,7 @@ export default function OrganizationManagementPage() {
             color: rgb(var(--text));
             border-radius: 10px;
             padding: 10px 12px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             line-height: 1.25;
             outline: none;
@@ -1535,6 +1571,30 @@ export default function OrganizationManagementPage() {
           .organization-input:disabled {
             opacity: .65;
             cursor: not-allowed;
+          }
+
+          .organization-page .compact-form-control {
+            min-height: 36px;
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 9px;
+          }
+
+          .dark .organization-page .compact-form-control {
+            background: #111c31 !important;
+            color: #f8fafc !important;
+            border-color: #334155 !important;
+            color-scheme: dark;
+          }
+
+          .dark .organization-page .compact-form-control option {
+            background: #111c31 !important;
+            color: #f8fafc !important;
+          }
+
+          .organization-page input[type="date"]::-webkit-calendar-picker-indicator {
+            opacity: .7;
           }
 
           .organization-page .text-text {
@@ -1652,6 +1712,41 @@ export default function OrganizationManagementPage() {
             background: rgb(34 211 238 / .10) !important;
           }
 
+          .organization-page .compact-form-control {
+            min-height: 36px;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            font-size: 11px;
+            font-weight: 600;
+          }
+
+          .organization-page .compact-readonly-control {
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            border: 1px solid rgb(var(--border-subtle));
+            border-radius: 10px;
+            background: rgb(var(--surface-hover) / .45);
+            color: rgb(var(--text));
+            font-size: 11px;
+            font-weight: 600;
+          }
+
+          .dark .organization-page .compact-readonly-control {
+            background: rgb(30 41 59 / .35);
+            border-color: #26364f;
+            color: #e2e8f0;
+          }
+
+          .dark .organization-page select {
+            color-scheme: dark;
+          }
+
+          .organization-page select {
+            color-scheme: light;
+          }
+
           @media (prefers-reduced-motion: reduce) {
             .organization-card,
             .organization-row,
@@ -1702,7 +1797,7 @@ export default function OrganizationManagementPage() {
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">
+                <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-text-dim">
                   {organizationText(
                     "management",
                     organizationLanguage,
@@ -1710,14 +1805,14 @@ export default function OrganizationManagementPage() {
                 </span>
               </div>
 
-              <h1 className="mt-0.5 truncate text-[21px] font-bold leading-tight tracking-[-0.02em] text-text">
+              <h1 className="mt-0.5 truncate text-[18px] font-bold leading-tight tracking-[-0.02em] text-text">
                 {organizationText(
                   "title",
                   organizationLanguage,
                 )}
               </h1>
 
-              <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-text-muted">
+              <p className="mt-1 max-w-3xl text-[10px] leading-relaxed text-text-muted">
                 {organizationText(
                   "description",
                   organizationLanguage,
@@ -1735,7 +1830,7 @@ export default function OrganizationManagementPage() {
               availableEmployees.length ===
               0
             }
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-500 px-3.5 py-2 text-[11px] font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-500 px-3.5 py-2 text-[10px] font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="text-base leading-none">
               +
@@ -1814,93 +1909,95 @@ export default function OrganizationManagementPage() {
             DIRECTORY
         ================================================= */}
 
-        <section className="organization-card overflow-hidden rounded-xl border border-border bg-surface">
-          <div className="border-b border-border-subtle bg-surface-hover p-4 md:p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-500/5 text-sm text-cyan-500 dark:text-cyan-300">
-                    👥
-                  </span>
-
-                  <h2 className="text-sm font-bold text-text">
-                    {organizationText(
-                      "employeeDirectory",
-                      organizationLanguage,
-                    )}
-                  </h2>
+        <section className="organization-card overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+          <div className="border-b border-border-subtle bg-surface-hover/60 p-4 md:p-5">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-500/5 text-[12px] text-cyan-500 dark:text-cyan-300">
+                      👥
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="text-[12px] font-bold text-text">
+                        {organizationText(
+                          "employeeDirectory",
+                          organizationLanguage,
+                        )}
+                      </h2>
+                      <p className="mt-0.5 text-[9px] text-text-muted">
+                        {organizationText(
+                          "employeeDirectoryDescription",
+                          organizationLanguage,
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <p className="mt-1 text-[10px] text-text-muted">
-                  {organizationText(
-                    "employeeDirectoryDescription",
+                <span className="self-start rounded-full border border-border bg-surface px-2.5 py-1 text-[9px] font-semibold text-text-muted lg:self-auto">
+                  {filteredEmployees.length} / {directoryEmployees.length} {organizationText(
+                    "employees",
                     organizationLanguage,
                   )}
-                </p>
+                </span>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {/* SEARCH */}
-
-                <div className="relative w-full min-w-[220px]">
-                    {/* SEARCH ICON */}
-                    <span
-                      className="pointer-events-none absolute left-3 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center"
-                      aria-hidden="true"
+                <div className="relative w-full xl:col-span-1">
+                  <span
+                    className="pointer-events-none absolute left-3 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center text-text-dim"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <circle
-                          cx="11"
-                          cy="11"
-                          r="7"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M16.5 16.5L21 21"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </span>
+                      <circle
+                        cx="11"
+                        cy="11"
+                        r="7"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      />
+                      <path
+                        d="M16.5 16.5L21 21"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
 
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(event) =>
-                        setSearch(event.target.value)
-                      }
-                      placeholder={organizationText(
-                        "search",
-                        organizationLanguage,
-                      )}
-                      className="organization-input w-full rounded-lg"
-                      style={{
-                        paddingLeft: "40px",
-                        paddingRight: "12px",
-                      }}
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(event) =>
+                      setSearch(event.target.value)
+                    }
+                    placeholder={organizationText(
+                      "search",
+                      organizationLanguage,
+                    )}
+                    className="organization-input rounded-xl"
+                    style={{
+                      paddingLeft: "40px",
+                      paddingRight: "12px",
+                    }}
+                  />
+                </div>
+
                 {/* DEPARTMENT */}
-
                 <select
-                  value={
-                    departmentFilter
-                  }
+                  value={departmentFilter}
                   onChange={(event) =>
-                    setDepartmentFilter(
-                      event.target
-                        .value,
-                    )
+                    setDepartmentFilter(event.target.value)
                   }
-                  className="organization-input rounded-lg"
+                  className="organization-input rounded-xl"
                 >
                   <option value="all">
                     {organizationText(
@@ -1908,38 +2005,20 @@ export default function OrganizationManagementPage() {
                       organizationLanguage,
                     )}
                   </option>
-
-                  {departments.map(
-                    (
-                      department,
-                    ) => (
-                      <option
-                        key={
-                          department
-                        }
-                        value={
-                          department
-                        }
-                      >
-                        {department}
-                      </option>
-                    ),
-                  )}
+                  {departments.map((department) => (
+                    <option key={department} value={department}>
+                      {department}
+                    </option>
+                  ))}
                 </select>
 
                 {/* STATUS */}
-
                 <select
-                  value={
-                    statusFilter
-                  }
+                  value={statusFilter}
                   onChange={(event) =>
-                    setStatusFilter(
-                      event.target
-                        .value,
-                    )
+                    setStatusFilter(event.target.value)
                   }
-                  className="organization-input rounded-lg"
+                  className="organization-input rounded-xl"
                 >
                   <option value="all">
                     {organizationText(
@@ -1947,37 +2026,27 @@ export default function OrganizationManagementPage() {
                       organizationLanguage,
                     )}
                   </option>
-
                   <option value="Active">
                     {employmentStatusName("Active", organizationLanguage)}
                   </option>
-
                   <option value="On Leave">
                     {employmentStatusName("On Leave", organizationLanguage)}
                   </option>
-
                   <option value="Inactive">
                     {employmentStatusName("Inactive", organizationLanguage)}
                   </option>
-
                   <option value="Resigned">
                     {employmentStatusName("Resigned", organizationLanguage)}
                   </option>
                 </select>
 
                 {/* TYPE */}
-
                 <select
-                  value={
-                    employmentTypeFilter
-                  }
+                  value={employmentTypeFilter}
                   onChange={(event) =>
-                    setEmploymentTypeFilter(
-                      event.target
-                        .value,
-                    )
+                    setEmploymentTypeFilter(event.target.value)
                   }
-                  className="organization-input rounded-lg"
+                  className="organization-input rounded-xl"
                 >
                   <option value="all">
                     {organizationText(
@@ -1985,23 +2054,18 @@ export default function OrganizationManagementPage() {
                       organizationLanguage,
                     )}
                   </option>
-
                   <option value="Permanent">
                     {employmentTypeName("Permanent", organizationLanguage)}
                   </option>
-
                   <option value="Contract">
                     {employmentTypeName("Contract", organizationLanguage)}
                   </option>
-
                   <option value="Probation">
                     {employmentTypeName("Probation", organizationLanguage)}
                   </option>
-
                   <option value="Intern">
                     {employmentTypeName("Intern", organizationLanguage)}
                   </option>
-
                   <option value="Outsource">
                     {employmentTypeName("Outsource", organizationLanguage)}
                   </option>
@@ -2010,326 +2074,318 @@ export default function OrganizationManagementPage() {
             </div>
           </div>
 
-          {/* =================================================
-              TABLE
-          ================================================= */}
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1150px] border-collapse">
-              <thead>
-                <tr className="border-b border-border-subtle bg-surface-hover">
-                  <Th>
-                    {organizationText(
-                      "employeeId",
-                      organizationLanguage,
-                    )}
-                  </Th>
-
-                  <Th>
-                    {organizationText(
-                      "employee",
-                      organizationLanguage,
-                    )}
-                  </Th>
-
-                  <Th>
-                    {organizationText(
-                      "department",
-                      organizationLanguage,
-                    )}
-                  </Th>
-
-                  <Th>
-                    {organizationText(
-                      "position",
-                      organizationLanguage,
-                    )}
-                  </Th>
-
-                  <Th>
-                    {organizationText(
-                      "manager",
-                      organizationLanguage,
-                    )}
-                  </Th>
-
-                  <Th>
-                    {organizationText(
-                      "employmentType",
-                      organizationLanguage,
-                    )}
-                  </Th>
-
-                  <Th>
-                    {organizationText(
-                      "status",
-                      organizationLanguage,
-                    )}
-                  </Th>
-
-                  <Th align="right">
-                    {organizationText(
-                      "action",
-                      organizationLanguage,
-                    )}
-                  </Th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {loadingEmployees ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-14 text-center"
-                    >
-                      <div className="animate-pulse text-3xl">
-                        👥
+          <div className="p-4 md:p-5">
+            {loadingEmployees ? (
+              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-2xl border border-border-subtle bg-surface p-4"
+                  >
+                    <div className="animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="size-11 rounded-full bg-bg/60" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 w-32 rounded bg-bg/60" />
+                          <div className="h-2.5 w-24 rounded bg-bg/50" />
+                        </div>
                       </div>
-
-                      <p className="mt-2 text-xs text-text-muted">
-                        {organizationText(
-                          "loading",
-                          organizationLanguage,
-                        )}
-                      </p>
-                    </td>
-                  </tr>
-                ) : filteredEmployees.length ===
-                  0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-14 text-center"
-                    >
-                      <div className="text-3xl">
-                        👥
-                      </div>
-
-                      <p className="mt-2 text-xs text-text-muted">
-                        {organizationText(
-                          "noData",
-                          organizationLanguage,
-                        )}
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredEmployees.map(
-                    (employee) => (
-                      <tr
-                        key={
-                          employee.id
+                      <div className="mt-4 h-2.5 w-3/4 rounded bg-bg/50" />
+                      <div className="mt-2 h-2.5 w-1/2 rounded bg-bg/50" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredEmployees.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border-subtle px-4 py-14 text-center">
+                <div className="text-xl opacity-70">👥</div>
+                <p className="mt-2 text-[11px] font-medium text-text-muted">
+                  {organizationText(
+                    "noData",
+                    organizationLanguage,
+                  )}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredEmployees.map((employee) => (
+                  <article
+                    key={employee.id}
+                    className="group rounded-xl border border-border-subtle bg-surface p-3.5 transition-all duration-200 hover:border-cyan-400/20 hover:shadow-[0_4px_16px_rgba(8,47,73,0.06)]"
+                  >
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedEmployee(employee)
                         }
-                        className="organization-row border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]"
+                        className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
+                        aria-label={organizationText(
+                          "view",
+                          organizationLanguage,
+                        )}
                       >
-                        <Td>
-                          <span
-                            className="text-xs font-bold"
-                            style={{
-                              color:
-                                getDepartmentColor(
-                                  employee.department,
-                                ),
-                            }}
-                          >
-                            {
-                              employee.employeeId
-                            }
-                          </span>
-                        </Td>
+                        <Avatar
+                          name={employee.name}
+                          department={employee.department}
+                        />
+                      </button>
 
-                        <Td>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
                           <button
                             type="button"
                             onClick={() =>
-                              setSelectedEmployee(
-                                employee,
-                              )
+                              setSelectedEmployee(employee)
                             }
-                            className="flex items-center gap-3 text-left"
+                            className="block min-w-0 flex-1 text-left focus:outline-none"
                           >
-                            <Avatar
-                              name={
-                                employee.name
-                              }
-                              department={
-                                employee.department
-                              }
-                            />
-
-                            <div>
-                              <p
-                                className="text-xs font-bold transition"
-                                style={{
-                                  color:
-                                    getDepartmentColor(
-                                      employee.department,
-                                    ),
-                                }}
-                              >
-                                {
-                                  organizationLanguage ===
-                                  "cn"
-                                    ? employee.nameCn ||
-                                      employee.name
-                                    : employee.name
-                                }
-                              </p>
-
-                              {employee.nameCn &&
-                                organizationLanguage !==
-                                  "cn" && (
-                                  <p className="mt-0.5 text-[10px] text-text-dim">
-                                    {
-                                      employee.nameCn
-                                    }
-                                  </p>
-                                )}
-                            </div>
+                            <p
+                              className="truncate text-[12px] font-bold text-text"
+                            >
+                              {organizationLanguage === "cn"
+                                ? employee.nameCn || employee.name
+                                : employee.name}
+                            </p>
+                            {employee.nameCn &&
+                              organizationLanguage !== "cn" && (
+                                <p className="mt-0.5 truncate text-[9px] text-text-dim">
+                                  {employee.nameCn}
+                                </p>
+                              )}
                           </button>
-                        </Td>
 
-                        <Td>
-                          <span className="text-text">
-                            {organizationLanguage ===
-                            "cn"
-                              ? employee.departmentCn
-                              : employee.department}
-                          </span>
-                        </Td>
-
-                        <Td>
-                          <span className="text-text-muted">
-                            {organizationLanguage ===
-                            "cn"
-                              ? employee.positionCn
-                              : employee.position}
-                          </span>
-                        </Td>
-
-                        <Td>
-                          <span className="text-text-muted">
-                            {managerName(
-                              employee,
-                            )}
-                          </span>
-                        </Td>
-
-                        <Td>
-                          <TypeBadge
-                              type={
-                                employee.employmentType
-                              }
-                              language={
-                                organizationLanguage
-                              }
-                            />
-                        </Td>
-
-                        <Td>
-                          <StatusBadge
-                              status={
-                                employee.status
-                              }
-                              language={
-                                organizationLanguage
-                              }
-                            />
-                        </Td>
-
-                        <Td align="right">
-                          <div className="flex justify-end gap-1.5">
+                          <div
+                            className="relative shrink-0"
+                            data-employee-actions
+                          >
                             <button
                               type="button"
                               onClick={() =>
-                                setSelectedEmployee(
-                                  employee,
+                                setOpenActionEmployeeId((current) =>
+                                  current === employee.id ? null : employee.id,
                                 )
                               }
-                              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
+                              className="flex size-7 cursor-pointer items-center justify-center rounded-md text-text-dim transition hover:bg-surface-hover hover:text-text focus:outline-none focus:ring-2 focus:ring-cyan-400/25"
+                              aria-label="Actions"
+                              aria-expanded={openActionEmployeeId === employee.id}
+                              aria-haspopup="menu"
                             >
-                              {organizationText(
-                                "view",
-                                organizationLanguage,
-                              )}
+                              <span className="text-base leading-none">⋮</span>
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openEditForm(
-                                  employee,
-                                )
-                              }
-                              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
-                            >
-                              {organizationText(
-                                "edit",
-                                organizationLanguage,
-                              )}
-                            </button>
+                            {openActionEmployeeId === employee.id && (
+                              <div
+                                className="absolute right-0 top-8 z-50 w-32 overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-xl"
+                                role="menu"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionEmployeeId(null);
+                                    setSelectedEmployee(employee);
+                                  }}
+                                  className="block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold text-text-muted transition hover:bg-surface-hover hover:text-text"
+                                  role="menuitem"
+                                >
+                                  {organizationText("view", organizationLanguage)}
+                                </button>
 
-                            {employee.status ===
-                              "Inactive" ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void reactivateEmployee(
-                                    employee,
-                                  )
-                                }
-                                className="rounded-lg border border-emerald-400/30 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-bold text-emerald-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400/50 hover:bg-emerald-100 hover:shadow-md dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
-                              >
-                                {organizationText(
-                                  "reactivate",
-                                  organizationLanguage,
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionEmployeeId(null);
+                                    openEditForm(employee);
+                                  }}
+                                  className="block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold text-text-muted transition hover:bg-surface-hover hover:text-text"
+                                  role="menuitem"
+                                >
+                                  {organizationText("edit", organizationLanguage)}
+                                </button>
+
+                                {employee.status === "Inactive" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionEmployeeId(null);
+                                      void reactivateEmployee(employee);
+                                    }}
+                                    className="block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold text-emerald-600 transition hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
+                                    role="menuitem"
+                                  >
+                                    {organizationText("reactivate", organizationLanguage)}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionEmployeeId(null);
+                                      void deactivateEmployee(employee);
+                                    }}
+                                    className="block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                    role="menuitem"
+                                  >
+                                    {organizationText("deactivate", organizationLanguage)}
+                                  </button>
                                 )}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void deactivateEmployee(
-                                    employee,
-                                  )
-                                }
-                                className="rounded-lg border border-rose-400/30 bg-rose-50 px-2.5 py-1.5 text-[10px] font-bold text-rose-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-400/50 hover:bg-rose-100 hover:shadow-md dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
-                              >
-                                {organizationText(
-                                  "deactivate",
-                                  organizationLanguage,
-                                )}
-                              </button>
+                              </div>
                             )}
                           </div>
-                        </Td>
-                      </tr>
-                    ),
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
+                        </div>
 
-          {/* FOOTER */}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                          <span className="rounded-full border border-border bg-surface-hover px-1.5 py-0.5 text-[7px] font-semibold text-text-muted">
+                            {employee.department}
+                          </span>
+                          <StatusBadge
+                            status={employee.status}
+                            language={organizationLanguage}
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-          <div className="flex items-center justify-between border-t border-border-subtle bg-surface-hover px-4 py-3 text-[10px] font-semibold text-text-muted">
-            <span>
-              {
-                filteredEmployees.length
-              }{" "}
-              /{" "}
-              {
-                directoryEmployees.length
-              }{" "}
-              {organizationText(
-                "employees",
-                organizationLanguage,
-              )}
-            </span>
+                    <div className="mt-3 border-t border-border-subtle pt-3">
+                      <div className="flex items-end justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-[8px] font-semibold uppercase tracking-wide text-text-dim">
+                            {organizationText(
+                              "position",
+                              organizationLanguage,
+                            )}
+                          </p>
+                          <p className="mt-0.5 truncate text-[10px] font-semibold text-text">
+                            {organizationLanguage === "cn"
+                              ? employee.positionCn
+                              : employee.position}
+                          </p>
+                        </div>
+
+                        <span className="shrink-0 font-mono text-[9px] font-bold text-text-dim">
+                          {employee.employeeId}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </section>
+
+        {/* =================================================
+            CUSTOM CONFIRMATION / NOTICE DIALOG
+        ================================================= */}
+
+        {confirmDialog && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="w-full max-w-sm rounded-2xl border border-border bg-surface shadow-[0_24px_70px_rgba(2,6,23,0.35)]"
+            >
+              <div className="px-5 pt-5">
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+                      confirmDialog.action === "deactivate"
+                        ? "bg-rose-500/10 text-rose-500 dark:text-rose-300"
+                        : "bg-emerald-500/10 text-emerald-500 dark:text-emerald-300"
+                    }`}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      {confirmDialog.action === "deactivate" ? (
+                        <>
+                          <path d="M12 9v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                          <path d="M12 17h.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                          <path d="M10.3 3.7 2.9 17a2 2 0 0 0 1.75 3h14.7a2 2 0 0 0 1.75-3L13.7 3.7a2 2 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+                        </>
+                      ) : (
+                        <>
+                          <path d="M5 12.5 9.2 17 19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </>
+                      )}
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-[13px] font-bold text-text">
+                      {confirmDialog.action === "deactivate"
+                        ? organizationLanguage === "cn"
+                          ? "停用员工"
+                          : "Deactivate employee"
+                        : organizationLanguage === "cn"
+                          ? "重新启用员工"
+                          : "Reactivate employee"}
+                    </h3>
+                    <p className="mt-1 text-[11px] leading-relaxed text-text-muted">
+                      {confirmDialog.action === "deactivate"
+                        ? organizationLanguage === "cn"
+                          ? `确定要停用 ${confirmDialog.employee.name} 吗？`
+                          : `Are you sure you want to deactivate ${confirmDialog.employee.name}?`
+                        : organizationLanguage === "cn"
+                          ? `确定要重新启用 ${confirmDialog.employee.name} 吗？`
+                          : `Are you sure you want to reactivate ${confirmDialog.employee.name}?`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2 border-t border-border-subtle px-5 py-3.5">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDialog(null)}
+                  className="rounded-lg border border-border px-3.5 py-2 text-[11px] font-semibold text-text-muted transition hover:bg-surface-hover hover:text-text"
+                >
+                  {organizationText("cancel", organizationLanguage)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void confirmEmployeeAction()}
+                  className={`rounded-lg px-3.5 py-2 text-[11px] font-semibold text-white transition ${
+                    confirmDialog.action === "deactivate"
+                      ? "bg-rose-500 hover:bg-rose-400"
+                      : "bg-emerald-500 hover:bg-emerald-400"
+                  }`}
+                >
+                  {confirmDialog.action === "deactivate"
+                    ? organizationText("deactivate", organizationLanguage)
+                    : organizationText("reactivate", organizationLanguage)}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {noticeDialog && (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+            <div role="alertdialog" aria-modal="true" className="w-full max-w-sm rounded-2xl border border-border bg-surface shadow-[0_24px_70px_rgba(2,6,23,0.35)]">
+              <div className="px-5 pt-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 dark:text-rose-300">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 9v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M12 17h.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                      <path d="M10.3 3.7 2.9 17a2 2 0 0 0 1.75 3h14.7a2 2 0 0 0 1.75-3L13.7 3.7a2 2 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-[13px] font-bold text-text">{noticeDialog.title}</h3>
+                    <p className="mt-1 text-[11px] leading-relaxed text-text-muted">{noticeDialog.message}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 flex justify-end border-t border-border-subtle px-5 py-3.5">
+                <button
+                  type="button"
+                  onClick={() => setNoticeDialog(null)}
+                  className="rounded-lg bg-cyan-500 px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-cyan-400"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* =================================================
             PROFILE DRAWER
@@ -2348,12 +2404,12 @@ export default function OrganizationManagementPage() {
                   null,
                 )
               }
-              className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
             />
 
-            <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-border-subtle bg-surface shadow-2xl">
+            <aside className="absolute left-1/2 top-1/2 max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-border-subtle bg-surface shadow-2xl">
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface px-5 py-4">
-                <h2 className="text-sm font-bold text-text">
+                <h2 className="text-[12px] font-bold text-text">
                   {organizationText(
                     "profile",
                     organizationLanguage,
@@ -2385,7 +2441,7 @@ export default function OrganizationManagementPage() {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold text-text">
+                        <h3 className="text-base font-semibold text-text">
                           {organizationLanguage ===
                           "cn"
                             ? selectedEmployee.nameCn ||
@@ -2403,13 +2459,13 @@ export default function OrganizationManagementPage() {
                         />
                       </div>
 
-                      <p className="mt-1 text-xs text-cyan-300">
+                      <p className="mt-1 text-[11px] text-cyan-300">
                         {
                           selectedEmployee.employeeId
                         }
                       </p>
 
-                      <p className="mt-1 text-[10px] text-text-muted">
+                      <p className="mt-1 text-[9px] text-text-muted">
                         {organizationLanguage ===
                         "cn"
                           ? selectedEmployee.positionCn
@@ -2424,7 +2480,7 @@ export default function OrganizationManagementPage() {
                       {organizationLanguage ===
                         "en" &&
                         selectedEmployee.nameCn && (
-                          <p className="mt-1 text-[10px] text-text-dim">
+                          <p className="mt-1 text-[9px] text-text-dim">
                             {
                               selectedEmployee.nameCn
                             }
@@ -2581,7 +2637,7 @@ export default function OrganizationManagementPage() {
                         null,
                       );
                     }}
-                    className="rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400"
+                    className="rounded-md bg-cyan-500 px-4 py-2.5 text-[11px] font-semibold text-white transition hover:bg-cyan-400"
                   >
                     {organizationText(
                       "edit",
@@ -2598,7 +2654,7 @@ export default function OrganizationManagementPage() {
                           selectedEmployee,
                         )
                       }
-                      className="rounded-md border border-emerald-400/20 px-4 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/10"
+                      className="rounded-md border border-emerald-400/20 px-4 py-2.5 text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-500/10"
                     >
                       {organizationText(
                         "reactivate",
@@ -2613,7 +2669,7 @@ export default function OrganizationManagementPage() {
                           selectedEmployee,
                         )
                       }
-                      className="rounded-md border border-rose-400/20 px-4 py-2.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
+                      className="rounded-md border border-rose-400/20 px-4 py-2.5 text-[11px] font-semibold text-rose-300 transition hover:bg-rose-500/10"
                     >
                       {organizationText(
                         "deactivate",
@@ -2632,514 +2688,400 @@ export default function OrganizationManagementPage() {
         ================================================= */}
 
         {showForm && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-border bg-surface shadow-2xl">
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface px-5 py-4">
-                <div>
-                  <h2 className="text-sm font-bold text-text">
-                    {editingEmployee
-                      ? organizationText(
-                          "edit",
-                          organizationLanguage,
-                        )
-                      : organizationText(
-                          "newEmployee",
-                          organizationLanguage,
-                        )}
-                  </h2>
-
-                  <p className="mt-1 text-[10px] text-text-dim">
-                    {organizationText(
-                      "description",
-                      organizationLanguage,
-                    )}
-                  </p>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[2px] sm:p-5">
+            <div className="flex max-h-[84vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_24px_70px_rgba(15,23,42,0.28)]">
+              {/* HEADER */}
+              <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3.5">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-500 dark:text-cyan-300">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M19 8v6M22 11h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-[13px] font-bold leading-tight text-text">
+                      {editingEmployee
+                        ? organizationText("edit", organizationLanguage)
+                        : organizationText("newEmployee", organizationLanguage)}
+                    </h2>
+                    <p className="mt-0.5 truncate text-[9px] text-text-dim">
+                      {organizationLanguage === "cn"
+                        ? "维护员工组织信息"
+                        : "Maintain employee organization details"}
+                    </p>
+                  </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowForm(false)
-                  }
-                  className="rounded-md px-2 py-1 text-text-muted transition hover:bg-surface-hover hover:text-text"
+                  onClick={() => setShowForm(false)}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-text-dim transition hover:bg-surface-hover hover:text-text"
+                  aria-label={organizationText("close", organizationLanguage)}
                 >
-                  ✕
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
                 </button>
               </div>
 
-              <div className="space-y-6 p-5">
-                {/* EMPLOYEE */}
+              {/* BODY */}
+              <div className="overflow-y-auto px-4 py-3.5">
+                <div className="space-y-4">
+                  {/* PERSONAL */}
+                  <section>
+                    <div className="mb-2.5 flex items-center gap-2">
+                      <span className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 text-[13px]">👤</span>
+                      <div>
+                        <h3 className="text-[10px] font-bold text-text">
+                          {organizationText("personalInformation", organizationLanguage)}
+                        </h3>
+                        <p className="text-[8px] text-text-dim">
+                          {organizationLanguage === "cn" ? "员工身份" : "Employee identity"}
+                        </p>
+                      </div>
+                    </div>
 
-                <FormSection
-                  title={organizationText(
-                    "personalInformation",
-                    organizationLanguage,
-                  )}
-                  icon="👤"
-                >
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {!editingEmployee && (
+                    <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
+                      {!editingEmployee && (
+                        <FormField
+                          label={organizationText("selectEmployee", organizationLanguage)}
+                          required
+                        >
+                          <CompactSelect
+                            value={form.userId}
+                            onChange={handleUserSelect}
+                            placeholder={organizationText("selectEmployeePlaceholder", organizationLanguage)}
+                            options={availableEmployees.map((employee) => ({
+                              value: String(employee.id),
+                              label: `${employee.employeeId} — ${employee.name}`,
+                            }))}
+                          />
+                        </FormField>
+                      )}
+
+                      <FormField label={organizationText("employeeId", organizationLanguage)}>
+                        <div className="compact-readonly-control">
+                          {form.employeeId || "—"}
+                        </div>
+                      </FormField>
+
+                      <FormField label={organizationText("fullName", organizationLanguage)}>
+                        <div className="compact-readonly-control">
+                          {form.name || "—"}
+                        </div>
+                      </FormField>
+
+                      <FormField label={organizationText("chineseName", organizationLanguage)}>
+                        <div className="compact-readonly-control">
+                          {form.nameCn || "—"}
+                        </div>
+                      </FormField>
+
+                      <FormField label={organizationText("department", organizationLanguage)}>
+                        <div className="compact-readonly-control">
+                          {organizationLanguage === "cn"
+                            ? (() => {
+                                const employee = employees.find(
+                                  (item) => item.id === Number(form.userId),
+                                );
+                                return employee?.departmentCn || form.department || "—";
+                              })()
+                            : form.department || "—"}
+                        </div>
+                      </FormField>
+                    </div>
+                  </section>
+
+                  <div className="h-px bg-border-subtle" />
+
+                  {/* ORGANIZATION */}
+                  <section>
+                    <div className="mb-2.5 flex items-center gap-2">
+                      <span className="flex size-7 items-center justify-center rounded-lg bg-cyan-500/10 text-[13px]">🏢</span>
+                      <div>
+                        <h3 className="text-[10px] font-bold text-text">
+                          {organizationText("organizationInformation", organizationLanguage)}
+                        </h3>
+                        <p className="text-[8px] text-text-dim">
+                          {organizationLanguage === "cn" ? "组织与汇报关系" : "Work structure and reporting line"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
                       <FormField
-                        label={organizationText(
-                          "selectEmployee",
-                          organizationLanguage,
-                        )}
+                        label={organizationText("position", organizationLanguage)}
                         required
                       >
-                        <select
-                          value={
-                            form.userId
+                        <CompactSelect
+                          value={form.positionId}
+                          onChange={applyPositionHierarchy}
+                          placeholder={
+                            loadingPositions
+                              ? organizationText("loadingPositions", organizationLanguage)
+                              : organizationText("selectPosition", organizationLanguage)
                           }
-                          onChange={(
-                            event,
-                          ) =>
-                            handleUserSelect(
-                              event
-                                .target
-                                .value,
-                            )
-                          }
-                          className="organization-input rounded-lg"
-                        >
-                          <option value="">
-                            {organizationText(
-                              "selectEmployeePlaceholder",
-                              organizationLanguage,
-                            )}
-                          </option>
-
-                          {availableEmployees.map(
-                            (
-                              employee,
-                            ) => (
-                              <option
-                                key={
-                                  employee.id
-                                }
-                                value={
-                                  employee.id
-                                }
-                              >
-                                {
-                                  employee.employeeId
-                                }{" "}
-                                —{" "}
-                                {
-                                  employee.name
-                                }
-                              </option>
-                            ),
-                          )}
-                        </select>
+                          disabled={loadingPositions}
+                          options={positions.map((position) => ({
+                            value: String(position.id),
+                            label: positionName(position),
+                          }))}
+                        />
                       </FormField>
-                    )}
 
-                    <FormField
-                      label={organizationText(
-                        "employeeId",
-                        organizationLanguage,
-                      )}
-                    >
-                      <input
-                        value={
-                          form.employeeId
-                        }
-                        className="organization-input rounded-lg"
-                        disabled
-                        readOnly
-                      />
-                    </FormField>
-
-                    <FormField
-                      label={organizationText(
-                        "fullName",
-                        organizationLanguage,
-                      )}
-                    >
-                      <input
-                        value={
-                          form.name
-                        }
-                        className="organization-input rounded-lg"
-                        disabled
-                        readOnly
-                      />
-                    </FormField>
-
-                    <FormField
-                      label={organizationText(
-                        "chineseName",
-                        organizationLanguage,
-                      )}
-                    >
-                      <input
-                        value={
-                          form.nameCn
-                        }
-                        className="organization-input rounded-lg"
-                        disabled
-                        readOnly
-                      />
-                    </FormField>
-
-                    <FormField
-                      label={organizationText(
-                        "department",
-                        organizationLanguage,
-                      )}
-                    >
-                      <input
-                        value={
-                          organizationLanguage ===
-                          "cn"
-                            ? (() => {
-                                const employee =
-                                  employees.find(
-                                    (
-                                      item,
-                                    ) =>
-                                      item.id ===
-                                      Number(
-                                        form.userId,
-                                      ),
-                                  );
-
-                                return (
-                                  employee?.departmentCn ||
-                                  form.department
-                                );
-                              })()
-                            : form.department
-                        }
-                        className="organization-input rounded-lg"
-                        disabled
-                        readOnly
-                      />
-                    </FormField>
-                  </div>
-                </FormSection>
-
-                {/* ORGANIZATION */}
-
-                <FormSection
-                  title={organizationText(
-                    "organizationInformation",
-                    organizationLanguage,
-                  )}
-                  icon="🏢"
-                >
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      label={organizationText(
-                        "position",
-                        organizationLanguage,
-                      )}
-                      required
-                    >
-                      <select
-                        value={
-                          form.positionId
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          applyPositionHierarchy(
-                            event.target.value,
-                          )
-                        }
-                        className="organization-input rounded-lg"
-                        disabled={
-                          loadingPositions
-                        }
-                      >
-                        <option value="">
-                          {loadingPositions
-                            ? organizationText(
-                                "loadingPositions",
-                                organizationLanguage,
-                              )
-                            : organizationText(
-                                "selectPosition",
-                                organizationLanguage,
-                              )}
-                        </option>
-
-                        {positions.map(
-                          (
-                            position,
-                          ) => (
-                            <option
-                              key={
-                                position.id
-                              }
-                              value={
-                                position.id
-                              }
-                            >
-                              {positionName(
-                                position,
-                              )}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </FormField>
-
-                    <FormField
-                      label={organizationText(
-                        "manager",
-                        organizationLanguage,
-                      )}
-                    >
-                      <select
-                        value={form.managerId}
-                        onChange={(event) =>
-                          setForm((current) => ({
-                            ...current,
-                            managerId: event.target.value,
-                          }))
-                        }
-                        className="organization-input rounded-lg"
-                      >
-                        <option value="">
-                          {organizationText(
-                            "noManager",
-                            organizationLanguage,
-                          )}
-                        </option>
-
-                        {employees
-                          .filter(
-                            (employee) =>
-                              employee.id !==
-                              Number(form.userId),
-                          )
-                          .map((employee) => (
-                            <option
-                              key={employee.id}
-                              value={employee.id}
-                            >
-                              {employee.employeeId} — {
-                                organizationLanguage === "cn"
-                                  ? employee.nameCn || employee.name
-                                  : employee.name
-                              }
-                            </option>
-                          ))}
-                      </select>
-                    </FormField>
-
-                    <FormField
-                      label={organizationText(
-                        "location",
-                        organizationLanguage,
-                      )}
-                    >
-                      <input
-                        value={
-                          form.location
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setForm(
-                            (
-                              current,
-                            ) => ({
+                      <FormField label={organizationText("manager", organizationLanguage)}>
+                        <CompactSelect
+                          value={form.managerId}
+                          onChange={(value) =>
+                            setForm((current) => ({
                               ...current,
-                              location:
-                                event
-                                  .target
-                                  .value,
-                            }),
-                          )
-                        }
-                        className="organization-input rounded-lg"
-                        placeholder="Head Office / Site A / Plant 1"
-                      />
-                    </FormField>
-                  </div>
-                </FormSection>
+                              managerId: value,
+                            }))
+                          }
+                          placeholder={organizationText("noManager", organizationLanguage)}
+                          options={employees
+                            .filter((employee) => employee.id !== Number(form.userId))
+                            .map((employee) => ({
+                              value: String(employee.id),
+                              label: `${employee.employeeId} — ${organizationLanguage === "cn" ? employee.nameCn || employee.name : employee.name}`,
+                            }))}
+                        />
+                      </FormField>
 
-                {/* EMPLOYMENT */}
-
-                <FormSection
-                  title={organizationText(
-                    "employmentInformation",
-                    organizationLanguage,
-                  )}
-                  icon="💼"
-                >
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      label={organizationText(
-                        "employmentType",
-                        organizationLanguage,
-                      )}
-                    >
-                      <select
-                        value={
-                          form.employmentType
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setForm(
-                            (
-                              current,
-                            ) => ({
+                      <FormField label={organizationText("location", organizationLanguage)}>
+                        <input
+                          value={form.location}
+                          onChange={(event) =>
+                            setForm((current) => ({
                               ...current,
-                              employmentType:
-                                event
-                                  .target
-                                  .value as EmploymentType,
-                            }),
-                          )
-                        }
-                        className="organization-input rounded-lg"
-                      >
-                        <option value="Permanent">
-                          {employmentTypeName("Permanent", organizationLanguage)}
-                        </option>
+                              location: event.target.value,
+                            }))
+                          }
+                          className="organization-input compact-form-control rounded-lg"
+                          placeholder="Head Office / Site A / Plant 1"
+                        />
+                      </FormField>
+                    </div>
+                  </section>
 
-                        <option value="Contract">
-                          {employmentTypeName("Contract", organizationLanguage)}
-                        </option>
+                  <div className="h-px bg-border-subtle" />
 
-                        <option value="Probation">
-                          {employmentTypeName("Probation", organizationLanguage)}
-                        </option>
+                  {/* EMPLOYMENT */}
+                  <section>
+                    <div className="mb-2.5 flex items-center gap-2">
+                      <span className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-[13px]">💼</span>
+                      <div>
+                        <h3 className="text-[10px] font-bold text-text">
+                          {organizationText("employmentInformation", organizationLanguage)}
+                        </h3>
+                        <p className="text-[8px] text-text-dim">
+                          {organizationLanguage === "cn" ? "雇佣信息" : "Employment details"}
+                        </p>
+                      </div>
+                    </div>
 
-                        <option value="Intern">
-                          {employmentTypeName("Intern", organizationLanguage)}
-                        </option>
-
-                        <option value="Outsource">
-                          {employmentTypeName("Outsource", organizationLanguage)}
-                        </option>
-                      </select>
-                    </FormField>
-
-                    <FormField
-                      label={organizationText(
-                        "joinDate",
-                        organizationLanguage,
-                      )}
-                    >
-                      <input
-                        type="date"
-                        value={
-                          form.joinDate
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setForm(
-                            (
-                              current,
-                            ) => ({
+                    <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
+                      <FormField label={organizationText("employmentType", organizationLanguage)}>
+                        <CompactSelect
+                          value={form.employmentType}
+                          onChange={(value) =>
+                            setForm((current) => ({
                               ...current,
-                              joinDate:
-                                event
-                                  .target
-                                  .value,
-                            }),
-                          )
-                        }
-                        className="organization-input rounded-lg"
-                      />
-                    </FormField>
+                              employmentType: value as EmploymentType,
+                            }))
+                          }
+                          options={[
+                            "Permanent",
+                            "Contract",
+                            "Probation",
+                            "Intern",
+                            "Outsource",
+                          ].map((value) => ({
+                            value,
+                            label: employmentTypeName(value as EmploymentType, organizationLanguage),
+                          }))}
+                        />
+                      </FormField>
 
-                    <FormField
-                      label={organizationText(
-                        "status",
-                        organizationLanguage,
-                      )}
-                    >
-                      <select
-                        value={
-                          form.status
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setForm(
-                            (
-                              current,
-                            ) => ({
+                      <FormField label={organizationText("joinDate", organizationLanguage)}>
+                        <input
+                          type="date"
+                          value={form.joinDate}
+                          onChange={(event) =>
+                            setForm((current) => ({
                               ...current,
-                              status:
-                                event
-                                  .target
-                                  .value as EmployeeStatus,
-                            }),
-                          )
-                        }
-                        className="organization-input rounded-lg"
-                      >
-                        <option value="Active">
-                          {employmentStatusName("Active", organizationLanguage)}
-                        </option>
+                              joinDate: event.target.value,
+                            }))
+                          }
+                          className="organization-input compact-form-control rounded-lg"
+                        />
+                      </FormField>
 
-                        <option value="On Leave">
-                          {employmentStatusName("On Leave", organizationLanguage)}
-                        </option>
-
-                        <option value="Inactive">
-                          {employmentStatusName("Inactive", organizationLanguage)}
-                        </option>
-
-                        <option value="Resigned">
-                          {employmentStatusName("Resigned", organizationLanguage)}
-                        </option>
-                      </select>
-                    </FormField>
-                  </div>
-                </FormSection>
+                      <FormField label={organizationText("status", organizationLanguage)}>
+                        <CompactSelect
+                          value={form.status}
+                          onChange={(value) =>
+                            setForm((current) => ({
+                              ...current,
+                              status: value as EmployeeStatus,
+                            }))
+                          }
+                          options={[
+                            "Active",
+                            "On Leave",
+                            "Inactive",
+                            "Resigned",
+                          ].map((value) => ({
+                            value,
+                            label: employmentStatusName(value as EmployeeStatus, organizationLanguage),
+                          }))}
+                        />
+                      </FormField>
+                    </div>
+                  </section>
+                </div>
               </div>
 
               {/* FOOTER */}
+              <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-3">
+                <p className="text-[8px] text-text-dim">
+                  {organizationLanguage === "cn" ? "* 必填字段" : "* Required fields"}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    disabled={saving}
+                    className="rounded-lg border border-border bg-surface px-3.5 py-2 text-[10px] font-semibold text-text-muted transition hover:bg-surface-hover hover:text-text disabled:opacity-50"
+                  >
+                    {organizationText("cancel", organizationLanguage)}
+                  </button>
 
-              <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-surface px-5 py-4">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowForm(false)
-                  }
-                  disabled={saving}
-                  className="rounded-lg border border-border px-4 py-2.5 text-xs font-medium text-text-muted transition hover:bg-bg disabled:opacity-50"
-                >
-                  {organizationText(
-                    "cancel",
-                    organizationLanguage,
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    void saveEmployee()
-                  }
-                  disabled={
-                    saving ||
-                    !form.userId ||
-                    !form.positionId
-                  }
-                  className="rounded-md bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {saving
-                    ? "..."
-                    : organizationText(
-                        "saveEmployee",
-                        organizationLanguage,
-                      )}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => void saveEmployee()}
+                    disabled={saving || !form.userId || !form.positionId}
+                    className="rounded-lg bg-cyan-500 px-4 py-2 text-[10px] font-bold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving
+                      ? "..."
+                      : organizationText("saveEmployee", organizationLanguage)}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
     </AppShell>
+  );
+}
+
+/* =========================================================
+   COMPACT SELECT
+========================================================= */
+
+type CompactSelectOption = {
+  value: string;
+  label: string;
+};
+
+function CompactSelect({
+  value,
+  onChange,
+  options,
+  placeholder = "Select...",
+  disabled = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: CompactSelectOption[];
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
+
+  const selected = options.find((option) => option.value === value);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        className="organization-input compact-form-control flex w-full items-center justify-between gap-3 rounded-lg text-left disabled:cursor-not-allowed disabled:opacity-50"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={`truncate ${selected ? "text-text" : "text-text-dim"}`}>
+          {selected?.label ?? placeholder}
+        </span>
+        <span
+          className={`shrink-0 text-[13px] text-text-dim transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        >
+          ⌄
+        </span>
+      </button>
+
+      {open && !disabled && (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-[100] max-h-52 overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-[0_14px_30px_rgba(0,0,0,0.28)]"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className={`flex w-full items-center rounded-md px-2.5 py-2 text-left text-[10px] transition ${
+              !value
+                ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300"
+                : "text-text-muted hover:bg-surface-hover hover:text-text"
+            }`}
+          >
+            {placeholder}
+          </button>
+
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center rounded-md px-2.5 py-2 text-left text-[10px] transition ${
+                option.value === value
+                  ? "bg-cyan-500/10 font-semibold text-cyan-600 dark:text-cyan-300"
+                  : "text-text hover:bg-surface-hover"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -3183,17 +3125,17 @@ function KpiCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
+          <p className="text-[9px] font-bold uppercase tracking-wide text-text-dim">
             {title}
           </p>
 
-          <p className="mt-1 text-2xl font-black text-text">
+          <p className="mt-1 text-lg font-black text-text">
             {value}
           </p>
         </div>
 
         <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-md text-sm ${styles.icon}`}
+          className={`flex size-8 shrink-0 items-center justify-center rounded-md text-[12px] ${styles.icon}`}
         >
           {icon}
         </div>
@@ -3281,8 +3223,8 @@ function Avatar({
         "flex shrink-0 items-center justify-center rounded-full border bg-transparent font-semibold",
 
         large
-          ? "size-16 text-lg"
-          : "size-9 text-[10px]",
+          ? "size-16 text-base"
+          : "size-9 text-[9px]",
       ].join(" ")}
       style={{
         color: getDepartmentColor(
@@ -3361,7 +3303,7 @@ function StatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium ${config.style}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-medium ${config.style}`}
     >
       <span
         className={`size-1.5 rounded-full ${config.dot}`}
@@ -3402,7 +3344,7 @@ function TypeBadge({
   language: OrganizationLanguage;
 }) {
   return (
-    <span className="inline-flex rounded-md border border-border bg-surface px-2.5 py-1 text-[10px] font-semibold text-text-muted">
+    <span className="inline-flex rounded-md border border-border bg-surface px-2.5 py-1 text-[9px] font-semibold text-text-muted">
       {employmentTypeName(type, language)}
     </span>
   );
@@ -3421,7 +3363,7 @@ function Th({
 }) {
   return (
     <th
-      className={`px-4 py-3 text-[10px] font-bold uppercase tracking-wide text-text-muted ${
+      className={`px-4 py-3 text-[9px] font-bold uppercase tracking-wide text-text-muted ${
         align === "right"
           ? "text-right"
           : "text-left"
@@ -3447,7 +3389,7 @@ function Td({
 }) {
   return (
     <td
-      className={`px-4 py-3 text-xs ${
+      className={`px-4 py-3 text-[11px] ${
         align === "right"
           ? "text-right"
           : "text-left"
@@ -3477,7 +3419,7 @@ function ProfileSection({
       <div className="mb-4 flex items-center gap-2">
         <span>{icon}</span>
 
-        <h3 className="text-xs font-semibold text-text">
+        <h3 className="text-[11px] font-semibold text-text">
           {title}
         </h3>
       </div>
@@ -3502,11 +3444,11 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start justify-between gap-5 border-b border-border-subtle pb-2.5 last:border-0 last:pb-0">
-      <span className="text-[10px] text-text-dim">
+      <span className="text-[9px] text-text-dim">
         {label}
       </span>
 
-      <span className="max-w-[65%] text-right text-xs text-text">
+      <span className="max-w-[65%] text-right text-[11px] text-text">
         {value || "—"}
       </span>
     </div>
@@ -3531,7 +3473,7 @@ function FormSection({
       <div className="mb-3 flex items-center gap-2">
         <span>{icon}</span>
 
-        <h3 className="text-xs font-semibold text-text">
+        <h3 className="text-[11px] font-semibold text-text">
           {title}
         </h3>
       </div>
@@ -3556,7 +3498,7 @@ function FormField({
 }) {
   return (
     <label className="block">
-      <div className="mb-1.5 text-[10px] font-medium text-text-muted">
+      <div className="mb-1.5 text-[9px] font-medium text-text-muted">
         {label}
 
         {required && (
