@@ -598,6 +598,11 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
           }
           onClose={() => setWeekFormOpen(false)}
           onSaved={() => void handleWeekSaved()}
+          onSubItemCreated={(item) => {
+            setSubItems((prev) =>
+              prev.some((s) => s.id === item.id) ? prev : [...prev, item]
+            );
+          }}
         />
       ) : null}
 

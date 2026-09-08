@@ -134,6 +134,28 @@ const REPORT_TEXT = {
     "中文内容必须包含中文字符。",
   ] as TextPair,
   subItemRequired: ["Sub-item is required.", "子项必选。"] as TextPair,
+  subItemNotFound: [
+    "Sub-item “{name}” was not found in the master list. Fix the name or create it.",
+    "子项“{name}”不在主数据中。请修正名称或新建。",
+  ] as TextPair,
+  newSubItem: ["New Sub-item", "新建子项"] as TextPair,
+  newSubItemTitle: ["Create Sub-item", "创建子项"] as TextPair,
+  subItemNameEn: ["Name (EN)", "名称（英）"] as TextPair,
+  subItemNameCn: ["Name (CN)", "名称（中）"] as TextPair,
+  createSubItem: ["Create", "创建"] as TextPair,
+  subItemCreated: ["Sub-item created.", "子项已创建。"] as TextPair,
+  subItemExists: [
+    "A sub-item with this Chinese name already exists for this area; it was reused.",
+    "该类别下已有相同中文名称的子项，已复用现有项。",
+  ] as TextPair,
+  pasteHint: [
+    "Tip: paste a block from Excel (Tab-separated). Columns: Sub-item, Completion %, Target EN, Target CN, Summary EN, Summary CN, Plan EN, Plan CN.",
+    "提示：可从 Excel 粘贴（制表符分隔）。列顺序：子项、完成度%、目标英、目标中、总结英、总结中、计划英、计划中。",
+  ] as TextPair,
+  gridColumnsHint: [
+    "Sub-item · Completion · Target EN/CN · Summary EN/CN · Plan EN/CN",
+    "子项 · 完成度 · 目标英/中 · 总结英/中 · 计划英/中",
+  ] as TextPair,
   maxLinesReached: ["Maximum lines reached.", "已达行数上限。"] as TextPair,
   editLine: ["Edit Line", "编辑事项"] as TextPair,
   save: ["Save", "保存"] as TextPair,

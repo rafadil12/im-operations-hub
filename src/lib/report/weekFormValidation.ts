@@ -109,6 +109,7 @@ export function validateWeekLinePayload(
   const draft: ReportWeekLineDraft = {
     key: "validate",
     subItemId: 1,
+    subItemLabel: "",
     targetEn: line.workTargetEn,
     targetCn: line.workTargetCn,
     summaryEn: line.summaryEn,

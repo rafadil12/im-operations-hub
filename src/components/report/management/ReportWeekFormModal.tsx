@@ -1,24 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertDialog } from "@/components/ui/AlertDialog";
 import { SkeletonForm } from "@/components/ui/skeletons";
 import { FullViewWorkspace } from "./FullViewWorkspace";
+import { ReportWeekGrid } from "./ReportWeekGrid";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
 import {
   draftToPayload,
   lineToDraft,
-  MAX_WEEK_REPORT_LINES,
   newWeekLineDraft,
-  usedSubItemIds,
   type ReportWeekLineDraft,
 } from "@/lib/report/weekFormDraft";
 import { validateWeekLineDraft } from "@/lib/report/weekFormValidation";
-import { completionBarColor } from "@/lib/report/completionColor";
+import { hasUnmatchedSubItem } from "@/lib/report/gridPaste";
 import {
-  reportCnText,
-  reportEnText,
   reportText,
   type ReportArea,
   type ReportLanguage,
@@ -45,177 +42,12 @@ type ReportWeekFormModalProps = {
   canSave: boolean;
   onClose: () => void;
   onSaved: () => void;
+  onSubItemCreated?: (item: ReportSubItem) => void;
 };
 
 const field =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-1 text-sm text-text outline-none focus:border-accent";
 const label = "mb-1 block text-xs font-medium text-text-muted";
-const section =
-  "rounded-lg border border-border-subtle bg-bg/30 p-3 space-y-3";
-
-const textareaField =
-  "w-full resize-none overflow-hidden rounded-md border border-border bg-bg/40 px-3 py-2 text-sm leading-5 text-text outline-none focus:border-accent";
-
-function AutoExpandTextarea({
-  value,
-  onChange,
-  placeholder,
-  disabled,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const syncHeight = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "0px";
-    const minHeight = 56; // 2 lines (leading-5) + vertical padding
-    el.style.height = `${Math.max(minHeight, el.scrollHeight)}px`;
-  }, []);
-
-  useEffect(() => {
-    syncHeight();
-  }, [value, syncHeight]);
-
-  return (
-    <textarea
-      ref={ref}
-      rows={2}
-      className={textareaField}
-      placeholder={placeholder}
-      value={value}
-      disabled={disabled}
-      onChange={(e) => {
-        onChange(e.target.value);
-        syncHeight();
-      }}
-    />
-  );
-}
-
-function BilingualFieldRow({
-  labelEn,
-  labelCn,
-  en,
-  cn,
-  onEnChange,
-  onCnChange,
-  placeholderEn,
-  placeholderCn,
-  disabled,
-}: {
-  labelEn: string;
-  labelCn: string;
-  en: string;
-  cn: string;
-  onEnChange: (value: string) => void;
-  onCnChange: (value: string) => void;
-  placeholderEn: string;
-  placeholderCn: string;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div className="min-w-0">
-        <label className={label}>{labelEn}</label>
-        <AutoExpandTextarea
-          value={en}
-          placeholder={placeholderEn}
-          disabled={disabled}
-          onChange={onEnChange}
-        />
-      </div>
-      <div className="min-w-0">
-        <label className={label}>{labelCn}</label>
-        <AutoExpandTextarea
-          value={cn}
-          placeholder={placeholderCn}
-          disabled={disabled}
-          onChange={onCnChange}
-        />
-      </div>
-    </div>
-  );
-}
-
-function CompletionSlider({
-  value,
-  onChange,
-  language,
-  disabled = false,
-}: {
-  value: number;
-  onChange: (next: number) => void;
-  language: ReportLanguage;
-  disabled?: boolean;
-}) {
-  const pct = Math.min(100, Math.max(0, value));
-  const fillColor = completionBarColor(pct);
-
-  return (
-    <div className="flex h-full flex-col justify-center">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className={label + " mb-0 shrink-0"}>
-          {reportText("rate", language)} — {pct}%
-        </span>
-        {!disabled ? (
-          <div className="flex shrink-0 gap-1">
-            {[0, 10, 25, 50, 80, 100].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => onChange(preset)}
-                className={[
-                  "cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors",
-                  pct === preset
-                    ? "ring-1 ring-inset"
-                    : "border border-border text-text-muted hover:bg-surface-hover",
-                ].join(" ")}
-                style={
-                  pct === preset
-                    ? {
-                        backgroundColor: `${completionBarColor(preset)}22`,
-                        color: completionBarColor(preset),
-                        borderColor: completionBarColor(preset),
-                      }
-                    : undefined
-                }
-              >
-                {preset}%
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-      <div className="relative flex h-5 w-full items-center">
-        <div className="pointer-events-none absolute inset-x-0 h-2 rounded-full bg-border-subtle" />
-        <div
-          className="pointer-events-none absolute left-0 h-2 rounded-full transition-[width,background-color] duration-300 ease-out"
-          style={{ width: `${pct}%`, backgroundColor: fillColor }}
-        />
-        <div
-          className="pointer-events-none absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-sm transition-[left,background-color] duration-300 ease-out"
-          style={{ left: `${pct}%`, backgroundColor: fillColor }}
-        />
-        <input
-          type="range"
-          min={0}
-          max={100}
-          step={1}
-          value={pct}
-          disabled={disabled}
-          aria-label={reportText("rate", language)}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-        />
-      </div>
-    </div>
-  );
-}
 
 export function ReportWeekFormModal({
   open,
@@ -229,6 +61,7 @@ export function ReportWeekFormModal({
   canSave,
   onClose,
   onSaved,
+  onSubItemCreated,
 }: ReportWeekFormModalProps) {
   const { lang } = useLang();
   const language = lang as ReportLanguage;
@@ -303,7 +136,7 @@ export function ReportWeekFormModal({
         setSavedAttachments(res.data.attachments ?? []);
         setLines(
           res.data.lines.length
-            ? res.data.lines.map((row) => lineToDraft(row))
+            ? res.data.lines.map((row) => lineToDraft(row, lang))
             : [newWeekLineDraft()]
         );
       } catch (err) {
@@ -319,6 +152,15 @@ export function ReportWeekFormModal({
 
   const handleSave = async () => {
     if (readOnly) return;
+
+    const unmatched = lines.find(hasUnmatchedSubItem);
+    if (unmatched) {
+      setError(
+        reportText("subItemNotFound", language).replace("{name}", unmatched.subItemLabel)
+      );
+      return;
+    }
+
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
       if (line.subItemId === "") {
@@ -440,243 +282,98 @@ export function ReportWeekFormModal({
           </>
         }
       >
-      {loading ? (
-        <SkeletonForm fields={4} />
-      ) : (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className={label}>{reportText("year", language)}</label>
-              <select
-                className={field}
-                value={year}
-                disabled
-                onChange={(e) => setYear(Number(e.target.value))}
-              >
-                {[2025, 2026, 2027].map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={label}>{reportText("week", language)}</label>
-              <select
-                className={field}
-                value={weekNumber}
-                disabled
-                onChange={(e) => setWeekNumber(Number(e.target.value))}
-              >
-                {weekOptions.map((w) => (
-                  <option key={w} value={w}>
-                    Week {w}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={label}>{reportText("reportCategory", language)}</label>
-              <select
-                className={field}
-                value={areaId}
-                disabled
-                onChange={(e) => {
-                  const nextAreaId = Number(e.target.value);
-                  setAreaId(nextAreaId);
-                  setLines((prev) => prev.map((l) => ({ ...l, subItemId: "" })));
-                }}
-              >
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {localizedName({ name_en: a.nameEn, name_cn: a.nameCn }, lang)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {isSubmitted ? (
-            <p className="rounded-md border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
-              {reportText("submitted", language)}
-            </p>
-          ) : null}
-
-          <ReportWeekAttachments
-            language={language}
-            readOnly={readOnly}
-            year={year}
-            weekNumber={weekNumber}
-            areaId={areaId}
-            savedAttachments={savedAttachments}
-            pendingFiles={pendingFiles}
-            uploading={attachmentUploading || saving}
-            onSavedAttachmentsChange={setSavedAttachments}
-            onPendingFilesChange={setPendingFiles}
-            onUploadingChange={setAttachmentUploading}
-            onError={setError}
-            uploadImmediately={mode === "edit"}
-          />
-
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-text">{reportText("subItem", language)}</h3>
-              {!readOnly ? (
-                <button
-                  type="button"
-                  disabled={lines.length >= MAX_WEEK_REPORT_LINES}
-                  title={
-                    lines.length >= MAX_WEEK_REPORT_LINES
-                      ? reportText("maxLinesReached", language)
-                      : undefined
-                  }
-                  onClick={() =>
-                    setLines((prev) =>
-                      prev.length >= MAX_WEEK_REPORT_LINES ? prev : [...prev, newWeekLineDraft()]
-                    )
-                  }
-                  className="cursor-pointer rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
+        {loading ? (
+          <SkeletonForm fields={4} />
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <label className={label}>{reportText("year", language)}</label>
+                <select
+                  className={field}
+                  value={year}
+                  disabled
+                  onChange={(e) => setYear(Number(e.target.value))}
                 >
-                  + {reportText("addLine", language)}
-                </button>
-              ) : null}
+                  {[2025, 2026, 2027].map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={label}>{reportText("week", language)}</label>
+                <select
+                  className={field}
+                  value={weekNumber}
+                  disabled
+                  onChange={(e) => setWeekNumber(Number(e.target.value))}
+                >
+                  {weekOptions.map((w) => (
+                    <option key={w} value={w}>
+                      Week {w}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={label}>{reportText("reportCategory", language)}</label>
+                <select
+                  className={field}
+                  value={areaId}
+                  disabled
+                  onChange={(e) => {
+                    const nextAreaId = Number(e.target.value);
+                    setAreaId(nextAreaId);
+                    setLines((prev) =>
+                      prev.map((l) => ({ ...l, subItemId: "", subItemLabel: "" }))
+                    );
+                  }}
+                >
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {localizedName({ name_en: a.nameEn, name_cn: a.nameCn }, lang)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {lines.map((line, index) => {
-                const taken = usedSubItemIds(lines, line.key);
-                return (
-                  <div key={line.key} className={section}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-text-dim">
-                        #{index + 1}
-                      </span>
-                      {!readOnly && lines.length > 1 ? (
-                        <button
-                          type="button"
-                          onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
-                          className="cursor-pointer text-xs text-danger hover:underline"
-                        >
-                          {reportText("removeLine", language)}
-                        </button>
-                      ) : null}
-                    </div>
+            {isSubmitted ? (
+              <p className="rounded-md border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
+                {reportText("submitted", language)}
+              </p>
+            ) : null}
 
-                    <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,240px)_1fr]">
-                      <div className="min-w-0 max-w-full md:max-w-[240px]">
-                        <label className={label}>{reportText("subItem", language)} *</label>
-                        <select
-                          className={field}
-                          value={line.subItemId}
-                          disabled={readOnly}
-                          onChange={(e) =>
-                            setLines((prev) =>
-                              prev.map((l) =>
-                                l.key === line.key
-                                  ? {
-                                      ...l,
-                                      subItemId:
-                                        e.target.value === "" ? "" : Number(e.target.value),
-                                    }
-                                  : l
-                              )
-                            )
-                          }
-                        >
-                          <option value="">—</option>
-                          {areaSubItems.map((item) => (
-                            <option
-                              key={item.id}
-                              value={item.id}
-                              disabled={taken.has(item.id) && line.subItemId !== item.id}
-                            >
-                              {localizedName({ name_en: item.nameEn, name_cn: item.nameCn }, lang)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+            <ReportWeekAttachments
+              language={language}
+              readOnly={readOnly}
+              year={year}
+              weekNumber={weekNumber}
+              areaId={areaId}
+              savedAttachments={savedAttachments}
+              pendingFiles={pendingFiles}
+              uploading={attachmentUploading || saving}
+              onSavedAttachmentsChange={setSavedAttachments}
+              onPendingFilesChange={setPendingFiles}
+              onUploadingChange={setAttachmentUploading}
+              onError={setError}
+              uploadImmediately={mode === "edit"}
+            />
 
-                      <CompletionSlider
-                        value={line.completionPct}
-                        language={language}
-                        disabled={readOnly}
-                        onChange={(next) =>
-                          setLines((prev) =>
-                            prev.map((l) =>
-                              l.key === line.key ? { ...l, completionPct: next } : l
-                            )
-                          )
-                        }
-                      />
-                    </div>
-
-                    <BilingualFieldRow
-                      labelEn={reportText("targetEn", language)}
-                      labelCn={reportText("targetCn", language)}
-                      en={line.targetEn}
-                      cn={line.targetCn}
-                      placeholderEn={reportEnText("targetPlaceholderEn")}
-                      placeholderCn={reportCnText("targetPlaceholderCn")}
-                      disabled={readOnly}
-                      onEnChange={(targetEn) =>
-                        setLines((prev) =>
-                          prev.map((l) => (l.key === line.key ? { ...l, targetEn } : l))
-                        )
-                      }
-                      onCnChange={(targetCn) =>
-                        setLines((prev) =>
-                          prev.map((l) => (l.key === line.key ? { ...l, targetCn } : l))
-                        )
-                      }
-                    />
-
-                    <BilingualFieldRow
-                      labelEn={reportText("summaryEn", language)}
-                      labelCn={reportText("summaryCn", language)}
-                      en={line.summaryEn}
-                      cn={line.summaryCn}
-                      placeholderEn={reportEnText("summaryPlaceholderEn")}
-                      placeholderCn={reportCnText("summaryPlaceholderCn")}
-                      disabled={readOnly}
-                      onEnChange={(summaryEn) =>
-                        setLines((prev) =>
-                          prev.map((l) => (l.key === line.key ? { ...l, summaryEn } : l))
-                        )
-                      }
-                      onCnChange={(summaryCn) =>
-                        setLines((prev) =>
-                          prev.map((l) => (l.key === line.key ? { ...l, summaryCn } : l))
-                        )
-                      }
-                    />
-
-                    <BilingualFieldRow
-                      labelEn={reportText("planEn", language)}
-                      labelCn={reportText("planCn", language)}
-                      en={line.planEn}
-                      cn={line.planCn}
-                      placeholderEn={reportEnText("planPlaceholderEn")}
-                      placeholderCn={reportCnText("planPlaceholderCn")}
-                      disabled={readOnly}
-                      onEnChange={(planEn) =>
-                        setLines((prev) =>
-                          prev.map((l) => (l.key === line.key ? { ...l, planEn } : l))
-                        )
-                      }
-                      onCnChange={(planCn) =>
-                        setLines((prev) =>
-                          prev.map((l) => (l.key === line.key ? { ...l, planCn } : l))
-                        )
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <ReportWeekGrid
+              language={language}
+              lines={lines}
+              areaId={areaId}
+              areaSubItems={areaSubItems}
+              readOnly={readOnly}
+              onChange={setLines}
+              onSubItemCreated={onSubItemCreated}
+            />
           </div>
-        </div>
-      )}
-    </FullViewWorkspace>
+        )}
+      </FullViewWorkspace>
     </>
   );
 }

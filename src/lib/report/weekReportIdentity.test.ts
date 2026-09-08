@@ -102,4 +102,20 @@ describe("buildAreaWeekReportRows", () => {
     expect(itRows[0].status).toBe("none");
     expect(itRows[0].lineCount).toBe(0);
   });
+
+  it("keeps lastUpdatedAt as the database wall-clock time (not UTC ISO)", () => {
+    const rows = buildAreaWeekReportRows({
+      year: 2026,
+      weekNumbers: [37],
+      lines: [
+        line({
+          id: 1,
+          weekNumber: 37,
+          updatedAt: "2026-09-08 16:47:12",
+          submittedAt: "2026-09-08 10:00:00",
+        }),
+      ],
+    });
+    expect(rows[0].lastUpdatedAt).toBe("2026-09-08 16:47:12");
+  });
 });

@@ -1,4 +1,5 @@
 import { execute, query } from "@/lib/db";
+import { isValidCnText, isValidEnText } from "@/lib/daily-operation/mesRecordValidation";
 import { mapReportLineRow } from "./apiHelpers";
 import type {
   ReportArea,
@@ -49,6 +50,58 @@ export async function loadReportSubItems(areaId?: number): Promise<ReportSubItem
     nameCn: r.name_cn,
     sortOrder: Number(r.sort_order),
   }));
+}
+
+export async function createReportSubItem(
+  areaId: number,
+  nameEn: string,
+  nameCn: string
+): Promise<ReportSubItem> {
+  const en = nameEn.trim();
+  const cn = nameCn.trim();
+  if (!en) throw new Error("English name is required.");
+  if (!cn) throw new Error("Chinese name is required.");
+  if (!isValidEnText(en)) throw new Error("English name must not contain Chinese characters.");
+  if (!isValidCnText(cn)) throw new Error("Chinese name must include Chinese characters.");
+
+  const existing = await query<
+    { id: number; area_id: number; name_en: string; name_cn: string; sort_order: number }[]
+  >(
+    `SELECT id, area_id, name_en, name_cn, sort_order
+     FROM report_sub_items
+     WHERE area_id = ? AND name_cn = ?
+     LIMIT 1`,
+    [areaId, cn]
+  );
+  if (existing[0]) {
+    return {
+      id: Number(existing[0].id),
+      areaId: Number(existing[0].area_id),
+      nameEn: existing[0].name_en,
+      nameCn: existing[0].name_cn,
+      sortOrder: Number(existing[0].sort_order),
+    };
+  }
+
+  const maxSort = await query<{ max_sort: number | null }[]>(
+    `SELECT MAX(sort_order) AS max_sort FROM report_sub_items WHERE area_id = ?`,
+    [areaId]
+  );
+  const sortOrder = Number(maxSort[0]?.max_sort ?? 0) + 1;
+
+  const result = await execute(
+    `INSERT INTO report_sub_items (area_id, name_en, name_cn, sort_order)
+     VALUES (?, ?, ?, ?)`,
+    [areaId, en, cn, sortOrder]
+  );
+
+  return {
+    id: Number(result.insertId),
+    areaId,
+    nameEn: en,
+    nameCn: cn,
+    sortOrder,
+  };
 }
 
 export async function ensureReportWeek(year: number, weekNumber: number): Promise<number> {

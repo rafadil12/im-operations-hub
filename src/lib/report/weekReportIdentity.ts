@@ -30,12 +30,18 @@ export function weekReportStatusFromLines(lines: ReportLine[]): WeekReportUiStat
   return "draft";
 }
 
-function latestTimestamp(values: Array<string | null | undefined>): string | null {
-  const dates = values
-    .map((value) => (value ? Date.parse(value) : Number.NaN))
-    .filter((value) => Number.isFinite(value)) as number[];
-  if (!dates.length) return null;
-  return new Date(Math.max(...dates)).toISOString();
+/** Pick the latest wall-clock timestamp without converting to UTC ISO. */
+export function latestTimestamp(values: Array<string | null | undefined>): string | null {
+  let best: string | null = null;
+  let bestMs = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    if (!value) continue;
+    const ms = Date.parse(value.includes("T") ? value : value.replace(" ", "T"));
+    if (!Number.isFinite(ms) || ms <= bestMs) continue;
+    bestMs = ms;
+    best = value;
+  }
+  return best;
 }
 
 export function buildAreaWeekReportRows(args: {

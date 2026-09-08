@@ -85,12 +85,9 @@ async function insertRevision(
 
 function validateWeekLines(lines: ReportWeekLinePayload[]): string | null {
   if (!lines.length) return "At least one line is required.";
-  const seen = new Set<number>();
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     if (!line.subItemId) return "Sub-item is required on every line.";
-    if (seen.has(line.subItemId)) return "Duplicate sub-item in the same week report.";
-    seen.add(line.subItemId);
     const bilingualError = validateWeekLinePayload(line, i);
     if (bilingualError) return bilingualError;
   }
