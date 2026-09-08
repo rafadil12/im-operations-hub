@@ -89,7 +89,8 @@ type LeaveType =
   | "UPL"
   | "A"
   | "ALPA"
-  | "OT";
+  | "OT"
+  | "NO_ATTENDANCE";
 
 type LeaveStatus =
   | "Pending"
@@ -152,6 +153,7 @@ type EmployeeLeaveSummary = {
   al: number;
   mc: number;
   upl: number;
+  alpa: number;
   total: number;
 };
 
@@ -268,6 +270,57 @@ function valueLabel(
       language === "cn" ? 1 : 0
     ] ?? value
   );
+}
+
+function requestTypeStyle(requestType: LeaveType) {
+  const styles: Record<
+    LeaveType,
+    { card: string; label: string }
+  > = {
+    AL: {
+      card: "border-sky-400/30 bg-sky-500/[0.04]",
+      label: "bg-sky-500/10 text-sky-300",
+    },
+    MC: {
+      card: "border-rose-400/30 bg-rose-500/[0.04]",
+      label: "bg-rose-500/10 text-rose-300",
+    },
+    UPL: {
+      card: "border-amber-400/30 bg-amber-500/[0.04]",
+      label: "bg-amber-500/10 text-amber-300",
+    },
+    A: {
+      card: "border-slate-400/30 bg-slate-500/[0.04]",
+      label: "bg-slate-500/10 text-slate-300",
+    },
+    ALPA: {
+      card: "border-fuchsia-400/30 bg-fuchsia-500/[0.04]",
+      label: "bg-fuchsia-500/10 text-fuchsia-300",
+    },
+    OT: {
+      card: "border-violet-400/30 bg-violet-500/[0.04]",
+      label: "bg-violet-500/10 text-violet-300",
+    },
+    NO_ATTENDANCE: {
+      card: "border-slate-400/30 bg-slate-500/[0.04]",
+      label: "bg-slate-500/10 text-slate-300",
+    },
+  };
+
+  return styles[requestType];
+}
+
+function leaveRequestLabel(
+  requestType: LeaveType,
+  language: OrganizationLanguage,
+) {
+  if (requestType === "ALPA") return language === "cn" ? "旷工" : "A";
+  if (requestType === "OT") return language === "cn" ? "加班" : "Overtime";
+  if (requestType === "NO_ATTENDANCE") {
+    return language === "cn" ? "无考勤" : "No Attendance";
+  }
+
+  return valueLabel(requestType, language);
 }
 
 function isWorkScheduleType(
@@ -1329,7 +1382,7 @@ function EmployeeLeaveChart({
 }) {
   if (data.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-xs text-text-muted">
+      <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
         {language === "cn"
           ? "本月没有已批准的请假记录"
           : "No approved leave records this month"}
@@ -1342,153 +1395,172 @@ function EmployeeLeaveChart({
     1,
   );
 
-  const chartHeight = 260;
-  const barMaxHeight = 190;
-  const yTicks = Array.from(
-    { length: 5 },
-    (_, index) =>
-      Math.ceil((maxTotal * (4 - index)) / 4),
-  );
+  // Compact chart: keep the whole visualization visible without a vertical scroll area.
+  const chartHeight = 185;
+  const barMaxHeight = 125;
+  // Small totals can round to the same value (for example, 1, 1, 1, 0).
+  // Keep only distinct grid lines so React keys and chart labels stay stable.
+  const yTicks = [
+    ...new Set(
+      Array.from(
+        { length: 4 },
+        (_, index) => Math.ceil((maxTotal * (3 - index)) / 3),
+      ),
+    ),
+  ];
 
   return (
-    <div className="rounded-lg border border-border-subtle bg-bg/20 p-2.5">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
-            {language === "cn" ? "员工请假" : "Leave by Employee"}
-          </p>
-          <p className="mt-0.5 text-[8px] text-text-dim">
-            {language === "cn"
-              ? "仅显示本月有已批准请假的员工"
-              : "Only employees with approved leave are shown"}
-          </p>
-        </div>
+    <div className="rounded-lg border border-border-subtle bg-bg/20 px-3 pb-3 pt-2.5">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+          {language === "cn" ? "员工请假" : "Leave by Employee"}
+        </p>
+        <p className="mt-0.5 text-[8px] text-text-dim">
+          {language === "cn"
+            ? "仅显示本月有已批准请假的员工"
+            : "Only employees with approved leave are shown"}
+        </p>
+      </div>
 
-        <div className="flex shrink-0 items-center gap-3 text-[8px]">
-          <span className="flex items-center gap-1 font-semibold text-blue-400">
-            <span className="size-2 rounded-sm bg-blue-500" />
-            AL
-          </span>
-          <span className="flex items-center gap-1 font-semibold text-violet-400">
-            <span className="size-2 rounded-sm bg-violet-500" />
-            MC
-          </span>
-          <span className="flex items-center gap-1 font-semibold text-indigo-400">
-            <span className="size-2 rounded-sm bg-indigo-500" />
-            UPL
-          </span>
+      <div
+        className="relative mt-1.5 w-full"
+        style={{ height: `${chartHeight}px` }}
+      >
+        {yTicks.map((tick) => {
+          const top =
+            maxTotal > 0
+              ? ((maxTotal - tick) / maxTotal) * barMaxHeight + 10
+              : 10;
+
+          return (
+            <div
+              key={tick}
+              className="pointer-events-none absolute left-8 right-1 flex items-center"
+              style={{ top: `${top}px` }}
+            >
+              <span className="absolute -left-7 -translate-y-1/2 text-[8px] text-text-dim">
+                {tick}
+              </span>
+              <div className="h-px flex-1 bg-border-subtle/70" />
+            </div>
+          );
+        })}
+
+        <div
+          className="absolute inset-x-0 bottom-0 top-2 grid items-end gap-1 px-1"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(data.length, 1)}, minmax(0, 1fr))`,
+          }}
+        >
+          {data.map((item) => {
+            const totalHeight =
+              maxTotal > 0
+                ? Math.max(
+                    (item.total / maxTotal) * barMaxHeight,
+                    item.total > 0 ? 6 : 0,
+                  )
+                : 0;
+
+            const alHeight =
+              item.total > 0
+                ? (item.al / item.total) * totalHeight
+                : 0;
+            const mcHeight =
+              item.total > 0
+                ? (item.mc / item.total) * totalHeight
+                : 0;
+            const uplHeight =
+              item.total > 0
+                ? (item.upl / item.total) * totalHeight
+                : 0;
+            const alpaHeight =
+              item.total > 0
+                ? (item.alpa / item.total) * totalHeight
+                : 0;
+
+            return (
+              <div
+                key={item.employee.employee_no}
+                className="flex min-w-0 h-full flex-col items-center justify-end"
+              >
+                <div className="mb-1 text-[10px] font-extrabold text-text">
+                  {item.total}
+                </div>
+
+                <div
+                  className="flex w-8 max-w-[2rem] flex-col justify-end overflow-hidden rounded-t-md bg-bg/50 ring-1 ring-inset ring-border-subtle"
+                  style={{ height: `${totalHeight}px` }}
+                  title={`${employeeName(item.employee, language)} — ${item.total} approved leave`}
+                >
+                  {item.alpa > 0 ? (
+                    <div
+                      className="w-full bg-fuchsia-500 transition-all duration-300"
+                      style={{ height: `${alpaHeight}px` }}
+                      title={`ALPA: ${item.alpa}`}
+                    />
+                  ) : null}
+
+                  {item.upl > 0 ? (
+                    <div
+                      className="w-full bg-amber-500 transition-all duration-300"
+                      style={{ height: `${uplHeight}px` }}
+                      title={`UPL: ${item.upl}`}
+                    />
+                  ) : null}
+
+                  {item.mc > 0 ? (
+                    <div
+                      className="w-full bg-rose-500 transition-all duration-300"
+                      style={{ height: `${mcHeight}px` }}
+                      title={`MC: ${item.mc}`}
+                    />
+                  ) : null}
+
+                  {item.al > 0 ? (
+                    <div
+                      className="w-full bg-blue-500 transition-all duration-300"
+                      style={{ height: `${alHeight}px` }}
+                      title={`AL: ${item.al}`}
+                    />
+                  ) : null}
+                </div>
+
+                <div className="mt-1.5 w-full min-w-0 text-center">
+                  <p className="truncate text-[8px] font-semibold text-text">
+                    {employeeName(item.employee, language)}
+                  </p>
+                  <p className="mt-0.5 truncate text-[7px] text-text-dim">
+                    {item.employee.employee_no}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-1">
-        <div
-          className="relative min-w-max"
-          style={{
-            height: `${chartHeight + 74}px`,
-            minWidth: `${Math.max(data.length * 82 + 58, 520)}px`,
-          }}
-        >
-          <div className="absolute left-8 right-2 top-1" style={{ height: `${chartHeight}px` }}>
-            {yTicks.map((tick) => {
-              const top =
-                maxTotal > 0
-                  ? ((maxTotal - tick) / maxTotal) * barMaxHeight + 8
-                  : 8;
-
-              return (
-                <div
-                  key={tick}
-                  className="pointer-events-none absolute left-0 right-0 flex items-center"
-                  style={{ top: `${top}px` }}
-                >
-                  <span className="absolute -left-7 -translate-y-1/2 text-[8px] text-text-dim">
-                    {tick}
-                  </span>
-                  <div className="h-px flex-1 bg-border-subtle/70" />
-                </div>
-              );
-            })}
-
-            <div className="absolute inset-x-0 bottom-[30px] top-2 flex items-end justify-start gap-2.5 px-2">
-              {data.map((item) => {
-                const totalHeight =
-                  maxTotal > 0
-                    ? Math.max(
-                        (item.total / maxTotal) * barMaxHeight,
-                        item.total > 0 ? 6 : 0,
-                      )
-                    : 0;
-
-                const alHeight =
-                  item.total > 0
-                    ? (item.al / item.total) * totalHeight
-                    : 0;
-                const mcHeight =
-                  item.total > 0
-                    ? (item.mc / item.total) * totalHeight
-                    : 0;
-                const uplHeight =
-                  item.total > 0
-                    ? (item.upl / item.total) * totalHeight
-                    : 0;
-
-                return (
-                  <div
-                    key={item.employee.employee_no}
-                    className="flex h-full w-16 shrink-0 flex-col items-center justify-end"
-                  >
-                    <div className="mb-1 text-[10px] font-extrabold text-text">
-                      {item.total}
-                    </div>
-
-                    <div
-                      className="flex w-9 flex-col justify-end overflow-hidden rounded-t-md bg-bg/50 ring-1 ring-inset ring-border-subtle"
-                      style={{ height: `${totalHeight}px` }}
-                      title={`${employeeName(item.employee, language)} — ${item.total} approved leave`}
-                    >
-                      {item.upl > 0 ? (
-                        <div
-                          className="w-full bg-indigo-500 transition-all duration-300"
-                          style={{ height: `${uplHeight}px` }}
-                          title={`UPL: ${item.upl}`}
-                        />
-                      ) : null}
-
-                      {item.mc > 0 ? (
-                        <div
-                          className="w-full bg-violet-500 transition-all duration-300"
-                          style={{ height: `${mcHeight}px` }}
-                          title={`MC: ${item.mc}`}
-                        />
-                      ) : null}
-
-                      {item.al > 0 ? (
-                        <div
-                          className="w-full bg-blue-500 transition-all duration-300"
-                          style={{ height: `${alHeight}px` }}
-                          title={`AL: ${item.al}`}
-                        />
-                      ) : null}
-                    </div>
-
-                    <div className="mt-2 w-20 text-center">
-                      <p className="truncate text-[8px] font-semibold text-text">
-                        {employeeName(item.employee, language)}
-                      </p>
-                      <p className="mt-0.5 truncate text-[7px] text-text-dim">
-                        {item.employee.employee_no}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+      <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[8px]">
+        <span className="flex items-center gap-1 font-semibold text-blue-400">
+          <span className="size-2 rounded-full bg-blue-500" />
+          {language === "cn" ? "年假" : "AL"}
+        </span>
+        <span className="flex items-center gap-1 font-semibold text-rose-400">
+          <span className="size-2 rounded-full bg-rose-500" />
+          {language === "cn" ? "病假" : "MC"}
+        </span>
+        <span className="flex items-center gap-1 font-semibold text-amber-400">
+          <span className="size-2 rounded-full bg-amber-500" />
+          {language === "cn" ? "请假 / 外出" : "UPL"}
+        </span>
+        <span className="flex items-center gap-1 font-semibold text-fuchsia-400">
+          <span className="size-2 rounded-full bg-fuchsia-500" />
+          {language === "cn" ? "旷工" : "ALPA"}
+        </span>
       </div>
     </div>
   );
 }
+
 
 /* =========================================================
    EMPLOYEE MONTHLY ATTENDANCE
@@ -1606,13 +1678,13 @@ function EmployeeMonthlyAttendance({
                     {language === "cn" ? "出勤" : "P"} {item.present}
                   </span>
                   <span className="text-blue-400">
-                    {language === "cn" ? "年假" : "AL"} {item.leave}
+                    {language === "cn" ? "AL · 年假" : "AL"} {item.leave}
                   </span>
                   <span className="text-purple-400">
-                    {language === "cn" ? "病假" : "MC"} {item.mc}
+                    {language === "cn" ? "MC · 病假" : "MC"} {item.mc}
                   </span>
                   <span className="text-orange-400">
-                    {language === "cn" ? "外出" : "UPL"} {item.upl}
+                    {language === "cn" ? "UPL · 请假 / 外出" : "UPL"} {item.upl}
                   </span>
                   <span className="text-rose-400">
                     {language === "cn" ? "缺勤" : "A"} {item.absent}
@@ -1684,7 +1756,7 @@ function DaySelector({
               )
             }
             className={[
-              "rounded-md border px-1.5 py-2 text-center transition-all duration-200",
+              "cursor-pointer rounded-md border px-1.5 py-2 text-center transition-all duration-200",
               active
                 ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-300"
                 : isFuture
@@ -1748,6 +1820,8 @@ export default function AttendanceOverviewPage() {
 
   const [showAllScheduleVariance, setShowAllScheduleVariance] = useState(true);
   const [showScheduleVarianceZoom, setShowScheduleVarianceZoom] = useState(false);
+  const [showAllMismatchEmployees, setShowAllMismatchEmployees] = useState(false);
+  const [showAllRecentRequests, setShowAllRecentRequests] = useState(false);
 
   const [
     employees,
@@ -2383,6 +2457,11 @@ export default function AttendanceOverviewPage() {
       .sort((a, b) => b.mismatch - a.mismatch || a.rate - b.rate);
   }, [dailyScheduleComparison, employees, scheduleMap, attendanceMap, todayKey]);
 
+  const mismatchEmployees = useMemo(
+    () => employeeScheduleSummary.filter((item) => item.mismatch > 0),
+    [employeeScheduleSummary],
+  );
+
   const departmentScheduleSummary = useMemo(() => {
     const map = new Map<string, {
       department: string;
@@ -2779,7 +2858,8 @@ export default function AttendanceOverviewPage() {
       if (
         row.request_type !== "AL" &&
         row.request_type !== "MC" &&
-        row.request_type !== "UPL"
+        row.request_type !== "UPL" &&
+        row.request_type !== "ALPA"
       ) {
         continue;
       }
@@ -2793,15 +2873,17 @@ export default function AttendanceOverviewPage() {
           al: 0,
           mc: 0,
           upl: 0,
+          alpa: 0,
           total: 0,
         };
 
       if (row.request_type === "AL") current.al++;
       else if (row.request_type === "MC") current.mc++;
-      else current.upl++;
+      else if (row.request_type === "UPL") current.upl++;
+      else if (row.request_type === "ALPA") current.alpa++;
 
       current.total =
-        current.al + current.mc + current.upl;
+        current.al + current.mc + current.upl + current.alpa;
 
       map.set(row.employee_no, current);
     }
@@ -3029,7 +3111,7 @@ export default function AttendanceOverviewPage() {
      RECENT REQUESTS
   ======================================================= */
 
-  const recentRequests =
+  const allRecentRequests =
     useMemo(
       () =>
         [
@@ -3044,10 +3126,11 @@ export default function AttendanceOverviewPage() {
                   `${a.request_date}T00:00:00`,
                 ).getTime() ||
               b.id - a.id,
-          )
-          .slice(0, 8),
+          ),
       [leaveRows],
     );
+
+  const recentRequests = allRecentRequests.slice(0, 4);
 
   /* =======================================================
      OT
@@ -4454,13 +4537,13 @@ export default function AttendanceOverviewPage() {
               {language === "cn" ? "出勤" : "P / Present"}
             </span>
             <span className="text-blue-400">
-              {language === "cn" ? "年假" : "AL"}
+              {language === "cn" ? "AL · 年假" : "AL"}
             </span>
             <span className="text-violet-400">
-              {language === "cn" ? "病假" : "MC"}
+              {language === "cn" ? "MC · 病假" : "MC"}
             </span>
             <span className="text-indigo-400">
-              {language === "cn" ? "外出" : "UPL"}
+              {language === "cn" ? "UPL · 请假 / 外出" : "UPL"}
             </span>
             <span className="text-rose-400">
               {language === "cn" ? "缺勤" : "A"}
@@ -4753,21 +4836,16 @@ export default function AttendanceOverviewPage() {
           </section>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+        <div className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
-            <div className="flex items-start justify-between gap-3">
+            <div>
               <SectionHeader
                 title={language === "cn" ? "员工请假情况" : "Leave by Employee"}
                 description={language === "cn" ? "只显示本月有已批准请假的员工。" : "Only employees with approved leave this month are shown."}
               />
-              <div className="flex shrink-0 items-center gap-2 text-[8px]">
-                <span className="font-semibold text-blue-400">AL</span>
-                <span className="font-semibold text-violet-400">MC</span>
-                <span className="font-semibold text-indigo-400">UPL</span>
-              </div>
             </div>
 
-            <div className="mt-2.5 max-h-[360px] overflow-y-auto pr-1">
+            <div className="mt-2.5">
               <EmployeeLeaveChart
                 data={employeeLeaveSummary}
                 language={language}
@@ -4781,12 +4859,23 @@ export default function AttendanceOverviewPage() {
                 title={language === "cn" ? "排班异常 · Top 人员" : "Top Schedule Mismatch Employees"}
                 description={language === "cn" ? "优先显示本月最常发生排班偏差的员工。" : "Employees with the most schedule variance in the selected month."}
               />
-              <span className="text-[10px] text-text-dim">Top 5</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-[10px] text-text-dim">Top 5</span>
+                {mismatchEmployees.length > 5 ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllMismatchEmployees(true)}
+                    className="cursor-pointer rounded-md border border-cyan-400/20 bg-cyan-500/5 px-2 py-1 text-[9px] font-semibold text-cyan-400 transition hover:border-cyan-400/40 hover:bg-cyan-500/10"
+                  >
+                    {language === "cn" ? "查看全部" : "View all"}
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             <div className="mt-5 space-y-2">
-              {employeeScheduleSummary.slice(0, 5).map((item) => {
-                const maxMismatch = Math.max(...employeeScheduleSummary.map((x) => x.mismatch), 1);
+              {mismatchEmployees.slice(0, 5).map((item) => {
+                const maxMismatch = Math.max(...mismatchEmployees.map((x) => x.mismatch), 1);
                 return (
                   <div key={item.employee.employee_no}>
                     <div className="mb-1 flex items-center justify-between gap-3">
@@ -4803,7 +4892,7 @@ export default function AttendanceOverviewPage() {
                 );
               })}
 
-              {employeeScheduleSummary.length === 0 && (
+              {mismatchEmployees.length === 0 && (
                 <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
                   {language === "cn" ? "暂无排班偏差" : "No schedule variance"}
                 </div>
@@ -4817,6 +4906,80 @@ export default function AttendanceOverviewPage() {
             </div>
           </section>
         </div>
+
+        {showAllMismatchEmployees ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm md:p-6">
+            <div
+              className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+              role="dialog"
+              aria-modal="true"
+              aria-label={language === "cn" ? "全部排班异常员工" : "All Schedule Mismatch Employees"}
+            >
+              <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
+                    {language === "cn" ? "排班异常" : "Schedule Mismatch"}
+                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <h3 className="truncate text-base font-semibold text-text md:text-lg">
+                      {language === "cn" ? "全部异常员工" : "All Mismatch Employees"}
+                    </h3>
+                    <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
+                      {mismatchEmployees.length}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAllMismatchEmployees(false)}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                  aria-label={language === "cn" ? "关闭" : "Close"}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-4 md:p-5">
+                <div className="space-y-3">
+                  {mismatchEmployees.map((item) => {
+                    const maxMismatch = Math.max(
+                      ...mismatchEmployees.map((employee) => employee.mismatch),
+                      1,
+                    );
+
+                    return (
+                      <div
+                        key={`all-mismatch-${item.employee.employee_no}`}
+                        className="rounded-lg border border-border-subtle bg-bg/20 p-3"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-text">
+                              {employeeName(item.employee, language)}
+                            </p>
+                            <p className="mt-0.5 text-[9px] text-text-dim">
+                              {item.employee.employee_no}
+                            </p>
+                          </div>
+                          <span className="text-sm font-extrabold text-rose-400">
+                            {item.mismatch}
+                          </span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-bg">
+                          <div
+                            className="h-full rounded-full bg-amber-400"
+                            style={{ width: `${(item.mismatch / maxMismatch) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
 
         <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
@@ -5102,20 +5265,39 @@ export default function AttendanceOverviewPage() {
         ================================================= */}
 
         <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
-          <SectionHeader
-            title={
-              language ===
-              "cn"
-                ? "最新申请"
-                : "Recent Requests"
-            }
-            description={
-              language ===
-              "cn"
-                ? "最近的请假、外出和 OT 申请。"
-                : "Latest leave, permission and OT requests."
-            }
-          />
+          <div className="flex items-start justify-between gap-4">
+            <SectionHeader
+              title={
+                language ===
+                "cn"
+                  ? "最新申请"
+                  : "Recent Requests"
+              }
+              description={
+                language ===
+                "cn"
+                  ? "最近的请假、外出和 OT 申请。"
+                  : "Latest leave, permission and OT requests."
+              }
+            />
+
+            {allRecentRequests.length > recentRequests.length ? (
+              <button
+                type="button"
+                onClick={() => setShowAllRecentRequests(true)}
+                className="cursor-pointer group mt-0.5 flex shrink-0 items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-400 transition hover:border-cyan-400/40 hover:bg-cyan-500/10"
+              >
+                <span>
+                  {language === "cn"
+                    ? `查看全部 ${allRecentRequests.length}`
+                    : `View all (${allRecentRequests.length})`}
+                </span>
+                <span className="cursor-pointer transition-transform duration-200 group-hover:translate-x-0.5">
+                  →
+                </span>
+              </button>
+            ) : null}
+          </div>
 
           <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             {recentRequests.length ===
@@ -5130,7 +5312,7 @@ export default function AttendanceOverviewPage() {
               </div>
             ) : (
               recentRequests.map(
-                (request) => {
+                (request, index) => {
                   const employee =
                     employeeMap.get(
                       request.employee_no,
@@ -5145,7 +5327,7 @@ export default function AttendanceOverviewPage() {
                       ? language === "cn"
                         ? "加班"
                         : "Overtime"
-                      : valueLabel(
+                      : leaveRequestLabel(
                           request.request_type,
                           language,
                         );
@@ -5158,13 +5340,12 @@ export default function AttendanceOverviewPage() {
                           "Rejected"
                         ? "bg-rose-500/10 text-rose-300"
                         : "bg-amber-500/10 text-amber-300";
+                  const typeStyle = requestTypeStyle(request.request_type);
 
                   return (
                     <div
-                      key={
-                        request.id
-                      }
-                      className="attendance-card rounded-lg border border-border bg-bg/20 p-3"
+                      key={`${request.id}-${request.employee_no}-${request.request_date}-${request.request_type}-${index}`}
+                      className={`attendance-card rounded-lg border p-3 ${typeStyle.card}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -5192,7 +5373,7 @@ export default function AttendanceOverviewPage() {
                       </div>
 
                       <div className="mt-2 flex items-center justify-between gap-2 border-t border-border-subtle pt-2">
-                        <span className="truncate text-[10px] text-text-muted">
+                        <span className={`truncate rounded-md px-2 py-1 text-[9px] font-medium ${typeStyle.label}`}>
                           {label}
                         </span>
 
@@ -5231,6 +5412,101 @@ export default function AttendanceOverviewPage() {
             )}
           </div>
         </section>
+
+        {showAllRecentRequests ? (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm md:p-6">
+            <div
+              className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+              role="dialog"
+              aria-modal="true"
+              aria-label={language === "cn" ? "全部申请" : "All Requests"}
+            >
+              <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
+                    {language === "cn" ? "申请" : "Requests"}
+                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <h3 className="truncate text-base font-semibold text-text md:text-lg">
+                      {language === "cn" ? "全部申请" : "All Requests"}
+                    </h3>
+                    <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold text-cyan-400">
+                      {allRecentRequests.length}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAllRecentRequests(false)}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                  aria-label={language === "cn" ? "关闭" : "Close"}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-3 md:p-5">
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {allRecentRequests.map((request, index) => {
+                    const employee = employeeMap.get(request.employee_no);
+                    const label =
+                      request.request_type === "ALPA"
+                        ? language === "cn"
+                          ? "旷工"
+                          : "A"
+                        : request.request_type === "OT"
+                          ? language === "cn"
+                            ? "加班"
+                            : "Overtime"
+                          : leaveRequestLabel(request.request_type, language);
+                    const statusClass =
+                      request.status === "Approved"
+                        ? "bg-emerald-500/10 text-emerald-300"
+                        : request.status === "Rejected"
+                          ? "bg-rose-500/10 text-rose-300"
+                          : "bg-amber-500/10 text-amber-300";
+                    const typeStyle = requestTypeStyle(request.request_type);
+
+                    return (
+                      <div
+                        key={`all-${request.id}-${request.employee_no}-${request.request_date}-${request.request_type}-${index}`}
+                        className={`attendance-card rounded-lg border p-3 ${typeStyle.card}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-medium text-text">
+                              {employeeName(employee, language)}
+                            </p>
+                            <p className="mt-0.5 text-[9px] text-text-dim">
+                              {request.employee_no}
+                            </p>
+                          </div>
+                          <span className={`rounded-md px-2 py-1 text-[9px] font-medium ${statusClass}`}>
+                            {request.status}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2 border-t border-border-subtle pt-2">
+                          <span className={`truncate rounded-md px-2 py-1 text-[9px] font-medium ${typeStyle.label}`}>
+                            {label}
+                          </span>
+                          <span className="shrink-0 text-[9px] text-text-dim">
+                            {String(request.request_date).slice(0, 10)}
+                          </span>
+                        </div>
+                        {request.start_time && request.end_time ? (
+                          <p className="mt-2 text-[9px] text-text-dim">
+                            {String(request.start_time).slice(0, 5)} {"–"} {String(request.end_time).slice(0, 5)}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* =================================================
             MONTH PERFORMANCE SCORE

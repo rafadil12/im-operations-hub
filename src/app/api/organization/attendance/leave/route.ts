@@ -255,7 +255,16 @@ export async function GET(request: NextRequest) {
         INNER JOIN users u
           ON u.employee_no = r.employee_no
 
-        LEFT JOIN employee_organization eo
+        /*
+         * A request must appear once even if employee_organization contains
+         * duplicate rows for the same user.  Joining the table directly can
+         * otherwise repeat r.id in the API response.
+         */
+        LEFT JOIN (
+          SELECT user_id, MAX(manager_id) AS manager_id
+          FROM employee_organization
+          GROUP BY user_id
+        ) eo
           ON eo.user_id = u.id
 
         LEFT JOIN users manager
