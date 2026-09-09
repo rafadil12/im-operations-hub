@@ -94,15 +94,58 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
   }
 
   if (module.id === "safety") {
+    const isEmptyShell =
+      (module.trendBars?.items.length ?? 0) === 0 &&
+      (module.bars?.items.length ?? 0) === 0;
+
+    const performanceStatLabels = [
+      t.dashboard.overallCompletion,
+      t.dashboard.findingClosure,
+      t.dashboard.trainingCompletion,
+      t.dashboard.safetyScore,
+    ];
+    const findingStatLabels = [
+      t.dashboard.todaysFinding,
+      t.dashboard.openFinding,
+      t.dashboard.closedFinding,
+      t.dashboard.avgFinding,
+    ];
+
     return {
       ...module,
       href: "/safety",
       title: t.dashboard.safetyDashboard,
-      stats: module.stats,
-      trendBars: module.trendBars,
-      bars: module.bars,
+      stats: module.stats.map((stat, index) => ({
+        ...stat,
+        label: (isEmptyShell ? findingStatLabels : performanceStatLabels)[index] ?? stat.label,
+      })),
+      trendBars: module.trendBars
+        ? {
+            ...module.trendBars,
+            title: t.dashboard.weeklySafetyRequirement,
+          }
+        : undefined,
+      bars: module.bars
+        ? {
+            ...module.bars,
+            title: t.dashboard.monthlySafetyActivity,
+          }
+        : undefined,
       pics: undefined,
-      chart: module.chart,
+      chart: {
+        ...module.chart,
+        title: t.dashboard.safetyPerformanceScore,
+        legend: module.chart.legend.map((item, index) => ({
+          ...item,
+          label:
+            [
+              `${t.dashboard.overallCompletion} × 50%`,
+              `${t.dashboard.findingClosure} × 30%`,
+              `${t.dashboard.trainingCompletion} × 20%`,
+            ][index] ?? item.label,
+        })),
+        centerLabel: t.dashboard.safetyScore,
+      },
     };
   }
 
