@@ -18,7 +18,7 @@ export function SafetyOverviewHeader({
   onNextMonth,
 }: SafetyOverviewHeaderProps) {
   return (
-    <div className="safety-scroll-animate flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div>
         <div className="flex items-center gap-2">
           <span className="size-2 rounded-full bg-emerald-500" />

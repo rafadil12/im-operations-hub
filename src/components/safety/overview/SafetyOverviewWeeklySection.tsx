@@ -25,7 +25,7 @@ export function SafetyOverviewWeeklySection({
   weeklyCompletion,
 }: SafetyOverviewWeeklySectionProps) {
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+    <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
       <SectionHeader
         title={safetyText("weeklySafetyRequirement", safetyLanguage)}
         description={safetyText("currentWeeklySafetyActivities", safetyLanguage)}

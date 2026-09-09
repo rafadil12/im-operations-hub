@@ -69,34 +69,6 @@ export function SafetyOverview() {
     };
   }, [periodKey, selectedYear, selectedMonth, safetyLanguage]);
 
-  useEffect(() => {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(".safety-scroll-animate"));
-
-    if (!elements.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const element = entry.target as HTMLElement;
-
-          if (entry.isIntersecting) {
-            element.classList.add("is-visible");
-          } else {
-            element.classList.remove("is-visible");
-          }
-        });
-      },
-      {
-        threshold: 0.15,
-        rootMargin: "0px 0px -8% 0px",
-      }
-    );
-
-    elements.forEach((element) => observer.observe(element));
-
-    return () => observer.disconnect();
-  }, []);
-
   const metrics = computeSafetyOverviewMetrics({
     weeklyRows,
     monthlyRows,
@@ -128,104 +100,104 @@ export function SafetyOverview() {
       <SafetyOverviewStyles />
 
       <div className="safety-overview-page space-y-5">
-        <SafetyOverviewHeader
-          safetyLanguage={safetyLanguage}
-          monthLabel={metrics.monthLabel}
-          overallCompletion={metrics.overallCompletion}
-          onPreviousMonth={goToPreviousMonth}
-          onNextMonth={goToNextMonth}
-        />
+      <SafetyOverviewHeader
+        safetyLanguage={safetyLanguage}
+        monthLabel={metrics.monthLabel}
+        overallCompletion={metrics.overallCompletion}
+        onPreviousMonth={goToPreviousMonth}
+        onNextMonth={goToNextMonth}
+      />
 
-        {loadError ? (
-          <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-300">
-            {loadError}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="space-y-5">
-            <SkeletonKpiGrid count={6} />
-            <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-              <div className="rounded-xl border border-border bg-surface p-4 md:p-5">
-                <SkeletonChart variant="line" />
-              </div>
-              <div className="rounded-xl border border-border bg-surface p-4 md:p-5">
-                <SkeletonChart variant="donut" />
-              </div>
-            </div>
-            <SkeletonTable rows={4} columns={4} />
-          </div>
-        ) : (
-          <>
-        <SafetyOverviewKpiSection
-          safetyLanguage={safetyLanguage}
-          trainingCompleted={metrics.trainingCompleted}
-          trainingTarget={metrics.trainingTarget}
-          hazardFinding={metrics.hazardFinding}
-          cleaningFinding={metrics.cleaningFinding}
-          totalFinding={metrics.totalFinding}
-          monthlyActivityData={metrics.monthlyActivityData}
-          overallCompletion={metrics.overallCompletion}
-        />
-
-        <SafetyOverviewMainCharts
-          safetyLanguage={safetyLanguage}
-          weeklyTrend={metrics.weeklyTrend}
-          closed={metrics.closed}
-          inProgress={metrics.inProgress}
-          open={metrics.open}
-          closureRate={metrics.closureRate}
-        />
-
-        <SafetyOverviewTrendSection
-          safetyLanguage={safetyLanguage}
-          weeklyTrend={metrics.weeklyTrend}
-        />
-
-        <SafetyOverviewTrainingMonthlySection
-          safetyLanguage={safetyLanguage}
-          trainingWeekly={metrics.trainingWeekly}
-          trainingCompleted={metrics.trainingCompleted}
-          trainingTarget={metrics.trainingTarget}
-          trainingRate={metrics.trainingRate}
-          monthlyActivityData={metrics.monthlyActivityData}
-        />
-
-        <SafetyOverviewScoreSection
-          safetyLanguage={safetyLanguage}
-          overallCompletion={metrics.overallCompletion}
-          closureRate={metrics.closureRate}
-          trainingRate={metrics.trainingRate}
-          safetyScore={metrics.safetyScore}
-        />
-
-        <SafetyOverviewWeeklySection
-          safetyLanguage={safetyLanguage}
-          weeklyRows={weeklyRows}
-          weeklyCompleted={metrics.weeklyCompleted}
-          weeklyTarget={metrics.weeklyTarget}
-          weeklyCompletion={metrics.weeklyCompletion}
-        />
-
-        <SafetyOverviewTrainingTableSection
-          safetyLanguage={safetyLanguage}
-          recentTraining={metrics.recentTraining}
-          pic={metrics.pic}
-          trainingRate={metrics.trainingRate}
-        />
-
-        <SafetyOverviewActionRequiredSection
-          safetyLanguage={safetyLanguage}
-          actionRows={metrics.actionRows}
-          pic={metrics.pic}
-        />
-          </>
-        )}
-
-        <div className="pb-2 text-center text-[10px] text-text-dim">
-          {safetyText("itSafetyManagementSystem", safetyLanguage)}
-          {" • 2026"}
+      {loadError ? (
+        <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-300">
+          {loadError}
         </div>
+      ) : null}
+
+      {loading ? (
+        <div className="space-y-5">
+          <SkeletonKpiGrid count={6} />
+          <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+            <div className="rounded-xl border border-border bg-surface p-4 md:p-5">
+              <SkeletonChart variant="line" />
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-4 md:p-5">
+              <SkeletonChart variant="donut" />
+            </div>
+          </div>
+          <SkeletonTable rows={4} columns={4} />
+        </div>
+      ) : (
+        <>
+          <SafetyOverviewKpiSection
+            safetyLanguage={safetyLanguage}
+            trainingCompleted={metrics.trainingCompleted}
+            trainingTarget={metrics.trainingTarget}
+            hazardFinding={metrics.hazardFinding}
+            cleaningFinding={metrics.cleaningFinding}
+            totalFinding={metrics.totalFinding}
+            monthlyActivityData={metrics.monthlyActivityData}
+            overallCompletion={metrics.overallCompletion}
+          />
+
+          <SafetyOverviewMainCharts
+            safetyLanguage={safetyLanguage}
+            weeklyTrend={metrics.weeklyTrend}
+            closed={metrics.closed}
+            inProgress={metrics.inProgress}
+            open={metrics.open}
+            closureRate={metrics.closureRate}
+          />
+
+          <SafetyOverviewTrendSection
+            safetyLanguage={safetyLanguage}
+            weeklyTrend={metrics.weeklyTrend}
+          />
+
+          <SafetyOverviewTrainingMonthlySection
+            safetyLanguage={safetyLanguage}
+            trainingWeekly={metrics.trainingWeekly}
+            trainingCompleted={metrics.trainingCompleted}
+            trainingTarget={metrics.trainingTarget}
+            trainingRate={metrics.trainingRate}
+            monthlyActivityData={metrics.monthlyActivityData}
+          />
+
+          <SafetyOverviewScoreSection
+            safetyLanguage={safetyLanguage}
+            overallCompletion={metrics.overallCompletion}
+            closureRate={metrics.closureRate}
+            trainingRate={metrics.trainingRate}
+            safetyScore={metrics.safetyScore}
+          />
+
+          <SafetyOverviewWeeklySection
+            safetyLanguage={safetyLanguage}
+            weeklyRows={weeklyRows}
+            weeklyCompleted={metrics.weeklyCompleted}
+            weeklyTarget={metrics.weeklyTarget}
+            weeklyCompletion={metrics.weeklyCompletion}
+          />
+
+          <SafetyOverviewTrainingTableSection
+            safetyLanguage={safetyLanguage}
+            recentTraining={metrics.recentTraining}
+            pic={metrics.pic}
+            trainingRate={metrics.trainingRate}
+          />
+
+          <SafetyOverviewActionRequiredSection
+            safetyLanguage={safetyLanguage}
+            actionRows={metrics.actionRows}
+            pic={metrics.pic}
+          />
+        </>
+      )}
+
+      <div className="pb-2 text-center text-[10px] text-text-dim">
+        {safetyText("itSafetyManagementSystem", safetyLanguage)}
+        {" • 2026"}
+      </div>
       </div>
     </>
   );

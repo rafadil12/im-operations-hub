@@ -34,11 +34,11 @@ export function GroupedBarChart({
                 }}
               />
 
-              {item.first > 0 && (
+              {item.first > 0 ? (
                 <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-text-muted">
                   {item.first}
                 </span>
-              )}
+              ) : null}
             </div>
 
             <div className="relative flex h-full items-end">
@@ -50,11 +50,11 @@ export function GroupedBarChart({
                 }}
               />
 
-              {item.second > 0 && (
+              {item.second > 0 ? (
                 <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-text-muted">
                   {item.second}
                 </span>
-              )}
+              ) : null}
             </div>
 
             <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] text-text-dim">
@@ -66,7 +66,6 @@ export function GroupedBarChart({
 
       <div className="mt-6 flex items-center gap-5">
         <Legend color="bg-amber-500" label={firstLabel} />
-
         <Legend color="bg-emerald-500" label={secondLabel} />
       </div>
     </div>
