@@ -28,6 +28,10 @@
 .cursor/
 debug-*.log
 
+
+# Docs
+docs/
+
 # local AI / developer instructions
 AGENTS.md
 COMMIT.md
