@@ -537,7 +537,7 @@ function ScheduleBadge({
           ? "border-sky-200 bg-sky-50 text-sky-700 "
           : value === "N"
             ? "border-violet-200 bg-violet-50 text-violet-700 "
-            : "border-slate-200 bg-slate-100 text-slate-500 ";
+            : "border-red-200 bg-red-100 text-red-500 ";
 
   return (
     <span
