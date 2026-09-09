@@ -1125,7 +1125,11 @@ function ScheduleVsActualChart({
         {points.map((point, index) => {
           const selected = point.date === selectedDate;
           const hasVariance =
-            point.missed + point.workedOnOff + point.unscheduledPresent > 0;
+            point.leave +
+              point.missed +
+              point.workedOnOff +
+              point.unscheduledPresent >
+            0;
 
           const sequenceDelay = `${(index * barDelay).toFixed(2)}s`;
           const actualDelay = `${(index * barDelay + actualOffset).toFixed(2)}s`;
@@ -2383,22 +2387,18 @@ export default function AttendanceOverviewPage() {
       workedOnOff,
       unscheduledPresent,
       rate: scheduled > 0 ? (actual / scheduled) * 100 : 0,
-      variance: missed + workedOnOff + unscheduledPresent,
+      variance: leave + missed + workedOnOff + unscheduledPresent,
     };
   }, [dailyScheduleComparison]);
 
   const allScheduleVarianceExceptions = useMemo(() => {
-    return dailyScheduleComparison
-      .filter((day) => day.exceptions.some((item) => item.status !== "LEAVE"))
-      .flatMap((day) =>
-        day.exceptions
-          .filter((item) => item.status !== "LEAVE")
-          .map((item) => ({
-            ...item,
-            day: day.day,
-            weekday: day.weekday,
-          })),
-      );
+    return dailyScheduleComparison.flatMap((day) =>
+      day.exceptions.map((item) => ({
+        ...item,
+        day: day.day,
+        weekday: day.weekday,
+      })),
+    );
   }, [dailyScheduleComparison]);
 
   const employeeScheduleSummary = useMemo(() => {
@@ -2428,8 +2428,10 @@ export default function AttendanceOverviewPage() {
           if (day.date > todayKey) continue;
 
           if (isPresent(attendance)) current.actual++;
-          else if (isLeaveAttendanceValue(attendance)) current.leave++;
-          else current.mismatch++;
+          else if (isLeaveAttendanceValue(attendance)) {
+            current.leave++;
+            current.mismatch++;
+          } else current.mismatch++;
         } else if (
           schedule === "OFF" &&
           day.date <= todayKey &&
@@ -2487,7 +2489,9 @@ export default function AttendanceOverviewPage() {
           current.scheduled++;
           if (day.date <= todayKey) {
             if (isPresent(attendance)) current.actual++;
-            else if (!isLeaveAttendanceValue(attendance)) current.mismatch++;
+            else if (isLeaveAttendanceValue(attendance)) {
+              current.mismatch++;
+            } else current.mismatch++;
           }
         } else if (
           day.date <= todayKey &&
@@ -3111,26 +3115,24 @@ export default function AttendanceOverviewPage() {
      RECENT REQUESTS
   ======================================================= */
 
-  const allRecentRequests =
-    useMemo(
-      () =>
-        [
-          ...leaveRows,
-        ]
-          .sort(
-            (a, b) =>
-              new Date(
-                `${b.request_date}T00:00:00`,
-              ).getTime() -
-                new Date(
-                  `${a.request_date}T00:00:00`,
-                ).getTime() ||
-              b.id - a.id,
-          ),
-      [leaveRows],
-    );
+  const allRecentRequests = useMemo(
+  () =>
+    leaveRows
+      .filter((row) => row.status === "Approved")
+      .sort(
+        (a, b) =>
+          new Date(
+            `${b.request_date}T00:00:00`,
+          ).getTime() -
+            new Date(
+              `${a.request_date}T00:00:00`,
+            ).getTime() ||
+          b.id - a.id,
+      ),
+  [leaveRows],
+);
 
-  const recentRequests = allRecentRequests.slice(0, 4);
+const recentRequests = allRecentRequests.slice(0, 4);
 
   /* =======================================================
      OT
@@ -3966,7 +3968,10 @@ export default function AttendanceOverviewPage() {
                 title={language === "cn" ? "差异" : "Variance"}
                 value={String(showAllScheduleVariance
                   ? scheduleMonthlySummary.variance
-                  : (selectedScheduleDay?.missed ?? 0) + (selectedScheduleDay?.workedOnOff ?? 0) + (selectedScheduleDay?.unscheduledPresent ?? 0))}
+                  : (selectedScheduleDay?.leave ?? 0) +
+                    (selectedScheduleDay?.missed ?? 0) +
+                    (selectedScheduleDay?.workedOnOff ?? 0) +
+                    (selectedScheduleDay?.unscheduledPresent ?? 0))}
                 subtitle=""
                 icon=""
                 tone="danger"
@@ -4013,22 +4018,30 @@ export default function AttendanceOverviewPage() {
                         <span
                           className={[
                             "rounded-md px-2 py-1 font-semibold",
-                            item.status === "WORKED_ON_OFF"
+                            item.status === "LEAVE"
                               ? "bg-amber-500/10 text-amber-400"
-                              : "bg-rose-500/10 text-rose-400",
+                              : item.status === "WORKED_ON_OFF"
+                                ? "bg-orange-500/10 text-orange-400"
+                                : item.status === "UNSCHEDULED_PRESENT"
+                                  ? "bg-violet-500/10 text-violet-400"
+                                  : "bg-rose-500/10 text-rose-400",
                           ].join(" ")}
                         >
-                          {item.status === "WORKED_ON_OFF"
+                          {item.status === "LEAVE"
                             ? language === "cn"
-                              ? "休息日出勤"
-                              : "Worked on OFF"
-                            : item.status === "UNSCHEDULED_PRESENT"
+                              ? "请假"
+                              : "Leave"
+                            : item.status === "WORKED_ON_OFF"
                               ? language === "cn"
-                                ? "无排班出勤"
-                                : "Unscheduled Present"
-                              : language === "cn"
-                                ? "应到未到"
-                                : "Missed"}
+                                ? "休息日出勤"
+                                : "Worked on OFF"
+                              : item.status === "UNSCHEDULED_PRESENT"
+                                ? language === "cn"
+                                  ? "无排班出勤"
+                                  : "Unscheduled Present"
+                                : language === "cn"
+                                  ? "应到未到"
+                                  : "Missed"}
                         </span>
                       </div>
                     </button>
@@ -4056,10 +4069,9 @@ export default function AttendanceOverviewPage() {
                   {language === "cn" ? "本月没有排班偏差。" : "No schedule variance found for this month."}
                 </div>
               )
-            ) : selectedScheduleDay && selectedScheduleDay.exceptions.filter((item) => item.status !== "LEAVE").length > 0 ? (
+            ) : selectedScheduleDay && selectedScheduleDay.exceptions.length > 0 ? (
               <div className="space-y-2">
                 {selectedScheduleDay.exceptions
-                  .filter((item) => item.status !== "LEAVE")
                   .map((item, index) => (
                     <div key={`${item.employee.employee_no}-${item.status}-${index}`} className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-bg/20 p-3 md:flex-row md:items-center md:justify-between">
                       <div className="min-w-0">
@@ -4071,17 +4083,21 @@ export default function AttendanceOverviewPage() {
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{item.attendanceValue ? valueLabel(item.attendanceValue, language) : (language === "cn" ? "无考勤" : "No attendance")}</span>
                         <span className={[
                           "rounded-md px-2 py-1 font-semibold",
-                          item.status === "WORKED_ON_OFF" ? "bg-amber-500/10 text-amber-400" : "bg-rose-500/10 text-rose-400",
-                        ].join(" ")}>{item.status === "WORKED_ON_OFF" ? (language === "cn" ? "休息日出勤" : "Worked on OFF") : item.status === "UNSCHEDULED_PRESENT" ? (language === "cn" ? "无排班出勤" : "Unscheduled Present") : (language === "cn" ? "应到未到" : "Missed")}</span>
+                          item.status === "LEAVE"
+                            ? "bg-amber-500/10 text-amber-400"
+                            : item.status === "WORKED_ON_OFF"
+                              ? "bg-orange-500/10 text-orange-400"
+                              : item.status === "UNSCHEDULED_PRESENT"
+                                ? "bg-violet-500/10 text-violet-400"
+                                : "bg-rose-500/10 text-rose-400",
+                        ].join(" ")}>{item.status === "LEAVE" ? (language === "cn" ? "请假" : "Leave") : item.status === "WORKED_ON_OFF" ? (language === "cn" ? "休息日出勤" : "Worked on OFF") : item.status === "UNSCHEDULED_PRESENT" ? (language === "cn" ? "无排班出勤" : "Unscheduled Present") : (language === "cn" ? "应到未到" : "Missed")}</span>
                       </div>
                     </div>
                   ))}
               </div>
             ) : (
               <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-4 py-4 text-sm text-emerald-400">
-                {selectedScheduleDay?.exceptions.some((item) => item.status === "LEAVE")
-                  ? language === "cn" ? "没有实际缺勤偏差；当天差异来自已记录的请假。" : "No attendance mismatch; the variance is explained by recorded leave."
-                  : language === "cn" ? "当天没有排班偏差。" : "No schedule variance found for this date."}
+                {language === "cn" ? "当天没有排班偏差。" : "No schedule variance found for this date."}
               </div>
             )}
           </div>
@@ -4155,22 +4171,30 @@ export default function AttendanceOverviewPage() {
                         <span
                           className={[
                             "rounded-md px-2 py-1 font-semibold",
-                            item.status === "WORKED_ON_OFF"
+                            item.status === "LEAVE"
                               ? "bg-amber-500/10 text-amber-400"
-                              : "bg-rose-500/10 text-rose-400",
+                              : item.status === "WORKED_ON_OFF"
+                                ? "bg-orange-500/10 text-orange-400"
+                                : item.status === "UNSCHEDULED_PRESENT"
+                                  ? "bg-violet-500/10 text-violet-400"
+                                  : "bg-rose-500/10 text-rose-400",
                           ].join(" ")}
                         >
-                          {item.status === "WORKED_ON_OFF"
+                          {item.status === "LEAVE"
                             ? language === "cn"
-                              ? "休息日出勤"
-                              : "Worked on OFF"
-                            : item.status === "UNSCHEDULED_PRESENT"
+                              ? "请假"
+                              : "Leave"
+                            : item.status === "WORKED_ON_OFF"
                               ? language === "cn"
-                                ? "无排班出勤"
-                                : "Unscheduled Present"
-                              : language === "cn"
-                                ? "应到未到"
-                                : "Missed"}
+                                ? "休息日出勤"
+                                : "Worked on OFF"
+                              : item.status === "UNSCHEDULED_PRESENT"
+                                ? language === "cn"
+                                  ? "无排班出勤"
+                                  : "Unscheduled Present"
+                                : language === "cn"
+                                  ? "应到未到"
+                                  : "Missed"}
                         </span>
                       </div>
                     </div>

@@ -9,6 +9,7 @@ type OrganizationLanguage = "en" | "cn";
 type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA" | "NO_ATTENDANCE";
 type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT" | "NO_CHECK_IN_OUT";
 type RequestStatus = "Pending" | "Approved" | "Rejected";
+type LeaveSource = "pending" | "final" | "history";
 
 type Employee = {
   id: number;
@@ -18,10 +19,12 @@ type Employee = {
   division_name_en: string | null;
   division_name_cn: string | null;
   employment_status: string | null;
+  is_manager: boolean;
 };
 
 type LeaveRequest = {
   id: string;
+  source: LeaveSource;
   employeeNo: string;
   employeeName: string;
   department: string;
@@ -55,7 +58,7 @@ const TYPE_META: Record<
       "border-violet-200 bg-violet-50 dark:border-violet-500/30 dark:bg-violet-500/10",
   },
   UPL: {
-    labelEn: "Permission",
+    labelEn: "Unpaid Leave",
     labelCn: "请假 / 外出",
     className:
       "border-indigo-200 bg-indigo-50 dark:border-indigo-500/30 dark:bg-indigo-500/10",
@@ -109,6 +112,7 @@ const API_LEAVE = "/api/organization/attendance/leave";
 
 type LeaveApiRow = {
   id: number;
+  source: LeaveSource;
   employee_no: string;
   request_date: string;
   request_type: RequestType;
@@ -143,6 +147,10 @@ function employeeDisplayName(
     : employee.name_en || employee.name_cn || employee.employee_no;
 }
 
+function requestKey(request: Pick<LeaveRequest, "id" | "source">): string {
+  return `${request.source}:${request.id}`;
+}
+
 function departmentDisplayName(
   employee: Employee | null | undefined,
   language: OrganizationLanguage,
@@ -158,6 +166,7 @@ function departmentDisplayName(
 const DEMO_REQUESTS: LeaveRequest[] = [
   {
     id: "demo-1",
+    source: "final",
     employeeNo: "62000085",
     employeeName: "Ari Wira Saputra",
     department: "IT",
@@ -171,6 +180,7 @@ const DEMO_REQUESTS: LeaveRequest[] = [
   },
   {
     id: "demo-2",
+    source: "pending",
     employeeNo: "62000059",
     employeeName: "Antoni Lau",
     department: "IT",
@@ -184,6 +194,7 @@ const DEMO_REQUESTS: LeaveRequest[] = [
   },
   {
     id: "demo-3",
+    source: "final",
     employeeNo: "62000468",
     employeeName: "Galuh Pratama",
     department: "IT",
@@ -207,6 +218,7 @@ export default function LeavePermissionPage() {
   const [requestsError, setRequestsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<LeaveRequest | null>(null);
 
   const [currentEmployeeNo, setCurrentEmployeeNo] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -235,11 +247,13 @@ export default function LeavePermissionPage() {
   const [employeeFilter, setEmployeeFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [typeFilter, setTypeFilter] = useState<"" | RequestType>("");
   const [statusFilter, setStatusFilter] = useState<"" | RequestStatus>("");
   const [oaNumberFilter, setOaNumberFilter] = useState<"" | "HAS_OA" | "NO_OA">("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -329,7 +343,9 @@ export default function LeavePermissionPage() {
           (employee) =>
             employee.employee_no &&
             employee.employee_no !== "SUPERADMIN" &&
-            employee.employment_status === "Active",
+            ( employee.employment_status === "Active"||
+            employee.is_manager
+            ),
         );
 
         setEmployees(activeEmployees);
@@ -380,6 +396,7 @@ export default function LeavePermissionPage() {
 
     return {
       id: String(row.id),
+      source: row.source,
       employeeNo: row.employee_no,
       managerEmployeeNo: row.manager_employee_no,
       managerName:
@@ -520,7 +537,8 @@ export default function LeavePermissionPage() {
       return;
     }
 
-    setApprovalId(request.id);
+    const approvalKey = requestKey(request);
+    setApprovalId(approvalKey);
     setRequestsError(null);
 
     try {
@@ -531,6 +549,7 @@ export default function LeavePermissionPage() {
         },
         body: JSON.stringify({
           id: Number(request.id),
+          source: request.source,
           status,
           approvedBy: currentEmployeeNo,
         }),
@@ -542,19 +561,33 @@ export default function LeavePermissionPage() {
         error?: string;
       };
 
-      if (!response.ok || payload.success === false || !payload.data) {
+      if (!response.ok || payload.success === false) {
         throw new Error(
           payload.error || `Leave API failed: ${response.status}`,
         );
       }
 
-      setRequests((current) =>
-        current.map((item) =>
-          item.id === request.id
-            ? mapLeaveRow(payload.data as LeaveApiRow)
-            : item,
-        ),
-      );
+      // Reject is stored in attendance_leave_history and removed from the
+      // pending table. Reload the list so the new Rejected history row appears.
+      if (status === "Rejected") {
+        await loadRequests();
+        return;
+      }
+
+      // Approve moves the pending request into the final table and returns
+      // the new final row. The final row can have a different database ID.
+      if (!payload.data) {
+        throw new Error(
+          payload.error || `Leave API failed: ${response.status}`,
+        );
+      }
+
+      const updatedItem = mapLeaveRow(payload.data as LeaveApiRow);
+
+      setRequests((current) => [
+        updatedItem,
+        ...current.filter((item) => requestKey(item) !== approvalKey),
+      ]);
     } catch (error) {
       setRequestsError(
         error instanceof Error
@@ -582,14 +615,19 @@ export default function LeavePermissionPage() {
 
   const updateOaNumber = async (request: LeaveRequest) => {
     if (!canEditOaNumber(request) || oaSavingId) return;
-    const value = (oaDrafts[request.id] ?? request.oaNumber ?? "").trim();
-    setOaSavingId(request.id);
+    const key = requestKey(request);
+    const value = (oaDrafts[key] ?? request.oaNumber ?? "").trim();
+    setOaSavingId(key);
     setRequestsError(null);
     try {
       const response = await fetch(API_LEAVE, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: Number(request.id), oaNumber: value || null }),
+        body: JSON.stringify({
+          id: Number(request.id),
+          source: "final",
+          oaNumber: value || null,
+        }),
       });
       const payload = (await response.json()) as {
         success?: boolean;
@@ -601,17 +639,19 @@ export default function LeavePermissionPage() {
       }
       setRequests((current) =>
         current.map((item) =>
-          item.id === request.id ? mapLeaveRow(payload.data as LeaveApiRow) : item,
+          item.id === request.id && item.source === request.source
+            ? mapLeaveRow(payload.data as LeaveApiRow)
+            : item,
         ),
       );
       setOaDrafts((current) => {
         const next = { ...current };
-        delete next[request.id];
+        delete next[key];
         return next;
       });
       setOaEditingIds((current) => ({
         ...current,
-        [request.id]: false,
+        [key]: false,
       }));
     } catch (error) {
       setRequestsError(error instanceof Error ? error.message : "Failed to update OA Number.");
@@ -657,6 +697,7 @@ export default function LeavePermissionPage() {
     return requests.filter((item) => {
       if (employeeFilter && item.employeeNo !== employeeFilter) return false;
       if (departmentFilter && item.department !== departmentFilter) return false;
+      if (monthFilter && !item.date.startsWith(monthFilter)) return false;
       if (dateFilter && item.date !== dateFilter) return false;
       if (typeFilter && item.type !== typeFilter) return false;
       if (statusFilter && item.status !== statusFilter) return false;
@@ -668,40 +709,17 @@ export default function LeavePermissionPage() {
     requests,
     employeeFilter,
     departmentFilter,
+    monthFilter,
     dateFilter,
     typeFilter,
     statusFilter,
     oaNumberFilter,
   ]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
-
-  const paginatedRequests = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredRequests.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredRequests, currentPage]);
-
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    employeeFilter,
-    departmentFilter,
-    dateFilter,
-    typeFilter,
-    statusFilter,
-    oaNumberFilter,
-  ]);
-
-  React.useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
 
   const resetForm = () => {
     const firstEmployee = employees[0];
 
-    setEmployeeNo(firstEmployee?.employee_no ?? "");
+    setEmployeeNo(firstEmployee?.employee_no ?? currentEmployeeNo ?? "");
     setEmployeeName(
       firstEmployee
         ? employeeDisplayName(
@@ -727,6 +745,48 @@ export default function LeavePermissionPage() {
     setReason("");
   };
 
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingRequest(null);
+    setRequestsError(null);
+  };
+
+  const openNewRequestForm = () => {
+    setEditingRequest(null);
+    resetForm();
+    setRequestsError(null);
+    setShowForm(true);
+  };
+
+  const canEditRequest = (item: LeaveRequest) => {
+    if (authLoading || !currentEmployeeNo) return false;
+    if (item.status !== "Pending") return false;
+    if (item.source !== "pending") return false;
+
+    const role = String(currentUserRole ?? "").trim().toLowerCase();
+    const isAdmin = role === "admin";
+    const isOwner = item.employeeNo === currentEmployeeNo;
+
+    return isOwner || isAdmin;
+  };
+
+  const openEditForm = (item: LeaveRequest) => {
+    if (!canEditRequest(item)) return;
+
+    setEditingRequest(item);
+    setEmployeeNo(item.employeeNo);
+    setEmployeeName(item.employeeName);
+    setDepartment(item.department);
+    setDate(item.date);
+    setType(item.type);
+    setNoAttendanceType(item.noAttendanceType ?? null);
+    setStartTime(item.startTime);
+    setEndTime(item.endTime);
+    setReason(item.reason);
+    setRequestsError(null);
+    setShowForm(true);
+  };
+
   const submitRequest = async () => {
     if (
       !employeeNo.trim() ||
@@ -749,25 +809,53 @@ export default function LeavePermissionPage() {
       return;
     }
 
+    if (editingRequest && !canEditRequest(editingRequest)) {
+      setRequestsError(
+        language === "cn"
+          ? "该申请当前不可编辑。"
+          : "This request cannot be edited.",
+      );
+      return;
+    }
+
+    const isEditing = Boolean(editingRequest);
+
     setSubmitting(true);
     setRequestsError(null);
 
     try {
       const response = await fetch(API_LEAVE, {
-        method: "POST",
+        method: isEditing ? "PATCH" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          employeeNo: employeeNo.trim(),
-          date,
-          requestType: type,
-          noAttendanceType: type === "NO_ATTENDANCE" ? noAttendanceType : null,
-          startTime: type === "NO_ATTENDANCE" ? null : startTime,
-          endTime: type === "NO_ATTENDANCE" ? null : endTime,
-          reason: reason.trim(),
-          createdBy: employeeNo.trim(),
-        }),
+        body: JSON.stringify(
+          isEditing
+            ? {
+                id: Number(editingRequest?.id),
+                source: "pending",
+                employeeNo: employeeNo.trim(),
+                requestType: type,
+                noAttendanceType:
+                  type === "NO_ATTENDANCE" ? noAttendanceType : null,
+                date,
+                startTime: type === "NO_ATTENDANCE" ? null : startTime,
+                endTime: type === "NO_ATTENDANCE" ? null : endTime,
+                reason: reason.trim(),
+                updatedBy: currentEmployeeNo ?? employeeNo.trim(),
+              }
+            : {
+                employeeNo: employeeNo.trim(),
+                date,
+                requestType: type,
+                noAttendanceType:
+                  type === "NO_ATTENDANCE" ? noAttendanceType : null,
+                startTime: type === "NO_ATTENDANCE" ? null : startTime,
+                endTime: type === "NO_ATTENDANCE" ? null : endTime,
+                reason: reason.trim(),
+                createdBy: employeeNo.trim(),
+              },
+        ),
       });
 
       const payload = (await response.json()) as {
@@ -782,20 +870,33 @@ export default function LeavePermissionPage() {
         );
       }
 
-      setRequests((current) => [
-        mapLeaveRow(payload.data as LeaveApiRow),
-        ...current.filter(
-          (item) => item.id !== String(payload.data?.id),
-        ),
-      ]);
+      const updatedItem = mapLeaveRow(payload.data as LeaveApiRow);
 
-      resetForm();
-      setShowForm(false);
+      setRequests((current) => {
+        if (isEditing) {
+          return current.map((item) =>
+            item.id === updatedItem.id && item.source === updatedItem.source
+              ? updatedItem
+              : item,
+          );
+        }
+
+        return [
+          updatedItem,
+          ...current.filter((item) => item.id !== updatedItem.id),
+        ];
+      });
+
+      closeForm();
+      await loadRequests();
+      
     } catch (error) {
       setRequestsError(
         error instanceof Error
           ? error.message
-          : "Failed to submit leave request.",
+          : isEditing
+            ? "Failed to update leave request."
+            : "Failed to submit leave request.",
       );
     } finally {
       setSubmitting(false);
@@ -814,8 +915,8 @@ export default function LeavePermissionPage() {
     if (item.type === "NO_ATTENDANCE") {
       const attendanceLabel = noAttendanceLabel(item.noAttendanceType);
       return attendanceLabel === "—"
-        ? `${item.type} · ${typeLabel(item.type)}`
-        : `${item.type} · ${attendanceLabel}`;
+         ? typeLabel(item.type)
+         : attendanceLabel;
     }
 
     return `${item.type} · ${typeLabel(item.type)}`;
@@ -921,13 +1022,14 @@ export default function LeavePermissionPage() {
 
           .leave-filter-input {
             width: 100%;
+            height: 38px;
             border: 1px solid var(--border);
             background: var(--surface);
             color: var(--text);
-            border-radius: 0.65rem;
-            padding: 0.7rem 0.75rem;
-            font-size: 0.75rem;
-            line-height: 1.2rem;
+            border-radius: 0.5rem;
+            padding: 0 0.65rem;
+            font-size: 0.7rem;
+            line-height: 1rem;
             outline: none;
             transition: border-color 160ms ease, box-shadow 160ms ease;
           }
@@ -961,10 +1063,7 @@ export default function LeavePermissionPage() {
 
           <button
             type="button"
-            onClick={() => {
-              resetForm();
-              setShowForm(true);
-            }}
+            onClick={openNewRequestForm}
             className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md"
           >
             + {language === "cn" ? "新申请" : "New Request"}
@@ -1025,7 +1124,7 @@ export default function LeavePermissionPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 border-b border-border-subtle p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid gap-2 border-b border-border-subtle px-3 py-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <select
               value={employeeFilter}
               onChange={(event) => setEmployeeFilter(event.target.value)}
@@ -1059,11 +1158,11 @@ export default function LeavePermissionPage() {
             </select>
 
             <input
-              type="date"
-              value={dateFilter}
-              onChange={(event) => setDateFilter(event.target.value)}
+              type="month"
+              value={monthFilter}
+              onChange={(event) => setMonthFilter(event.target.value)}
               className="leave-filter-input"
-              aria-label={language === "cn" ? "日期" : "Date"}
+              aria-label={language === "cn" ? "月份" : "Month"}
             />
 
             <select
@@ -1125,38 +1224,35 @@ export default function LeavePermissionPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
-            <table className="min-w-[1280px] w-full border-collapse">
-              <thead>
+          <div className="max-h-[560px] overflow-auto">
+            <table className="min-w-[1100px] w-full border-collapse">
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-slate-100 dark:bg-slate-800">
-                  <th className="border-b border-r border-border px-4 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="border-b border-r border-border px-3 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "员工" : "Employee"}
                   </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="border-b border-r border-border px-2 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "部门" : "Department"}
                   </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="border-b border-r border-border px-2 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "日期" : "Date"}
                   </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="border-b border-r border-border px-2 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "类型" : "Type"}
                   </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "开始" : "Start"}
+                  <th className="border-b border-r border-border px-2 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
+                    {language === "cn" ? "时间" : "Time"}
                   </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "结束" : "End"}
-                  </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="border-b border-r border-border px-2 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "原因" : "Reason"}
                   </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="border-b border-r border-border px-2 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "状态" : "Status"}
                   </th>
-                  <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="border-b border-r border-border px-2 py-2 text-left text-[9px] font-black text-slate-700 dark:text-white">
                     {language === "cn" ? "OA 编号" : "OA Number"}
                   </th>
-                  <th className="border-b border-border px-3 py-3 text-center text-[10px] font-black text-slate-700 dark:text-white">
+                  <th className="w-24 border-b border-border px-2 py-2 text-center text-[9px] font-bold text-slate-700 dark:text-white">
                     {language === "cn" ? "操作" : "Action"}
                   </th>
                 </tr>
@@ -1166,7 +1262,7 @@ export default function LeavePermissionPage() {
                 {requestsLoading ? (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={9}
                       className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
                     >
                       {language === "cn"
@@ -1177,7 +1273,7 @@ export default function LeavePermissionPage() {
                 ) : requests.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={9}
                       className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
                     >
                       {language === "cn"
@@ -1186,29 +1282,29 @@ export default function LeavePermissionPage() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedRequests.map((item) => (
+                  filteredRequests.map((item) => (
                   <tr
-                    key={item.id}
+                    key={requestKey(item)}
                     className="border-b border-border-subtle transition-colors hover:bg-surface-hover/60"
                   >
-                    <td className="px-4 py-3">
-                      <p className="text-xs font-extrabold text-text">
+                    <td className="px-3 py-2">
+                      <p className="text-[11px] font-extrabold text-text">
                         {item.employeeName}
                       </p>
-                      <p className="mt-0.5 text-[10px] text-text-dim">
+                      <p className="mt-0.5 text-[9px] text-text-dim">
                         {item.employeeNo}
                       </p>
                     </td>
 
-                    <td className="px-3 py-3 text-[10px] font-semibold text-text-muted">
+                    <td className="px-2 py-2 text-[10px] font-semibold text-text-muted">
                       {item.department}
                     </td>
 
-                    <td className="px-3 py-3 text-[10px] font-bold text-text">
+                    <td className="px-2 py-2 text-[10px] font-bold text-text">
                       {item.date}
                     </td>
 
-                    <td className="px-3 py-3">
+                    <td className="px-2 py-2">
                       <span
                         data-request-type={item.type}
                         className={`leave-type-pill inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${TYPE_META[item.type]?.className ?? "border-slate-200 bg-slate-50"}`}
@@ -1219,21 +1315,19 @@ export default function LeavePermissionPage() {
                       </span>
                     </td>
 
-                    <td className="px-3 py-3 text-[10px] font-bold text-text">
-                      {item.startTime || "—"}
+                    <td className="px-2 py-2 whitespace-nowrap text-[10px] font-bold text-text">
+                      {item.startTime && item.endTime
+                        ? `${item.startTime} – ${item.endTime}`
+                        : item.startTime || item.endTime || "—"}
                     </td>
 
-                    <td className="px-3 py-3 text-[10px] font-bold text-text">
-                      {item.endTime || "—"}
-                    </td>
-
-                    <td className="max-w-[300px] px-3 py-3 text-xs font-medium text-text">
+                    <td className="max-w-[260px] px-2 py-2 text-[10px] font-medium text-text">
                       <div className="truncate" title={item.reason}>
                         {item.reason}
                       </div>
                     </td>
 
-                    <td className="border-r border-border px-3 py-3">
+                    <td className="border-r border-border px-2 py-2">
                       <span
                         data-status={item.status}
                         className={`leave-status-pill inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-extrabold ${STATUS_META[item.status]?.className ?? "border-slate-200 bg-slate-50"}`}
@@ -1252,41 +1346,41 @@ export default function LeavePermissionPage() {
                       </span>
                     </td>
 
-                    <td className="border-r border-border px-3 py-3">
+                    <td className="border-r border-border px-2 py-2">
                       {item.status === "Approved" ? (
                         canEditOaNumber(item) ? (
-                          oaEditingIds[item.id] || !item.oaNumber ? (
+                          oaEditingIds[requestKey(item)] || !item.oaNumber ? (
                             <div className="flex items-center gap-1.5">
                               <input
-                                value={oaDrafts[item.id] ?? item.oaNumber ?? ""}
+                                value={oaDrafts[requestKey(item)] ?? item.oaNumber ?? ""}
                                 onChange={(event) =>
                                   setOaDrafts((current) => ({
                                     ...current,
-                                    [item.id]: event.target.value,
+                                    [requestKey(item)]: event.target.value,
                                   }))
                                 }
-                                disabled={oaSavingId === item.id}
+                                disabled={oaSavingId === requestKey(item)}
                                 className="w-32 rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-semibold text-text"
                                 placeholder={language === "cn" ? "OA 编号" : "OA Number"}
                               />
                               <button
                                 type="button"
                                 onClick={() => void updateOaNumber(item)}
-                                disabled={oaSavingId === item.id}
+                                disabled={oaSavingId === requestKey(item)}
                                 className="rounded-lg bg-cyan-600 px-2 py-1.5 text-[10px] font-bold text-white disabled:opacity-50"
                               >
-                                {oaSavingId === item.id ? "..." : language === "cn" ? "保存" : "Save"}
+                                {oaSavingId === requestKey(item) ? "..." : language === "cn" ? "保存" : "Save"}
                               </button>
-                              {oaEditingIds[item.id] && (
+                              {oaEditingIds[requestKey(item)] && (
                                 <button
                                   type="button"
                                   onClick={() =>
                                     setOaEditingIds((current) => ({
                                       ...current,
-                                      [item.id]: false,
+                                      [requestKey(item)]: false,
                                     }))
                                   }
-                                  disabled={oaSavingId === item.id}
+                                  disabled={oaSavingId === requestKey(item)}
                                   className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-bold text-text disabled:opacity-50"
                                 >
                                   {language === "cn" ? "取消" : "Cancel"}
@@ -1303,11 +1397,11 @@ export default function LeavePermissionPage() {
                                 onClick={() => {
                                   setOaDrafts((current) => ({
                                     ...current,
-                                    [item.id]: item.oaNumber ?? "",
+                                    [requestKey(item)]: item.oaNumber ?? "",
                                   }));
                                   setOaEditingIds((current) => ({
                                     ...current,
-                                    [item.id]: true,
+                                    [requestKey(item)]: true,
                                   }));
                                 }}
                                 className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover"
@@ -1328,52 +1422,64 @@ export default function LeavePermissionPage() {
                       )}
                     </td>
 
-                    <td className="px-3 py-3">
-                      {item.status === "Pending" && canApproveRequest(item) ? (
-                        <div className="flex items-center justify-center gap-1.5">
+                    <td className="w-24 px-2 py-2">
+                      <div className="flex items-center justify-center gap-1">
+                        {canEditRequest(item) && (
                           <button
                             type="button"
-                            onClick={() =>
-                              updateRequestStatus(item, "Approved")
-                            }
-                            disabled={approvalId === item.id}
-                            className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[10px] font-extrabold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => openEditForm(item)}
+                            disabled={approvalId === requestKey(item)}
+                            className="flex size-7 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300 disabled:opacity-40"
+                            title={language === "cn" ? "编辑申请" : "Edit request"}
+                            aria-label={language === "cn" ? "编辑申请" : "Edit request"}
                           >
-                            {approvalId === item.id
-                              ? language === "cn"
-                                ? "处理中..."
-                                : "Working..."
-                              : language === "cn"
-                                ? "批准"
-                                : "Approve"}
+                            <span aria-hidden="true" className="text-[13px] leading-none">✎</span>
                           </button>
+                        )}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateRequestStatus(item, "Rejected")
+                        {item.status === "Pending" && canApproveRequest(item) ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => updateRequestStatus(item, "Approved")}
+                              disabled={approvalId === requestKey(item)}
+                              className="flex size-7 items-center justify-center rounded-md bg-emerald-500 text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
+                              title={language === "cn" ? "批准" : "Approve"}
+                              aria-label={language === "cn" ? "批准" : "Approve"}
+                            >
+                              <span className="text-[13px] font-bold leading-none">✓</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => updateRequestStatus(item, "Rejected")}
+                              disabled={approvalId === requestKey(item)}
+                              className="flex size-7 items-center justify-center rounded-md bg-red-500 text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                              title={language === "cn" ? "拒绝" : "Reject"}
+                              aria-label={language === "cn" ? "拒绝" : "Reject"}
+                            >
+                              <span className="text-[13px] font-bold leading-none">✕</span>
+                            </button>
+                          </>
+                        ) : item.status === "Pending" && !canEditRequest(item) ? (
+                          <span
+                            className="text-[11px] text-text-dim"
+                            title={
+                              item.employeeNo === currentEmployeeNo
+                                ? language === "cn"
+                                  ? "等待经理审核"
+                                  : "Manager approval required"
+                                : language === "cn"
+                                  ? "等待直属经理"
+                                  : "Waiting for manager"
                             }
-                            disabled={approvalId === item.id}
-                            className="rounded-lg bg-red-600 px-2.5 py-1.5 text-[10px] font-extrabold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {language === "cn" ? "拒绝" : "Reject"}
-                          </button>
-                        </div>
-                      ) : item.status === "Pending" ? (
-                        <span className="block text-center text-[10px] font-semibold text-text-dim">
-                          {item.employeeNo === currentEmployeeNo
-                            ? language === "cn"
-                              ? "等待经理权限"
-                              : "Manager approval required"
-                            : language === "cn"
-                              ? "等待直属经理"
-                              : "Waiting for manager"}
-                        </span>
-                      ) : (
-                        <span className="block text-center text-[10px] font-semibold text-text-dim">
-                          —
-                        </span>
-                      )}
+                            •••
+                          </span>
+                        ) : !canEditRequest(item) && item.status !== "Pending" ? (
+                          <span className="text-[11px] text-text-dim">—</span>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1382,37 +1488,6 @@ export default function LeavePermissionPage() {
             </table>
           </div>
 
-          {!requestsLoading && filteredRequests.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[10px] font-semibold text-text-muted">
-                {language === "cn"
-                  ? `第 ${currentPage} / ${totalPages} 页 · 共 ${filteredRequests.length} 条`
-                  : `Page ${currentPage} of ${totalPages} · ${filteredRequests.length} records`}
-              </p>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  disabled={currentPage === 1}
-                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {language === "cn" ? "上一页" : "Previous"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.min(totalPages, page + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {language === "cn" ? "下一页" : "Next"}
-                </button>
-              </div>
-            </div>
-          )}
         </Card>
 
         {showForm && (
@@ -1421,26 +1496,42 @@ export default function LeavePermissionPage() {
               <div className="flex items-start justify-between border-b border-border-subtle px-5 py-4">
                 <div>
                   <h2 className="text-base font-extrabold text-text">
-                    {language === "cn"
-                      ? "新建请假 / 外出申请"
-                      : "New Leave / Permission Request"}
+                    {editingRequest
+                      ? language === "cn"
+                        ? "编辑请假 / 外出申请"
+                        : "Edit Leave / Permission Request"
+                      : language === "cn"
+                        ? "新建请假 / 外出申请"
+                        : "New Leave / Permission Request"}
                   </h2>
                   <p className="mt-1 text-[10px] text-text-muted">
-                    {language === "cn"
-                      ? "提交后状态为待审核。"
-                      : "New requests are created with Pending status."}
+                    {editingRequest
+                      ? language === "cn"
+                        ? "修改后申请仍保持待审核状态。"
+                        : "Changes will keep the request in Pending status."
+                      : language === "cn"
+                        ? "提交后状态为待审核。"
+                        : "New requests are created with Pending status."}
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={closeForm}
                   className="rounded-lg p-2 text-lg font-bold text-text-muted transition hover:bg-surface-hover hover:text-text"
                   aria-label="Close"
                 >
                   ×
                 </button>
               </div>
+
+              {editingRequest && (
+                <div className="mx-5 mt-4 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-[10px] font-semibold text-cyan-800 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-500">
+                  {language === "cn"
+                    ? "编辑模式：可修改员工、日期、类型、时间和原因。员工姓名和部门会根据所选员工自动同步。"
+                    : "Edit mode: you can change the employee, date, type, time, and reason. Employee name and department sync automatically with the selected employee."}
+                </div>
+              )}
 
               <div className="grid gap-4 p-5 md:grid-cols-2">
                 <div className="md:col-span-2">
@@ -1452,7 +1543,10 @@ export default function LeavePermissionPage() {
                       onChange={(event) =>
                         handleEmployeeChange(event.target.value)
                       }
-                      disabled={employeesLoading || employees.length === 0}
+                      disabled={
+                        employeesLoading ||
+                        employees.length === 0
+                      }
                       className="field-input"
                     >
                       {employees.length === 0 ? (
@@ -1496,39 +1590,50 @@ export default function LeavePermissionPage() {
                 <Field
                   label={language === "cn" ? "员工工号" : "Employee No."}
                 >
-                  <input
+                  <select
                     value={employeeNo}
-                    readOnly
-                    className="field-input bg-slate-50 dark:bg-slate-900/40"
-                  />
+                    onChange={(event) => handleEmployeeChange(event.target.value)}
+                    disabled={employeesLoading || employees.length === 0}
+                    className="field-input"
+                  >
+                    {employees.map((employee) => (
+                      <option key={employee.employee_no} value={employee.employee_no}>
+                        {employee.employee_no}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
                 <Field
                   label={language === "cn" ? "员工姓名" : "Employee Name"}
                 >
-                  <input
-                    value={employeeName}
-                    readOnly
-                    className="field-input bg-slate-50 dark:bg-slate-900/40"
-                  />
+                  <select
+                    value={employeeNo}
+                    onChange={(event) => handleEmployeeChange(event.target.value)}
+                    disabled={employeesLoading || employees.length === 0}
+                    className="field-input"
+                  >
+                    {employees.map((employee) => (
+                      <option key={employee.employee_no} value={employee.employee_no}>
+                        {employeeDisplayName(employee, language, employee.employee_no)}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
                 <Field label={language === "cn" ? "部门" : "Department"}>
-                  <input
-                    value={department}
-                    readOnly
-                    placeholder="IT"
-                    className="field-input bg-slate-50 dark:bg-slate-900/40"
-                  />
-                </Field>
-
-                <Field label={language === "cn" ? "日期" : "Date"}>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(event) => setDate(event.target.value)}
+                  <select
+                    value={employeeNo}
+                    onChange={(event) => handleEmployeeChange(event.target.value)}
+                    disabled={employeesLoading || employees.length === 0}
                     className="field-input"
-                  />
+                  >
+                    {employees.map((employee) => (
+                      <option key={employee.employee_no} value={employee.employee_no}>
+                        {departmentDisplayName(employee, language, "—")}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
                 <Field label={language === "cn" ? "类型" : "Type"}>
@@ -1546,7 +1651,7 @@ export default function LeavePermissionPage() {
                       MC — {language === "cn" ? "病假" : "Sick Leave"}
                     </option>
                     <option value="UPL">
-                      UPL — {language === "cn" ? "请假 / 外出" : "Permission"}
+                      UPL — {language === "cn" ? "请假 / 外出" : "Unpaid Leave"}
                     </option>
                     <option value="OT">
                       OT — {language === "cn" ? "加班" : "Overtime"}
@@ -1579,28 +1684,20 @@ export default function LeavePermissionPage() {
                   </Field>
                 )}
 
-                {type !== "NO_ATTENDANCE" && (
-                  <>
-                    <Field label={language === "cn" ? "开始时间" : "Start Time"}>
-                      <input
-                        type="time"
-                        value={startTime}
-                        onChange={(event) => setStartTime(event.target.value)}
-                        className="field-input"
-                      />
-                    </Field>
-
-                    <Field label={language === "cn" ? "结束时间" : "End Time"}>
-                      <input
-                        type="time"
-                        value={endTime}
-                        min={startTime || undefined}
-                        onChange={(event) => setEndTime(event.target.value)}
-                        className="field-input"
-                      />
-                    </Field>
-                  </>
-                )}
+                <div className="md:col-span-2">
+                  <Field label={language === "cn" ? "时间安排" : "Schedule"}>
+                    <SchedulePicker
+                      language={language}
+                      date={date}
+                      startTime={startTime}
+                      endTime={endTime}
+                      noAttendance={type === "NO_ATTENDANCE"}
+                      onDateChange={setDate}
+                      onStartTimeChange={setStartTime}
+                      onEndTimeChange={setEndTime}
+                    />
+                  </Field>
+                </div>
 
                 <div className="md:col-span-2">
                   <Field label={language === "cn" ? "原因" : "Reason"}>
@@ -1622,7 +1719,7 @@ export default function LeavePermissionPage() {
               <div className="flex justify-end gap-2 border-t border-border-subtle px-5 py-4">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={closeForm}
                   className="rounded-lg border border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:bg-surface-hover"
                 >
                   {language === "cn" ? "取消" : "Cancel"}
@@ -1647,9 +1744,13 @@ export default function LeavePermissionPage() {
                     ? language === "cn"
                       ? "提交中..."
                       : "Submitting..."
-                    : language === "cn"
-                      ? "提交申请"
-                      : "Submit Request"}
+                    : editingRequest
+                      ? language === "cn"
+                        ? "保存修改"
+                        : "Save Changes"
+                      : language === "cn"
+                        ? "提交申请"
+                        : "Submit Request"}
                 </button>
               </div>
             </div>
@@ -1677,6 +1778,202 @@ function MetricCard({
       <p className="mt-2 text-2xl font-black text-text">{value}</p>
     </div>
   );
+}
+
+function SchedulePicker({
+  language,
+  date,
+  startTime,
+  endTime,
+  noAttendance,
+  onDateChange,
+  onStartTimeChange,
+  onEndTimeChange,
+}: {
+  language: OrganizationLanguage;
+  date: string;
+  startTime: string;
+  endTime: string;
+  noAttendance?: boolean;
+  onDateChange: (value: string) => void;
+  onStartTimeChange: (value: string) => void;
+  onEndTimeChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const timeParts = (value: string) => {
+    const match = /^(\d{2}):(\d{2})$/.exec(value);
+    return {
+      hour: match ? match[1] : "00",
+      minute: match ? match[2] : "00",
+    };
+  };
+
+  const setTimePart = (
+    value: string,
+    part: "hour" | "minute",
+    nextValue: string,
+  ) => {
+    const current = timeParts(value);
+    return part === "hour"
+      ? `${nextValue}:${current.minute}`
+      : `${current.hour}:${nextValue}`;
+  };
+
+  const displayDate = date
+    ? (() => {
+        const [year, month, day] = date.split("-");
+        return year && month && day ? `${day}/${month}/${year}` : date;
+      })()
+    : language === "cn"
+      ? "选择日期"
+      : "Select date";
+
+  const displayStart = startTime || "--:--";
+  const displayEnd = endTime || "--:--";
+
+  const start = timeParts(startTime);
+  const end = timeParts(endTime);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={[
+          "flex w-full items-center rounded-[0.65rem] border bg-surface px-3 py-2.5 text-left transition",
+          open
+            ? "border-cyan-500 ring-2 ring-cyan-500/10"
+            : "border-border hover:border-cyan-400/60",
+        ].join(" ")}
+      >
+        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text">
+          {displayDate}
+          {!noAttendance && (
+            <>
+              <span className="mx-3 text-text-dim">|</span>
+              <span>{displayStart}</span>
+              <span className="mx-2 text-text-dim">→</span>
+              <span>{displayEnd}</span>
+            </>
+          )}
+        </span>
+        <span className="ml-3 shrink-0 text-sm text-text-muted">⌄</span>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-[120] w-full min-w-[320px] rounded-xl border border-border bg-surface p-3 shadow-2xl">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-wide text-text-dim">
+              {language === "cn" ? "时间安排" : "Schedule"}
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-md px-2 py-1 text-[10px] font-bold text-text-muted hover:bg-surface-hover hover:text-text"
+            >
+              {language === "cn" ? "完成" : "Done"}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-[9px] font-bold uppercase tracking-wide text-text-dim">
+                {language === "cn" ? "日期" : "Date"}
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => onDateChange(event.target.value)}
+                className="field-input"
+              />
+            </div>
+
+            {!noAttendance && (
+              <div className="grid grid-cols-2 gap-2">
+                <TimeSelect
+                  label={language === "cn" ? "开始" : "Start"}
+                  hour={start.hour}
+                  minute={start.minute}
+                  onHourChange={(value) =>
+                    onStartTimeChange(setTimePart(startTime, "hour", value))
+                  }
+                  onMinuteChange={(value) =>
+                    onStartTimeChange(setTimePart(startTime, "minute", value))
+                  }
+                />
+
+                <TimeSelect
+                  label={language === "cn" ? "结束" : "End"}
+                  hour={end.hour}
+                  minute={end.minute}
+                  onHourChange={(value) =>
+                    onEndTimeChange(setTimePart(endTime, "hour", value))
+                  }
+                  onMinuteChange={(value) =>
+                    onEndTimeChange(setTimePart(endTime, "minute", value))
+                  }
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimeSelect({
+  label,
+  hour,
+  minute,
+  onHourChange,
+  onMinuteChange,
+}: {
+  label: string;
+  hour: string;
+  minute: string;
+  onHourChange: (value: string) => void;
+  onMinuteChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[9px] font-bold uppercase tracking-wide text-text-dim">
+        {label}
+      </label>
+      <div className="flex items-center gap-1.5">
+        <select
+          value={hour}
+          onChange={(event) => onHourChange(event.target.value)}
+          className="field-input px-2 text-center"
+          aria-label={`${label} hour`}
+        >
+          {Array.from({ length: 24 }, (_, index) => (
+            <option key={index} value={padTime(index)}>
+              {padTime(index)}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs font-bold text-text-dim">:</span>
+        <select
+          value={minute}
+          onChange={(event) => onMinuteChange(event.target.value)}
+          className="field-input px-2 text-center"
+          aria-label={`${label} minute`}
+        >
+          {Array.from({ length: 60 }, (_, index) => (
+            <option key={index} value={padTime(index)}>
+              {padTime(index)}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+function padTime(value: number) {
+  return String(value).padStart(2, "0");
 }
 
 function Field({
