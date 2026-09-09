@@ -56,6 +56,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 When I ask you to commit or push changes, follow all rules below.
 
+This file is the single source of truth for commit rules. The surrounding
+workflow — base branch selection (`dev` vs `main`), version bumping,
+`CHANGELOG.md`, and pull requests — lives in
+`.cursor/rules/im-git-workflow.mdc`, with the full step-by-step procedure in the
+`im-git-workflow` skill (`.cursor/skills/im-git-workflow/SKILL.md`).
+
 ## 1. Git Identity
 
 All commits MUST use my configured Git identity.
@@ -148,6 +154,13 @@ refactor(report): simplify report data mapping
 test(report): add weekly report validation tests
 docs(report): update weekly report documentation
 chore(deps): update frontend dependencies
+
+Release commits (the commit carrying code + `VERSION` + `package.json` +
+`CHANGELOG.md`) use the release scope instead:
+
+feat(release): v1.2.0 - add weekly report attachments
+fix(release): v1.1.4 - correct stock balance rounding
+chore(release): v1.1.5 - update frontend dependencies
 
 ## 5. Commit Message Rules
 
