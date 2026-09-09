@@ -115,7 +115,7 @@ export function UploadModal({
                 className={inputClass}
               >
                 <option value="">
-                  {loadingUsers ? "Loading PIC..." : safetyText("enterPic", language)}
+                  {safetyText("enterPic", language)}
                 </option>
 
                 {users.map((user) => {

@@ -1,7 +1,7 @@
 import type { ModuleCardData } from "@/data/overview";
 import { localizedName } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
-import { areaColor, reportEnText } from "./copy";
+import { areaColor, reportText } from "./copy";
 import { monthLabel } from "./weekCalendar";
 import type { ReportKpiSnapshot, ReportOverviewMetrics } from "./types";
 
@@ -43,28 +43,28 @@ export function mapReportToOverview(
       kpiStat(
         metrics.achievement,
         metrics.achievement.value >= 90 ? "success" : "warning",
-        reportEnText("achievement")
+        reportText("achievement", lang)
       ),
-      kpiStat(metrics.workCompletion, "accent", reportEnText("workCompletion")),
+      kpiStat(metrics.workCompletion, "accent", reportText("workCompletion", lang)),
       projectProgress
         ? kpiStat(
             projectProgress,
             projectProgress.value >= 90 ? "success" : "warning",
-            reportEnText("projectProgress")
+            reportText("projectProgress", lang)
           )
         : {
-            label: reportEnText("projectProgress"),
+            label: reportText("projectProgress", lang),
             value: "—",
             tone: "warning" as const,
           },
       kpiStat(
         metrics.reportCompletion,
         metrics.reportCompletion.value >= 100 ? "success" : "warning",
-        reportEnText("reportCompletion")
+        reportText("reportCompletion", lang)
       ),
     ],
     trendBars: {
-      title: reportEnText("workTrend"),
+      title: reportText("workTrend", lang),
       items: [],
     },
     reportWeeklyTrend: metrics.weeklyTrend,
@@ -80,6 +80,7 @@ export function mapReportToOverview(
         label: areaLabel(a.nameEn, a.nameCn),
         value: a.avgCompletionRate,
         color: areaColor(a.code),
+        code: a.code,
       })),
     },
   };

@@ -55,6 +55,10 @@ describe("guestHasPermission", () => {
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartOverviewView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartStockView);
     expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartDocumentRead);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.organizationOverviewView);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.organizationEmployeeRead);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.organizationShiftRead);
+    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.organizationAttendanceRead);
     expect(guestHasPermission(PERMISSIONS.itsmAnalysisView)).toBe(true);
     expect(guestHasPermission(PERMISSIONS.adminRolesManage)).toBe(false);
   });
@@ -89,6 +93,13 @@ describe("getRoleAccess", () => {
     expect(access.canViewSparepartDocuments).toBe(true);
     expect(access.canPostSparepartDocument).toBe(false);
     expect(access.canReverseSparepartDocument).toBe(false);
+    expect(access.canViewOrganizationOverview).toBe(true);
+    expect(access.canViewOrganizationEmployees).toBe(true);
+    expect(access.canViewOrganizationShift).toBe(true);
+    expect(access.canViewOrganizationAttendance).toBe(true);
+    expect(access.canManageOrganizationShift).toBe(false);
+    expect(access.canManageOrganizationAttendance).toBe(false);
+    expect(access.canCreateOrganizationEmployee).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {
@@ -248,7 +259,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 42 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(49);
+  it("has exactly 58 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(58);
   });
 });

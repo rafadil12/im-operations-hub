@@ -11,6 +11,7 @@ import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import { normalizeCategoryCode } from "@/lib/sparepart/categories";
 import { overviewMatchesFilters, type SparepartOverviewData } from "@/lib/sparepart/overview";
+import { SkeletonPage } from "@/components/ui/skeletons";
 
 function isAbortError(err: unknown): boolean {
   return (
@@ -98,11 +99,7 @@ export default function SparepartIndexPage() {
   }, [access.canViewSparepartOverview, category, loading, range, t.common.error]);
 
   if (loading || !hasAnySparepart) {
-    return (
-      <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-        {t.common.loading}
-      </div>
-    );
+    return <SkeletonPage preset="dashboard" />;
   }
 
   if (!access.canViewSparepartOverview) {
@@ -168,11 +165,7 @@ export default function SparepartIndexPage() {
         <p className="text-sm text-text-muted">{t.sparepart.overviewDesc}</p>
       </div>
 
-      {fetching && !data ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
-      ) : null}
+      {fetching && !data ? <SkeletonPage preset="dashboard" /> : null}
 
       {error && !data ? (
         <div className="rounded-lg border border-danger/40 bg-danger/10 p-8 text-center text-sm text-danger">

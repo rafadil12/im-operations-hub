@@ -14,6 +14,7 @@ import {
   type ReportLine,
   type ReportOverviewMetrics,
 } from "@/lib/report";
+import { SkeletonChart, SkeletonKpiGrid } from "@/components/ui/skeletons";
 import { getWeekNumberForDate, weekLabel } from "@/lib/report/weekCalendar";
 import { ProgressRingItem } from "@/components/overview/ModuleCardShared";
 import { DivisionRateBar, ReportOverviewKpiCard } from "./ReportOverviewParts";
@@ -343,8 +344,11 @@ export function ReportOverview() {
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {reportText("loading", language)}
+        <div className="space-y-4">
+          <SkeletonKpiGrid count={4} />
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <SkeletonChart variant="line" className="h-40" />
+          </div>
         </div>
       ) : null}
 

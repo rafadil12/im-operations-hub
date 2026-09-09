@@ -2,7 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
+import { useToast } from "@/components/ui/ToastProvider";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { SkeletonKpiGrid } from "@/components/ui/skeletons";
 
 type ShiftCode = "D/S" | "N/S" | "1" | "4";
 
@@ -328,6 +333,9 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
+    if (handleGuestForbiddenResponse(response.status, payload, init?.method)) {
+      throw new Error("Not allowed, please login.");
+    }
     const error =
       typeof payload === "object" && payload !== null && "error" in payload
         ? String((payload as { error?: unknown }).error ?? "API request failed")
@@ -449,7 +457,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-border bg-surface transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.12)] ${className}`}>
+    <div className={`rounded-2xl border border-slate-200/80 bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-[border-color,box-shadow,background-color] duration-300 hover:border-slate-300 hover:shadow-[0_10px_30px_rgba(15,23,42,0.06)] ${className}`}>
       {children}
     </div>
   );
@@ -479,13 +487,13 @@ function StatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold shadow-sm ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
         active
-          ? "bg-emerald-500 text-white"
-          : "bg-slate-500 text-white"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700 "
+          : "border-slate-200 bg-slate-100 text-slate-500 "
       }`}
     >
-      <span className="size-1.5 rounded-full bg-white/80" />
+      <span className={`size-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-slate-400"}`} />
       {active ? text("active", language) : text("inactive", language)}
     </span>
   );
@@ -500,7 +508,7 @@ function ShiftBadge({
 }) {
   if (!shift) {
     return (
-      <span className="inline-flex min-w-[92px] items-center justify-center rounded-full bg-slate-500 px-3 py-1.5 text-[10px] font-extrabold text-white shadow-sm">
+      <span className="inline-flex min-w-[64px] items-center justify-center rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1 text-[9px] font-semibold text-slate-500 ">
         —
       </span>
     );
@@ -510,9 +518,11 @@ function ShiftBadge({
 
   return (
     <span
-      className={`inline-flex min-w-[92px] items-center justify-center rounded-md px-3 py-1.5 text-[10px] font-extrabold text-white shadow-sm ${
-  isDay ? "bg-cyan-500" : "bg-violet-500"
-}`}
+      className={`inline-flex min-w-[76px] items-center justify-center rounded-md border px-2.5 py-1 text-[9px] font-semibold ${
+        isDay
+          ? "border-sky-200 bg-sky-50 text-sky-700 "
+          : "border-violet-200 bg-violet-50 text-violet-700 "
+      }`}
     >
       {shift} {shiftName(shift, language)}
     </span>
@@ -528,18 +538,18 @@ function ScheduleBadge({
 }) {
   const className =
     value === "1"
-      ? "border border-emerald-500 bg-emerald-500 text-white"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 "
       : value === "4"
-        ? "border border-amber-500 bg-amber-500 text-white"
+        ? "border-amber-200 bg-amber-50 text-amber-700 "
         : value === "D"
-          ? "border border-cyan-500 bg-cyan-500 text-white"
+          ? "border-sky-200 bg-sky-50 text-sky-700 "
           : value === "N"
-            ? "border border-violet-500 bg-violet-500 text-white"
-            : "border border-rose-500 bg-rose-500 text-white";
+            ? "border-violet-200 bg-violet-50 text-violet-700 "
+            : "border-red-200 bg-red-100 text-red-500 ";
 
   return (
     <span
-      className={`inline-flex min-w-12 justify-center rounded-md px-3 py-1.5 text-[10px] font-extrabold shadow-sm ${className}`}
+      className={`inline-flex min-w-[46px] justify-center rounded-md border px-2 py-0.5 text-[8px] font-semibold shadow-none ${className}`}
       title={scheduleName(value, language)}
     >
       {scheduleName(value, language)}
@@ -573,6 +583,7 @@ function MyOffCalendar({
   onPersonalOffDaysChange: (days: PersonalOffDay[]) => void;
   onScheduleChanged?: () => void;
 }) {
+  const { error: toastError } = useToast();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -788,8 +799,10 @@ function MyOffCalendar({
       onScheduleChanged?.();
       return true;
     } catch (error) {
-      console.error("Failed to save work schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to save work schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save work schedule.";
+      toastError(message);
+      setMessage(message);
       return false;
     }
   }
@@ -816,8 +829,10 @@ function MyOffCalendar({
       onScheduleChanged?.();
       return true;
     } catch (error) {
-      console.error("Failed to delete work schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to delete work schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to delete work schedule.";
+      toastError(message);
+      setMessage(message);
       return false;
     }
   }
@@ -903,8 +918,10 @@ function MyOffCalendar({
       // clear -> 1
       await saveWorkSchedule(key, "1");
     } catch (error) {
-      console.error("Failed to change calendar schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to change calendar schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to change calendar schedule.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -935,8 +952,10 @@ function MyOffCalendar({
         ),
       );
     } catch (error) {
-      console.error("Failed to reset OFF days", error);
-      setMessage(error instanceof Error ? error.message : "Failed to reset OFF days.");
+      const message =
+        error instanceof Error ? error.message : "Failed to reset OFF days.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -980,8 +999,10 @@ function MyOffCalendar({
       onPersonalOffDaysChange([...otherEmployees, ...fixedRows]);
       setMessage(text("saveSuccess", language));
     } catch (error) {
-      console.error("Failed to save personal OFF days", error);
-      setMessage(error instanceof Error ? error.message : "Failed to save personal OFF days.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save personal OFF days.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -994,122 +1015,131 @@ function MyOffCalendar({
     : currentEmployeeId || "—";
 
   return (
-    <div className="mt-2 border-t border-border-subtle pt-6">
-      <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
-        <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/5 text-lg font-bold text-cyan-300">
-            ◎
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-text">{language === "cn" ? "工作排班日历" : "Work Schedule"}</h1>
-            <p className="mt-1 text-xs text-text-muted">{language === "cn" ? "选择未来每个日期的 1、4 或休息。" : "Choose 1, 4, or OFF for each future date."}</p>
-          </div>
+    <div className="mt-2">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold tracking-tight text-text">
+            {language === "cn" ? "工作排班日历" : "Work Schedule"}
+          </h1>
+          <p className="mt-1 text-[11px] text-text-muted">
+            {language === "cn"
+              ? "为未来日期选择 1、4 小时或休息。"
+              : "Choose 1, 4 hours, or OFF for future dates."}
+          </p>
         </div>
       </div>
 
-      <Card className="mt-5 overflow-hidden">
-        <div className="border-b border-border-subtle bg-surface-hover p-4">
-          <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-dim">
+      <Card className="overflow-hidden">
+        {/* Compact toolbar */}
+        <div className="border-b border-border-subtle px-4 py-3.5 md:px-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="shrink-0 text-[9px] font-bold uppercase tracking-[0.12em] text-text-dim">
                 {text("currentAccount", language)}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-md border border-cyan-500 bg-cyan-500 px-3 py-1.5 text-sm font-extrabold text-white shadow-sm">
-                  {authLoading ? text("loading", language) : accountLabel}
+              </span>
+              <span className="truncate text-sm font-bold text-text">
+                {authLoading ? text("loading", language) : accountLabel}
+              </span>
+
+              {!authLoading && !currentEmployeeId && (
+                <span className="text-[10px] font-semibold text-rose-600">
+                  {text("accountNotDetected", language)}
                 </span>
-              </div>
+              )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-                <span className="inline-flex items-center gap-2 rounded-md border border-emerald-500 bg-emerald-500 px-3 py-1.5 text-white shadow-sm">
-                  <span className="size-2.5 rounded-full bg-white" />
-                  1 — 08:00–17:00
-                </span>
-               <span className="inline-flex items-center gap-2 rounded-md border border-amber-500 bg-amber-500 px-3 py-1.5 text-white shadow-sm">
-                  <span className="size-2.5 rounded-sm bg-white" />
-                    4 — {language === "cn" ? "4小时" : "4 Hours"}
-                </span>
-                            <span className="inline-flex items-center gap-2 rounded-md border border-slate-500 bg-slate-500 px-3 py-1.5 text-white shadow-sm">
-                  <span className="size-2.5 rounded-sm bg-white" />
-                 {language === "cn" ? "休息" : "OFF"}
-                </span>
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-emerald-700">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                <span>1</span>
+                <span className="text-emerald-600/80">08:00–17:00</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-amber-700">
+                <span className="size-1.5 rounded-full bg-amber-500" />
+                <span>4</span>
+                <span className="text-amber-600/80">{language === "cn" ? "4小时" : "4 Hours"}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-slate-600">
+                <span className="size-1.5 rounded-full bg-slate-400" />
+                <span>OFF</span>
+              </span>
             </div>
           </div>
-
-          {!authLoading && !currentEmployeeId && (
-            <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/5 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
-              {text("accountNotDetected", language)}
-            </div>
-          )}
         </div>
 
         <div className="p-4 md:p-5">
-          <div className="mb-5 flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
-            <div className="flex items-center gap-2">
+          {/* Calendar toolbar */}
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
+                aria-label="Previous month"
+                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-semibold text-text-muted transition hover:border-slate-300 hover:bg-surface-hover hover:text-text"
               >
                 ←
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date())}
-                className="cursor-pointer rounded-lg border border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[10px] font-bold text-text transition hover:border-slate-300 hover:bg-surface-hover"
               >
                 {text("today", language)}
               </button>
-              <div className="inline-flex min-w-40 items-center justify-center rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-sm">
+              <div className="inline-flex h-9 min-w-36 items-center justify-center rounded-lg border border-border bg-surface px-4 text-[11px] font-bold text-text">
                 {monthName}
               </div>
               <button
                 type="button"
                 onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                className="cursor-pointer size-10 rounded-lg border border-border bg-surface text-lg font-bold text-text transition hover:border-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/15"
+                aria-label="Next month"
+                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-semibold text-text-muted transition hover:border-slate-300 hover:bg-surface-hover hover:text-text"
               >
                 →
               </button>
             </div>
 
-           {isFutureOffMonth && (
-  <div className="flex gap-2">
-    <button
-      type="button"
-      onClick={resetUnfixed}
-      disabled={!currentEmployeeId || authLoading || saving}
-      className="cursor-pointer rounded-lg border border-amber-400 bg-amber-500 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-amber-400 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {text("resetUnfixed", language)}
-    </button>
-
-    <button
-      type="button"
-      onClick={saveAndFix}
-      disabled={!currentEmployeeId || authLoading || saving}
-      className="cursor-pointer rounded-lg border border-emerald-400 bg-emerald-500 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-emerald-400 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {saving ? text("loading", language) : text("saveAndFix", language)}
-    </button>
-  </div>
-)}
+            {isFutureOffMonth && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={resetUnfixed}
+                  disabled={!currentEmployeeId || authLoading || saving}
+                  className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border bg-surface px-3 text-[10px] font-bold text-text-muted transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {text("resetUnfixed", language)}
+                </button>
+                <button
+                  type="button"
+                  onClick={saveAndFix}
+                  disabled={!currentEmployeeId || authLoading || saving}
+                  className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[10px] font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? text("loading", language) : text("saveAndFix", language)}
+                </button>
+              </div>
+            )}
           </div>
 
           {message && (
-            <div className="mb-4 rounded-lg border border-border bg-surface-hover px-4 py-3 text-xs font-semibold text-text">
+            <div className="mb-3 rounded-lg border border-border bg-surface-hover px-3 py-2.5 text-[10px] font-semibold text-text-muted">
               {message}
             </div>
           )}
 
-          <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-border bg-surface">
+          <div
+            className="work-schedule-calendar grid grid-cols-7 overflow-hidden rounded-xl border border-border bg-surface"
+            style={{ gridAutoRows: "118px" }}
+          >
             {(language === "cn"
               ? ["一", "二", "三", "四", "五", "六", "日"]
               : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-            ).map((label) => (
+            ).map((label, weekdayIndex) => (
               <div
                 key={label}
-                className="border-b border-r border-border bg-surface-hover px-2 py-3 text-center text-xs font-extrabold uppercase tracking-wide text-text"
+                className={`work-schedule-weekday flex items-center border-b border-r border-border px-2.5 py-2 text-[9px] font-bold uppercase tracking-[0.12em] text-text-muted last:border-r-0 ${
+                  weekdayIndex >= 5 ? "bg-slate-50/80" : "bg-surface-hover"
+                }`}
               >
                 {label}
               </div>
@@ -1120,7 +1150,7 @@ function MyOffCalendar({
                 return (
                   <div
                     key={`empty-${index}`}
-                    className="min-h-28 border-r border-b border-border-subtle bg-surface-hover"
+                    className="work-schedule-empty border-b border-r border-border-subtle bg-slate-50/50"
                   />
                 );
               }
@@ -1129,10 +1159,12 @@ function MyOffCalendar({
               const off = myDayMap.get(key);
               const work = workScheduleMap.get(key);
               const otherOffs = otherOffsByDate.get(key) ?? [];
+              const dateObject = new Date(year, month, day);
+              const weekday = dateObject.getDay();
+              const isWeekend = weekday === 0 || weekday === 6;
               const isToday = key === todayKey;
               const isFixed = Boolean(off?.fixed);
               const status = work?.scheduleType ?? (off ? "OFF" : null);
-              const isSelected = Boolean(status);
 
               return (
                 <button
@@ -1140,83 +1172,82 @@ function MyOffCalendar({
                   type="button"
                   onClick={() => void toggleDate(day)}
                   disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || saving}
-                  className={`relative min-h-28 border-r border-b border-border-subtle p-3 text-left align-top transition ${
-                    isFixed
-                      ? "bg-amber-500/10 hover:bg-amber-500/15 dark:bg-amber-500/10 dark:hover:bg-amber-500/15"
-                      : isSelected
-                        ? "bg-cyan-500/10 hover:bg-cyan-500/15 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/15"
-                        : "bg-surface hover:bg-surface-hover"
-                  } ${isToday ? "z-10 bg-cyan-500/10 ring-2 ring-inset ring-cyan-400" : ""} ${
-                    !isFutureOffMonth || isFixed || saving
+                  className={`work-schedule-cell group relative border-b border-r border-border-subtle p-2.5 text-left align-top transition-colors ${
+                    isToday
+                      ? "bg-cyan-50/60"
+                      : isWeekend
+                        ? "bg-slate-50/45 hover:bg-slate-50"
+                        : "bg-white hover:bg-slate-50/70"
+                  } ${
+                    !isFutureOffMonth || !currentEmployeeId || authLoading || saving || isFixed
                       ? "cursor-not-allowed"
                       : "cursor-pointer"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                  <span
-                    className={`text-sm font-extrabold ${
-                      isToday
-                        ? "text-cyan-700 dark:text-cyan-300"
-                        : isFixed
-                          ? "text-rose-700 dark:text-rose-300"
-                          : isSelected
-                            ? "text-sky-700 dark:text-sky-300"
-                            : "text-text"
-                    }`}
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-[11px] font-bold ${
+                        isToday ? "text-cyan-700" : isWeekend ? "text-slate-500" : "text-text"
+                      }`}
                     >
                       {day}
                     </span>
+
                     {isToday && (
-                      <span className="rounded-full border-2 border-cyan-400 bg-surface px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">
+                      <span className="rounded-md border border-cyan-200 bg-white px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide text-cyan-700">
                         {text("today", language)}
                       </span>
                     )}
                   </div>
 
-                  {status === "1" && (
-                   <div className="mt-5 flex items-center justify-center gap-2 rounded-md border border-emerald-500 bg-emerald-500 px-3 py-3 text-center text-xs font-extrabold text-white shadow-sm">
-                      <span className="size-2.5 rounded-sm bg-white" />
-                      <span>1 — 08:00–17:00</span>
-                    </div>
-                  )}
+                  <div className="mt-3">
+                    {status === "1" && (
+                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[9px] font-bold text-emerald-700">
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                        <span>1 · 08:00–17:00</span>
+                      </div>
+                    )}
 
-                  {status === "4" && (
-                    <div className="mt-5 flex items-center justify-center gap-2 rounded-md border border-amber-500 bg-amber-500 px-3 py-3 text-center text-xs font-extrabold text-white shadow-sm">
-                      <span className="size-2.5 rounded-sm bg-white" />
-                      <span> 4 — {language === "cn" ? "4小时" : "4 Hours"}</span>
-                    </div>
-                  )}
+                    {status === "4" && (
+                      <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[9px] font-bold text-amber-700">
+                        <span className="size-1.5 rounded-full bg-amber-500" />
+                        <span>4 · {language === "cn" ? "4小时" : "4 Hours"}</span>
+                      </div>
+                    )}
 
-                  {status === "OFF" && (
-                  <div
-                      className={`mt-5 flex items-center justify-center gap-2 rounded-md border px-3 py-3 text-center text-xs font-extrabold text-white shadow-sm ${
-                        isFixed
-                          ? "border-rose-600 bg-rose-600"
-                          : "border-rose-500 bg-rose-500"
-                      }`}
-                    >
-                      <span
-                        className={`size-2.5 rounded-sm bg-white ${
+                    {status === "OFF" && (
+                      <div
+                        className={`flex items-center justify-between rounded-lg border px-2.5 py-2 text-[9px] font-bold ${
                           isFixed
-                            ? "bg-rose-500 dark:bg-rose-300"
-                            : "bg-rose-400 dark:bg-rose-300"
+                            ? "border-rose-200 bg-rose-50 text-rose-600"
+                            : "border-slate-200 bg-slate-50 text-slate-600"
                         }`}
-                      />
-                      <span>{language === "cn" ? "休息" : "OFF"}{isFixed ? " 🔒" : ""}</span>
-                    </div>
-                  )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className={`size-1.5 rounded-full ${isFixed ? "bg-rose-500" : "bg-slate-400"}`} />
+                          <span>{language === "cn" ? "休息" : "OFF"}</span>
+                        </span>
+                        {isFixed && <span className="text-[8px]">LOCKED</span>}
+                      </div>
+                    )}
+                  </div>
 
                   {otherOffs.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      {otherOffs.map((name) => (
+                    <div className="mt-2 space-y-0.5">
+                      {otherOffs.slice(0, 2).map((name) => (
                         <div
                           key={`${key}-${name}`}
-                          className="truncate text-[10px] font-bold text-rose-600 dark:text-rose-300"
+                          className="truncate text-[8px] font-semibold text-rose-500"
                           title={`${name} ${text("off", language)}`}
                         >
                           {name} {text("off", language)}
                         </div>
                       ))}
+                      {otherOffs.length > 2 && (
+                        <div className="text-[8px] font-semibold text-slate-400">
+                          +{otherOffs.length - 2} more
+                        </div>
+                      )}
                     </div>
                   )}
                 </button>
@@ -1224,10 +1255,17 @@ function MyOffCalendar({
             })}
           </div>
 
-          <div className="mt-4 rounded-lg border border-cyan-200 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 px-4 py-3 text-xs text-text-muted">
-            {language === "cn"
-              ? "未来月份点击日期可循环选择 1 → 4 → OFF → 清空；1=08:00–17:00，4=4小时（08:00–12:00或12:00–17:00）。"
-              : "For future months, click a date to cycle 1 → 4 → OFF → clear; 1=08:00–17:00, 4=4 hours (08:00–12:00 or 12:00–17:00)."}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[9px] text-text-dim">
+            <span>
+              {language === "cn"
+                ? "点击未来日期：1 → 4 → OFF → 清空"
+                : "Click a future date: 1 → 4 → OFF → clear"}
+            </span>
+            <span>
+              {language === "cn"
+                ? "1 = 08:00–17:00 · 4 = 4 Hours"
+                : "1 = 08:00–17:00 · 4 = 4 Hours"}
+            </span>
           </div>
         </div>
       </Card>
@@ -1237,6 +1275,7 @@ function MyOffCalendar({
 
 function ShiftManagementView() {
   const { t } = useLang();
+  const { error: toastError } = useToast();
   const language: OrganizationLanguage = t.safety.management === "安全管理" ? "cn" : "en";
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
@@ -1718,16 +1757,13 @@ function ShiftManagementView() {
 
     return true;
   } catch (error) {
-    console.error(
-      "Failed to save rotation pairs",
-      error,
-    );
-
-    setShiftDataError(
+    const message =
       error instanceof Error
         ? error.message
-        : "Failed to save rotation pairs.",
-    );
+        : "Failed to save rotation pairs.";
+    toastError(message);
+
+    setShiftDataError(message);
 
     return false;
   } finally {
@@ -1770,8 +1806,10 @@ function ShiftManagementView() {
         [employeeId]: nextAssignment,
       }));
     } catch (error) {
-      console.error("Failed to save shift assignment", error);
-      setShiftDataError(error instanceof Error ? error.message : "Failed to save shift assignment.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save shift assignment.";
+      toastError(message);
+      setShiftDataError(message);
     } finally {
       setSavingEmployee(null);
     }
@@ -1903,12 +1941,12 @@ function ShiftManagementView() {
         window.URL.revokeObjectURL(blobUrl);
       }, 1000);
     } catch (error) {
-      console.error("Failed to export schedule", error);
-      setShiftDataError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Failed to export schedule.",
-      );
+          : "Failed to export schedule.";
+      toastError(message);
+      setShiftDataError(message);
     } finally {
       setExportingExcel(false);
     }
@@ -1943,10 +1981,10 @@ function ShiftManagementView() {
       setGenerated(true);
       setActiveTab("schedule");
     } catch (error) {
-      console.error("Failed to generate schedule", error);
-      setShiftDataError(
-        error instanceof Error ? error.message : "Failed to generate schedule.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Failed to generate schedule.";
+      toastError(message);
+      setShiftDataError(message);
     }
   }
 
@@ -1995,8 +2033,13 @@ function ShiftManagementView() {
   const todayKey = dateKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationShift || access.canManageOrganizationShift
+      }
+    >
     <AppShell title={text("title", language)}>
-      <div className="shift-management-page min-h-full space-y-5 p-5 text-text">
+      <div className="shift-management-page min-h-full space-y-4 bg-slate-50/70 p-4 text-slate-800 dark:bg-slate-950 dark:text-slate-100 ">
         <style>{`
           button:not(:disabled),
           select:not(:disabled) { cursor: pointer; }
@@ -2012,50 +2055,242 @@ function ShiftManagementView() {
 
 
 
-          /* Sharper, higher-contrast typography. Logic/layout unchanged. */
+
+          /* Clean adaptive enterprise theme.
+           * Light mode is the default. Dark mode is supported when the app
+           * uses either .dark or data-theme="dark" on an ancestor/root.
+           */
           .shift-management-page {
+            --sm-page: #f7f9fc;
+            --sm-card: #ffffff;
+            --sm-panel: #f8fafc;
+            --sm-panel-strong: #eef2f7;
+            --sm-border: #e3e8ef;
+            --sm-text: #172033;
+            --sm-muted: #5c687a;
+            --sm-dim: #8b96a8;
+            --sm-input: #ffffff;
+            --sm-table-head: #f5f7fa;
+            --sm-table-cell: #ffffff;
+            --sm-table-hover: #f8fafc;
+            --sm-sticky: #ffffff;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            text-rendering: geometricPrecision;
+            text-rendering: optimizeLegibility;
             font-synthesis-weight: none;
+            background: var(--sm-page);
+            color: var(--sm-text);
           }
 
-          .shift-management-page h1,
-          .shift-management-page h2,
-          .shift-management-page h3,
-          .shift-management-page th,
-          .shift-management-page button,
-          .shift-management-page select,
-          .shift-management-page input {
-            text-rendering: geometricPrecision;
+          .shift-management-page .bg-surface { background-color: var(--sm-card) !important; }
+          .shift-management-page .bg-surface-hover { background-color: var(--sm-panel) !important; }
+          .shift-management-page .bg-surface-hover\/60 { background-color: color-mix(in srgb, var(--sm-panel) 72%, transparent) !important; }
+          .shift-management-page .bg-surface-hover\/70 { background-color: color-mix(in srgb, var(--sm-panel) 82%, transparent) !important; }
+          .shift-management-page .border-border,
+          .shift-management-page .border-border-subtle,
+          .shift-management-page .border-slate-100,
+          .shift-management-page .border-slate-200 { border-color: var(--sm-border) !important; }
+          .shift-management-page .text-text { color: var(--sm-text) !important; }
+          .shift-management-page .text-text-muted { color: var(--sm-muted) !important; }
+          .shift-management-page .text-text-dim { color: var(--sm-dim) !important; }
+
+          /* Dark theme detection: support class and data-attribute based themes. */
+          .shift-management-page.dark,
+          .dark .shift-management-page,
+          .shift-management-page[data-theme="dark"],
+          [data-theme="dark"] .shift-management-page {
+            --sm-page: #080d15;
+            --sm-card: #0f1621;
+            --sm-panel: #121a27;
+            --sm-panel-strong: #172233;
+            --sm-border: #202b3a;
+            --sm-text: #e8edf4;
+            --sm-muted: #9aa8ba;
+            --sm-dim: #6f7d92;
+            --sm-input: #0c131e;
+            --sm-table-head: #121b29;
+            --sm-table-cell: #0d141f;
+            --sm-table-hover: #131d2a;
+            --sm-sticky: #101822;
+            color-scheme: dark;
+            background: var(--sm-page);
+            color: var(--sm-text);
           }
 
-          .shift-management-page .text-text {
-            color: rgb(15 23 42) !important;
-          }
+          /* Dark overrides for the redesigned utility classes. */
+          .shift-management-page.dark .bg-surface,
+          .dark .shift-management-page .bg-surface,
+          .shift-management-page[data-theme="dark"] .bg-surface,
+          [data-theme="dark"] .shift-management-page .bg-surface { background-color: var(--sm-card) !important; }
 
-          .shift-management-page .text-text-muted {
-            color: rgb(51 65 85) !important;
-          }
+          .shift-management-page.dark .bg-surface-hover,
+          .dark .shift-management-page .bg-surface-hover,
+          .shift-management-page[data-theme="dark"] .bg-surface-hover,
+          [data-theme="dark"] .shift-management-page .bg-surface-hover { background-color: var(--sm-panel) !important; }
 
-          .shift-management-page .text-text-dim {
-            color: rgb(71 85 105) !important;
-          }
+          .shift-management-page.dark .bg-surface-hover\/60,
+          .dark .shift-management-page .bg-surface-hover\/60,
+          .shift-management-page[data-theme="dark"] .bg-surface-hover\/60,
+          [data-theme="dark"] .shift-management-page .bg-surface-hover\/60 { background-color: rgba(23,32,51,.72) !important; }
 
+          .shift-management-page.dark .bg-surface-hover\/70,
+          .dark .shift-management-page .bg-surface-hover\/70,
+          .shift-management-page[data-theme="dark"] .bg-surface-hover\/70,
+          [data-theme="dark"] .shift-management-page .bg-surface-hover\/70 { background-color: rgba(23,32,51,.82) !important; }
+
+          .shift-management-page.dark .bg-white,
+          .dark .shift-management-page .bg-white,
+          .shift-management-page[data-theme="dark"] .bg-white,
+          [data-theme="dark"] .shift-management-page .bg-white,
+          .shift-management-page.dark .bg-white\/95,
+          .dark .shift-management-page .bg-white\/95,
+          .shift-management-page[data-theme="dark"] .bg-white\/95,
+          [data-theme="dark"] .shift-management-page .bg-white\/95 { background-color: var(--sm-card) !important; }
+
+          .shift-management-page.dark .bg-slate-50,
+          .dark .shift-management-page .bg-slate-50,
+          .shift-management-page[data-theme="dark"] .bg-slate-50,
+          [data-theme="dark"] .shift-management-page .bg-slate-50,
+          .shift-management-page.dark .bg-slate-50\/70,
+          .dark .shift-management-page .bg-slate-50\/70,
+          .shift-management-page[data-theme="dark"] .bg-slate-50\/70,
+          [data-theme="dark"] .shift-management-page .bg-slate-50\/70,
+          .shift-management-page.dark .bg-slate-50\/80,
+          .dark .shift-management-page .bg-slate-50\/80,
+          .shift-management-page[data-theme="dark"] .bg-slate-50\/80,
+          [data-theme="dark"] .shift-management-page .bg-slate-50\/80,
+          .shift-management-page.dark .bg-slate-50\/95,
+          .dark .shift-management-page .bg-slate-50\/95,
+          .shift-management-page[data-theme="dark"] .bg-slate-50\/95,
+          [data-theme="dark"] .shift-management-page .bg-slate-50\/95 { background-color: var(--sm-table-head) !important; }
+
+          .shift-management-page.dark .bg-slate-100,
+          .dark .shift-management-page .bg-slate-100,
+          .shift-management-page[data-theme="dark"] .bg-slate-100,
+          [data-theme="dark"] .shift-management-page .bg-slate-100,
+          .shift-management-page.dark .bg-slate-100\/80,
+          .dark .shift-management-page .bg-slate-100\/80,
+          .shift-management-page[data-theme="dark"] .bg-slate-100\/80,
+          [data-theme="dark"] .shift-management-page .bg-slate-100\/80 { background-color: var(--sm-panel-strong) !important; }
+
+          .shift-management-page.dark .hover\\:bg-slate-50\\/80:hover,
+          .dark .shift-management-page .hover\\:bg-slate-50\\/80:hover,
+          .shift-management-page[data-theme="dark"] .hover\\:bg-slate-50\\/80:hover,
+          [data-theme="dark"] .shift-management-page .hover\\:bg-slate-50\\/80:hover { background-color: var(--sm-table-hover) !important; }
+
+          .shift-management-page.dark .hover\\:bg-slate-50\\/70:hover,
+          .dark .shift-management-page .hover\\:bg-slate-50\\/70:hover,
+          .shift-management-page[data-theme="dark"] .hover\\:bg-slate-50\\/70:hover,
+          [data-theme="dark"] .shift-management-page .hover\\:bg-slate-50\\/70:hover { background-color: var(--sm-table-hover) !important; }
+
+          .shift-management-page.dark .hover\\:bg-slate-50:hover,
+          .dark .shift-management-page .hover\\:bg-slate-50:hover,
+          .shift-management-page[data-theme="dark"] .hover\\:bg-slate-50:hover,
+          [data-theme="dark"] .shift-management-page .hover\\:bg-slate-50:hover { background-color: var(--sm-table-hover) !important; }
+
+          .shift-management-page.dark .border-border,
+          .shift-management-page.dark .border-border-subtle,
+          .dark .shift-management-page .border-border,
+          .dark .shift-management-page .border-border-subtle,
+          .shift-management-page[data-theme="dark"] .border-border,
+          .shift-management-page[data-theme="dark"] .border-border-subtle,
+          [data-theme="dark"] .shift-management-page .border-border,
+          [data-theme="dark"] .shift-management-page .border-border-subtle,
+          .shift-management-page.dark .border-slate-100,
+          .shift-management-page.dark .border-slate-200,
+          .dark .shift-management-page .border-slate-100,
+          .dark .shift-management-page .border-slate-200,
+          .shift-management-page[data-theme="dark"] .border-slate-100,
+          .shift-management-page[data-theme="dark"] .border-slate-200,
+          [data-theme="dark"] .shift-management-page .border-slate-100,
+          [data-theme="dark"] .shift-management-page .border-slate-200 { border-color: var(--sm-border) !important; }
+
+          .shift-management-page.dark .text-text,
           .dark .shift-management-page .text-text,
-          [data-theme="dark"] .shift-management-page .text-text {
-            color: rgb(248 250 252) !important;
-          }
+          .shift-management-page[data-theme="dark"] .text-text,
+          [data-theme="dark"] .shift-management-page .text-text { color: var(--sm-text) !important; }
 
+          .shift-management-page.dark .text-text-muted,
           .dark .shift-management-page .text-text-muted,
-          [data-theme="dark"] .shift-management-page .text-text-muted {
-            color: rgb(203 213 225) !important;
+          .shift-management-page[data-theme="dark"] .text-text-muted,
+          [data-theme="dark"] .shift-management-page .text-text-muted { color: var(--sm-muted) !important; }
+
+          .shift-management-page.dark .text-text-dim,
+          .dark .shift-management-page .text-text-dim,
+          .shift-management-page[data-theme="dark"] .text-text-dim,
+          [data-theme="dark"] .shift-management-page .text-text-dim { color: var(--sm-dim) !important; }
+
+          /* Explicit slate text used by the redesign. */
+          .shift-management-page.dark .text-slate-900,
+          .dark .shift-management-page .text-slate-900,
+          .shift-management-page[data-theme="dark"] .text-slate-900,
+          [data-theme="dark"] .shift-management-page .text-slate-900 { color: #f1f5f9 !important; }
+          .shift-management-page.dark .text-slate-800,
+          .dark .shift-management-page .text-slate-800,
+          .shift-management-page[data-theme="dark"] .text-slate-800,
+          [data-theme="dark"] .shift-management-page .text-slate-800 { color: #e2e8f0 !important; }
+          .shift-management-page.dark .text-slate-700,
+          .dark .shift-management-page .text-slate-700,
+          .shift-management-page[data-theme="dark"] .text-slate-700,
+          [data-theme="dark"] .shift-management-page .text-slate-700 { color: #cbd5e1 !important; }
+          .shift-management-page.dark .text-slate-600,
+          .shift-management-page.dark .text-slate-500,
+          .dark .shift-management-page .text-slate-600,
+          .dark .shift-management-page .text-slate-500,
+          .shift-management-page[data-theme="dark"] .text-slate-600,
+          .shift-management-page[data-theme="dark"] .text-slate-500,
+          [data-theme="dark"] .shift-management-page .text-slate-600,
+          [data-theme="dark"] .shift-management-page .text-slate-500 { color: #94a3b8 !important; }
+          .shift-management-page.dark .text-slate-400,
+          .dark .shift-management-page .text-slate-400,
+          .shift-management-page[data-theme="dark"] .text-slate-400,
+          [data-theme="dark"] .shift-management-page .text-slate-400 { color: #64748b !important; }
+
+          .shift-management-page.dark input,
+          .shift-management-page.dark select,
+          .dark .shift-management-page input,
+          .dark .shift-management-page select,
+          .shift-management-page[data-theme="dark"] input,
+          .shift-management-page[data-theme="dark"] select,
+          [data-theme="dark"] .shift-management-page input,
+          [data-theme="dark"] .shift-management-page select {
+            background-color: var(--sm-input) !important;
+            color: #e2e8f0 !important;
+            border-color: #334155 !important;
+            color-scheme: dark;
           }
 
-          .dark .shift-management-page .text-text-dim,
-          [data-theme="dark"] .shift-management-page .text-text-dim {
-            color: rgb(148 163 184) !important;
+          .shift-management-page.dark option,
+          .dark .shift-management-page option,
+          .shift-management-page[data-theme="dark"] option,
+          [data-theme="dark"] .shift-management-page option {
+            background: #131d2d;
+            color: #e2e8f0;
           }
+
+          .shift-management-page .bg-white { background-color: var(--sm-card) !important; }
+
+          /* In dark mode the table itself also changes surface, while preserving
+             the Today / rotation column highlights supplied by the Tailwind classes. */
+          .shift-management-page.dark table tbody td,
+          .dark .shift-management-page table tbody td,
+          .shift-management-page[data-theme="dark"] table tbody td,
+          [data-theme="dark"] .shift-management-page table tbody td { background-color: var(--sm-table-cell); }
+
+          .shift-management-page.dark table thead th,
+          .dark .shift-management-page table thead th,
+          .shift-management-page[data-theme="dark"] table thead th,
+          [data-theme="dark"] .shift-management-page table thead th { background-color: var(--sm-table-head); }
+
+          .shift-management-page.dark table tbody tr:hover td,
+          .dark .shift-management-page table tbody tr:hover td,
+          .shift-management-page[data-theme="dark"] table tbody tr:hover td,
+          [data-theme="dark"] .shift-management-page table tbody tr:hover td { background-color: var(--sm-table-hover); }
+
+          .shift-management-page.dark table td.sticky,
+          .dark .shift-management-page table td.sticky,
+          .shift-management-page[data-theme="dark"] table td.sticky,
+          [data-theme="dark"] .shift-management-page table td.sticky { background-color: var(--sm-sticky) !important; }
 
           .shift-management-page .text-\[8px\],
           .shift-management-page .text-\[9px\],
@@ -2063,61 +2298,565 @@ function ShiftManagementView() {
             -webkit-font-smoothing: antialiased;
           }
 
-          .shift-management-page .shift-card-hover:hover {
-            border-color: rgb(34 211 238 / .20);
-            box-shadow: 0 12px 32px rgb(8 47 73 / .12);
-          }
+
+          /* ============================================================
+           * V7 FULL VISUAL REDESIGN
+           * A calmer, premium enterprise scheduling surface.
+           * No application logic/API behavior is changed.
+           * ============================================================ */
 
           .shift-management-page {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
+            background: var(--sm-page) !important;
           }
 
-          .shift-management-page .text-text {
-            color: rgb(15 23 42) !important;
+          /* Top title */
+          .shift-management-page h1,
+          .shift-management-page h2 {
+            letter-spacing: -0.015em;
           }
 
-          .shift-management-page .text-text-muted {
-            color: rgb(51 65 85) !important;
+          /* Nav strip */
+          .shift-management-page .flex.overflow-x-auto.rounded-xl.border {
+            background: var(--sm-panel) !important;
+            border-color: var(--sm-border) !important;
+            border-radius: 14px !important;
+            padding: 4px !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+          }
+          .shift-management-page .flex.overflow-x-auto.rounded-xl.border button {
+            min-height: 38px;
+            border-radius: 10px !important;
+          }
+          .shift-management-page .flex.overflow-x-auto.rounded-xl.border button.bg-cyan-500 {
+            background: var(--sm-card) !important;
+            color: var(--sm-text) !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 1px var(--sm-border);
           }
 
-          .shift-management-page .text-text-dim {
-            color: rgb(71 85 105) !important;
+          /* Main card */
+          .shift-management-page .rounded-2xl.border.bg-surface {
+            background: var(--sm-card) !important;
+            border-color: var(--sm-border) !important;
+            border-radius: 18px !important;
+            box-shadow:
+              0 12px 36px rgba(15,23,42,.045),
+              inset 0 1px 0 rgba(255,255,255,.025);
+            overflow: hidden;
           }
 
-          .dark .shift-management-page .text-text,
-          [data-theme="dark"] .shift-management-page .text-text {
-            color: rgb(248 250 252) !important;
+          /* Schedule toolbar */
+          .shift-management-page .rounded-2xl.border.bg-surface > .border-b {
+            background: var(--sm-card) !important;
+            border-color: var(--sm-border) !important;
+          }
+          .shift-management-page .rounded-2xl.border.bg-surface > .border-b > div {
+            gap: 10px;
           }
 
-          .dark .shift-management-page .text-text-muted,
-          [data-theme="dark"] .shift-management-page .text-text-muted {
-            color: rgb(203 213 225) !important;
+          /* Make primary action family visually consistent. */
+          .shift-management-page button.bg-indigo-500,
+          .shift-management-page button.bg-cyan-500 {
+            background: var(--sm-panel-strong) !important;
+            border-color: var(--sm-border) !important;
+            color: var(--sm-text) !important;
+            box-shadow: 0 1px 2px rgba(15,23,42,.08) !important;
+          }
+          .shift-management-page button.bg-indigo-500:hover,
+          .shift-management-page button.bg-cyan-500:hover {
+            background: color-mix(in srgb, var(--sm-panel-strong) 76%, var(--sm-card)) !important;
+          }
+          .shift-management-page button.bg-emerald-50 {
+            background: rgba(16,185,129,.09) !important;
+            border-color: rgba(16,185,129,.24) !important;
+            color: #159669 !important;
           }
 
-          .dark .shift-management-page .text-text-dim,
-          [data-theme="dark"] .shift-management-page .text-text-dim {
-            color: rgb(148 163 184) !important;
+          /* Legend: lighter, quieter, pill-like. */
+          .shift-management-page .rounded-md.border.bg-emerald-50,
+          .shift-management-page .rounded-md.border.bg-amber-50,
+          .shift-management-page .rounded-md.border.bg-cyan-50,
+          .shift-management-page .rounded-md.border.bg-indigo-50,
+          .shift-management-page .rounded-md.border.bg-surface-hover {
+            border-color: color-mix(in srgb, var(--sm-border) 80%, transparent) !important;
+            border-radius: 999px !important;
           }
 
-          .shift-management-page th,
-          .shift-management-page td,
-          .shift-management-page button,
-          .shift-management-page select,
-          .shift-management-page input {
-            text-rendering: optimizeLegibility;
+          /* Filters */
+          .shift-management-page input,
+          .shift-management-page select {
+            min-height: 42px;
+            border-radius: 12px !important;
+            border-color: var(--sm-border) !important;
+            background: var(--sm-input) !important;
+            color: var(--sm-text) !important;
+            box-shadow: inset 0 1px 1px rgba(15,23,42,.025);
           }
+          .shift-management-page input::placeholder {
+            color: var(--sm-dim) !important;
+          }
+          .shift-management-page input:focus,
+          .shift-management-page select:focus {
+            border-color: rgba(96,165,250,.50) !important;
+            box-shadow: 0 0 0 3px rgba(96,165,250,.08) !important;
+            outline: none !important;
+          }
+
+          /* Date navigator */
+          .shift-management-page .inline-flex.h-9 {
+            border-radius: 11px !important;
+          }
+
+          /* Table becomes a surface instead of a spreadsheet grid. */
+          .shift-management-page table.w-max {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            background: var(--sm-table-cell) !important;
+          }
+          .shift-management-page table.w-max thead tr {
+            background: var(--sm-table-head) !important;
+          }
+          .shift-management-page table.w-max thead th {
+            height: 60px;
+            padding-top: 12px !important;
+            padding-bottom: 12px !important;
+            border-color: var(--sm-border) !important;
+            background: var(--sm-table-head) !important;
+            color: var(--sm-muted) !important;
+            font-variant-numeric: tabular-nums;
+          }
+          .shift-management-page table.w-max thead th:first-child {
+            padding-left: 18px !important;
+          }
+          .shift-management-page table.w-max tbody tr {
+            background: var(--sm-table-cell);
+            transition: background-color .16s ease;
+          }
+          .shift-management-page table.w-max tbody tr:nth-child(even) {
+            background: color-mix(in srgb, var(--sm-table-cell) 96%, var(--sm-panel));
+          }
+          .shift-management-page table.w-max tbody tr:hover {
+            background: var(--sm-table-hover) !important;
+          }
+          .shift-management-page table.w-max tbody td {
+            height: 66px;
+            border-color: color-mix(in srgb, var(--sm-border) 78%, transparent) !important;
+          }
+
+          /* Reduce vertical-line noise. */
+          .shift-management-page table.w-max tbody td:not(.sticky),
+          .shift-management-page table.w-max thead th:not(.sticky) {
+            border-left-color: color-mix(in srgb, var(--sm-border) 54%, transparent) !important;
+          }
+
+          /* Employee rail */
+          .shift-management-page table.w-max th.sticky,
+          .shift-management-page table.w-max td.sticky {
+            background: var(--sm-sticky) !important;
+          }
+          .shift-management-page table.w-max th.sticky {
+            min-width: 300px !important;
+            border-right-color: var(--sm-border) !important;
+          }
+          .shift-management-page table.w-max td.sticky {
+            min-width: 300px !important;
+            border-right-color: var(--sm-border) !important;
+            box-shadow: 9px 0 22px -23px rgba(0,0,0,.5);
+          }
+
+          /* Schedule cells */
+          .shift-management-page table.w-max th:not(:first-child),
+          .shift-management-page table.w-max td:not(.sticky) {
+            min-width: 70px !important;
+          }
+          .shift-management-page table.w-max td > span {
+            min-width: 52px !important;
+            min-height: 28px;
+            border-radius: 9px !important;
+            padding: 5px 8px !important;
+            font-size: 9px !important;
+            font-weight: 700 !important;
+            box-shadow: none !important;
+          }
+
+          /* Today */
+          .shift-management-page table.w-max thead th.bg-sky-50,
+          .shift-management-page table.w-max td.bg-sky-50\/70 {
+            background: rgba(56,189,248,.055) !important;
+          }
+          .shift-management-page table.w-max thead th.bg-sky-50 {
+            color: #45a8d4 !important;
+            box-shadow: inset 0 -2px 0 rgba(56,189,248,.58);
+          }
+
+          /* Rotation days */
+          .shift-management-page table.w-max thead th.bg-amber-50,
+          .shift-management-page table.w-max td.bg-amber-50\/70 {
+            background: rgba(245,158,11,.045) !important;
+          }
+          .shift-management-page table.w-max thead th.bg-amber-50 {
+            color: #b8893b !important;
+            box-shadow: inset 0 -2px 0 rgba(245,158,11,.35);
+          }
+
+          /* Muted fixed badge */
+          .shift-management-page .bg-amber-50.text-amber-700 {
+            background: rgba(245,158,11,.075) !important;
+            border-color: rgba(245,158,11,.18) !important;
+          }
+
+          /* Rotation pair cards — preserve color in dark mode. */
+          .shift-management-page .border-cyan-200\/70 {
+            background: rgba(236, 254, 255, .72);
+            border-color: rgba(103, 232, 249, .35) !important;
+          }
+          .shift-management-page .border-violet-200\/70 {
+            background: rgba(245, 243, 255, .72);
+            border-color: rgba(196, 181, 253, .35) !important;
+          }
+          .shift-management-page.dark .border-cyan-200\/70,
+          .dark .shift-management-page .border-cyan-200\/70,
+          [data-theme="dark"] .shift-management-page .border-cyan-200\/70 {
+            background: linear-gradient(135deg, rgba(8, 47, 73, .78), rgba(12, 74, 110, .34)) !important;
+            border-color: rgba(34, 211, 238, .26) !important;
+          }
+          .shift-management-page.dark .border-violet-200\/70,
+          .dark .shift-management-page .border-violet-200\/70,
+          [data-theme="dark"] .shift-management-page .border-violet-200\/70 {
+            background: linear-gradient(135deg, rgba(46, 16, 101, .76), rgba(76, 29, 149, .32)) !important;
+            border-color: rgba(167, 139, 250, .26) !important;
+          }
+
+          /* Footer rule */
+          .shift-management-page table.w-max + div {
+            background: var(--sm-panel) !important;
+            border-color: var(--sm-border) !important;
+          }
+
+          /* ============================================================
+           * DARK MODE — deliberate, low-contrast, no bright spreadsheet grid
+           * ============================================================ */
+          .shift-management-page.dark,
+          .dark .shift-management-page,
+          .shift-management-page[data-theme="dark"],
+          [data-theme="dark"] .shift-management-page {
+            background: #080d15 !important;
+          }
+
+          .shift-management-page.dark .flex.overflow-x-auto.rounded-xl.border,
+          .dark .shift-management-page .flex.overflow-x-auto.rounded-xl.border,
+          [data-theme="dark"] .shift-management-page .flex.overflow-x-auto.rounded-xl.border {
+            background: #111a28 !important;
+            border-color: #202b3b !important;
+          }
+
+          .shift-management-page.dark .rounded-2xl.border.bg-surface,
+          .dark .shift-management-page .rounded-2xl.border.bg-surface,
+          [data-theme="dark"] .shift-management-page .rounded-2xl.border.bg-surface {
+            background: #0f1621 !important;
+            border-color: #202b3b !important;
+            box-shadow: 0 18px 45px rgba(0,0,0,.16) !important;
+          }
+
+          .shift-management-page.dark table.w-max,
+          .dark .shift-management-page table.w-max,
+          [data-theme="dark"] .shift-management-page table.w-max {
+            background: #0d141f !important;
+          }
+          .shift-management-page.dark table.w-max thead tr,
+          .dark .shift-management-page table.w-max thead tr,
+          [data-theme="dark"] .shift-management-page table.w-max thead tr {
+            background: #121b29 !important;
+          }
+          .shift-management-page.dark table.w-max thead th,
+          .dark .shift-management-page table.w-max thead th,
+          [data-theme="dark"] .shift-management-page table.w-max thead th {
+            background: #121b29 !important;
+            border-color: #202b3b !important;
+            color: #7f8da2 !important;
+          }
+          .shift-management-page.dark table.w-max tbody tr,
+          .dark .shift-management-page table.w-max tbody tr,
+          [data-theme="dark"] .shift-management-page table.w-max tbody tr {
+            background: #0d141f !important;
+          }
+          .shift-management-page.dark table.w-max tbody tr:nth-child(even),
+          .dark .shift-management-page table.w-max tbody tr:nth-child(even),
+          [data-theme="dark"] .shift-management-page table.w-max tbody tr:nth-child(even) {
+            background: #101823 !important;
+          }
+          .shift-management-page.dark table.w-max tbody tr:hover,
+          .dark .shift-management-page table.w-max tbody tr:hover,
+          [data-theme="dark"] .shift-management-page table.w-max tbody tr:hover {
+            background: #141e2b !important;
+          }
+          .shift-management-page.dark table.w-max tbody td,
+          .dark .shift-management-page table.w-max tbody td,
+          [data-theme="dark"] .shift-management-page table.w-max tbody td {
+            border-color: #1d2735 !important;
+          }
+          .shift-management-page.dark table.w-max td.sticky,
+          .dark .shift-management-page table.w-max td.sticky,
+          [data-theme="dark"] .shift-management-page table.w-max td.sticky,
+          .shift-management-page.dark table.w-max th.sticky,
+          .dark .shift-management-page table.w-max th.sticky,
+          [data-theme="dark"] .shift-management-page table.w-max th.sticky {
+            background: #101822 !important;
+          }
+
+          /* Dark inputs and controls */
+          .shift-management-page.dark input,
+          .shift-management-page.dark select,
+          .dark .shift-management-page input,
+          .dark .shift-management-page select,
+          [data-theme="dark"] .shift-management-page input,
+          [data-theme="dark"] .shift-management-page select {
+            background: #0c131e !important;
+            color: #e5ebf3 !important;
+            border-color: #263244 !important;
+          }
+
+          /* Dark buttons */
+          .shift-management-page.dark button.bg-indigo-500,
+          .shift-management-page.dark button.bg-cyan-500,
+          .dark .shift-management-page button.bg-indigo-500,
+          .dark .shift-management-page button.bg-cyan-500,
+          [data-theme="dark"] .shift-management-page button.bg-indigo-500,
+          [data-theme="dark"] .shift-management-page button.bg-cyan-500 {
+            background: #172232 !important;
+            color: #e8edf4 !important;
+            border-color: #2a3748 !important;
+          }
+
+          /* Dark soft shift colors */
+          .shift-management-page.dark table.w-max td > span.border-emerald-200,
+          .dark .shift-management-page table.w-max td > span.border-emerald-200,
+          [data-theme="dark"] .shift-management-page table.w-max td > span.border-emerald-200 {
+            background: rgba(16,185,129,.09) !important;
+            border-color: rgba(52,211,153,.20) !important;
+            color: #78d6ad !important;
+          }
+          .shift-management-page.dark table.w-max td > span.border-amber-200,
+          .dark .shift-management-page table.w-max td > span.border-amber-200,
+          [data-theme="dark"] .shift-management-page table.w-max td > span.border-amber-200 {
+            background: rgba(245,158,11,.085) !important;
+            border-color: rgba(251,191,36,.18) !important;
+            color: #dfb45f !important;
+          }
+          .shift-management-page.dark table.w-max td > span.border-sky-200,
+          .dark .shift-management-page table.w-max td > span.border-sky-200,
+          [data-theme="dark"] .shift-management-page table.w-max td > span.border-sky-200 {
+            background: rgba(14,165,233,.09) !important;
+            border-color: rgba(56,189,248,.18) !important;
+            color: #79c5eb !important;
+          }
+          .shift-management-page.dark table.w-max td > span.border-violet-200,
+          .dark .shift-management-page table.w-max td > span.border-violet-200,
+          [data-theme="dark"] .shift-management-page table.w-max td > span.border-violet-200 {
+            background: rgba(139,92,246,.085) !important;
+            border-color: rgba(167,139,250,.18) !important;
+            color: #b3a0ed !important;
+          }
+          .shift-management-page.dark table.w-max td > span.border-slate-200,
+          .dark .shift-management-page table.w-max td > span.border-slate-200,
+          [data-theme="dark"] .shift-management-page table.w-max td > span.border-slate-200 {
+            background: #192230 !important;
+            border-color: #293647 !important;
+            color: #9aa8ba !important;
+          }
+
+
+          /* ============================================================
+           * PREMIUM DARK WORK SCHEDULE CALENDAR
+           * Softer contrast, blue-gray surfaces, restrained weekend tint,
+           * and compact schedule chips.
+           * ============================================================ */
+          .shift-management-page.dark,
+          .dark .shift-management-page,
+          .shift-management-page[data-theme="dark"],
+          [data-theme="dark"] .shift-management-page {
+            --sm-page: #0b1120;
+            --sm-card: #111827;
+            --sm-panel: #151f30;
+            --sm-panel-strong: #1b2739;
+            --sm-border: #263449;
+            --sm-text: #f3f6fb;
+            --sm-muted: #9eacc0;
+            --sm-dim: #708198;
+            --sm-input: #0f1726;
+            --sm-table-head: #121c2c;
+            --sm-table-cell: #101827;
+            --sm-table-hover: #162235;
+            --sm-sticky: #111a28;
+          }
+
+          .dark .shift-management-page .work-schedule-calendar,
+          [data-theme="dark"] .shift-management-page .work-schedule-calendar {
+            border-color: #27364c !important;
+            background: #0f1726 !important;
+          }
+
+          .dark .shift-management-page .work-schedule-weekday,
+          [data-theme="dark"] .shift-management-page .work-schedule-weekday {
+            background: #151f30 !important;
+            color: #98a8bf !important;
+            border-color: #27364c !important;
+          }
+
+          .dark .shift-management-page .work-schedule-weekday:nth-child(n+6),
+          [data-theme="dark"] .shift-management-page .work-schedule-weekday:nth-child(n+6) {
+            background: #182437 !important;
+            color: #8ea1ba !important;
+          }
+
+          .dark .shift-management-page .work-schedule-empty,
+          [data-theme="dark"] .shift-management-page .work-schedule-empty {
+            background: #0f1726 !important;
+            border-color: #243248 !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell {
+            background: #101827 !important;
+            border-color: #243248 !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell:nth-child(7n+6),
+          .dark .shift-management-page .work-schedule-cell:nth-child(7n),
+          [data-theme="dark"] .shift-management-page .work-schedule-cell:nth-child(7n+6),
+          [data-theme="dark"] .shift-management-page .work-schedule-cell:nth-child(7n) {
+            background: #121d2d !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell:hover,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell:hover {
+            background: #172438 !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell.bg-cyan-50\/60,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell.bg-cyan-50\/60 {
+            background:
+              linear-gradient(0deg, rgba(34,211,238,.07), rgba(34,211,238,.07)),
+              #101827 !important;
+            box-shadow: inset 0 0 0 1px rgba(56,189,248,.42) !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell .bg-white,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .bg-white {
+            background: transparent !important;
+          }
+
+          /* Date labels */
+          .dark .shift-management-page .work-schedule-cell .text-text,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .text-text {
+            color: #e9eef7 !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell .text-slate-500,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .text-slate-500 {
+            color: #90a2bb !important;
+          }
+
+          /* Today pill */
+          .dark .shift-management-page .work-schedule-cell .border-cyan-200,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .border-cyan-200 {
+            border-color: rgba(56,189,248,.45) !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell .text-cyan-700,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .text-cyan-700 {
+            color: #65d3f2 !important;
+          }
+
+          /* Schedule chips */
+          .dark .shift-management-page .work-schedule-cell .border-emerald-200.bg-emerald-50,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .border-emerald-200.bg-emerald-50 {
+            background: rgba(16,185,129,.13) !important;
+            border-color: rgba(52,211,153,.28) !important;
+            color: #78ddb6 !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell .border-amber-200.bg-amber-50,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .border-amber-200.bg-amber-50 {
+            background: rgba(245,158,11,.13) !important;
+            border-color: rgba(251,191,36,.28) !important;
+            color: #f4c56e !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell .border-slate-200.bg-slate-50,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .border-slate-200.bg-slate-50 {
+            background: rgba(100,116,139,.12) !important;
+            border-color: rgba(148,163,184,.20) !important;
+            color: #b2bfd1 !important;
+          }
+
+          .dark .shift-management-page .work-schedule-cell .border-rose-200.bg-rose-50,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .border-rose-200.bg-rose-50 {
+            background: rgba(244,63,94,.12) !important;
+            border-color: rgba(251,113,133,.27) !important;
+            color: #ff8ea5 !important;
+          }
+
+          /* Locked label */
+          .dark .shift-management-page .work-schedule-cell .text-rose-600,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .text-rose-600 {
+            color: #ff8ea5 !important;
+          }
+
+          /* Other employees' OFF notes */
+          .dark .shift-management-page .work-schedule-cell .text-rose-500,
+          [data-theme="dark"] .shift-management-page .work-schedule-cell .text-rose-500 {
+            color: #ff829d !important;
+          }
+
+          /* Calendar toolbar */
+          .dark .shift-management-page .work-schedule-calendar + *,
+          [data-theme="dark"] .shift-management-page .work-schedule-calendar + * {
+            color: #9eacc0;
+          }
+
+          /* Avoid tiny text disappearing in dark mode. */
+          .shift-management-page.dark .text-slate-400,
+          .dark .shift-management-page .text-slate-400,
+          [data-theme="dark"] .shift-management-page .text-slate-400 {
+            color: #7e8ba0 !important;
+          }
+          .shift-management-page.dark .text-slate-500,
+          .dark .shift-management-page .text-slate-500,
+          [data-theme="dark"] .shift-management-page .text-slate-500 {
+            color: #8c99ad !important;
+          }
+          .shift-management-page.dark .text-slate-600,
+          .dark .shift-management-page .text-slate-600,
+          [data-theme="dark"] .shift-management-page .text-slate-600 {
+            color: #a1adbd !important;
+          }
+          .shift-management-page.dark .text-slate-800,
+          .dark .shift-management-page .text-slate-800,
+          [data-theme="dark"] .shift-management-page .text-slate-800 {
+            color: #e4eaf2 !important;
+          }
+
+          @media (max-width: 1024px) {
+            .shift-management-page table.w-max th:not(:first-child),
+            .shift-management-page table.w-max td:not(.sticky) {
+              min-width: 62px !important;
+            }
+            .shift-management-page table.w-max td.sticky,
+            .shift-management-page table.w-max th.sticky {
+              min-width: 225px !important;
+            }
+          }
+
         `}</style>
         {(employeeLoadError || shiftDataError) && (
-          <div className="rounded-lg border border-rose-400/20 bg-rose-500/5 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
+          <div className="rounded-lg border border-rose-400/20 bg-rose-500/5 px-4 py-3 text-xs font-semibold text-rose-700 ">
             {employeeLoadError || shiftDataError}
           </div>
         )}
 
         <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/5 text-lg font-bold text-cyan-300">
+          <div className="flex items-center gap-2">
+            <div className="flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-lg font-semibold text-slate-600 shadow-sm ">
               ⇄
             </div>
             <div>
@@ -2132,7 +2871,7 @@ function ShiftManagementView() {
 
         </div>
 
-        <div className="flex overflow-x-auto rounded-xl border border-border bg-surface-hover/60 p-1">
+        <div className="flex overflow-x-auto rounded-xl border border-slate-200 bg-slate-100/80 p-1 shadow-sm ">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -2140,8 +2879,8 @@ function ShiftManagementView() {
               onClick={() => setActiveTab(tab.key)}
               className={`whitespace-nowrap rounded-md px-4 py-2 text-[10px] font-semibold transition ${
                 activeTab === tab.key
-                  ? "bg-cyan-500 text-white"
-                  : "text-text-muted hover:bg-surface hover:text-text"
+                  ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 "
+                  : "text-slate-500 hover:bg-white/70 hover:text-slate-800 "
               }`}
             >
               {tab.label}
@@ -2154,12 +2893,12 @@ function ShiftManagementView() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <Card className="p-4">
                 <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("dayShift", language)}</p>
-                <p className="mt-2 text-xl font-bold text-cyan-800 dark:text-cyan-300">D/S</p>
+                <p className="mt-2 text-xl font-bold text-sky-700 ">D/S</p>
                 <p className="mt-1 text-[10px] text-text-dim">08:00 – 20:00</p>
               </Card>
               <Card className="p-4">
                 <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("nightShift", language)}</p>
-                <p className="mt-2 text-xl font-bold text-indigo-800 dark:text-indigo-300">N/S</p>
+                <p className="mt-2 text-xl font-bold text-violet-700 ">N/S</p>
                 <p className="mt-1 text-[10px] text-text-dim">20:00 – 08:00</p>
               </Card>
               <Card className="p-4">
@@ -2169,7 +2908,7 @@ function ShiftManagementView() {
               </Card>
               <Card className="p-4">
                 <p className="text-[10px] uppercase tracking-wide text-text-dim">{text("transitionRule", language)}</p>
-                <p className="mt-2 text-xl font-bold text-amber-800 dark:text-amber-300">OFF 1</p>
+                <p className="mt-2 text-xl font-bold text-amber-700 ">OFF 1</p>
                 <p className="mt-1 text-[10px] text-text-dim">{text("scheduleRule", language)}</p>
               </Card>
             </div>
@@ -2185,9 +2924,7 @@ function ShiftManagementView() {
               />
 
               {loadingEmployees || loadingShiftData ? (
-                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
-                  {text("loading", language)}
-                </div>
+                <SkeletonKpiGrid count={5} />
               ) : filteredMembers.length === 0 ? (
                 <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
                   {text("noData", language)}
@@ -2199,19 +2936,19 @@ function ShiftManagementView() {
                       key={member.id}
                       className={`rounded-lg border p-3 ${
                         member.excluded
-                          ? "border-amber-500/50 bg-amber-500/10 dark:border-amber-400/50 dark:bg-amber-500/10"
+                          ? "border-amber-500/50 bg-amber-500/10 "
                           : "border-border-subtle bg-surface"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-bold text-text dark:text-white">
+                          <p className="text-xs font-bold text-text ">
                             {language === "cn" ? member.nameCn || member.name : member.name}
                           </p>
-                          <p className="mt-0.5 text-[10px] text-text-dim dark:text-slate-300">{member.employeeId}</p>
+                          <p className="mt-0.5 text-[10px] text-text-dim ">{member.employeeId}</p>
                         </div>
                         {member.excluded ? (
-                          <span className="inline-flex items-center rounded-md border border-amber-400 bg-amber-500 px-2.5 py-1 text-[9px] font-extrabold text-white shadow-sm dark:border-amber-400 dark:bg-amber-500 dark:text-white">
+                          <span className="inline-flex items-center rounded-md border border-amber-400 bg-amber-500 px-2.5 py-1 text-[9px] font-extrabold text-white shadow-sm ">
                             {text("excluded", language)}
                           </span>
                         ) : (
@@ -2234,20 +2971,20 @@ function ShiftManagementView() {
                 }
               />
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-100/7 p-4 ">
                   <p className="text-[10px] text-text-dim">{text("periodOne", language)}</p>
                   <p className="mt-2 text-sm font-bold text-text">01 – 14</p>
                 </div>
-                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/7 p-4 ">
                   <p className="text-[10px] text-text-dim">{text("periodTwo", language)}</p>
                   <p className="mt-2 text-sm font-bold text-text">15 – 16 / 17 – {daysInMonth}</p>
                 </div>
-                <div className="rounded-lg border border-amber-400 bg-amber-500 p-4">
-                  <p className="text-[10px] font-semibold text-white/90">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 ">
+                  <p className="text-[10px] font-semibold text-amber-700 ">
                     {text("transitionRule", language)}
                   </p>
 
-                  <p className="mt-2 text-sm font-extrabold text-white">
+                  <p className="mt-2 text-sm font-semibold text-amber-800 ">
                     N/S → {language === "cn" ? "休息" : "OFF"} → D/S
                   </p>
                 </div>
@@ -2258,7 +2995,7 @@ function ShiftManagementView() {
 
         {activeTab === "master" && (
           <Card className="overflow-hidden">
-            <div className="border-b border-border-subtle p-4">
+            <div className="border-b border-border-subtle px-4 py-3">
               <SectionTitle
                 title={text("shiftMaster", language)}
                 subtitle={
@@ -2272,7 +3009,7 @@ function ShiftManagementView() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
                 <thead>
-                  <tr className="border-b border-border-subtle bg-surface-hover">
+                  <tr className="border-b border-slate-100 bg-slate-50/80 ">
                     <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">
                       {text("code", language)}
                     </th>
@@ -2314,17 +3051,17 @@ function ShiftManagementView() {
                       return (
                         <tr
                           key={shift.id}
-                          className="border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]"
+                          className="border-b border-border-subtle last:border-0 transition-colors hover:bg-slate-50/80 "
                         >
                           <td
                             className={`px-4 py-4 text-xs font-extrabold ${
                               isDayRotation
-                                ? "text-cyan-500 dark:text-cyan-300"
+                                ? "text-cyan-500 "
                                 : isNightRotation
-                                  ? "text-indigo-500 dark:text-indigo-300"
+                                  ? "text-indigo-500 "
                                   : shift.shift_code === "1"
-                                    ? "text-emerald-600 dark:text-emerald-300"
-                                    : "text-amber-600 dark:text-amber-300"
+                                    ? "text-emerald-600 "
+                                    : "text-amber-600 "
                             }`}
                           >
                             {shift.shift_code}
@@ -2370,12 +3107,12 @@ function ShiftManagementView() {
                   <p className="text-[10px] text-text-dim">{text("changeDate", language)}</p>
                   <p className="mt-2 text-xs font-bold text-text">{text("every15th16th", language)}</p>
                 </div>
-               <div className="rounded-lg border border-amber-400 bg-amber-500 p-4">
-                  <p className="text-[10px] font-semibold text-white/90">
+               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 ">
+                  <p className="text-[10px] font-semibold text-amber-700 ">
                     {text("transitionRule", language)}
                   </p>
 
-                  <p className="mt-2 text-sm font-extrabold text-white">
+                  <p className="mt-2 text-sm font-semibold text-amber-800 ">
                     N/S → {language === "cn" ? "休息" : "OFF"} → D/S
                   </p>
                 </div>
@@ -2396,10 +3133,14 @@ function ShiftManagementView() {
                 }
               />
 
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-3 lg:grid-cols-2">
                 {(["PAIR_A", "PAIR_B"] as const).map((group) => {
                   const selection = pairSelections[group];
                   const otherGroup = group === "PAIR_A" ? pairSelections.PAIR_B : pairSelections.PAIR_A;
+                  const rotationDay =
+                    group === "PAIR_A"
+                      ? rotationRules[0]?.first_rotation_day
+                      : rotationRules[0]?.second_rotation_day;
 
                   const optionsFor = (slot: "first" | "second", currentValue: string) =>
                     rotationMembers
@@ -2420,31 +3161,65 @@ function ShiftManagementView() {
                         );
                       });
 
+                  const employeeLabel = (employeeNo: string) => {
+                    const member = rotationMembers.find((item) => item.employeeId === employeeNo);
+                    if (!member) return null;
+                    return {
+                      name: language === "cn" ? member.nameCn || member.name : member.name,
+                      shift: member.shift ?? "—",
+                    };
+                  };
+
+                  const first = employeeLabel(selection.first);
+                  const second = employeeLabel(selection.second);
+
                   return (
                     <div
                       key={group}
-                      className="rounded-xl border border-border-subtle bg-surface-hover p-4"
+                      className={`rounded-xl border px-3.5 py-3 shadow-none transition-colors ${
+                        group === "PAIR_A"
+                          ? "border-cyan-200/70 bg-cyan-50/70 dark:border-cyan-400/20 dark:bg-cyan-400/8"
+                          : "border-violet-200/70 bg-violet-50/70 dark:border-violet-400/20 dark:bg-violet-400/8"
+                      }`}
                     >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-bold text-text">
-                            {group === "PAIR_A" ? text("pairA", language) : text("pairB", language)}
-                          </p>
-                          <p className="mt-1 text-[10px] text-text-dim">
-                            {group === "PAIR_A"
-                              ? `Rotation day: ${rotationRules[0]?.first_rotation_day ?? "—"}`
-                              : `Rotation day: ${rotationRules[0]?.second_rotation_day ?? "—"}`}
-                          </p>
+                      <div className="mb-2.5 flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <div
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-[10px] font-extrabold ${
+                              group === "PAIR_A"
+                                ? "border-cyan-200 bg-cyan-100 text-cyan-700 dark:border-cyan-400/25 dark:bg-cyan-400/12 dark:text-cyan-600"
+                                : "border-violet-200 bg-violet-100 text-violet-700 dark:border-violet-400/25 dark:bg-violet-400/12 dark:text-violet-600"
+                            }`}
+                          >
+                            {group === "PAIR_A" ? "A" : "B"}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-text">
+                                {group === "PAIR_A" ? text("pairA", language) : text("pairB", language)}
+                              </p>
+                              <span className="text-[9px] font-semibold text-text-dim">
+                                Day {rotationDay ?? "—"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <span className="inline-flex items-center justify-center rounded-md border border-cyan-500 bg-cyan-500 px-2.5 py-1 text-[9px] font-extrabold text-white shadow-sm">
+
+                        <span
+                          className={`shrink-0 text-[9px] font-extrabold uppercase tracking-[0.08em] ${
+                            group === "PAIR_A"
+                              ? "text-cyan-600 dark:text-cyan-300"
+                              : "text-violet-600 dark:text-violet-300"
+                          }`}
+                        >
                           {group}
                         </span>
                       </div>
 
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-muted">
-                            {text("employeeOne", language)}
+                      <div className="grid gap-2.5 md:grid-cols-2">
+                        <label className="block min-w-0">
+                          <span className="mb-1 block text-[9px] font-semibold uppercase tracking-wide text-text-dim">
+                            D/S · {text("employeeOne", language)}
                           </span>
                           <select
                             value={selection.first}
@@ -2452,20 +3227,25 @@ function ShiftManagementView() {
                               updatePairSelection(group, "first", event.target.value)
                             }
                             disabled={savingPairs || loadingEmployees || loadingShiftData}
-                            className="cursor-pointer w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
+                            className="w-full min-w-0 cursor-pointer rounded-lg border border-border bg-surface-hover px-3 py-2.5 text-[11px] font-semibold text-text outline-none transition focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/10"
                           >
                             <option value="">{text("selectEmployee", language)}</option>
                             {optionsFor("first", selection.first).map((member) => (
                               <option key={member.employeeId} value={member.employeeId}>
-                                {member.employeeId} — {language === "cn" ? member.nameCn || member.name : member.name} — {member.shift ?? "—"}
+                                {member.employeeId} — {language === "cn" ? member.nameCn || member.name : member.name}
                               </option>
                             ))}
                           </select>
+                          {first && (
+                            <div className="mt-1.5 truncate text-[9px] font-medium text-text-dim">
+                              {first.name} · {first.shift}
+                            </div>
+                          )}
                         </label>
 
-                        <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-muted">
-                            {text("employeeTwo", language)}
+                        <label className="block min-w-0">
+                          <span className="mb-1 block text-[9px] font-semibold uppercase tracking-wide text-text-dim">
+                            N/S · {text("employeeTwo", language)}
                           </span>
                           <select
                             value={selection.second}
@@ -2473,15 +3253,20 @@ function ShiftManagementView() {
                               updatePairSelection(group, "second", event.target.value)
                             }
                             disabled={savingPairs || loadingEmployees || loadingShiftData}
-                            className="cursor-pointer w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text"
+                            className="w-full min-w-0 cursor-pointer rounded-lg border border-border bg-surface-hover px-3 py-2.5 text-[11px] font-semibold text-text outline-none transition focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/10"
                           >
                             <option value="">{text("selectEmployee", language)}</option>
                             {optionsFor("second", selection.second).map((member) => (
                               <option key={member.employeeId} value={member.employeeId}>
-                                {member.employeeId} — {language === "cn" ? member.nameCn || member.name : member.name} — {member.shift ?? "—"}
+                                {member.employeeId} — {language === "cn" ? member.nameCn || member.name : member.name}
                               </option>
                             ))}
                           </select>
+                          {second && (
+                            <div className="mt-1.5 truncate text-[9px] font-medium text-text-dim">
+                              {second.name} · {second.shift}
+                            </div>
+                          )}
                         </label>
                       </div>
                     </div>
@@ -2489,7 +3274,7 @@ function ShiftManagementView() {
                 })}
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-3 flex justify-end">
                 <button
                   type="button"
                   onClick={() => void saveRotationPairs()}
@@ -2500,7 +3285,7 @@ function ShiftManagementView() {
                     loadingEmployees ||
                     loadingShiftData
                   }
-                  className="inline-flex items-center justify-center rounded-md border border-cyan-500 bg-cyan-500 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface-hover px-3.5 text-[11px] font-bold text-text transition hover:border-cyan-400/50 hover:bg-surface focus:outline-none focus:ring-2 focus:ring-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {savingPairs ? text("loading", language) : text("saveRotationPairs", language)}
                 </button>
@@ -2522,7 +3307,7 @@ function ShiftManagementView() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[950px]">
                   <thead>
-                    <tr className="border-b border-border-subtle bg-surface-hover">
+                    <tr className="border-b border-slate-100 bg-slate-50/80 ">
                       <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("employee", language)}</th>
                       <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("department", language)}</th>
                       <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-text-muted">{text("shiftMaster", language)}</th>
@@ -2532,7 +3317,7 @@ function ShiftManagementView() {
                   </thead>
                   <tbody>
                     {filteredMembers.map((member) => (
-                      <tr key={member.id} className="border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]">
+                      <tr key={member.id} className="border-b border-border-subtle last:border-0 transition-colors hover:bg-slate-50/80 ">
                         <td className="px-4 py-3">
                           <p className="text-xs font-bold text-text">{language === "cn" ? member.nameCn || member.name : member.name}</p>
                           <p className="mt-0.5 text-[10px] text-text-dim">{member.employeeId}</p>
@@ -2543,11 +3328,11 @@ function ShiftManagementView() {
                         </td>
                         <td className="px-4 py-3">
                           {member.excluded ? (
-                            <span className="inline-flex rounded-full bg-amber-500 px-3 py-1 text-[10px] font-extrabold text-white shadow-sm">
+                            <span className="inline-flex items-center rounded-md border border-amber-300 bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-600">
                               {text("fixed", language)}
                             </span>
                           ) : (
-                            <span className="inline-flex rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-extrabold text-white shadow-sm">
+                            <span className="inline-flex items-center rounded-md border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-600">
                               {text("rotation", language)}
                             </span>
                           )}
@@ -2590,7 +3375,7 @@ function ShiftManagementView() {
                                   excluded: !member.excluded,
                                 })
                               }
-                              className="cursor-pointer rounded-md border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50"
+                              className="cursor-pointer rounded-md border border-border bg-surface px-2.5 py-1.5 text-[10px] font-bold text-text-muted hover:border-cyan-400 hover:text-cyan-700 disabled:opacity-50"
                             >
                               {member.excluded ? text("rotation", language) : text("fixed", language)}
                             </button>
@@ -2609,56 +3394,71 @@ function ShiftManagementView() {
         {activeTab === "schedule" && (
           <Card className="overflow-hidden">
             <div className="border-b border-border-subtle p-4">
-              <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
-                <div className="min-w-0">
-                  <SectionTitle
-                    title={text("schedule", language)}
-                    subtitle={
-                      generated
-                        ? language === "cn"
-                          ? "排班已从数据库加载"
-                          : "Schedule loaded from the database"
-                        : language === "cn"
-                          ? "查看 智能物流 月度排班"
-                          : "View Smart Logistic monthly schedule"
-                    }
-                  />
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <h2 className="text-sm font-semibold text-text">{text("schedule", language)}</h2>
+                      <span className="text-[10px] text-text-dim">
+                        {generated
+                          ? language === "cn"
+                            ? "排班已从数据库加载"
+                            : "Schedule loaded from the database"
+                          : language === "cn"
+                            ? "查看 智能物流 月度排班"
+                            : "View Smart Logistic monthly schedule"}
+                      </span>
+                    </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/20 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-[9px] font-bold text-emerald-800 dark:text-emerald-300">
-                      1 = 08:00–17:00
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/20 bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-[9px] font-bold text-amber-800 dark:text-amber-300">
-                      4 = 4 Hours
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500 dark:border-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-1 text-[9px] font-bold text-cyan-800 dark:text-cyan-300">
-                      D = {text("day", language)}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-indigo-400/20 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 text-[9px] font-bold text-indigo-800 dark:text-indigo-300">
-                      N = {text("night", language)}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-400/20 bg-surface-hover px-2 py-1 text-[9px] font-bold text-text">
-                      O = {text("off", language)}
-                    </span>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[9px] font-semibold">
+                      <span className="text-emerald-700">1 = 08:00–17:00</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-amber-700">4 = 4 Hours</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-sky-700">D = {text("day", language)}</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-violet-700">N = {text("night", language)}</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-500">O = {text("off", language)}</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex w-full flex-col items-stretch gap-2.5 xl:w-auto xl:items-end">
-                  <div className="flex flex-wrap items-center justify-end gap-1.5 rounded-xl border border-border bg-surface-hover/70 p-1.5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                      aria-label="Previous month"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentDate(new Date())}
+                      className="inline-flex h-8 items-center justify-center rounded-md border border-slate-200 bg-white px-2.5 text-[10px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    >
+                      {text("today", language)}
+                    </button>
+                    <div className="inline-flex h-8 min-w-32 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-[10px] font-semibold text-slate-800">
+                      {monthName}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                      aria-label="Next month"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    >
+                      →
+                    </button>
+
+                    <span className="mx-0.5 hidden h-5 w-px bg-slate-200 sm:block" />
+
                     <button
                       type="button"
                       onClick={() => setActiveTab("calendar")}
                       title={text("goOffCalendar", language)}
-                      className="group inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-indigo-400/30 bg-indigo-500 px-3.5 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 text-[10px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     >
-                      <svg
-                        aria-hidden="true"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110"
-                      >
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5 shrink-0">
                         <rect x="3" y="4" width="18" height="17" rx="2" />
                         <path d="M16 2v4M8 2v4M3 10h18" />
                         <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
@@ -2679,20 +3479,9 @@ function ShiftManagementView() {
                               ? text("monthLocked", language)
                               : text("generate", language)
                       }
-                      className="group inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-cyan-400/50 bg-cyan-500 px-3.5 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400/40 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                      className="inline-flex h-8 items-center justify-center rounded-md border border-slate-800 bg-slate-800 px-2.5 text-[10px] font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-45"
                     >
-                      <svg
-                        aria-hidden="true"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="size-4 shrink-0 transition-transform duration-200 group-hover:rotate-12"
-                      >
-                        <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" />
-                        <path d="m19 3 .6 1.4L21 5l-1.4.6L19 7l-.6-1.4L17 5l1.4-.6L19 3Z" />
-                      </svg>
-                      <span>{text("generate", language)}</span>
+                      {text("generate", language)}
                     </button>
 
                     <button
@@ -2709,69 +3498,28 @@ function ShiftManagementView() {
                           ? text("loading", language)
                           : text("exportExcel", language)
                       }
-                      className="group inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-50 px-3.5 text-xs font-extrabold text-emerald-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400/50 hover:bg-emerald-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 text-[10px] font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <svg
-                        aria-hidden="true"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110"
-                      >
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-3.5 shrink-0">
                         <path d="M5 3h10l4 4v14H5z" />
                         <path d="M15 3v5h5M8 12h8M8 16h8M8 20h5" />
                       </svg>
-                      <span>
-                        {exportingExcel
-                          ? text("loading", language)
-                          : text("exportExcel", language)}
-                      </span>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-                      aria-label="Previous month"
-                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
-                    >
-                      ←
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentDate(new Date())}
-                      className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[10px] font-extrabold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
-                    >
-                      {text("today", language)}
-                    </button>
-                    <div className="inline-flex h-9 min-w-36 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500 px-4 text-[10px] font-extrabold text-white shadow-md shadow-cyan-500/20">
-                      {monthName}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-                      aria-label="Next month"
-                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
-                    >
-                      →
+                      <span>{exportingExcel ? text("loading", language) : text("exportExcel", language)}</span>
                     </button>
                   </div>
                 </div>
-              </div>
 
               <div className="mt-4 grid gap-2 md:grid-cols-3">
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={text("search", language)}
-                  className="cursor-text rounded-md border border-border bg-surface px-3 py-2 text-xs text-text outline-none transition focus:border-cyan-400/50"
+                  className="cursor-text rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100 "
                 />
                 <select
                   value={departmentFilter}
                   onChange={(event) => setDepartmentFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
+                  className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 "
                 >
                   <option value="all">{text("allDepartments", language)}</option>
                   {departments.map((department) => (
@@ -2783,7 +3531,7 @@ function ShiftManagementView() {
                 <select
                   value={shiftFilter}
                   onChange={(event) => setShiftFilter(event.target.value)}
-                  className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
+                  className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 "
                 >
                   <option value="all">{text("allShifts", language)}</option>
                   <option value="D/S">D/S — {text("day", language)}</option>
@@ -2796,7 +3544,7 @@ function ShiftManagementView() {
               <table className="w-max min-w-full border-collapse">
                 <thead>
                   <tr className="border-b border-border-subtle bg-surface-hover">
-                    <th className="sticky left-0 z-20 min-w-56 border-r border-border-subtle bg-surface-hover px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-text">
+                    <th className="sticky left-0 z-20 w-[300px] min-w-[300px] border-r border-slate-200 bg-slate-50/95 px-4 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-500 ">
                       {text("employee", language)}
                     </th>
                     {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
@@ -2805,12 +3553,12 @@ function ShiftManagementView() {
                       return (
                         <th
                           key={day}
-                          className={`min-w-14 px-2 py-3 text-center text-[10px] font-extrabold ${
+                          className={`min-w-14 border-l border-slate-100 px-2 py-1.5 text-center text-[9px] font-semibold ${
                             isToday
-                              ? "bg-blue-600 dark:bg-blue-500/15 text-blue-700 dark:text-blue-500"
+                              ? "bg-sky-50 text-sky-700 "
                               : isRotationDay
-                                ? "border-b border-amber-400 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-500"
-                                : "text-text-muted"
+                                ? "bg-amber-50 text-amber-700 "
+                                : "text-slate-500 "
                           }`}
                         >
                           <div>{pad(day)}</div>
@@ -2823,34 +3571,46 @@ function ShiftManagementView() {
                 </thead>
                 <tbody>
                   {loadingEmployees || loadingShiftData ? (
-                    <tr>
-                      <td colSpan={daysInMonth + 1} className="px-4 py-10 text-center text-xs font-semibold text-text-dim">
-                        {text("loading", language)}
-                      </td>
-                    </tr>
+                    Array.from({ length: 6 }, (_, rowIndex) => (
+                      <tr key={rowIndex}>
+                        <td className="px-4 py-3">
+                          <Skeleton className="h-3 w-28" />
+                        </td>
+                        {Array.from({ length: Math.min(daysInMonth, 14) }, (_, cellIndex) => (
+                          <td key={cellIndex} className="px-2 py-3">
+                            <Skeleton className="h-3 w-8" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
                   ) : scheduleRows.filter((row) => {
                     const member = filteredMembers.find((item) => item.employeeId === row.employeeId);
                     return Boolean(member);
                   }).map((row) => (
-                    <tr key={row.employeeId} className="border-b border-border-subtle last:border-0 transition-colors hover:bg-cyan-500/[0.025]">
-                      <td className="sticky left-0 z-10 border-r border-border-subtle bg-surface px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-cyan-500/10 text-[9px] font-extrabold text-cyan-600 dark:text-cyan-300">
-                            {row.name
-                              .split(" ")
-                              .map((part) => part[0])
-                              .join("")
-                              .slice(0, 2)
-                              .toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="whitespace-nowrap text-xs font-bold text-text">{language === "cn" ? row.nameCn || row.name : row.name}</p>
-                            <p className="mt-0.5 whitespace-nowrap text-[9px] text-text-dim">{row.employeeId}</p>
+                    <tr key={row.employeeId} className="border-b border-border-subtle last:border-0 transition-colors hover:bg-slate-50/60">
+                      <td className="sticky left-0 z-10 w-[300px] min-w-[300px] border-r border-slate-200 bg-white px-4 py-2 align-middle">
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                            <p className="truncate text-[12px] font-bold leading-4 text-slate-800">
+                              {language === "cn" ? row.nameCn || row.name : row.name}
+                            </p>
                             {row.fixed && (
-                              <span className="mt-1 inline-flex rounded-full bg-amber-500 px-2 py-0.5 text-[8px] font-extrabold text-white shadow-sm">
+                              <span className="shrink-0 border-l border-amber-300 pl-2 text-[8px] font-bold uppercase tracking-wide text-amber-500">
                                 {text("fixed", language)}
                               </span>
                             )}
+                          </div>
+                          <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                            <span className="shrink-0 text-[10px] font-medium text-slate-400">
+                              {row.employeeId}
+                            </span>
+                            <span className="shrink-0 text-slate-300">•</span>
+                            <span
+                              className="truncate text-[10px] font-semibold text-slate-500"
+                              title={language === "cn" ? row.departmentCn || row.department : row.department}
+                            >
+                              {language === "cn" ? row.departmentCn || row.department : row.department}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -2861,11 +3621,11 @@ function ShiftManagementView() {
                         return (
                           <td
                             key={`${row.employeeId}-${day}`}
-                            className={`px-2 py-3 text-center ${
+                            className={`border-l border-slate-100 px-1 py-1 text-center align-middle ${
                               isToday
-                                ? "bg-blue-50 dark:bg-blue-600/20"
+                                ? "bg-sky-50/70 "
                                 : isRotationDay
-                                  ? "bg-amber-50 dark:bg-amber-500/10"
+                                  ? "bg-amber-50/70 "
                                   : ""
                             }`}
                           >
@@ -2881,7 +3641,7 @@ function ShiftManagementView() {
 
             <div className="flex flex-col gap-2 border-t-2 border-border-subtle px-4 py-3 text-[9px] text-text-muted md:flex-row md:items-center md:justify-between">
               <span>
-                {text("transitionRule", language)}: <span className="font-bold text-amber-800 dark:text-amber-300"> N/S → {language === "cn" ? "休息" : "OFF"} → D/S</span>
+                {text("transitionRule", language)}: <span className="font-bold text-amber-700 "> N/S → {language === "cn" ? "休息" : "OFF"} → D/S</span>
               </span>
               <span>
                 {text("changeDate", language)}: <span className="font-bold text-text">{text("every15th16th", language)}</span>
@@ -2901,6 +3661,7 @@ function ShiftManagementView() {
         )}
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

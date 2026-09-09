@@ -2,16 +2,6 @@ export function SafetyOverviewStyles() {
   return (
     <>
       <style>{`
-        @keyframes safetyOverviewFadeUp {
-          from { opacity: 0; transform: translateY(18px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes safetyOverviewScaleIn {
-          from { opacity: 0; transform: scale(0.97); }
-          to { opacity: 1; transform: scale(1); }
-        }
-
         @keyframes safetyBarGrow {
           from { transform: scaleY(0); transform-origin: bottom; opacity: 0.2; }
           to { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
@@ -40,47 +30,6 @@ export function SafetyOverviewStyles() {
         @keyframes safetyTextReveal {
           from { opacity: 0; transform: translateY(3px); }
           to { opacity: 1; transform: translateY(0); }
-        }
-
-        .safety-scroll-animate {
-          opacity: 0;
-          transform: translateY(18px) scale(0.985);
-          will-change: opacity, transform;
-        }
-
-        .safety-scroll-animate.is-visible {
-          animation: safetyOverviewFadeUp 0.65s ease-out both;
-        }
-
-        .safety-scroll-animate.is-visible .safety-animate-card {
-          animation: safetyOverviewScaleIn 0.5s ease-out both;
-        }
-
-        .safety-scroll-animate.is-visible .safety-animate-card:nth-child(1) { animation-delay: 0.04s; }
-        .safety-scroll-animate.is-visible .safety-animate-card:nth-child(2) { animation-delay: 0.10s; }
-        .safety-scroll-animate.is-visible .safety-animate-card:nth-child(3) { animation-delay: 0.16s; }
-        .safety-scroll-animate.is-visible .safety-animate-card:nth-child(4) { animation-delay: 0.22s; }
-        .safety-scroll-animate.is-visible .safety-animate-card:nth-child(5) { animation-delay: 0.28s; }
-        .safety-scroll-animate.is-visible .safety-animate-card:nth-child(6) { animation-delay: 0.34s; }
-
-        .safety-bar-grow,
-        .safety-horizontal-grow,
-        .safety-donut-segment,
-        .safety-line-draw,
-        .safety-line-point,
-        .safety-line-value,
-        .safety-line-label {
-          animation-play-state: paused !important;
-        }
-
-        .safety-scroll-animate.is-visible .safety-bar-grow,
-        .safety-scroll-animate.is-visible .safety-horizontal-grow,
-        .safety-scroll-animate.is-visible .safety-donut-segment,
-        .safety-scroll-animate.is-visible .safety-line-draw,
-        .safety-scroll-animate.is-visible .safety-line-point,
-        .safety-scroll-animate.is-visible .safety-line-value,
-        .safety-scroll-animate.is-visible .safety-line-label {
-          animation-play-state: running !important;
         }
 
         .safety-line-draw {
@@ -117,8 +66,6 @@ export function SafetyOverviewStyles() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .safety-overview-page .safety-scroll-animate,
-          .safety-overview-page .safety-animate-card,
           .safety-overview-page .safety-bar-grow,
           .safety-overview-page .safety-horizontal-grow,
           .safety-overview-page .safety-donut-segment,
@@ -141,13 +88,11 @@ export function SafetyOverviewStyles() {
           --safety-rose: 251 113 133;
         }
 
-        .safety-overview-page .safety-animate-card,
         .safety-overview-page section,
         .safety-overview-page > div > .rounded-xl {
           transition: border-color .25s ease, box-shadow .25s ease, background-color .25s ease;
         }
 
-        .safety-overview-page .safety-animate-card:hover,
         .safety-overview-page section:hover {
           border-color: rgb(var(--safety-cyan) / .20);
           box-shadow: 0 12px 34px rgb(8 47 73 / .12);

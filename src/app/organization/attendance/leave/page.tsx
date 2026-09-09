@@ -2,9 +2,14 @@
 
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
+import { useGuestWriteGuard } from "@/hooks/useGuestWriteGuard";
 import { useLang } from "@/lib/i18n";
-
-type OrganizationLanguage = "en" | "cn";
+import { organizationLanguageValue } from "@/lib/organization/copy";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { organizationText } from "@/lib/organization/copy";
+import type { OrganizationLanguage } from "@/lib/organization/copy";
 
 type RequestType = "AL" | "MC" | "UPL" | "OT" | "ALPA" | "NO_ATTENDANCE";
 type NoAttendanceType = "NO_CHECK_IN" | "NO_CHECK_OUT" | "NO_CHECK_IN_OUT";
@@ -138,9 +143,7 @@ function employeeDisplayName(
 ) {
   if (!employee) return fallback;
 
-  return language === "cn"
-    ? employee.name_cn || employee.name_en || employee.employee_no
-    : employee.name_en || employee.name_cn || employee.employee_no;
+  return organizationLanguageValue(language, employee.name_en || employee.name_cn || employee.employee_no, employee.name_cn || employee.name_en || employee.employee_no);
 }
 
 function departmentDisplayName(
@@ -150,9 +153,7 @@ function departmentDisplayName(
 ) {
   if (!employee) return fallback;
 
-  return language === "cn"
-    ? employee.division_name_cn || employee.division_name_en || fallback
-    : employee.division_name_en || employee.division_name_cn || fallback;
+  return organizationLanguageValue(language, employee.division_name_en || employee.division_name_cn || fallback, employee.division_name_cn || employee.division_name_en || fallback);
 }
 
 const DEMO_REQUESTS: LeaveRequest[] = [
@@ -198,9 +199,9 @@ const DEMO_REQUESTS: LeaveRequest[] = [
 ];
 
 export default function LeavePermissionPage() {
-  const { t } = useLang();
-  const language: OrganizationLanguage =
-    t.safety.management === "安全管理" ? "cn" : "en";
+  const { lang } = useLang();
+  const guardWrite = useGuestWriteGuard();
+  const language: OrganizationLanguage = lang === "cn" ? "cn" : "en";
 
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
@@ -512,6 +513,10 @@ export default function LeavePermissionPage() {
     },
     status: "Approved" | "Rejected",
   ) => {
+    if (!guardWrite()) {
+      return;
+    }
+
     if (
       !currentEmployeeNo ||
       !canApproveRequest(request) ||
@@ -543,6 +548,9 @@ export default function LeavePermissionPage() {
       };
 
       if (!response.ok || payload.success === false || !payload.data) {
+        if (handleGuestForbiddenResponse(response.status, payload, "PATCH")) {
+          return;
+        }
         throw new Error(
           payload.error || `Leave API failed: ${response.status}`,
         );
@@ -573,7 +581,7 @@ export default function LeavePermissionPage() {
       NO_CHECK_OUT: { en: "No Check-out", cn: "未打下班卡" },
       NO_CHECK_IN_OUT: { en: "No Check-in & Check-out", cn: "上下班均未打卡" },
     };
-    return language === "cn" ? labels[value].cn : labels[value].en;
+    return organizationLanguageValue(language, labels[value].en, labels[value].cn);
   };
 
   const canEditOaNumber = (item: LeaveRequest) =>
@@ -581,6 +589,10 @@ export default function LeavePermissionPage() {
     String(currentUserRole ?? "").trim().toLowerCase() === "admin";
 
   const updateOaNumber = async (request: LeaveRequest) => {
+    if (!guardWrite()) {
+      return;
+    }
+
     if (!canEditOaNumber(request) || oaSavingId) return;
     const value = (oaDrafts[request.id] ?? request.oaNumber ?? "").trim();
     setOaSavingId(request.id);
@@ -597,6 +609,9 @@ export default function LeavePermissionPage() {
         error?: string;
       };
       if (!response.ok || payload.success === false || !payload.data) {
+        if (handleGuestForbiddenResponse(response.status, payload, "PATCH")) {
+          return;
+        }
         throw new Error(payload.error || `Leave API failed: ${response.status}`);
       }
       setRequests((current) =>
@@ -728,6 +743,10 @@ export default function LeavePermissionPage() {
   };
 
   const submitRequest = async () => {
+    if (!guardWrite()) {
+      return;
+    }
+
     if (
       !employeeNo.trim() ||
       !employeeName.trim() ||
@@ -742,9 +761,7 @@ export default function LeavePermissionPage() {
 
     if (type !== "NO_ATTENDANCE" && startTime >= endTime) {
       setRequestsError(
-        language === "cn"
-          ? "结束时间必须晚于开始时间。"
-          : "End time must be later than start time.",
+        organizationText("endTimeMustBeLaterThanStartTime", language),
       );
       return;
     }
@@ -777,6 +794,9 @@ export default function LeavePermissionPage() {
       };
 
       if (!response.ok || payload.success === false || !payload.data) {
+        if (handleGuestForbiddenResponse(response.status, payload, "POST")) {
+          return;
+        }
         throw new Error(
           payload.error || `Leave API failed: ${response.status}`,
         );
@@ -803,12 +823,10 @@ export default function LeavePermissionPage() {
   };
 
   const statusLabel = (status: RequestStatus) =>
-    language === "cn"
-      ? STATUS_META[status].labelCn
-      : STATUS_META[status].labelEn;
+    organizationLanguageValue(language, STATUS_META[status].labelEn, STATUS_META[status].labelCn);
 
   const typeLabel = (value: RequestType) =>
-    TYPE_META[value]?.[language === "cn" ? "labelCn" : "labelEn"] ?? String(value);
+    TYPE_META[value]?.[organizationLanguageValue(language, "labelEn", "labelCn")] ?? String(value);
 
   const requestTypeDisplayLabel = (item: LeaveRequest) => {
     if (item.type === "NO_ATTENDANCE") {
@@ -822,11 +840,14 @@ export default function LeavePermissionPage() {
   };
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationAttendance || access.canManageOrganizationAttendance
+      }
+    >
     <AppShell
   title={
-    language === "cn"
-      ? "请假 / 外出"
-      : "Leave / Permission"
+    organizationText("leavePermission", language)
   }>
       <div className="min-h-full space-y-5 p-5 md:p-6 xl:p-8">
         <style>{`
@@ -946,14 +967,10 @@ export default function LeavePermissionPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-text">
-                  {language === "cn"
-                    ? "请假 / 外出"
-                    : "Leave / Permission"}
+                  {organizationText("leavePermission", language)}
                 </h1>
                 <p className="mt-1 text-xs text-text-muted">
-                  {language === "cn"
-                    ? "提交、查看和审核员工请假与外出申请。"
-                    : "Submit, review and track employee leave and permission requests."}
+                  {organizationText("submitReviewAndTrackEmployeeLeaveAndPermissionRequests", language)}
                 </p>
               </div>
             </div>
@@ -967,38 +984,38 @@ export default function LeavePermissionPage() {
             }}
             className="rounded-lg bg-cyan-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-md"
           >
-            + {language === "cn" ? "新申请" : "New Request"}
+            + {organizationText("newRequest2", language)}
           </button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <MetricCard
-            label={language === "cn" ? "总申请数" : "Total Requests"}
+            label={organizationText("totalRequests", language)}
             value={totalRequestsCount}
             tone="blue"
           />
           <MetricCard
-            label={language === "cn" ? "待审核" : "Pending"}
+            label={organizationText("pending", language)}
             value={pendingCount}
             tone="amber"
           />
           <MetricCard
-            label={language === "cn" ? "已批准" : "Approved"}
+            label={organizationText("approved", language)}
             value={approvedCount}
             tone="emerald"
           />
           <MetricCard
-            label={language === "cn" ? "已拒绝" : "Rejected"}
+            label={organizationText("rejected", language)}
             value={rejectedCount}
             tone="red"
           />
           <MetricCard
-            label={language === "cn" ? "未打卡" : "No Attendance"}
+            label={organizationText("noAttendance", language)}
             value={noAttendanceCount}
             tone="rose"
           />
           <MetricCard
-            label={language === "cn" ? "OA 已完成" : "OA Completed"}
+            label={organizationText("oaCompleted", language)}
             value={oaCompletedCount}
             tone="indigo"
           />
@@ -1008,20 +1025,16 @@ export default function LeavePermissionPage() {
           <div className="flex flex-col gap-3 border-b border-border-subtle bg-surface-hover p-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-sm font-extrabold text-text">
-                {language === "cn"
-                  ? "申请记录"
-                  : "Leave & Permission Requests"}
+                {organizationText("leavePermissionRequests", language)}
               </h2>
               <p className="mt-1 text-[10px] text-text-muted">
-                {language === "cn"
-                  ? "申请记录来自 Leave API，并保存到数据库。"
-                  : "Requests are loaded from the Leave API and stored in the database."}
+                {organizationText("requestsAreLoadedFromTheLeaveApiAndStoredIn", language)}
               </p>
             </div>
 
             <div className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text shadow-sm">
               {filteredRequests.length}{" "}
-              {language === "cn" ? "条记录" : "records"}
+              {organizationText("records", language)}
             </div>
           </div>
 
@@ -1031,7 +1044,7 @@ export default function LeavePermissionPage() {
               onChange={(event) => setEmployeeFilter(event.target.value)}
               className="leave-filter-input"
             >
-              <option value="">{language === "cn" ? "所有员工" : "All Employees"}</option>
+              <option value="">{organizationText("allEmployees", language)}</option>
               {employees.map((employee) => (
                 <option key={employee.employee_no} value={employee.employee_no}>
                   {employeeDisplayName(employee, language, employee.employee_no)}
@@ -1044,7 +1057,7 @@ export default function LeavePermissionPage() {
               onChange={(event) => setDepartmentFilter(event.target.value)}
               className="leave-filter-input"
             >
-              <option value="">{language === "cn" ? "所有部门" : "All Departments"}</option>
+              <option value="">{organizationText("allDepartments", language)}</option>
               {Array.from(
                 new Set(
                   requests
@@ -1063,7 +1076,7 @@ export default function LeavePermissionPage() {
               value={dateFilter}
               onChange={(event) => setDateFilter(event.target.value)}
               className="leave-filter-input"
-              aria-label={language === "cn" ? "日期" : "Date"}
+              aria-label={organizationText("date", language)}
             />
 
             <select
@@ -1073,7 +1086,7 @@ export default function LeavePermissionPage() {
               }
               className="leave-filter-input"
             >
-              <option value="">{language === "cn" ? "所有类型" : "All Types"}</option>
+              <option value="">{organizationText("allTypes", language)}</option>
               {Object.keys(TYPE_META).map((requestType) => (
                 <option key={requestType} value={requestType}>
                   {requestType} · {typeLabel(requestType as RequestType)}
@@ -1088,7 +1101,7 @@ export default function LeavePermissionPage() {
               }
               className="leave-filter-input"
             >
-              <option value="">{language === "cn" ? "所有状态" : "All Statuses"}</option>
+              <option value="">{organizationText("allStatuses", language)}</option>
               {Object.keys(STATUS_META).map((requestStatus) => (
                 <option key={requestStatus} value={requestStatus}>
                   {statusLabel(requestStatus as RequestStatus)}
@@ -1105,9 +1118,9 @@ export default function LeavePermissionPage() {
               }
               className="leave-filter-input"
             >
-              <option value="">{language === "cn" ? "所有 OA 编号" : "All OA Numbers"}</option>
-              <option value="HAS_OA">{language === "cn" ? "有 OA 编号" : "Has OA Number"}</option>
-              <option value="NO_OA">{language === "cn" ? "无 OA 编号" : "No OA Number"}</option>
+              <option value="">{organizationText("allOaNumbers", language)}</option>
+              <option value="HAS_OA">{organizationText("hasOaNumber", language)}</option>
+              <option value="NO_OA">{organizationText("noOaNumber", language)}</option>
             </select>
           </div>
 
@@ -1119,9 +1132,7 @@ export default function LeavePermissionPage() {
 
           {!authLoading && !currentEmployeeNo && (
             <div className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-              {language === "cn"
-                ? "无法识别当前登录账户，无法执行审核。"
-                : "Current login account could not be identified. Approval is disabled."}
+              {organizationText("accountNotIdentified", language)}
             </div>
           )}
 
@@ -1130,59 +1141,56 @@ export default function LeavePermissionPage() {
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-800">
                   <th className="border-b border-r border-border px-4 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "员工" : "Employee"}
+                    {organizationText("employee", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "部门" : "Department"}
+                    {organizationText("department", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "日期" : "Date"}
+                    {organizationText("date", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "类型" : "Type"}
+                    {organizationText("type", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "开始" : "Start"}
+                    {organizationText("start", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "结束" : "End"}
+                    {organizationText("end", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "原因" : "Reason"}
+                    {organizationText("reason", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "状态" : "Status"}
+                    {organizationText("status", language)}
                   </th>
                   <th className="border-b border-r border-border px-3 py-3 text-left text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "OA 编号" : "OA Number"}
+                    {organizationText("oaNumber", language)}
                   </th>
                   <th className="border-b border-border px-3 py-3 text-center text-[10px] font-black text-slate-700 dark:text-white">
-                    {language === "cn" ? "操作" : "Action"}
+                    {organizationText("action", language)}
                   </th>
                 </tr>
               </thead>
 
               <tbody>
                 {requestsLoading ? (
-                  <tr>
-                    <td
-                      colSpan={10}
-                      className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
-                    >
-                      {language === "cn"
-                        ? "加载申请记录..."
-                        : "Loading requests..."}
-                    </td>
-                  </tr>
+                  Array.from({ length: 6 }, (_, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {Array.from({ length: 10 }, (_, cellIndex) => (
+                        <td key={cellIndex} className="px-4 py-3">
+                          <Skeleton className="h-3 w-16" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
                 ) : requests.length === 0 ? (
                   <tr>
                     <td
                       colSpan={10}
                       className="px-6 py-12 text-center text-xs font-semibold text-text-muted"
                     >
-                      {language === "cn"
-                        ? "暂无申请记录"
-                        : "No leave requests yet."}
+                      {organizationText("noLeaveRequestsYet", language)}
                     </td>
                   </tr>
                 ) : (
@@ -1267,7 +1275,7 @@ export default function LeavePermissionPage() {
                                 }
                                 disabled={oaSavingId === item.id}
                                 className="w-32 rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-semibold text-text"
-                                placeholder={language === "cn" ? "OA 编号" : "OA Number"}
+                                placeholder={organizationText("oaNumber", language)}
                               />
                               <button
                                 type="button"
@@ -1275,7 +1283,7 @@ export default function LeavePermissionPage() {
                                 disabled={oaSavingId === item.id}
                                 className="rounded-lg bg-cyan-600 px-2 py-1.5 text-[10px] font-bold text-white disabled:opacity-50"
                               >
-                                {oaSavingId === item.id ? "..." : language === "cn" ? "保存" : "Save"}
+                                {oaSavingId === item.id ? "..." : organizationText("save", language)}
                               </button>
                               {oaEditingIds[item.id] && (
                                 <button
@@ -1289,7 +1297,7 @@ export default function LeavePermissionPage() {
                                   disabled={oaSavingId === item.id}
                                   className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-bold text-text disabled:opacity-50"
                                 >
-                                  {language === "cn" ? "取消" : "Cancel"}
+                                  {organizationText("cancel", language)}
                                 </button>
                               )}
                             </div>
@@ -1312,7 +1320,7 @@ export default function LeavePermissionPage() {
                                 }}
                                 className="rounded-lg border border-border bg-surface px-2 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover"
                               >
-                                {language === "cn" ? "编辑" : "Edit"}
+                                {organizationText("edit", language)}
                               </button>
                             </div>
                           )
@@ -1340,12 +1348,8 @@ export default function LeavePermissionPage() {
                             className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[10px] font-extrabold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {approvalId === item.id
-                              ? language === "cn"
-                                ? "处理中..."
-                                : "Working..."
-                              : language === "cn"
-                                ? "批准"
-                                : "Approve"}
+                              ? organizationText("working", language)
+                              : organizationText("approve", language)}
                           </button>
 
                           <button
@@ -1356,18 +1360,14 @@ export default function LeavePermissionPage() {
                             disabled={approvalId === item.id}
                             className="rounded-lg bg-red-600 px-2.5 py-1.5 text-[10px] font-extrabold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {language === "cn" ? "拒绝" : "Reject"}
+                            {organizationText("reject", language)}
                           </button>
                         </div>
                       ) : item.status === "Pending" ? (
                         <span className="block text-center text-[10px] font-semibold text-text-dim">
                           {item.employeeNo === currentEmployeeNo
-                            ? language === "cn"
-                              ? "等待经理权限"
-                              : "Manager approval required"
-                            : language === "cn"
-                              ? "等待直属经理"
-                              : "Waiting for manager"}
+                            ? organizationText("managerApprovalRequired", language)
+                            : organizationText("waitingForManager", language)}
                         </span>
                       ) : (
                         <span className="block text-center text-[10px] font-semibold text-text-dim">
@@ -1385,9 +1385,10 @@ export default function LeavePermissionPage() {
           {!requestsLoading && filteredRequests.length > 0 && (
             <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[10px] font-semibold text-text-muted">
-                {language === "cn"
-                  ? `第 ${currentPage} / ${totalPages} 页 · 共 ${filteredRequests.length} 条`
-                  : `Page ${currentPage} of ${totalPages} · ${filteredRequests.length} records`}
+                {organizationText("paginationSummary", language)
+                  .replace("{currentPage}", String(currentPage))
+                  .replace("{totalPages}", String(totalPages))
+                  .replace("{count}", String(filteredRequests.length))}
               </p>
 
               <div className="flex items-center gap-2">
@@ -1397,7 +1398,7 @@ export default function LeavePermissionPage() {
                   disabled={currentPage === 1}
                   className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {language === "cn" ? "上一页" : "Previous"}
+                  {organizationText("previous", language)}
                 </button>
 
                 <button
@@ -1408,7 +1409,7 @@ export default function LeavePermissionPage() {
                   disabled={currentPage === totalPages}
                   className="rounded-lg border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-text transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {language === "cn" ? "下一页" : "Next"}
+                  {organizationText("next", language)}
                 </button>
               </div>
             </div>
@@ -1421,14 +1422,10 @@ export default function LeavePermissionPage() {
               <div className="flex items-start justify-between border-b border-border-subtle px-5 py-4">
                 <div>
                   <h2 className="text-base font-extrabold text-text">
-                    {language === "cn"
-                      ? "新建请假 / 外出申请"
-                      : "New Leave / Permission Request"}
+                    {organizationText("newLeavePermissionRequest", language)}
                   </h2>
                   <p className="mt-1 text-[10px] text-text-muted">
-                    {language === "cn"
-                      ? "提交后状态为待审核。"
-                      : "New requests are created with Pending status."}
+                    {organizationText("newRequestsAreCreatedWithPendingStatus", language)}
                   </p>
                 </div>
 
@@ -1445,7 +1442,7 @@ export default function LeavePermissionPage() {
               <div className="grid gap-4 p-5 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <Field
-                    label={language === "cn" ? "选择员工" : "Employee"}
+                    label={organizationText("employee2", language)}
                   >
                     <select
                       value={employeeNo}
@@ -1458,12 +1455,8 @@ export default function LeavePermissionPage() {
                       {employees.length === 0 ? (
                         <option value="">
                           {employeesLoading
-                            ? language === "cn"
-                              ? "加载员工..."
-                              : "Loading employees..."
-                            : language === "cn"
-                              ? "没有可用员工"
-                              : "No active employees"}
+                            ? organizationText("loadingEmployees", language)
+                            : organizationText("noEmployees", language)}
                         </option>
                       ) : (
                         employees.map((employee) => {
@@ -1494,7 +1487,7 @@ export default function LeavePermissionPage() {
                 </div>
 
                 <Field
-                  label={language === "cn" ? "员工工号" : "Employee No."}
+                  label={organizationText("employeeNo", language)}
                 >
                   <input
                     value={employeeNo}
@@ -1504,7 +1497,7 @@ export default function LeavePermissionPage() {
                 </Field>
 
                 <Field
-                  label={language === "cn" ? "员工姓名" : "Employee Name"}
+                  label={organizationText("employeeName", language)}
                 >
                   <input
                     value={employeeName}
@@ -1513,7 +1506,7 @@ export default function LeavePermissionPage() {
                   />
                 </Field>
 
-                <Field label={language === "cn" ? "部门" : "Department"}>
+                <Field label={organizationText("department", language)}>
                   <input
                     value={department}
                     readOnly
@@ -1522,7 +1515,7 @@ export default function LeavePermissionPage() {
                   />
                 </Field>
 
-                <Field label={language === "cn" ? "日期" : "Date"}>
+                <Field label={organizationText("date", language)}>
                   <input
                     type="date"
                     value={date}
@@ -1531,7 +1524,7 @@ export default function LeavePermissionPage() {
                   />
                 </Field>
 
-                <Field label={language === "cn" ? "类型" : "Type"}>
+                <Field label={organizationText("type", language)}>
                   <select
                     value={type}
                     onChange={(event) =>
@@ -1540,28 +1533,28 @@ export default function LeavePermissionPage() {
                     className="field-input"
                   >
                     <option value="AL">
-                      AL — {language === "cn" ? "年假" : "Annual Leave"}
+                      AL — {organizationText("annualLeave", language)}
                     </option>
                     <option value="MC">
-                      MC — {language === "cn" ? "病假" : "Sick Leave"}
+                      MC — {organizationText("sickLeave", language)}
                     </option>
                     <option value="UPL">
-                      UPL — {language === "cn" ? "请假 / 外出" : "Permission"}
+                      UPL — {organizationText("permission", language)}
                     </option>
                     <option value="OT">
-                      OT — {language === "cn" ? "加班" : "Overtime"}
+                      OT — {organizationText("overtime", language)}
                     </option>
                     <option value="ALPA">
-                      ALPA — {language === "cn" ? "旷工" : "Absent Without Leave"}
+                      ALPA — {organizationText("absentWithoutLeave", language)}
                     </option>
                     <option value="NO_ATTENDANCE">
-                      {language === "cn" ? "未打卡" : "No Attendance"}
+                      {organizationText("noAttendance", language)}
                     </option>
                   </select>
                 </Field>
 
                 {type === "NO_ATTENDANCE" && (
-                  <Field label={language === "cn" ? "未打卡类型" : "No Attendance Type"}>
+                  <Field label={organizationText("noAttendanceType", language)}>
                     <select
                       value={noAttendanceType ?? ""}
                       onChange={(event) =>
@@ -1571,17 +1564,17 @@ export default function LeavePermissionPage() {
                       }
                       className="field-input"
                     >
-                      <option value="">{language === "cn" ? "请选择" : "Select"}</option>
-                      <option value="NO_CHECK_IN">{language === "cn" ? "未打上班卡" : "No Check-in"}</option>
-                      <option value="NO_CHECK_OUT">{language === "cn" ? "未打下班卡" : "No Check-out"}</option>
-                      <option value="NO_CHECK_IN_OUT">{language === "cn" ? "上下班均未打卡" : "No Check-in & Check-out"}</option>
+                      <option value="">{organizationText("select", language)}</option>
+                      <option value="NO_CHECK_IN">{organizationText("noCheckIn", language)}</option>
+                      <option value="NO_CHECK_OUT">{organizationText("noCheckOut", language)}</option>
+                      <option value="NO_CHECK_IN_OUT">{organizationText("noCheckInCheckOut", language)}</option>
                     </select>
                   </Field>
                 )}
 
                 {type !== "NO_ATTENDANCE" && (
                   <>
-                    <Field label={language === "cn" ? "开始时间" : "Start Time"}>
+                    <Field label={organizationText("startTime", language)}>
                       <input
                         type="time"
                         value={startTime}
@@ -1590,7 +1583,7 @@ export default function LeavePermissionPage() {
                       />
                     </Field>
 
-                    <Field label={language === "cn" ? "结束时间" : "End Time"}>
+                    <Field label={organizationText("endTime", language)}>
                       <input
                         type="time"
                         value={endTime}
@@ -1603,14 +1596,12 @@ export default function LeavePermissionPage() {
                 )}
 
                 <div className="md:col-span-2">
-                  <Field label={language === "cn" ? "原因" : "Reason"}>
+                  <Field label={organizationText("reason", language)}>
                     <textarea
                       value={reason}
                       onChange={(event) => setReason(event.target.value)}
                       placeholder={
-                        language === "cn"
-                          ? "请输入申请原因..."
-                          : "Enter the reason for this request..."
+                        organizationText("enterTheReasonForThisRequest", language)
                       }
                       rows={4}
                       className="field-input resize-none"
@@ -1625,7 +1616,7 @@ export default function LeavePermissionPage() {
                   onClick={() => setShowForm(false)}
                   className="rounded-lg border border-border bg-surface px-4 py-2 text-xs font-bold text-text transition hover:bg-surface-hover"
                 >
-                  {language === "cn" ? "取消" : "Cancel"}
+                  {organizationText("cancel", language)}
                 </button>
                 <button
                   type="button"
@@ -1644,12 +1635,8 @@ export default function LeavePermissionPage() {
                   className="rounded-lg bg-cyan-600 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting
-                    ? language === "cn"
-                      ? "提交中..."
-                      : "Submitting..."
-                    : language === "cn"
-                      ? "提交申请"
-                      : "Submit Request"}
+                    ? organizationText("submitting", language)
+                    : organizationText("submitRequest", language)}
                 </button>
               </div>
             </div>
@@ -1657,6 +1644,7 @@ export default function LeavePermissionPage() {
         )}
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

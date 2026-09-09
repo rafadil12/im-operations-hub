@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
+import { Spinner } from "@/components/ui/Skeleton";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { ExportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
@@ -57,7 +59,6 @@ export function TrainingSessionClient() {
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [divisions, setDivisions] = useState<TrainingDivision[]>([]);
   const [master, setMaster] = useState<TrainingParticipantName[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [divisionFilter, setDivisionFilter] = useState<number | "all">("all");
@@ -72,6 +73,8 @@ export function TrainingSessionClient() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [loadedDivision, setLoadedDivision] = useState<number | "all" | null>(null);
+  const loading = loadedDivision !== divisionFilter;
 
   const canCreate = access.canCreateTrainingSession;
   const canUpdate = access.canUpdateTrainingSession;
@@ -79,8 +82,6 @@ export function TrainingSessionClient() {
   const canExport = access.canViewTrainingSessions;
 
   const load = async (opts?: { q?: string }) => {
-    setLoading(true);
-    setError(null);
     try {
       const search = (opts?.q !== undefined ? opts.q : q).trim();
       const qs = new URLSearchParams();
@@ -112,14 +113,17 @@ export function TrainingSessionClient() {
           nameCn: row.nameCn,
         }))
       );
+      setError(null);
+      setLoadedDivision(divisionFilter);
     } catch (err) {
       setError(getApiErrorMessage(err) || trainingText("errorLoad", language));
-    } finally {
-      setLoading(false);
+      setLoadedDivision(divisionFilter);
     }
   };
 
   useEffect(() => {
+    // Data fetch on mount / division filter; setState occurs only after await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional client fetch
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on filter change
   }, [divisionFilter]);
@@ -369,9 +373,7 @@ export function TrainingSessionClient() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
+        <SkeletonTable />
       ) : sessions.length === 0 ? (
         <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
           {trainingText("noSessions", language)}
@@ -552,10 +554,7 @@ export function TrainingSessionClient() {
               >
                 {saving ? (
                   <>
-                    <span
-                      className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                      aria-hidden
-                    />
+                    <Spinner />
                     {t.common.loading}
                   </>
                 ) : (

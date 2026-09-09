@@ -91,7 +91,7 @@ export default function RecentTickets({ rows }: Props) {
                   </td>
 
                   <td className="px-3 py-3">
-                    <span className="inline-flex max-w-full items-center truncate rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-green-700">
+                    <span className="inline-flex max-w-full items-center truncate rounded-full border border-success/40 bg-success/10 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-success">
                       {row.status}
                     </span>
                   </td>

@@ -52,6 +52,7 @@ export type ProgressRing = {
   label: string;
   value: number;
   color: string;
+  code?: string;
 };
 
 export type TrainingRow = {
@@ -145,9 +146,12 @@ export type ModuleCardData = {
   recentRows?: TrainingRow[];
   /** Training division breakdown for expand-mode Recharts donut. */
   trainingByDivision?: TrainingOverviewMetrics["byDivision"];
+  /** Set when live API data failed to load for this card. */
+  loadFailed?: boolean;
+  loadError?: string;
 };
 
-const EMPTY = "â";
+const EMPTY = "—";
 
 export const dashboardModules: ModuleCardData[] = [
   {
@@ -229,25 +233,24 @@ export const dashboardModules: ModuleCardData[] = [
       { label: "Avg. Finding", value: EMPTY, tone: "warning" },
     ],
     trendBars: {
-      title: "Finding Trend (Last 7 Days)",
+      title: "Weekly Safety Requirement",
       items: [],
     },
-    pics: {
-      title: "Top PIC (by Closed Finding)",
+    bars: {
+      title: "Monthly Safety Activity",
       items: [],
     },
     chart: {
-      title: "Finding by Category (This Month)",
+      title: "Safety Performance Score",
       type: "donut",
       legend: [
-        { label: "Unsafe Action", color: "#22c55e" },
-        { label: "Unsafe Condition", color: "#3b82f6" },
-        { label: "Near Miss", color: "#f97316" },
-        { label: "Good Practice", color: "#eab308" },
+        { label: "Overall Completion × 50%", color: "#22c55e" },
+        { label: "Finding Closure × 30%", color: "#3b82f6" },
+        { label: "Training Completion × 20%", color: "#f97316" },
       ],
-      segments: [],
-      centerValue: EMPTY,
-      centerLabel: "Findings",
+      segments: [0, 0, 0],
+      centerValue: "0%",
+      centerLabel: "Safety Score",
     },
   },
   {

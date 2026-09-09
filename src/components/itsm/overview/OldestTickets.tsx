@@ -91,7 +91,7 @@ export default function OldestTickets({ rows }: Props) {
                   </td>
 
                   <td className="px-3 py-3 text-center">
-                    <span className="inline-flex max-w-full items-center truncate rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-red-600">
+                    <span className="inline-flex max-w-full items-center truncate rounded-full border border-danger/40 bg-danger/10 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-danger">
                       {row.daysOpen} {t.itsm.days}
                     </span>
                   </td>

@@ -12,6 +12,7 @@ import { ImportItemsModal } from "@/components/sparepart/ImportItemsModal";
 import { ItemForm } from "@/components/sparepart/ItemForm";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import {
   StockTable,
   type PageSize,
@@ -36,6 +37,7 @@ export default function MaterialMasterPage() {
   } = useRoleAccess();
   const [rows, setRows] = useState<SparepartItem[]>([]);
   const [categories, setCategories] = useState<SparepartCategory[]>([]);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(true);
@@ -74,9 +76,15 @@ export default function MaterialMasterPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
     load({ q: "", category: "" });
     apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
-      .then((data) => setCategories(data.rows))
-      .catch(() => setCategories([]));
-  }, [load]);
+      .then((data) => {
+        setCategories(data.rows);
+        setCategoriesError(null);
+      })
+      .catch((err) => {
+        setCategories([]);
+        setCategoriesError(err instanceof Error ? err.message : t.common.error);
+      });
+  }, [load, t.common.error]);
 
   const sortedRows = useMemo(
     () => sortSparepartItems(rows, sortKey, sortDir),
@@ -237,6 +245,12 @@ export default function MaterialMasterPage() {
           </div>
         </div>
 
+        {categoriesError ? (
+          <div className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+            {categoriesError}
+          </div>
+        ) : null}
+
         <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
           <div className="min-w-[160px] flex-1">
             <label className="mb-1 block text-[10px] uppercase text-text-dim">
@@ -287,9 +301,7 @@ export default function MaterialMasterPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-            {t.common.loading}
-          </div>
+          <SkeletonTable />
         ) : (
           <StockTable
             rows={pagedRows}

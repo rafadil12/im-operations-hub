@@ -178,19 +178,11 @@ async function resolveAutomaticManagerId(
           u.employee_no
         FROM users u
         WHERE
-          LOWER(
-            TRIM(
-              COALESCE(
-                u.name_en,
-                ''
-              )
-            )
-          ) = 'wang chunlai'
-
+          u.employee_no = ?
           AND u.employee_no <> 'SUPERADMIN'
-
         LIMIT 1
         `,
+        ['62000125'],
       );
 
     if (!wangRows.length) {

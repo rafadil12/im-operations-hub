@@ -22,7 +22,7 @@ export function SafetyOverviewTrainingMonthlySection({
 }: SafetyOverviewTrainingMonthlySectionProps) {
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+      <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
         <SectionHeader
           title={safetyText("safetyTrainingPerformance", safetyLanguage)}
           description={safetyText("trainingCompletionByWeek", safetyLanguage)}
@@ -55,7 +55,7 @@ export function SafetyOverviewTrainingMonthlySection({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+      <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
         <SectionHeader
           title={safetyText("monthlySafetyActivity", safetyLanguage)}
           description={safetyText("monthlyRequirementCompletion", safetyLanguage)}

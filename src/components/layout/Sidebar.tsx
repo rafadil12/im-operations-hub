@@ -38,6 +38,12 @@ export function Sidebar() {
     canPostSparepartDocument,
     canViewSparepartMaterials,
     canManageSparepartLocations,
+    canViewOrganizationOverview,
+    canViewOrganizationEmployees,
+    canViewOrganizationShift,
+    canManageOrganizationShift,
+    canViewOrganizationAttendance,
+    canManageOrganizationAttendance,
     canAccessSettings,
     canManageRoles,
     canManageAccounts,
@@ -81,6 +87,16 @@ export function Sidebar() {
             canViewSparepartDocuments ||
             canViewSparepartMaterials ||
             canManageSparepartLocations
+          );
+        }
+        if (item.id === "organization") {
+          return (
+            canViewOrganizationOverview ||
+            canViewOrganizationEmployees ||
+            canViewOrganizationShift ||
+            canManageOrganizationShift ||
+            canViewOrganizationAttendance ||
+            canManageOrganizationAttendance
           );
         }
         return true;
@@ -176,6 +192,32 @@ export function Sidebar() {
               .filter((child): child is NavChild => child !== null),
           };
         }
+        if (item.id === "organization" && item.children) {
+          const canAttendance =
+            canViewOrganizationAttendance || canManageOrganizationAttendance;
+          return {
+            ...item,
+            children: item.children
+              .map((child) => {
+                if (child.id === "overview") {
+                  return canViewOrganizationOverview ? child : null;
+                }
+                if (child.id === "employees") {
+                  return canViewOrganizationEmployees ? child : null;
+                }
+                if (child.id === "shift") {
+                  return canViewOrganizationShift || canManageOrganizationShift
+                    ? child
+                    : null;
+                }
+                if (child.id === "attendance") {
+                  return canAttendance ? child : null;
+                }
+                return child;
+              })
+              .filter((child): child is NavChild => child !== null),
+          };
+        }
         return item;
       })
       .filter((item) => {
@@ -209,6 +251,12 @@ export function Sidebar() {
     canViewSparepartMaterials,
     canViewSparepartOverview,
     canViewSparepartStock,
+    canViewOrganizationOverview,
+    canViewOrganizationEmployees,
+    canViewOrganizationShift,
+    canManageOrganizationShift,
+    canViewOrganizationAttendance,
+    canManageOrganizationAttendance,
   ]);
 
   const toggleCollapsed = () => {

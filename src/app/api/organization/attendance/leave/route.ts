@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -122,6 +123,9 @@ function timeToMinutes(value: string): number {
    ========================================================= */
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -255,7 +259,16 @@ export async function GET(request: NextRequest) {
         INNER JOIN users u
           ON u.employee_no = r.employee_no
 
-        LEFT JOIN employee_organization eo
+        /*
+         * A request must appear once even if employee_organization contains
+         * duplicate rows for the same user.  Joining the table directly can
+         * otherwise repeat r.id in the API response.
+         */
+        LEFT JOIN (
+          SELECT user_id, MAX(manager_id) AS manager_id
+          FROM employee_organization
+          GROUP BY user_id
+        ) eo
           ON eo.user_id = u.id
 
         LEFT JOIN users manager
@@ -305,6 +318,9 @@ export async function GET(request: NextRequest) {
    ========================================================= */
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       employeeNo?: unknown;
@@ -595,6 +611,9 @@ export async function POST(request: NextRequest) {
    ========================================================= */
 
 export async function PATCH(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       id?: unknown;
@@ -1012,6 +1031,9 @@ export async function PATCH(request: NextRequest) {
    ========================================================= */
 
 export async function DELETE(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       id?: unknown;

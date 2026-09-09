@@ -1,0 +1,85 @@
+import { weekDateRange } from "./weekCalendar";
+import type { ReportLine } from "./types";
+
+export type WeekReportUiStatus = "none" | "draft" | "submitted";
+
+export const WEEK_REPORT_ALREADY_EXISTS =
+  "A weekly report already exists for this year, area, and week.";
+
+export type AreaWeekReportRow = {
+  year: number;
+  weekNumber: number;
+  startsOn: string;
+  endsOn: string;
+  status: WeekReportUiStatus;
+  lineCount: number;
+  weekId: number | null;
+  createdAt: string | null;
+  createdByLabel: string | null;
+  updatedAt: string | null;
+  updatedByLabel: string | null;
+  lines: ReportLine[];
+};
+
+export function createModeConflictMessage(existingLineCount: number): string | null {
+  if (existingLineCount > 0) return WEEK_REPORT_ALREADY_EXISTS;
+  return null;
+}
+
+export function weekReportStatusFromLines(lines: ReportLine[]): WeekReportUiStatus {
+  if (!lines.length) return "none";
+  if (lines.some((line) => line.submissionStatus === "submitted")) return "submitted";
+  return "draft";
+}
+
+/** Pick the latest wall-clock timestamp without converting to UTC ISO. */
+export function latestTimestamp(values: Array<string | null | undefined>): string | null {
+  let best: string | null = null;
+  let bestMs = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    if (!value) continue;
+    const ms = Date.parse(value.includes("T") ? value : value.replace(" ", "T"));
+    if (!Number.isFinite(ms) || ms <= bestMs) continue;
+    bestMs = ms;
+    best = value;
+  }
+  return best;
+}
+
+export function buildAreaWeekReportRows(args: {
+  year: number;
+  weekNumbers: number[];
+  lines: ReportLine[];
+}): AreaWeekReportRow[] {
+  const linesByWeek = new Map<number, ReportLine[]>();
+  for (const line of args.lines) {
+    if (line.weekNumber == null) continue;
+    const group = linesByWeek.get(line.weekNumber) ?? [];
+    group.push(line);
+    linesByWeek.set(line.weekNumber, group);
+  }
+
+  return args.weekNumbers.map((weekNumber) => {
+    const lines = (linesByWeek.get(weekNumber) ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder);
+    const range = weekDateRange(args.year, weekNumber);
+    const status = weekReportStatusFromLines(lines);
+    const first = lines[0];
+    return {
+      year: args.year,
+      weekNumber,
+      startsOn: range.startsOn,
+      endsOn: range.endsOn,
+      status,
+      lineCount: lines.length,
+      weekId: first?.weekId ?? null,
+      createdAt: first?.reportCreatedAt ?? null,
+      createdByLabel: first?.createdByLabel ?? null,
+      updatedAt: latestTimestamp([
+        ...lines.map((line) => line.updatedAt),
+        first?.reportUpdatedAt,
+      ]),
+      updatedByLabel: first?.updatedByLabel ?? null,
+      lines,
+    };
+  });
+}

@@ -7,6 +7,7 @@ import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { ImOneLogo } from "@/components/brand/ImOneLogo";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useLang } from "@/lib/i18n";
+import { fillTemplate } from "@/lib/i18n/fillTemplate";
 import { useTheme } from "@/lib/theme";
 import type { Lang } from "@/lib/types";
 
@@ -161,7 +162,7 @@ export function LoginPage() {
       if (err instanceof Error && err.cause === "inactive") {
         setError(t.auth.accountInactive);
       } else {
-        setError(err instanceof Error ? err.message : "Login failed.");
+        setError(err instanceof Error ? err.message : t.auth.loginFailed);
       }
     } finally {
       setSubmitting(false);
@@ -216,7 +217,7 @@ export function LoginPage() {
               type="button"
               onClick={toggleTheme}
               className="grid size-9 cursor-pointer place-items-center rounded-full border border-border bg-surface text-text-muted shadow-sm transition-colors hover:bg-surface-hover hover:text-text"
-              title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+              title={theme === "dark" ? t.auth.switchToLight : t.auth.switchToDark}
               aria-label="Toggle theme"
             >
               {theme === "dark" ? <SunIcon /> : <MoonIcon />}
@@ -229,16 +230,15 @@ export function LoginPage() {
         {/* Left: copy + hero art — stretch toward the login card */}
         <section className="flex min-w-0 flex-[1.35] flex-col justify-center lg:min-w-0 lg:pr-2">
           <h1 className="max-w-[22ch] text-[2rem] font-bold uppercase leading-[1.12] tracking-tight text-text sm:text-[2.5rem] lg:text-[2.75rem]">
-            Intelligent
+            {t.auth.heroTitleLine1}
             <span
               aria-hidden
               className="mt-2.5 mb-2.5 block h-[5px] w-[7.5rem] rounded-full bg-gradient-to-r from-[#3b82f6] to-[#22c55e]"
             />
-            Operations, One Platform.
+            {t.auth.heroTitleLine2}
           </h1>
           <p className="mt-3 max-w-[40rem] text-[15px] leading-relaxed text-text-muted">
-            Unified visibility across factory floor, IT services, logistics, and daily operations —
-            all in one place.
+            {t.auth.heroSubtitle}
           </p>
 
           <div className="relative mt-2 w-full max-w-[480px] lg:mt-3 lg:max-w-[520px] xl:max-w-[640px]">
@@ -261,12 +261,12 @@ export function LoginPage() {
         {/* Right: Sign In card */}
         <section className="flex w-full shrink-0 justify-center lg:w-[380px] lg:justify-end xl:w-[400px]">
           <div className="w-full max-w-[400px] rounded-2xl border border-border/80 bg-bg-elevated p-8 shadow-[0_18px_50px_rgba(15,23,42,0.10)]">
-            <h2 className="text-[1.75rem] font-bold leading-none text-accent">Sign In</h2>
-            <p className="mt-2 text-sm text-text-muted">Access your operations dashboard.</p>
+            <h2 className="text-[1.75rem] font-bold leading-none text-accent">{t.auth.signIn}</h2>
+            <p className="mt-2 text-sm text-text-muted">{t.auth.accessDashboard}</p>
 
             {account && !authLoading ? (
               <div className="mt-5 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
-                Signed in as {account.displayName}.{" "}
+                {fillTemplate(t.auth.signedInAs, { name: account.displayName })}{" "}
                 <Link href="/" className="underline underline-offset-2">
                   Go to dashboard
                 </Link>
@@ -275,7 +275,7 @@ export function LoginPage() {
 
             <form className="mt-7 space-y-5" onSubmit={onSubmit}>
               <label className="block">
-                <span className="mb-2 block text-sm text-text-muted">Employee ID</span>
+                <span className="mb-2 block text-sm text-text-muted">{t.auth.employeeId}</span>
                 <span className="relative block">
                   <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-dim">
                     <UserIcon />
@@ -285,7 +285,7 @@ export function LoginPage() {
                     autoComplete="username"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="Enter your employee ID"
+                    placeholder={t.auth.employeeIdPlaceholder}
                     className="w-full rounded-lg border border-border bg-bg/30 py-3 pl-11 pr-3 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent focus:ring-2 focus:ring-accent/20"
                     required
                   />
@@ -293,7 +293,7 @@ export function LoginPage() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm text-text-muted">Password</span>
+                <span className="mb-2 block text-sm text-text-muted">{t.auth.password}</span>
                 <span className="relative block">
                   <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-dim">
                     <LockIcon />
@@ -311,7 +311,7 @@ export function LoginPage() {
                     type="button"
                     className="absolute inset-y-0 right-2 grid w-9 place-items-center text-text-dim hover:text-text"
                     onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                   >
                     <EyeIcon open={showPassword} />
                   </button>
@@ -326,7 +326,7 @@ export function LoginPage() {
                     onChange={(e) => setRemember(e.target.checked)}
                     className="size-4 rounded border-border accent-[var(--accent)]"
                   />
-                  Remember me
+                  {t.auth.rememberMe}
                 </label>
                 <Link href="/" className="font-medium text-accent hover:underline">
                   {t.auth.goToDashboard}
@@ -344,7 +344,7 @@ export function LoginPage() {
                 disabled={submitting}
                 className="w-full cursor-pointer rounded-lg bg-accent py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitting ? "Signing in…" : "Sign In"}
+                {submitting ? t.auth.signingIn : t.auth.signIn}
               </button>
             </form>
           </div>
@@ -361,9 +361,9 @@ export function LoginPage() {
           </div>
           <p className="hidden sm:block">Kayy_Nou</p>
           <div className="flex flex-wrap gap-5">
-            <span className="cursor-default hover:text-text-muted">Privacy Policy</span>
-            <span className="cursor-default hover:text-text-muted">Help Desk</span>
-            <span className="cursor-default hover:text-text-muted">IT Support</span>
+            <span className="cursor-default hover:text-text-muted">{t.auth.privacyPolicy}</span>
+            <span className="cursor-default hover:text-text-muted">{t.auth.helpDesk}</span>
+            <span className="cursor-default hover:text-text-muted">{t.auth.itSupport}</span>
           </div>
         </div>
       </footer>
@@ -371,8 +371,8 @@ export function LoginPage() {
       <a
         href="mailto:it-support@imone.com"
         className="fixed bottom-5 right-5 z-20 grid size-11 place-items-center rounded-full bg-text text-lg font-semibold text-bg shadow-lg transition hover:opacity-90"
-        aria-label="Help"
-        title="Help"
+        aria-label={t.auth.help}
+        title={t.auth.help}
       >
         ?
       </a>

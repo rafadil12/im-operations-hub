@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ function pad(value: number) {
 }
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -68,31 +72,44 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = await query<AttendanceDailyRow[]>(
-      `
-        SELECT
-          id,
-          employee_no,
-          attendance_date,
-          attendance_value,
-          planned_hours,
-          source,
-          leave_request_id,
-          created_at,
-          updated_at
-        FROM attendance_daily
-        WHERE attendance_date >= ?
-          AND attendance_date < DATE_ADD(
-            ?,
-            INTERVAL 1 MONTH
-          )
-          ${employeeCondition}
-        ORDER BY
-          employee_no ASC,
-          attendance_date ASC,
-          id ASC
-      `,
-      params,
-    );
+        `
+          SELECT
+            ad.id,
+            ad.employee_no,
+            ad.attendance_date,
+
+            CASE
+              WHEN ad.source = 'LEAVE'
+                THEN lr.request_type
+              ELSE ad.attendance_value
+            END AS attendance_value,
+
+            ad.planned_hours,
+            ad.source,
+            ad.leave_request_id,
+            ad.created_at,
+            ad.updated_at
+
+          FROM attendance_daily ad
+
+          LEFT JOIN attendance_leave_requests lr
+            ON lr.id = ad.leave_request_id
+
+          WHERE ad.attendance_date >= ?
+            AND ad.attendance_date < DATE_ADD(
+              ?,
+              INTERVAL 1 MONTH
+            )
+
+            ${employeeCondition}
+
+          ORDER BY
+            ad.employee_no ASC,
+            ad.attendance_date ASC,
+            ad.id ASC
+        `,
+        params,
+      );
 
     return NextResponse.json(
       {

@@ -1,4 +1,5 @@
 import type { ModuleCardData } from "@/data/overview";
+import { getDict } from "@/lib/i18n";
 import type { Lang, ItsmAnalysisResult } from "@/lib/types";
 
 const BAR_COLORS = ["#3b82f6", "#60a5fa", "#93c5fd"];
@@ -30,6 +31,7 @@ export function mapItsmToOverview(
   result: ItsmAnalysisResult,
   lang: Lang
 ): ModuleCardData {
+  const t = getDict(lang);
   const topGroups = [...result.byGroup].sort((a, b) => b.count - a.count).slice(0, 3);
   const maxBar = Math.max(1, ...topGroups.map((g) => g.count));
 
@@ -44,29 +46,29 @@ export function mapItsmToOverview(
 
     stats: [
       {
-        label: "Total Tickets",
+        label: t.dashboard.totalTicket,
         value: String(result.total),
         tone: "accent",
       },
       {
-        label: "Open Tickets",
+        label: t.dashboard.openTicket,
         value: String(result.openTickets),
         tone: "warning",
       },
       {
-        label: "Closed Tickets",
+        label: t.dashboard.closedTicket,
         value: String(result.closedTickets),
         tone: "success",
       },
       {
-        label: "Active Users",
+        label: t.itsmAnalysis.activeUsers,
         value: String(result.activeUsers),
         tone: "accent",
       },
     ],
 
     bars: {
-      title: "Ticket by Group",
+      title: t.dashboard.ticketByGroup,
       items: topGroups.map((g, index) => ({
         label:
           lang === "cn"
@@ -80,7 +82,7 @@ export function mapItsmToOverview(
     },
 
     pics: {
-      title: "Top PIC",
+      title: t.dashboard.topPicTicket,
       items: result.requesterRanking
         .filter((r) => r.name !== "NUSA IT Test001")
         .slice(0, 3)
@@ -93,11 +95,11 @@ export function mapItsmToOverview(
     },
 
     chart: {
-      title: "Ticket Trend",
+      title: t.dashboard.ticketTrend,
       type: "trend",
       legend: [
-        { label: "Current Period", color: "#25ebb3" },
-        { label: "Previous Period", color: "#C9D1DB" },
+        { label: t.dashboard.currentPeriod, color: "#25ebb3" },
+        { label: t.dashboard.previousPeriod, color: "#C9D1DB" },
       ],
       series,
     },
