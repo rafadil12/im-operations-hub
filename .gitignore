@@ -28,7 +28,7 @@
 .cursor/
 debug-*.log
 
-# Local AI / developer instructions
+# local AI / developer instructions
 AGENTS.md
 COMMIT.md
 
