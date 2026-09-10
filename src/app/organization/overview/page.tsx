@@ -254,26 +254,20 @@ function isPresent(
 function valueLabel(
   value: AttendanceValue,
   language: OrganizationLanguage,
+  attendanceT: Record<string, string>,
 ) {
-  const labels: Record<
-    AttendanceValue,
-    [string, string]
-  > = {
-    "10.5": ["Present", "出勤"],
-    "8": ["Present", "出勤"],
-    "4": ["Present", "出勤"],
-    OFF: ["OFF", "休息"],
-    AL: ["Annual Leave", "年假"],
-    MC: ["Sick Leave", "病假"],
-    UPL: ["Permission", "请假 / 外出"],
-    A: ["Absent", "缺勤"],
+  const labels: Record<AttendanceValue, string> = {
+    "10.5": attendanceT.present,
+    "8": attendanceT.present,
+    "4": attendanceT.present,
+    OFF: attendanceT.off,
+    AL: attendanceT.annualLeave,
+    MC: attendanceT.sickLeave,
+    UPL: attendanceT.permission,
+    A: attendanceT.absent,
   };
 
-  return (
-    labels[value]?.[
-      language === "cn" ? 1 : 0
-    ] ?? value
-  );
+  return labels[value] ?? value;
 }
 
 function requestTypeStyle(requestType: LeaveType) {
@@ -317,14 +311,15 @@ function requestTypeStyle(requestType: LeaveType) {
 function leaveRequestLabel(
   requestType: LeaveType,
   language: OrganizationLanguage,
+  attendanceT: Record<string, string>,
 ) {
-  if (requestType === "ALPA") return language === "cn" ? "旷工" : "A";
-  if (requestType === "OT") return language === "cn" ? "加班" : "Overtime";
+  if (requestType === "ALPA") return attendanceT.absentShort;
+  if (requestType === "OT") return attendanceT.overtime;
   if (requestType === "NO_ATTENDANCE") {
-    return language === "cn" ? "无考勤" : "No Attendance";
+    return attendanceT.noAttendance;
   }
 
-  return valueLabel(requestType, language);
+  return valueLabel(requestType, language, attendanceT);
 }
 
 function isWorkScheduleType(
@@ -348,14 +343,14 @@ function isLeaveAttendanceValue(
 
 function scheduleLabel(
   value: ScheduleApiRow["schedule_type"],
-  language: OrganizationLanguage,
+  attendanceT: Record<string, string>,
 ) {
-  if (!value) return language === "cn" ? "无排班" : "No schedule";
-  if (value === "D" || value === "D/S") return language === "cn" ? "白班" : "Day";
-  if (value === "N" || value === "N/S") return language === "cn" ? "夜班" : "Night";
-  if (value === "1") return language === "cn" ? "8小时" : "8 Hours";
-  if (value === "4") return language === "cn" ? "4小时" : "4 Hours";
-  return language === "cn" ? "休息" : "OFF";
+  if (!value) return attendanceT.noSchedule;
+  if (value === "D" || value === "D/S") return attendanceT.day;
+  if (value === "N" || value === "N/S") return attendanceT.night;
+  if (value === "1") return attendanceT.hours8;
+  if (value === "4") return attendanceT.hours4;
+  return attendanceT.off;
 }
 
 /* =========================================================
@@ -684,7 +679,7 @@ function DonutChart({
         </span>
 
         <span className="mt-0.5 text-[10px] text-text-dim">
-          Total
+          {total}
         </span>
       </div>
     </div>
@@ -923,6 +918,8 @@ function ScheduleVsActualChart({
   onSelectDate: (date: string) => void;
   language: OrganizationLanguage;
 }) {
+  const { t } = useLang();
+  const ao = t.attendanceOverview;
   const width = 900;
   const height = 330;
   const left = 46;
@@ -1252,20 +1249,18 @@ function ScheduleVsActualChart({
       <div className="mt-2 flex flex-wrap items-center justify-center gap-5 text-[10px]">
         <span className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-slate-400" />
-          {language === "cn" ? "应出勤" : "Scheduled"}
+          {ao.scheduled}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-cyan-400" />
-          {language === "cn" ? "实际出勤" : "Actual"}
+          {ao.actualAttendance}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-0.5 w-4 bg-emerald-400" />
-          {language === "cn" ? "出勤率" : "Attendance Rate"}
+          {ao.attendanceRate}
         </span>
         <span className="text-text-dim">
-          {language === "cn"
-            ? "红点 = 存在排班偏差"
-            : "Red dot = schedule variance"}
+          {ao.redDotScheduleVariance}
         </span>
       </div>
     </div>
@@ -1388,12 +1383,12 @@ function EmployeeLeaveChart({
   data: EmployeeLeaveSummary[];
   language: OrganizationLanguage;
 }) {
+  const { t } = useLang();
+  const ao = t.attendanceOverview;
   if (data.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
-        {language === "cn"
-          ? "本月没有已批准的请假记录"
-          : "No approved leave records this month"}
+        {ao.noApprovedLeaveThisMonth}
       </div>
     );
   }
@@ -1421,12 +1416,10 @@ function EmployeeLeaveChart({
     <div className="rounded-lg border border-border-subtle bg-bg/20 px-3 pb-3 pt-2.5">
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
-          {language === "cn" ? "员工请假" : "Leave by Employee"}
+          {ao.leaveByEmployee}
         </p>
         <p className="mt-0.5 text-[8px] text-text-dim">
-          {language === "cn"
-            ? "仅显示本月有已批准请假的员工"
-            : "Only employees with approved leave are shown"}
+          {ao.leaveByEmployeeDescription}
         </p>
       </div>
 
@@ -1498,7 +1491,7 @@ function EmployeeLeaveChart({
                 <div
                   className="flex w-8 max-w-[2rem] flex-col justify-end overflow-hidden rounded-t-md bg-bg/50 ring-1 ring-inset ring-border-subtle"
                   style={{ height: `${totalHeight}px` }}
-                  title={`${employeeName(item.employee, language)} — ${item.total} approved leave`}
+                  title={`${employeeName(item.employee, language)} — ${ao.approvedLeaveTooltip.replace("{count}", String(item.total))}`}
                 >
                   {item.alpa > 0 ? (
                     <div
@@ -1550,19 +1543,19 @@ function EmployeeLeaveChart({
       <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[8px]">
         <span className="flex items-center gap-1 font-semibold text-blue-400">
           <span className="size-2 rounded-full bg-blue-500" />
-          {language === "cn" ? "年假" : "AL"}
+          {ao.annualLeave}
         </span>
         <span className="flex items-center gap-1 font-semibold text-rose-400">
           <span className="size-2 rounded-full bg-rose-500" />
-          {language === "cn" ? "病假" : "MC"}
+          {ao.sickLeave}
         </span>
         <span className="flex items-center gap-1 font-semibold text-amber-400">
           <span className="size-2 rounded-full bg-amber-500" />
-          {language === "cn" ? "请假 / 外出" : "UPL"}
+          {ao.permission}
         </span>
         <span className="flex items-center gap-1 font-semibold text-fuchsia-400">
           <span className="size-2 rounded-full bg-fuchsia-500" />
-          {language === "cn" ? "旷工" : "ALPA"}
+          {ao.alpa}
         </span>
       </div>
     </div>
@@ -1583,6 +1576,8 @@ function EmployeeMonthlyAttendance({
   totalDays: number;
   language: OrganizationLanguage;
 }) {
+  const { t } = useLang();
+  const ao = t.attendanceOverview;
   const segmentWidth = (value: number) =>
     totalDays > 0 ? `${(value / totalDays) * 100}%` : "0%";
 
@@ -1683,22 +1678,22 @@ function EmployeeMonthlyAttendance({
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[8px] font-semibold">
                   <span className="text-emerald-400">
-                    {language === "cn" ? "出勤" : "P"} {item.present}
+                    {ao.presentShort} {item.present}
                   </span>
                   <span className="text-blue-400">
-                    {language === "cn" ? "AL · 年假" : "AL"} {item.leave}
+                    {ao.annualLeaveDetail} {item.leave}
                   </span>
                   <span className="text-purple-400">
-                    {language === "cn" ? "MC · 病假" : "MC"} {item.mc}
+                    {ao.sickLeaveDetail} {item.mc}
                   </span>
                   <span className="text-orange-400">
-                    {language === "cn" ? "UPL · 请假 / 外出" : "UPL"} {item.upl}
+                    {ao.permissionDetail} {item.upl}
                   </span>
                   <span className="text-rose-400">
-                    {language === "cn" ? "缺勤" : "A"} {item.absent}
+                    {ao.absent} {item.absent}
                   </span>
                   <span className="text-slate-400">
-                    {language === "cn" ? "休息" : "OFF"} {item.off}
+                    {ao.off} {item.off}
                   </span>
                 </div>
               </div>
@@ -1709,9 +1704,7 @@ function EmployeeMonthlyAttendance({
 
       {data.length === 0 && (
         <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted lg:col-span-2">
-          {language === "cn"
-            ? "没有员工考勤数据"
-            : "No employee attendance data"}
+          {ao.noEmployeeAttendance}
         </div>
       )}
     </div>
@@ -1812,6 +1805,7 @@ function DaySelector({
 
 export default function AttendanceOverviewPage() {
   const { t } = useLang();
+  const ao = t.attendanceOverview;
 
   const language: OrganizationLanguage =
     t.safety.management ===
@@ -2115,10 +2109,7 @@ export default function AttendanceOverviewPage() {
             err instanceof
               Error
               ? err.message
-              : language ===
-                  "cn"
-                ? "加载考勤概览失败。"
-                : "Failed to load attendance overview.",
+              : ao.loadFailed,
           );
 
           setLoading(false);
@@ -2518,10 +2509,10 @@ export default function AttendanceOverviewPage() {
 
   const shiftHealthSummary = useMemo(() => {
     const groups: Record<string, { label: string; scheduled: number; actual: number }> = {
-      day: { label: language === "cn" ? "白班" : "Day Shift", scheduled: 0, actual: 0 },
-      night: { label: language === "cn" ? "夜班" : "Night Shift", scheduled: 0, actual: 0 },
-      four: { label: language === "cn" ? "4小时" : "4 Hours", scheduled: 0, actual: 0 },
-      eight: { label: language === "cn" ? "8小时" : "8 Hours", scheduled: 0, actual: 0 },
+      day: { label: ao.dayShift, scheduled: 0, actual: 0 },
+      night: { label: ao.nightShift, scheduled: 0, actual: 0 },
+      four: { label: ao.hours4, scheduled: 0, actual: 0 },
+      eight: { label: ao.hours8, scheduled: 0, actual: 0 },
     };
 
     for (const employee of employees) {
@@ -3477,22 +3468,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase tracking-wide text-text-dim">
-                  {language === "cn"
-                    ? "考勤管理"
-                    : "Attendance Management"}
+                  {ao.attendanceManagement}
                 </span>
               </div>
 
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-text">
-                {language === "cn"
-                  ? "考勤概览"
-                  : "Attendance Overview"}
+                {ao.title}
               </h1>
 
               <p className="mt-1 max-w-2xl text-xs text-text-muted">
-                {language === "cn"
-                  ? "员工月度考勤、每日出勤人员、部门表现、请假与加班总览。"
-                  : "Monthly attendance, daily employees present, department performance, leave and overtime overview."}
+                {ao.subtitle}
               </p>
             </div>
           </div>
@@ -3512,9 +3497,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 }
                 className="rounded-lg border border-border bg-surface px-2 py-2 text-xs text-text-muted transition hover:border-cyan-400/30 hover:bg-surface-hover hover:text-cyan-300"
                 aria-label={
-                  language === "cn"
-                    ? "上个月"
-                    : "Previous month"
+                  ao.previousMonth
                 }
               >
                 ‹
@@ -3537,9 +3520,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 }
                 className="rounded-lg border border-border bg-surface px-2 py-2 text-xs text-text-muted transition hover:border-cyan-400/30 hover:bg-surface-hover hover:text-cyan-300"
                 aria-label={
-                  language === "cn"
-                    ? "下个月"
-                    : "Next month"
+                  ao.nextMonth
                 }
               >
                 ›
@@ -3555,9 +3536,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
               }
               className="rounded-lg border border-border bg-surface px-3 py-2 text-xs font-bold text-text transition hover:border-cyan-400/50 hover:bg-surface-hover"
             >
-              {language === "cn"
-                ? "本月"
-                : "This Month"}
+              {ao.thisMonth}
             </button>
 
             <div
@@ -3578,12 +3557,8 @@ const recentRequests = allRecentRequests.slice(0, 4);
               />
 
               {syncing
-                ? language === "cn"
-                  ? "同步中"
-                  : "Syncing"
-                : language === "cn"
-                  ? "已同步"
-                  : "Synced"}
+                ? ao.syncing
+                : ao.synced}
             </div>
           </div>
         </div>
@@ -3605,10 +3580,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "员工"
-                : "Employees"
+              ao.employees
             }
             value={String(
               monthStats.employees,
@@ -3620,19 +3592,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "月度出勤"
-                : "Present Days"
+              ao.presentDays
             }
             value={String(
               monthStats.present,
             )}
             subtitle={
-              language ===
-              "cn"
-                ? "整个月份"
-                : "Whole month"
+              ao.wholeMonth
             }
             icon="✓"
             tone="success"
@@ -3640,19 +3606,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "出勤率"
-                : "Attendance Rate"
+              ao.attendanceRate
             }
             value={`${monthStats.attendanceRate.toFixed(
               1,
             )}%`}
             subtitle={
-              language ===
-              "cn"
-                ? "员工天数"
-                : "Employee-days"
+              ao.employeeDays
             }
             icon="📊"
             tone="accent"
@@ -3660,18 +3620,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "缺勤"
-                : "Absent"
+              ao.absentFull
             }
             value={String(
               monthStats.absent,
             )}
             subtitle={
-              language === "cn"
-                ? "旷工 · A"
-                : "A"
+              ao.absentShortDetail
             }
             icon="!"
             tone="danger"
@@ -3679,23 +3634,15 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "计划工时"
-                : "Planned Hours"
+              ao.plannedHours
             }
             value={monthStats.hours.toFixed(
               1,
             )}
             subtitle={
               syncing
-                ? language ===
-                  "cn"
-                  ? "同步中"
-                  : "Syncing"
-                : language === "cn"
-                    ? "每日考勤"
-                    : "attendance_daily"
+                ? ao.syncing
+                : ao.dailyAttendance
               }
             icon="◷"
             tone="warning"
@@ -3703,18 +3650,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "年假"
-                : "Annual Leave"
+              ao.annualLeaveFull
             }
             value={String(
               approvedLeaveRequestStats.al,
             )}
             subtitle={
-                language === "cn"
-                  ? "已批准申请 · AL"
-                  : "Approved requests · AL"
+                ao.approvedAL
               }
             icon="A"
             tone="info"
@@ -3722,18 +3664,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "病假"
-                : "Sick Leave"
+              ao.sickLeaveFull
             }
             value={String(
               approvedLeaveRequestStats.mc,
             )}
             subtitle={
-              language === "cn"
-                ? "已批准申请 · MC"
-                : "Approved requests · MC"
+              ao.approvedMC
             }
             icon="M"
             tone="info"
@@ -3741,18 +3678,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "外出"
-                : "Permission"
+              ao.permissionFull
             }
             value={String(
               approvedLeaveRequestStats.upl,
             )}
             subtitle={
-              language === "cn"
-                ? "已批准申请 · UPL"
-                : "Approved requests · UPL"
+              ao.approvedUPL
             }
             icon="↗"
             tone="accent"
@@ -3760,18 +3692,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "休息日"
-                : "Rest Days"
+              ao.restDays
             }
             value={String(
               monthStats.off,
             )}
             subtitle={
-              language === "cn"
-                ? "休息 · OFF"
-                : "OFF"
+              ao.offDetail
             }
             icon="—"
             tone="info"
@@ -3779,19 +3706,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
           <KpiCard
             title={
-              language ===
-              "cn"
-                ? "加班"
-                : "Overtime"
+              ao.overtime
             }
             value={`${otStats.hours.toFixed(
               1,
             )} h`}
             subtitle={`${otStats.requests} ${
-              language ===
-              "cn"
-                ? "申请"
-                : "requests"
+              ao.request
             }`}
             icon="⏱"
             tone="warning"
@@ -3804,14 +3725,14 @@ const recentRequests = allRecentRequests.slice(0, 4);
         <div className="grid items-stretch gap-5 xl:grid-cols-[1.55fr_0.75fr]">
           <section className="attendance-section h-full rounded-xl border border-border bg-surface p-4 md:p-5">
             <SectionHeader
-              title={language === "cn" ? "每日出勤 vs 排班（排班达成走势）" : "Daily Attendance vs Schedule"}
-              description={language === "cn" ? "灰柱=排班计划应出勤人数；蓝柱=实际到岗人数；绿线=当日出勤率。红点表示存在排班偏差。" : "Scheduled employees vs actual attendance by day. Red dots indicate schedule variance."}
+              title={ao.dailyAttendanceVsSchedule}
+              description={ao.dailyAttendanceVsScheduleDescription}
             />
 
             <div className="mt-2.5">
               {loading ? (
                 <div className="flex h-[330px] items-center justify-center text-xs text-text-muted">
-                  {language === "cn" ? "加载中..." : "Loading..."}
+                  {ao.loading}
                 </div>
               ) : (
                 <ScheduleVsActualChart
@@ -3829,11 +3750,11 @@ const recentRequests = allRecentRequests.slice(0, 4);
             </div>
 
             <div className="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4">
-              <LegendStat label={language === "cn" ? "计划工作日次" : "Scheduled Workdays"} value={scheduleMonthlySummary.scheduled} tone="info" />
-              <LegendStat label={language === "cn" ? "实际出勤" : "Scheduled Actual"} value={scheduleMonthlySummary.actual} tone="success" />
-              <LegendStat label={language === "cn" ? "月度出勤率" : "Monthly Rate"} value={Number(scheduleMonthlySummary.rate.toFixed(1))} tone="accent" />
+              <LegendStat label={ao.scheduledWorkdays} value={scheduleMonthlySummary.scheduled} tone="info" />
+              <LegendStat label={ao.scheduledActual} value={scheduleMonthlySummary.actual} tone="success" />
+              <LegendStat label={ao.monthlyRate} value={Number(scheduleMonthlySummary.rate.toFixed(1))} tone="accent" />
               <LegendStat
-                label={language === "cn" ? "排班偏差" : "Schedule Variance"}
+                label={ao.scheduleVariance}
                 value={scheduleMonthlySummary.variance}
                 tone="danger"
                 onClick={() => setShowAllScheduleVariance((value) => !value)}
@@ -3844,12 +3765,12 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <section className="attendance-section flex h-full min-h-0 flex-col rounded-xl border border-border bg-surface p-4 md:p-5">
             <div className="flex items-start justify-between gap-3 shrink-0">
               <SectionHeader
-                title={language === "cn" ? "出勤排班差异" : "Attendance Variance"}
-                description={language === "cn" ? "查看本月排班与实际出勤之间的主要差异原因。" : "Understand why scheduled and actual attendance differ this month."}
+                title={ao.attendanceVariance}
+                description={ao.attendanceVarianceDescription}
               />
 
               <div className="rounded-lg border border-cyan-400/15 bg-cyan-500/5 px-2.5 py-1.5 text-right">
-                <p className="text-[8px] uppercase tracking-wide text-text-dim">Rate</p>
+                <p className="text-[8px] uppercase tracking-wide text-text-dim">{ao.rate}</p>
                 <p className="mt-0.5 text-sm font-extrabold text-cyan-300">
                   {scheduleMonthlySummary.rate.toFixed(1)}%
                 </p>
@@ -3872,11 +3793,11 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
               <div className="min-w-0 flex-1 space-y-2">
                 {[
-                  { label: language === "cn" ? "正常出勤" : "Scheduled Present", value: scheduleMonthlySummary.actual, tone: "text-emerald-400", dot: "bg-emerald-400" },
-                  { label: language === "cn" ? "请假" : "Leave", value: scheduleMonthlySummary.leave, tone: "text-amber-400", dot: "bg-amber-400" },
-                  { label: language === "cn" ? "应到未到" : "Missed", value: scheduleMonthlySummary.missed, tone: "text-rose-400", dot: "bg-rose-400" },
-                  { label: language === "cn" ? "休息日出勤" : "Worked on OFF", value: scheduleMonthlySummary.workedOnOff, tone: "text-orange-400", dot: "bg-orange-400" },
-                  { label: language === "cn" ? "无排班出勤" : "Unscheduled", value: scheduleMonthlySummary.unscheduledPresent, tone: "text-violet-400", dot: "bg-violet-400" },
+                  { label: ao.scheduledPresent, value: scheduleMonthlySummary.actual, tone: "text-emerald-400", dot: "bg-emerald-400" },
+                  { label: ao.leave, value: scheduleMonthlySummary.leave, tone: "text-amber-400", dot: "bg-amber-400" },
+                  { label: ao.missed, value: scheduleMonthlySummary.missed, tone: "text-rose-400", dot: "bg-rose-400" },
+                  { label: ao.workedOnOff, value: scheduleMonthlySummary.workedOnOff, tone: "text-orange-400", dot: "bg-orange-400" },
+                  { label: ao.unscheduledPresent, value: scheduleMonthlySummary.unscheduledPresent, tone: "text-violet-400", dot: "bg-violet-400" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
@@ -3893,28 +3814,28 @@ const recentRequests = allRecentRequests.slice(0, 4);
               <div className="rounded-lg border border-rose-400/15 bg-rose-500/5 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[9px] font-semibold uppercase tracking-wide text-rose-300">
-                    {language === "cn" ? "需处理" : "Needs Attention"}
+                    {ao.needsAttention}
                   </span>
                   <span className="text-sm font-extrabold text-rose-400">
                     {scheduleMonthlySummary.missed}
                   </span>
                 </div>
                 <p className="mt-1 text-[8px] leading-4 text-text-dim">
-                  {language === "cn" ? "排班工作日未出勤" : "Scheduled workdays without matching attendance."}
+                  {ao.missedDescription}
                 </p>
               </div>
 
               <div className="rounded-lg border border-amber-400/15 bg-amber-500/5 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-300">
-                    {language === "cn" ? "休息日出勤" : "OFF Work"}
+                    {ao.offWork}
                   </span>
                   <span className="text-sm font-extrabold text-amber-400">
                     {scheduleMonthlySummary.workedOnOff}
                   </span>
                 </div>
                 <p className="mt-1 text-[8px] leading-4 text-text-dim">
-                  {language === "cn" ? "休息日仍有出勤记录" : "Employees recorded as present on OFF days."}
+                  {ao.offWorkDescription}
                 </p>
               </div>
             </div>
@@ -3923,10 +3844,10 @@ const recentRequests = allRecentRequests.slice(0, 4);
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[9px] font-semibold text-cyan-300">
-                    {language === "cn" ? "排班完成度" : "Schedule adherence"}
+                    {ao.scheduleAdherence}
                   </p>
                   <p className="mt-0.5 text-[8px] text-text-dim">
-                    {language === "cn" ? "实际出勤 / 应出勤" : "Actual attendance divided by scheduled attendance."}
+                    {ao.scheduleAdherenceDescription}
                   </p>
                 </div>
                 <span className="text-base font-black text-text">
@@ -3943,33 +3864,31 @@ const recentRequests = allRecentRequests.slice(0, 4);
         <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-text-dim">{language === "cn" ? "排班偏差" : "Schedule Variance"}</p>
+              <p className="text-[10px] uppercase tracking-wide text-text-dim">{ao.scheduleVariance}</p>
               <h2 className="mt-1 text-base font-semibold text-text">
                 {showAllScheduleVariance
-                  ? language === "cn"
-                    ? `${monthLabel} · 全部排班偏差`
-                    : `All Schedule Variances · ${monthLabel}`
+                  ? ao.allScheduleVariancesForMonth.replace("{month}", monthLabel)
                   : selectedDateLabel}
               </h2>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
               <KpiCard
-                title={language === "cn" ? "应出勤" : "Scheduled"}
+                title={ao.scheduled}
                 value={String(showAllScheduleVariance ? scheduleMonthlySummary.scheduled : selectedScheduleDay?.scheduled ?? 0)}
                 subtitle=""
                 icon=""
                 tone="info"
               />
               <KpiCard
-                title={language === "cn" ? "实际" : "Actual"}
+                title={ao.actual}
                 value={String(showAllScheduleVariance ? scheduleMonthlySummary.actual : selectedScheduleDay?.actual ?? 0)}
                 subtitle=""
                 icon=""
                 tone="success"
               />
               <KpiCard
-                title={language === "cn" ? "差异" : "Variance"}
+                title={ao.variance}
                 value={String(showAllScheduleVariance
                   ? scheduleMonthlySummary.variance
                   : (selectedScheduleDay?.leave ?? 0) +
@@ -4010,14 +3929,12 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
-                          {scheduleLabel(item.scheduleType, language)}
+                          {scheduleLabel(item.scheduleType, ao)}
                         </span>
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
                           {item.attendanceValue
-                            ? valueLabel(item.attendanceValue, language)
-                            : language === "cn"
-                              ? "无考勤"
-                              : "No attendance"}
+                            ? valueLabel(item.attendanceValue, language, ao)
+                            : ao.noAttendance}
                         </span>
                         <span
                           className={[
@@ -4032,20 +3949,12 @@ const recentRequests = allRecentRequests.slice(0, 4);
                           ].join(" ")}
                         >
                           {item.status === "LEAVE"
-                            ? language === "cn"
-                              ? "请假"
-                              : "Leave"
+                            ? ao.leave
                             : item.status === "WORKED_ON_OFF"
-                              ? language === "cn"
-                                ? "休息日出勤"
-                                : "Worked on OFF"
+                              ? ao.workedOnOff
                               : item.status === "UNSCHEDULED_PRESENT"
-                                ? language === "cn"
-                                  ? "无排班出勤"
-                                  : "Unscheduled Present"
-                                : language === "cn"
-                                  ? "应到未到"
-                                  : "Missed"}
+                                ? ao.unscheduledPresent
+                                : ao.missed}
                         </span>
                       </div>
                     </button>
@@ -4058,9 +3967,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                       className="group flex w-full cursor-pointer items-center justify-between rounded-lg border border-rose-400/25 bg-rose-500/5 px-3 py-2.5 text-left transition-all duration-200 hover:border-rose-400/50 hover:bg-rose-500/10"
                     >
                       <span className="text-[10px] font-semibold text-rose-500 dark:text-rose-300">
-                        {language === "cn"
-                          ? `点击查看全部 ${allScheduleVarianceExceptions.length} 条偏差`
-                          : `View all ${allScheduleVarianceExceptions.length} schedule variances`}
+                        {ao.viewAllScheduleVariances.replace("{count}", String(allScheduleVarianceExceptions.length))}
                       </span>
                       <span className="rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-bold text-rose-500 dark:text-rose-300 transition-transform duration-200 group-hover:scale-105">
                         ↗
@@ -4070,7 +3977,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 </div>
               ) : (
                 <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-4 py-4 text-sm text-emerald-400">
-                  {language === "cn" ? "本月没有排班偏差。" : "No schedule variance found for this month."}
+                  {ao.noScheduleVarianceMonth}
                 </div>
               )
             ) : selectedScheduleDay && selectedScheduleDay.exceptions.length > 0 ? (
@@ -4083,8 +3990,8 @@ const recentRequests = allRecentRequests.slice(0, 4);
                         <p className="mt-0.5 text-[9px] text-text-dim">{item.employee.employee_no} · {departmentName(item.employee, language)}</p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{scheduleLabel(item.scheduleType, language)}</span>
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{item.attendanceValue ? valueLabel(item.attendanceValue, language) : (language === "cn" ? "无考勤" : "No attendance")}</span>
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{scheduleLabel(item.scheduleType, ao)}</span>
+                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{item.attendanceValue ? valueLabel(item.attendanceValue, language, ao) : (ao.noAttendance)}</span>
                         <span className={[
                           "rounded-md px-2 py-1 font-semibold",
                           item.status === "LEAVE"
@@ -4094,14 +4001,14 @@ const recentRequests = allRecentRequests.slice(0, 4);
                               : item.status === "UNSCHEDULED_PRESENT"
                                 ? "bg-violet-500/10 text-violet-400"
                                 : "bg-rose-500/10 text-rose-400",
-                        ].join(" ")}>{item.status === "LEAVE" ? (language === "cn" ? "请假" : "Leave") : item.status === "WORKED_ON_OFF" ? (language === "cn" ? "休息日出勤" : "Worked on OFF") : item.status === "UNSCHEDULED_PRESENT" ? (language === "cn" ? "无排班出勤" : "Unscheduled Present") : (language === "cn" ? "应到未到" : "Missed")}</span>
+                        ].join(" ")}>{item.status === "LEAVE" ? (ao.leave) : item.status === "WORKED_ON_OFF" ? (ao.workedOnOff) : item.status === "UNSCHEDULED_PRESENT" ? (ao.unscheduledPresent) : (ao.missed)}</span>
                       </div>
                     </div>
                   ))}
               </div>
             ) : (
               <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/5 px-4 py-4 text-sm text-emerald-400">
-                {language === "cn" ? "当天没有排班偏差。" : "No schedule variance found for this date."}
+                {ao.noScheduleVarianceDate}
               </div>
             )}
           </div>
@@ -4113,16 +4020,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
               className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
               role="dialog"
               aria-modal="true"
-              aria-label={language === "cn" ? "全部排班偏差" : "All Schedule Variances"}
+              aria-label={ao.allScheduleVariances}
             >
               <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
-                    {language === "cn" ? "排班偏差" : "Schedule Variance"}
+                    {ao.scheduleVariance}
                   </p>
                   <div className="mt-1 flex items-center gap-2">
                     <h3 className="truncate text-base font-semibold text-text md:text-lg">
-                      {language === "cn" ? "全部排班偏差" : "All Schedule Variances"}
+                      {ao.allScheduleVariances}
                     </h3>
                     <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
                       {allScheduleVarianceExceptions.length}
@@ -4134,7 +4041,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                   type="button"
                   onClick={() => setShowScheduleVarianceZoom(false)}
                   className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
-                  aria-label={language === "cn" ? "关闭" : "Close"}
+                  aria-label={ao.close}
                 >
                   ×
                 </button>
@@ -4163,14 +4070,12 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
-                          {scheduleLabel(item.scheduleType, language)}
+                          {scheduleLabel(item.scheduleType, ao)}
                         </span>
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
                           {item.attendanceValue
-                            ? valueLabel(item.attendanceValue, language)
-                            : language === "cn"
-                              ? "无考勤"
-                              : "No attendance"}
+                            ? valueLabel(item.attendanceValue, language, ao)
+                            : ao.noAttendance}
                         </span>
                         <span
                           className={[
@@ -4185,20 +4090,12 @@ const recentRequests = allRecentRequests.slice(0, 4);
                           ].join(" ")}
                         >
                           {item.status === "LEAVE"
-                            ? language === "cn"
-                              ? "请假"
-                              : "Leave"
+                            ? ao.leave
                             : item.status === "WORKED_ON_OFF"
-                              ? language === "cn"
-                                ? "休息日出勤"
-                                : "Worked on OFF"
+                              ? ao.workedOnOff
                               : item.status === "UNSCHEDULED_PRESENT"
-                                ? language === "cn"
-                                  ? "无排班出勤"
-                                  : "Unscheduled Present"
-                                : language === "cn"
-                                  ? "应到未到"
-                                  : "Missed"}
+                                ? ao.unscheduledPresent
+                                : ao.missed}
                         </span>
                       </div>
                     </div>
@@ -4218,25 +4115,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <SectionHeader
               title={
-                language ===
-                "cn"
-                  ? "每日出勤"
-                  : "Daily Attendance"
+                ao.dailyAttendanceTitle
               }
               description={
-                language ===
-                "cn"
-                  ? "点击日期即可查看当天实际出勤人员。"
-                  : "Click any date to see exactly who was present."
+                ao.clickDateToSeePresent
               }
             />
 
             <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-3 py-2 text-right">
               <p className="text-[9px] uppercase tracking-wide text-text-dim">
-                {language ===
-                "cn"
-                  ? "当前日期"
-                  : "Selected Date"}
+                {ao.selectedDate}
               </p>
 
               <p className="mt-0.5 text-xs font-medium text-text">
@@ -4265,10 +4153,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
             <ScoreCard
               title={
-                language ===
-                "cn"
-                  ? "出勤率"
-                  : "Attendance Rate"
+                ao.attendanceRate
               }
               value={Number(
                 selectedDayStats.rate.toFixed(
@@ -4280,10 +4165,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <LegendStat
               label={
-                language ===
-                "cn"
-                  ? "出勤"
-                  : "Present"
+                ao.present
               }
               value={
                 selectedDayStats.present
@@ -4293,9 +4175,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <LegendStat
               label={
-                language === "cn"
-                  ? "年假"
-                  : "AL"
+                ao.annualLeave
               }
               value={
                 selectedDayStats.leave
@@ -4305,9 +4185,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <LegendStat
               label={
-                language === "cn"
-                  ? "病假"
-                  : "MC"
+                ao.sickLeave
               }
               value={
                 selectedDayStats.mc
@@ -4317,9 +4195,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <LegendStat
               label={
-                language === "cn"
-                  ? "外出"
-                  : "UPL"
+                ao.permissionCode
               }
               value={
                 selectedDayStats.upl
@@ -4329,9 +4205,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <LegendStat
               label={
-                language === "cn"
-                  ? "旷工"
-                  : "A"
+                ao.absentShort
               }
               value={
                 selectedDayStats.absent
@@ -4341,9 +4215,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <LegendStat
              label={
-                language === "cn"
-                  ? "休息"
-                  : "OFF"
+                ao.off
               }
               value={
                 selectedDayStats.off
@@ -4357,10 +4229,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-text">
-                  {language ===
-                  "cn"
-                    ? "当天出勤人员"
-                    : "Employees Present"}
+                  {ao.employeesPresent}
                 </h3>
 
                 <p className="mt-1 text-[10px] text-text-muted">
@@ -4372,19 +4241,14 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 {
                   selectedDayStats.present
                 }{" "}
-                {language ===
-                "cn"
-                  ? "人"
-                  : "people"}
+                {ao.people}
               </div>
             </div>
 
             {selectedDayStats.present === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-bg/20 px-5 py-12 text-center">
                 <p className="text-xs font-medium text-text-muted">
-                  {language === "cn"
-                    ? "当天没有出勤记录。"
-                    : "No present employees recorded for this day."}
+                  {ao.noPresentEmployees}
                 </p>
               </div>
             ) : (
@@ -4394,9 +4258,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                   <div className="mb-3 flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-bold text-cyan-600 dark:text-cyan-300">
-                         {language === "cn"
-                          ? "☀️ 白班"
-                          : "☀️ Day Shift"}
+                         {ao.dayShiftTitle}
                       </h4>
                       <p className="mt-1 text-[10px] text-text-dim">
                         D / D-S
@@ -4437,7 +4299,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                             </span>
 
                             <span className="ml-2 shrink-0 text-[9px] font-extrabold text-emerald-500">
-                              {language === "cn" ? "出勤" : "Present"}
+                              {ao.present}
                             </span>
                           </div>
                         </div>
@@ -4446,9 +4308,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
                     {selectedDayStats.dayShiftEmployees.length === 0 && (
                       <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-[10px] text-text-muted sm:col-span-2">
-                        {language === "cn"
-                          ? "没有白班出勤人员"
-                          : "No day-shift employees"}
+                        {ao.noDayShiftEmployees}
                       </div>
                     )}
                   </div>
@@ -4459,9 +4319,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                   <div className="mb-3 flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-300">
-                        {language === "cn"
-                          ? "🌙 夜班"
-                          : "🌙 Night Shift"}
+                        {ao.nightShiftTitle}
                       </h4>
                       <p className="mt-1 text-[10px] text-text-dim">
                         N / N-S
@@ -4502,7 +4360,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                             </span>
 
                             <span className="ml-2 shrink-0 text-[9px] font-extrabold text-emerald-500">
-                              {language === "cn" ? "出勤" : "Present"}
+                              {ao.present}
                             </span>
                           </div>
                         </div>
@@ -4511,9 +4369,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
                     {selectedDayStats.nightShiftEmployees.length === 0 && (
                       <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-[10px] text-text-muted sm:col-span-2">
-                        {language === "cn"
-                          ? "没有夜班出勤人员"
-                          : "No night-shift employees"}
+                        {ao.noNightShiftEmployees}
                       </div>
                     )}
                   </div>
@@ -4534,20 +4390,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
         <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
           <SectionHeader
             title={
-              language === "cn"
-                ? "员工月度考勤"
-                : "Employee Monthly Attendance"
+              ao.employeeMonthlyAttendance
             }
             description={
-              language === "cn"
-                ? "每位员工整个月份的出勤及状态构成。"
-                : "Monthly attendance rate and status breakdown for each employee."
+              ao.employeeMonthlyAttendanceDescription
             }
           />
           <div className="mt-2.5">
             {loading ? (
               <div className="flex h-[160px] items-center justify-center text-xs text-text-muted">
-                {language === "cn" ? "加载中..." : "Loading..."}
+                {ao.loading}
               </div>
             ) : (
               <EmployeeMonthlyAttendance
@@ -4559,25 +4411,25 @@ const recentRequests = allRecentRequests.slice(0, 4);
           </div>
           <div className="mt-2.5 flex flex-wrap items-center gap-3 border-t border-border-subtle pt-3 text-[9px] text-text-dim">
             <span className="font-semibold text-text-muted">
-              {language === "cn" ? "图例" : "Legend"}
+              {ao.legend}
             </span>
             <span className="text-emerald-400">
-              {language === "cn" ? "出勤" : "P / Present"}
+              {ao.presentLegend}
             </span>
             <span className="text-blue-400">
-              {language === "cn" ? "AL · 年假" : "AL"}
+              {ao.annualLeaveDetail}
             </span>
             <span className="text-violet-400">
-              {language === "cn" ? "MC · 病假" : "MC"}
+              {ao.sickLeaveDetail}
             </span>
             <span className="text-indigo-400">
-              {language === "cn" ? "UPL · 请假 / 外出" : "UPL"}
+              {ao.permissionDetail}
             </span>
             <span className="text-rose-400">
-              {language === "cn" ? "缺勤" : "A"}
+              {ao.absent}
             </span>
             <span className="text-slate-400">
-              {language === "cn" ? "休息" : "OFF"}
+              {ao.off}
             </span>
           </div>
         </section>
@@ -4591,20 +4443,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
             <div className="mb-4 flex items-center justify-between gap-3">
               <SectionHeader
                 title={
-                  language === "cn"
-                    ? "班组维度比较（应出勤 vs 实际出勤）"
-                    : "Department Planned vs Actual"
+                  ao.departmentPlannedVsActual
                 }
                 description={
-                  language === "cn"
-                    ? "按部门比较排班计划与实际出勤，并显示排班偏差数量。"
-                    : "Compare scheduled headcount with actual attendance by department."
+                  ao.departmentPlannedVsActualDescription
                 }
               />
 
               <div className="hidden shrink-0 rounded-lg border border-border-subtle bg-bg/40 px-2.5 py-1.5 text-right sm:block">
                 <p className="text-[8px] uppercase tracking-wide text-text-dim">
-                  {language === "cn" ? "部门" : "Departments"}
+                  {ao.departmentsPlural}
                 </p>
                 <p className="text-sm font-black text-text">
                   {departmentScheduleSummary.length}
@@ -4661,15 +4509,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
                             {item.actual}/{item.scheduled}
                           </span>
                           <span>
-                            {language === "cn" ? "实际 / 计划" : "Actual / Scheduled"}
+                            {ao.actualScheduled}
                           </span>
 
                           <span className="ml-auto">
                             {hasVariance
-                              ? `${language === "cn" ? "偏差" : "Variance"} ${item.mismatch}`
-                              : language === "cn"
-                                ? "完全匹配"
-                                : "Perfect match"}
+                              ? `${ao.variance} ${item.mismatch}`
+                              : ao.perfectMatch}
                           </span>
                         </div>
 
@@ -4709,7 +4555,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
               {departmentScheduleSummary.length === 0 && (
                 <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
-                  {language === "cn" ? "暂无数据" : "No department data"}
+                  {ao.noDepartmentData}
                 </div>
               )}
             </div>
@@ -4718,21 +4564,21 @@ const recentRequests = allRecentRequests.slice(0, 4);
             {departmentScheduleSummary.length > 0 && (
               <div className="mt-3 flex items-center justify-center gap-4 rounded-lg border border-border-subtle bg-bg/20 px-3 py-2 text-[9px]">
                 <span className="text-text-dim">
-                  {language === "cn" ? "计划" : "Scheduled"}
+                  {ao.planned}
                   <span className="ml-1 font-bold text-violet-400">
                     {scheduleMonthlySummary.scheduled}
                   </span>
                 </span>
 
                 <span className="text-text-dim">
-                  {language === "cn" ? "实际" : "Actual"}
+                  {ao.actual}
                   <span className="ml-1 font-bold text-emerald-400">
                     {scheduleMonthlySummary.actual}
                   </span>
                 </span>
 
                 <span className="text-text-dim">
-                  {language === "cn" ? "缺口" : "Gap"}
+                  {ao.gap}
                   <span className="ml-1 font-bold text-rose-400">
                     {scheduleMonthlySummary.variance}
                   </span>
@@ -4748,19 +4594,15 @@ const recentRequests = allRecentRequests.slice(0, 4);
             <div className="mb-4 flex items-center justify-between gap-3">
               <SectionHeader
                 title={
-                  language === "cn"
-                    ? "班次类型健康度"
-                    : "Shift Health"
+                  ao.shiftHealth
                 }
                 description={
-                  language === "cn"
-                    ? "按排班类型查看计划出勤与实际到岗。"
-                    : "Planned vs actual attendance by schedule type."
+                  ao.shiftHealthDescription
                 }
               />
 
               <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold text-emerald-400">
-                {shiftHealthSummary.length} {language === "cn" ? "班次" : "Shifts"}
+                {shiftHealthSummary.length} {ao.shifts}
               </span>
             </div>
 
@@ -4814,9 +4656,9 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
                         <div className="mt-1 flex items-center justify-between text-[8px] text-text-dim">
                           <span>
-                            {language === "cn" ? "计划" : "Scheduled"} {item.scheduled}
+                            {ao.planned} {item.scheduled}
                             <span className="mx-1 text-text-dim/50">•</span>
-                            {language === "cn" ? "实际" : "Actual"} {item.actual}
+                            {ao.actual} {item.actual}
                           </span>
 
                           <span
@@ -4827,7 +4669,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                             }
                           >
                             {hasGap
-                              ? `${item.scheduled - item.actual} ${language === "cn" ? "差异" : "gap"}`
+                              ? `${item.scheduled - item.actual} ${ao.gapLabel}`
                               : "✓"}
                           </span>
                         </div>
@@ -4855,9 +4697,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
               {shiftHealthSummary.length === 0 && (
                 <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
-                  {language === "cn"
-                    ? "暂无班次数据"
-                    : "No shift data"}
+                  {ao.noShiftData}
                 </div>
               )}
             </div>
@@ -4868,8 +4708,8 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
             <div>
               <SectionHeader
-                title={language === "cn" ? "员工请假情况" : "Leave by Employee"}
-                description={language === "cn" ? "只显示本月有已批准请假的员工。" : "Only employees with approved leave this month are shown."}
+                title={ao.leaveByEmployee}
+                description={ao.leaveByEmployeeDescription2}
               />
             </div>
 
@@ -4884,18 +4724,18 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
             <div className="flex items-end justify-between gap-2.5">
               <SectionHeader
-                title={language === "cn" ? "排班异常 · Top 人员" : "Top Schedule Mismatch Employees"}
-                description={language === "cn" ? "优先显示本月最常发生排班偏差的员工。" : "Employees with the most schedule variance in the selected month."}
+                title={ao.topScheduleMismatchEmployees}
+                description={ao.topScheduleMismatchEmployeesDescription}
               />
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-[10px] text-text-dim">Top 5</span>
+                <span className="text-[10px] text-text-dim">{ao.topFive}</span>
                 {mismatchEmployees.length > 5 ? (
                   <button
                     type="button"
                     onClick={() => setShowAllMismatchEmployees(true)}
                     className="cursor-pointer rounded-md border border-cyan-400/20 bg-cyan-500/5 px-2 py-1 text-[9px] font-semibold text-cyan-400 transition hover:border-cyan-400/40 hover:bg-cyan-500/10"
                   >
-                    {language === "cn" ? "查看全部" : "View all"}
+                    {ao.viewAll}
                   </button>
                 ) : null}
               </div>
@@ -4922,14 +4762,14 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
               {mismatchEmployees.length === 0 && (
                 <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-text-muted">
-                  {language === "cn" ? "暂无排班偏差" : "No schedule variance"}
+                  {ao.noScheduleVariance}
                 </div>
               )}
             </div>
 
             <div className="mt-2.5 border-t border-border-subtle pt-4">
               <p className="text-[9px] text-text-dim">
-                {language === "cn" ? "点击上方日柱可查看当天具体员工的排班偏差。" : "Click a day in the chart above to inspect the employees behind that variance."}
+                {ao.clickDayVariance}
               </p>
             </div>
           </section>
@@ -4941,16 +4781,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
               className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
               role="dialog"
               aria-modal="true"
-              aria-label={language === "cn" ? "全部排班异常员工" : "All Schedule Mismatch Employees"}
+              aria-label={ao.allScheduleMismatchEmployees}
             >
               <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
-                    {language === "cn" ? "排班异常" : "Schedule Mismatch"}
+                    {ao.scheduleMismatch}
                   </p>
                   <div className="mt-1 flex items-center gap-2">
                     <h3 className="truncate text-base font-semibold text-text md:text-lg">
-                      {language === "cn" ? "全部异常员工" : "All Mismatch Employees"}
+                      {ao.allMismatchEmployees}
                     </h3>
                     <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
                       {mismatchEmployees.length}
@@ -4962,7 +4802,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                   type="button"
                   onClick={() => setShowAllMismatchEmployees(false)}
                   className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
-                  aria-label={language === "cn" ? "关闭" : "Close"}
+                  aria-label={ao.close}
                 >
                   ×
                 </button>
@@ -5014,16 +4854,10 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
             <SectionHeader
               title={
-                language ===
-                "cn"
-                  ? "部门月度表现"
-                  : "Monthly Department Performance"
+                ao.monthlyDepartmentPerformance
               }
               description={
-                language ===
-                "cn"
-                  ? "按照整个月份员工天数计算部门出勤率。"
-                  : "Department attendance performance across the whole month."
+                ao.monthlyDepartmentPerformanceDescription
               }
             />
 
@@ -5047,59 +4881,38 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 <thead>
                   <tr className="border-b border-border">
                     <th className="px-3 py-3 text-left text-[10px] uppercase tracking-wide text-text-dim">
-                      {language ===
-                      "cn"
-                        ? "部门"
-                        : "Department"}
+                      {ao.department}
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                     {language === "cn" ? "员工" : "Employees"}
+                     {ao.employees}
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                        {language === "cn" ? "出勤" : "Present"}
+                        {ao.present}
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                      {language ===
-                      "cn"
-                        ? "年假"
-                        : "AL"}  
+                      {ao.annualLeave}  
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                       {language ===
-                      "cn"
-                        ? "病假"
-                        : "MC"} 
+                       {ao.sickLeave} 
                     </th>
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                       {language ===
-                      "cn"
-                        ? "外出"
-                        : "UPL"} 
+                       {ao.permissionCode} 
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                       {language ===
-                      "cn"
-                        ? "旷工"
-                        : "A"} 
+                       {ao.absentShort} 
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                       {language ===
-                      "cn"
-                        ? "休息"
-                        : "OFF"}
+                       {ao.off}
                     </th>
 
                     <th className="px-3 py-3 text-center text-[10px] uppercase tracking-wide text-text-dim">
-                       {language ===
-                      "cn"
-                        ? "出勤率"
-                        : "Rate"}
+                       {ao.rate}
                     </th>
                   </tr>
                 </thead>
@@ -5190,35 +5003,23 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
             <SectionHeader
               title={
-                language ===
-                "cn"
-                  ? "加班概况"
-                  : "Overtime Summary"
+                ao.overtimeSummary
               }
               description={
-                language ===
-                "cn"
-                  ? "OT 独立于 每日考勤。"
-                  : "OT is tracked separately from Daily Attendance."
+                ao.overtimeSummaryDescription
               }
             />
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <KpiCard
                 title={
-                  language ===
-                  "cn"
-                    ? "申请数"
-                    : "Requests"
+                  ao.requestCount
                 }
                 value={String(
                   otStats.requests,
                 )}
                 subtitle={
-                  language ===
-                  "cn"
-                    ? "本月"
-                    : "This month"
+                  ao.thisMonthLower
                 }
                 icon="📄"
                 tone="warning"
@@ -5226,10 +5027,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
               <KpiCard
                 title={
-                  language ===
-                  "cn"
-                    ? "总时长"
-                    : "Total Hours"
+                  ao.totalHours
                 }
                 value={`${otStats.hours.toFixed(
                   1,
@@ -5241,10 +5039,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
               <KpiCard
                 title={
-                  language ===
-                  "cn"
-                    ? "待审核"
-                    : "Pending"
+                  ao.pending
                 }
                 value={String(
                   otStats.pending,
@@ -5256,10 +5051,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
               <KpiCard
                 title={
-                  language ===
-                  "cn"
-                    ? "已批准"
-                    : "Approved"
+                  ao.approved
                 }
                 value={String(
                   otStats.approved,
@@ -5272,17 +5064,11 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <div className="mt-5 rounded-lg border border-border-subtle bg-bg/30 p-4">
               <p className="text-[10px] uppercase tracking-wide text-text-dim">
-                {language ===
-                "cn"
-                  ? "说明"
-                  : "Note"}
+                {ao.note}
               </p>
 
               <p className="mt-1.5 text-[10px] leading-5 text-text-muted">
-                {language ===
-                "cn"
-                  ? "OT 不覆盖 每日考勤，仅在本区域统计 OT 申请和时长。"
-                  : "OT does not override Daily Attendance. This section summarizes monthly OT requests and duration only."}
+                {ao.overtimeNote}
               </p>
             </div>
           </section>
@@ -5296,16 +5082,10 @@ const recentRequests = allRecentRequests.slice(0, 4);
           <div className="flex items-start justify-between gap-4">
             <SectionHeader
               title={
-                language ===
-                "cn"
-                  ? "最新申请"
-                  : "Recent Requests"
+                ao.recentRequests
               }
               description={
-                language ===
-                "cn"
-                  ? "最近的请假、外出和 OT 申请。"
-                  : "Latest leave, permission and OT requests."
+                ao.recentRequestsDescription
               }
             />
 
@@ -5316,9 +5096,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 className="cursor-pointer group mt-0.5 flex shrink-0 items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-500/5 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-400 transition hover:border-cyan-400/40 hover:bg-cyan-500/10"
               >
                 <span>
-                  {language === "cn"
-                    ? `查看全部 ${allRecentRequests.length}`
-                    : `View all (${allRecentRequests.length})`}
+                  {ao.viewAllRequests.replace("{count}", String(allRecentRequests.length))}
                 </span>
                 <span className="cursor-pointer transition-transform duration-200 group-hover:translate-x-0.5">
                   →
@@ -5332,10 +5110,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
             0 ? (
               <div className="rounded-lg border border-dashed border-border px-5 py-12 text-center md:col-span-2 xl:col-span-4">
                 <p className="text-xs font-medium text-text-muted">
-                  {language ===
-                  "cn"
-                    ? "暂无申请记录"
-                    : "No requests yet."}
+                  {ao.noRequests}
                 </p>
               </div>
             ) : (
@@ -5351,16 +5126,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
                   };
                  const label =
                   request.request_type === "ALPA"
-                    ? language === "cn"
-                      ? "旷工"
-                      : "A"
+                    ? ao.absentShort
                     : request.request_type === "OT"
-                      ? language === "cn"
-                        ? "加班"
-                        : "Overtime"
+                      ? ao.overtime
                       : leaveRequestLabel(
                           request.request_type,
                           language,
+                          ao,
                         );
 
                   const statusClass =
@@ -5450,16 +5222,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
               className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
               role="dialog"
               aria-modal="true"
-              aria-label={language === "cn" ? "全部申请" : "All Requests"}
+              aria-label={ao.allRequests}
             >
               <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
-                    {language === "cn" ? "申请" : "Requests"}
+                    {ao.requests}
                   </p>
                   <div className="mt-1 flex items-center gap-2">
                     <h3 className="truncate text-base font-semibold text-text md:text-lg">
-                      {language === "cn" ? "全部申请" : "All Requests"}
+                      {ao.allRequests}
                     </h3>
                     <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold text-cyan-400">
                       {allRecentRequests.length}
@@ -5471,7 +5243,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                   type="button"
                   onClick={() => setShowAllRecentRequests(false)}
                   className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
-                  aria-label={language === "cn" ? "关闭" : "Close"}
+                  aria-label={ao.close}
                 >
                   ×
                 </button>
@@ -5487,14 +5259,10 @@ const recentRequests = allRecentRequests.slice(0, 4);
                     };
                     const label =
                       request.request_type === "ALPA"
-                        ? language === "cn"
-                          ? "旷工"
-                          : "A"
+                        ? ao.absentShort
                         : request.request_type === "OT"
-                          ? language === "cn"
-                            ? "加班"
-                            : "Overtime"
-                          : leaveRequestLabel(request.request_type, language);
+                          ? ao.overtime
+                          : leaveRequestLabel(request.request_type, language, ao);
                     const statusClass =
                       request.status === "Approved"
                         ? "bg-emerald-500/10 text-emerald-300"
@@ -5550,26 +5318,17 @@ const recentRequests = allRecentRequests.slice(0, 4);
         <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
           <SectionHeader
             title={
-              language ===
-              "cn"
-                ? "月度考勤表现"
-                : "Monthly Attendance Performance"
+              ao.monthlyAttendancePerformance
             }
             description={
-              language ===
-              "cn"
-                ? "从整体出勤率、缺勤控制和计划工时查看本月表现。"
-                : "Monthly performance based on attendance rate, absence and planned hours."
+              ao.monthlyAttendancePerformanceDescription
             }
           />
 
           <div className="mt-5 grid gap-2.5 md:grid-cols-4">
             <ScoreCard
               title={
-                language ===
-                "cn"
-                  ? "出勤率"
-                  : "Attendance Rate"
+                ao.attendanceRate
               }
               value={Number(
                 monthStats.attendanceRate.toFixed(
@@ -5581,10 +5340,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <ScoreCard
               title={
-                language ===
-                "cn"
-                  ? "出勤表现"
-                  : "Present Performance"
+                ao.presentPerformance
               }
               value={
                 employees.length >
@@ -5608,10 +5364,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <ScoreCard
               title={
-                language ===
-                "cn"
-                  ? "缺勤控制"
-                  : "Absence Control"
+                ao.absenceControl
               }
               value={
                 employees.length >
@@ -5638,10 +5391,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
 
             <ScoreCard
               title={
-                language ===
-                "cn"
-                  ? "月度状态"
-                  : "Monthly Status"
+                ao.monthlyStatus
               }
               value={Math.round(
                 monthStats.attendanceRate,
@@ -5656,10 +5406,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
         ================================================= */}
 
         <div className="rounded-lg border border-border-subtle bg-bg/20 px-4 py-3 text-[10px] text-text-dim">
-          {language ===
-          "cn"
-            ? "本页面按所选月份统计 每日考勤；点击日期可查看当天出勤人员。AL / MC / UPL / A 按 每日考勤 规则统计，OT 独立统计。"
-            : "This page summarizes the selected month from attendance_daily. Click a date to see employees present that day. AL / MC / UPL / A follow Daily Attendance rules, while OT is tracked separately."}
+          {ao.pageNote}
         </div>
       </div>
     </AppShell>
