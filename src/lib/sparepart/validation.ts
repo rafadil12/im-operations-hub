@@ -1,4 +1,5 @@
 import type { SparepartItemInput } from "@/lib/types";
+import { isValidCnText, isValidEnText } from "@/lib/daily-operation/mesRecordValidation";
 
 export type SparepartFieldError = {
   field: string;
@@ -39,6 +40,7 @@ export function parseSparepartItemBody(
   const brand_cn = trim(body.brand_cn);
   const model = trim(body.model);
   const notes = trim(body.notes);
+  const erp_item_code = trim(body.erp_item_code);
   const category_id = parseCategoryId(body.category_id);
   const uom_id = parseCategoryId(body.uom_id);
   const min_stock = parseMinStock(body.min_stock);
@@ -51,6 +53,19 @@ export function parseSparepartItemBody(
       field: "name_en",
       message: "At least one description (EN or CN) is required.",
     });
+  }
+  if (!brand_en) {
+    errors.push({ field: "brand_en", message: "Brand (EN) is required." });
+  } else if (!isValidEnText(brand_en)) {
+    errors.push({ field: "brand_en", message: "Brand (EN) cannot contain Chinese characters." });
+  }
+  if (!brand_cn) {
+    errors.push({ field: "brand_cn", message: "Brand (CN) is required." });
+  } else if (!isValidCnText(brand_cn)) {
+    errors.push({ field: "brand_cn", message: "Brand (CN) must contain Chinese characters." });
+  }
+  if (erp_item_code.length > 64) {
+    errors.push({ field: "erp_item_code", message: "ERP item code must be at most 64 characters." });
   }
   if (code.length > 32) {
     errors.push({ field: "code", message: "Code must be at most 32 characters." });
@@ -73,6 +88,7 @@ export function parseSparepartItemBody(
     ok: true,
     data: {
       code,
+      erp_item_code,
       name_en,
       name_cn,
       brand_en,

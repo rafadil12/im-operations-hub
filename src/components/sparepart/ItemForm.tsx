@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { Modal } from "@/components/ui/Modal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { SparepartMasterCreateDialog } from "@/components/sparepart/SparepartMasterCreateDialog";
 import { apiGetAbs } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
 import type {
@@ -24,11 +25,16 @@ type Props = {
   onSubmit: (input: SparepartItemInput, extras: SparepartItemFormExtras) => Promise<void>;
 };
 
+function capitalizeWords(value: string): string {
+  return value.replace(/\S+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1));
+}
+
 export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const { t, lang } = useLang();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState(initial?.code ?? "");
+  const [erpItemCode, setErpItemCode] = useState(initial?.erp_item_code ?? "");
   const [nameEn, setNameEn] = useState(initial?.name_en ?? "");
   const [nameCn, setNameCn] = useState(initial?.name_cn ?? "");
   const [brandEn, setBrandEn] = useState(initial?.brand_en ?? "");
@@ -49,6 +55,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createKind, setCreateKind] = useState<"category" | "uom" | null>(null);
 
   const hasExistingImage = Boolean(initial?.image_url) && !removeImage;
   const previewSrc = objectUrl ?? (hasExistingImage ? initial?.image_url : null);
@@ -63,10 +70,6 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
         if (cancelled) return;
         setCategories(catData.rows);
         setUoms(uomData.rows);
-        if (!initial?.category_id) {
-          const it = catData.rows.find((row) => row.code === "IT") ?? catData.rows[0];
-          if (it) setCategoryId(String(it.id));
-        }
         if (!initial?.uom_id) {
           const pcs = uomData.rows.find((row) => row.code === "PCS") ?? uomData.rows[0];
           if (pcs) setUomId(String(pcs.id));
@@ -91,10 +94,34 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  useEffect(() => {
+    if (initial) return;
+    if (!categoryId) return;
+    let cancelled = false;
+    apiGetAbs<{ code: string }>(`/api/sparepart/materials/next-code?category_id=${categoryId}`)
+      .then((data) => {
+        if (!cancelled) setCode(data.code);
+      })
+      .catch(() => {
+        if (!cancelled) setCode("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId, initial]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nameEn.trim() && !nameCn.trim()) {
       setError(t.sparepart.nameRequired);
+      return;
+    }
+    if (!brandEn.trim() || !brandCn.trim()) {
+      setError(`${t.sparepart.brandEn} / ${t.sparepart.brandCn}`);
+      return;
+    }
+    if (initial && !isActive && Number(initial.stock_current) !== 0) {
+      setError(t.sparepart.cannotInactiveWithStock);
       return;
     }
     const parsedCategoryId = Number(categoryId);
@@ -118,6 +145,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
       await onSubmit(
         {
           code: code.trim(),
+          erp_item_code: erpItemCode.trim(),
           name_en: nameEn.trim(),
           name_cn: nameCn.trim(),
           brand_en: brandEn.trim(),
@@ -187,41 +215,56 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={label}>{t.sparepart.code} *</label>
+              <input className={`${field} bg-bg/60 text-text-muted`} value={code} readOnly />
+            </div>
+            <div>
+              <label className={label}>{t.sparepart.erpItemCode}</label>
               <input
                 className={field}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                required
+                value={erpItemCode}
+                onChange={(e) => setErpItemCode(e.target.value)}
               />
             </div>
-            <div className="hidden sm:block" aria-hidden />
             <div>
               <label className={label}>{t.sparepart.nameEn}</label>
-              <input className={field} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+              <input
+                className={field}
+                value={nameEn}
+                onChange={(e) => setNameEn(e.target.value)}
+                onBlur={() => setNameEn((current) => capitalizeWords(current))}
+              />
             </div>
             <div>
               <label className={label}>{t.sparepart.nameCn}</label>
               <input className={field} value={nameCn} onChange={(e) => setNameCn(e.target.value)} />
             </div>
             <div>
-              <label className={label}>{t.sparepart.brandEn}</label>
+              <label className={label}>{t.sparepart.brandEn} *</label>
               <input
                 className={field}
                 value={brandEn}
                 onChange={(e) => setBrandEn(e.target.value)}
+                onBlur={() => setBrandEn((current) => capitalizeWords(current))}
+                required
               />
             </div>
             <div>
-              <label className={label}>{t.sparepart.brandCn}</label>
+              <label className={label}>{t.sparepart.brandCn} *</label>
               <input
                 className={field}
                 value={brandCn}
                 onChange={(e) => setBrandCn(e.target.value)}
+                required
               />
             </div>
             <div className="sm:col-span-2">
               <label className={label}>{t.sparepart.model}</label>
-              <input className={field} value={model} onChange={(e) => setModel(e.target.value)} />
+              <input
+                className={field}
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                onBlur={() => setModel((current) => capitalizeWords(current))}
+              />
             </div>
             <div>
               <label className={label}>{t.sparepart.category} *</label>
@@ -235,6 +278,8 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                 }))}
                 placeholder={t.sparepart.category}
                 disabled={busy}
+                onAdd={() => setCreateKind("category")}
+                addLabel={`+ ${t.sparepart.addCategory}`}
               />
             </div>
             <div>
@@ -249,6 +294,8 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                 }))}
                 placeholder={t.sparepart.uom}
                 disabled={busy}
+                onAdd={() => setCreateKind("uom")}
+                addLabel={`+ ${t.sparepart.addUom}`}
               />
             </div>
             <div>
@@ -267,10 +314,18 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
               <SparepartDropdown
                 className="w-full"
                 value={isActive ? "1" : "0"}
-                onChange={(value) => setIsActive(value !== "0")}
+                onChange={(value) => {
+                  if (value === "0" && initial && Number(initial.stock_current) !== 0) {
+                    setError(t.sparepart.cannotInactiveWithStock);
+                    return;
+                  }
+                  setIsActive(value !== "0");
+                }}
                 options={[
                   { value: "1", label: t.sparepart.active },
-                  { value: "0", label: t.sparepart.nonActive },
+                  ...(initial && Number(initial.stock_current) !== 0
+                    ? []
+                    : [{ value: "0", label: t.sparepart.nonActive }]),
                 ]}
                 placeholder={t.sparepart.stockStatus}
                 disabled={busy}
@@ -347,6 +402,54 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           src={previewSrc}
           alt={`${code} ${nameEn || nameCn}`.trim()}
           onClose={() => setLightboxOpen(false)}
+        />
+      ) : null}
+
+      {createKind ? (
+        <SparepartMasterCreateDialog
+          title={createKind === "category" ? t.sparepart.addCategory : t.sparepart.addUom}
+          endpoint={
+            createKind === "category" ? "/api/sparepart/categories" : "/api/sparepart/uoms"
+          }
+          onClose={() => setCreateKind(null)}
+          onCreated={(row) => {
+            if (createKind === "category") {
+              setCategories((current) =>
+                current.some((item) => item.id === row.id)
+                  ? current
+                  : [
+                      ...current,
+                      {
+                        id: row.id,
+                        code: row.code,
+                        name_en: row.name_en,
+                        name_cn: row.name_cn,
+                        sort_order: current.length + 1,
+                        is_active: 1,
+                      },
+                    ]
+              );
+              setCategoryId(String(row.id));
+            } else {
+              setUoms((current) =>
+                current.some((item) => item.id === row.id)
+                  ? current
+                  : [
+                      ...current,
+                      {
+                        id: row.id,
+                        code: row.code,
+                        name_en: row.name_en,
+                        name_cn: row.name_cn,
+                        sort_order: current.length + 1,
+                        is_active: 1,
+                      },
+                    ]
+              );
+              setUomId(String(row.id));
+            }
+            setCreateKind(null);
+          }}
         />
       ) : null}
     </>

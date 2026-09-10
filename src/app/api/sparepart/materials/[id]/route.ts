@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
-import { SparepartImageError, renameMaterialImage } from "@/lib/sparepart/images";
 import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepart/categories";
 import { parseSparepartItemBody } from "@/lib/sparepart/validation";
+import { STOCK_BALANCE_FROM, STOCK_BALANCE_SELECT } from "@/lib/sparepart/stockBalances";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -34,15 +34,10 @@ export async function GET(_request: NextRequest, context: Ctx) {
     }
 
     const balances = await query(
-      `SELECT b.id, b.item_id, b.storage_location_id, b.qty, b.updated_at,
-              loc.code AS location_code,
-              loc.name_en AS location_name_en,
-              loc.name_cn AS location_name_cn,
-              loc.name_en AS location_name
-       FROM sparepart_stock_balances b
-       JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
+      `SELECT ${STOCK_BALANCE_SELECT}
+       FROM ${STOCK_BALANCE_FROM}
        WHERE b.item_id = ? AND b.qty > 0
-       ORDER BY loc.name_en ASC`,
+       ORDER BY loc.name_en ASC, lvl.sort_order ASC`,
       [itemId]
     );
 
@@ -85,8 +80,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Invalid UoM." }, { status: 400 });
     }
 
-    const existing = await query<Pick<SparepartItem, "id" | "code" | "image_url">[]>(
-      `SELECT id, code, image_url FROM sparepart_items
+    const existing = await query<
+      Pick<SparepartItem, "id" | "code" | "image_url" | "stock_current">[]
+    >(
+      `SELECT id, code, image_url, stock_current FROM sparepart_items
        WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
       [itemId]
     );
@@ -94,31 +91,26 @@ export async function PUT(request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Material not found." }, { status: 404 });
     }
 
-    let nextImageUrl = existing[0].image_url;
-    if (existing[0].code !== data.code) {
-      try {
-        nextImageUrl = await renameMaterialImage(
-          existing[0].code,
-          data.code,
-          existing[0].image_url
-        );
-      } catch (err) {
-        if (err instanceof SparepartImageError) {
-          return NextResponse.json({ error: err.message }, { status: err.status });
-        }
-        throw err;
-      }
+    if (!data.is_active && Number(existing[0].stock_current) !== 0) {
+      return NextResponse.json(
+        { error: "Cannot set a material inactive while stock is not zero." },
+        { status: 400 }
+      );
     }
+
+    const nextCode = existing[0].code;
+    const nextImageUrl = existing[0].image_url;
 
     try {
       const result = await execute(
         `UPDATE sparepart_items
-         SET code = ?, name_en = ?, name_cn = ?, brand_en = ?, brand_cn = ?,
+         SET code = ?, erp_item_code = ?, name_en = ?, name_cn = ?, brand_en = ?, brand_cn = ?,
              model = ?, notes = ?, image_url = ?, min_stock = ?, is_active = ?,
              category_id = ?, uom_id = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
-          data.code,
+          nextCode,
+          data.erp_item_code || null,
           data.name_en || null,
           data.name_cn || null,
           data.brand_en || null,
@@ -141,7 +133,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
       const code = (err as { code?: string }).code;
       if (code === "ER_DUP_ENTRY") {
         return NextResponse.json(
-          { error: `Material code "${data.code}" already exists.` },
+          { error: `Material code "${nextCode}" already exists.` },
           { status: 409 }
         );
       }
@@ -159,10 +151,25 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
 
   try {
     const { id } = await context.params;
+    const itemId = Number(id);
+    const existing = await query<{ stock_current: number }[]>(
+      `SELECT stock_current FROM sparepart_items
+       WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
+      [itemId]
+    );
+    if (!existing[0]) {
+      return NextResponse.json({ error: "Material not found." }, { status: 404 });
+    }
+    if (Number(existing[0].stock_current) !== 0) {
+      return NextResponse.json(
+        { error: "Cannot delete a material while stock is not zero." },
+        { status: 400 }
+      );
+    }
     const result = await execute(
       `UPDATE sparepart_items SET deleted_at = NOW()
        WHERE id = ? AND deleted_at IS NULL`,
-      [Number(id)]
+      [itemId]
     );
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Material not found." }, { status: 404 });

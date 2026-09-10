@@ -6,7 +6,7 @@ const validBody = {
   name_en: "Cable",
   name_cn: "线缆",
   brand_en: "Acme",
-  brand_cn: "",
+  brand_cn: "艾克米",
   model: "X1",
   notes: "",
   category_id: 1,
@@ -43,6 +43,12 @@ describe("parseSparepartItemBody", () => {
       expect(result.data.name_en).toBe("");
       expect(result.data.name_cn).toBe("线缆");
     }
+  });
+
+  it("rejects missing brand_en or brand_cn and invalid charset", () => {
+    expect(parseSparepartItemBody({ ...validBody, brand_en: "  " }).ok).toBe(false);
+    expect(parseSparepartItemBody({ ...validBody, brand_cn: "Acme" }).ok).toBe(false);
+    expect(parseSparepartItemBody({ ...validBody, brand_en: "Acme 线" }).ok).toBe(false);
   });
 
   it("rejects missing code and both names empty", () => {

@@ -153,6 +153,11 @@ export default function MaterialMasterPage() {
 
   const confirmDelete = async () => {
     if (!deleteRow) return;
+    if (Number(deleteRow.stock_current) !== 0) {
+      toastError(t.sparepart.cannotDeleteWithStock);
+      setDeleteRow(null);
+      return;
+    }
     setDeleting(true);
     try {
       await apiSendAbs(`/api/sparepart/materials/${deleteRow.id}`, "DELETE");
@@ -321,7 +326,17 @@ export default function MaterialMasterPage() {
                   }
                 : undefined
             }
-            onDelete={canDeleteSparepartMaterial ? setDeleteRow : undefined}
+            onDelete={
+              canDeleteSparepartMaterial
+                ? (row) => {
+                    if (Number(row.stock_current) !== 0) {
+                      toastError(t.sparepart.cannotDeleteWithStock);
+                      return;
+                    }
+                    setDeleteRow(row);
+                  }
+                : undefined
+            }
             variant="master"
             sortKey={sortKey}
             sortDir={sortDir}

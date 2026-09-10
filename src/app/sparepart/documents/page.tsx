@@ -4,8 +4,8 @@ import { SkeletonPage } from "@/components/ui/skeletons";
 import MaterialDocumentsPage from "./DocumentsClient";
 
 export const metadata = pageMetadata({
-  title: "Transaction History · Sparepart",
-  description: "History of posted stock transactions.",
+  title: "Movement Documents · Sparepart",
+  description: "Posted goods movement documents.",
   path: "/sparepart/documents",
 });
 

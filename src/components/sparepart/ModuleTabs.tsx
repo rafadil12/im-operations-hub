@@ -23,14 +23,19 @@ export function ModuleTabs() {
       visible: canViewSparepartStock,
     },
     {
-      label: t.nav.sparepartPost,
-      href: "/sparepart/post",
-      visible: canPostSparepartDocument,
-    },
-    {
       label: t.nav.sparepartDocuments,
       href: "/sparepart/documents",
       visible: canViewSparepartDocuments,
+    },
+    {
+      label: t.nav.sparepartMovementHistory,
+      href: "/sparepart/movement-history",
+      visible: canViewSparepartDocuments,
+    },
+    {
+      label: t.nav.sparepartPost,
+      href: "/sparepart/post",
+      visible: canPostSparepartDocument,
     },
     {
       label: t.nav.sparepartMaterials,

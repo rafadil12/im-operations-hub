@@ -6,7 +6,9 @@ export type LineDraft = {
   qty: string;
   note: string;
   storage_location_id: string;
+  storage_level_id: string;
   to_storage_location_id: string;
+  to_storage_level_id: string;
   item?: SparepartItem | null;
 };
 
@@ -33,7 +35,9 @@ export function newLine(defaultLocId = ""): LineDraft {
     qty: "1",
     note: "",
     storage_location_id: defaultLocId,
+    storage_level_id: "",
     to_storage_location_id: "",
+    to_storage_level_id: "",
     item: null,
   };
 }

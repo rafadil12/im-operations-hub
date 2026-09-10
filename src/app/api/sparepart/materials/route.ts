@@ -3,11 +3,12 @@ import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
 import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepart/categories";
+import { nextMaterialCode } from "@/lib/sparepart/materialCode";
 import { parseSparepartItemBody } from "@/lib/sparepart/validation";
 import type { SparepartItem, SparepartItemInput } from "@/lib/types";
 
 const SEARCH_SQL = `
-  (i.code LIKE ? OR i.name_en LIKE ? OR i.name_cn LIKE ?
+  (i.code LIKE ? OR i.erp_item_code LIKE ? OR i.name_en LIKE ? OR i.name_cn LIKE ?
    OR i.brand_en LIKE ? OR i.brand_cn LIKE ? OR i.model LIKE ?)
 `;
 
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     if (q) {
       conditions.push(SEARCH_SQL);
       const like = `%${q}%`;
-      params.push(like, like, like, like, like, like);
+      params.push(like, like, like, like, like, like, like);
     }
 
     const category = sp.get("category")?.trim();
@@ -86,14 +87,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid UoM." }, { status: 400 });
     }
 
+    const generatedCode = await nextMaterialCode(data.category_id);
+
     try {
       const result = await execute(
         `INSERT INTO sparepart_items
-          (code, name_en, name_cn, brand_en, brand_cn, model, notes,
+          (code, erp_item_code, name_en, name_cn, brand_en, brand_cn, model, notes,
            stock_current, min_stock, is_active, category_id, uom_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
         [
-          data.code,
+          generatedCode,
+          data.erp_item_code || null,
           data.name_en || null,
           data.name_cn || null,
           data.brand_en || null,
@@ -106,12 +110,12 @@ export async function POST(request: NextRequest) {
           data.uom_id,
         ]
       );
-      return NextResponse.json({ id: result.insertId }, { status: 201 });
+      return NextResponse.json({ id: result.insertId, code: generatedCode }, { status: 201 });
     } catch (err) {
       const code = (err as { code?: string }).code;
       if (code === "ER_DUP_ENTRY") {
         return NextResponse.json(
-          { error: `Material code "${data.code}" already exists.` },
+          { error: `Material code "${generatedCode}" already exists.` },
           { status: 409 }
         );
       }

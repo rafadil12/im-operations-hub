@@ -6,6 +6,7 @@ import {
   DOCUMENTS_TH as th,
   formatLocationLabel,
   formatPostingDateTime,
+  appendLevelLabel,
   isReversalMovement,
   movementLabel,
 } from "@/lib/sparepart/documentDisplay";
@@ -162,19 +163,31 @@ export function DocumentDetailModal({
               </thead>
               <tbody>
                 {(detail.lines ?? []).map((line) => {
-                  const fromLabel = formatLocationLabel(
+                  const fromLabel = appendLevelLabel(
+                    formatLocationLabel(
                     line.from_location_code,
                     line.from_location_name_en,
                     line.from_location_name_cn,
                     lang,
                     line.from_storage_location || line.storage_location
+                    ),
+                    line.from_level_code,
+                    line.from_level_name_en,
+                    line.from_level_name_cn,
+                    lang
                   );
-                  const toLabel = formatLocationLabel(
+                  const toLabel = appendLevelLabel(
+                    formatLocationLabel(
                     line.to_location_code,
                     line.to_location_name_en,
                     line.to_location_name_cn,
                     lang,
                     line.to_storage_location
+                    ),
+                    line.to_level_code,
+                    line.to_level_name_en,
+                    line.to_level_name_cn,
+                    lang
                   );
                   const isTransfer =
                     detail.movement_type === "311" || detail.movement_type === "312";

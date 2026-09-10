@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
+import { STOCK_BALANCE_FROM, STOCK_BALANCE_SELECT } from "@/lib/sparepart/stockBalances";
 import type { SparepartStockBalance } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -21,15 +22,10 @@ export async function GET(_request: NextRequest, context: Ctx) {
     }
 
     const balances = await query<SparepartStockBalance[]>(
-      `SELECT b.id, b.item_id, b.storage_location_id, b.qty, b.updated_at,
-              loc.code AS location_code,
-              loc.name_en AS location_name_en,
-              loc.name_cn AS location_name_cn,
-              loc.name_en AS location_name
-       FROM sparepart_stock_balances b
-       JOIN sparepart_storage_locations loc ON loc.id = b.storage_location_id
+      `SELECT ${STOCK_BALANCE_SELECT}
+       FROM ${STOCK_BALANCE_FROM}
        WHERE b.item_id = ? AND b.qty > 0
-       ORDER BY loc.name_en ASC`,
+       ORDER BY loc.name_en ASC, lvl.sort_order ASC`,
       [itemId]
     );
 

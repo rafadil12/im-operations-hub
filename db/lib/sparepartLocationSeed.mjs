@@ -164,16 +164,35 @@ export async function seedSparepartLocationsAndBalances(conn, schema) {
     }
 
     let firstLocId = unassignedId;
+    let defaultLevelId = null;
+    if (await columnExists("sparepart_stock_balances", "level_id")) {
+      const [levelRows] = await conn.query(
+        `SELECT id FROM sparepart_stock_levels WHERE code = 'L01' LIMIT 1`,
+      );
+      if (!levelRows[0]) {
+        throw new Error("Missing sparepart_stock_levels L01. Run migrations first.");
+      }
+      defaultLevelId = Number(levelRows[0].id);
+    }
     for (let i = 0; i < seeds.length; i += 1) {
       const seed = seeds[i];
       const locId = await ensureLocation(seed.name);
       if (i === 0) firstLocId = locId;
-      await conn.query(
-        `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE qty = VALUES(qty)`,
-        [item.id, locId, seed.qty],
-      );
+      if (defaultLevelId != null) {
+        await conn.query(
+          `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, level_id, qty)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE qty = VALUES(qty)`,
+          [item.id, locId, defaultLevelId, seed.qty],
+        );
+      } else {
+        await conn.query(
+          `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE qty = VALUES(qty)`,
+          [item.id, locId, seed.qty],
+        );
+      }
     }
 
     const [sumRows] = await conn.query(

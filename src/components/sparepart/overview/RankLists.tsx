@@ -34,12 +34,14 @@ export function TopUsedList({
     },
   ] as const;
 
-  if (items.length === 0) {
-    return <p className="text-sm text-text-muted">{t.common.noData}</p>;
-  }
-
   return (
-    <div className="space-y-1">
+    <div className="flex h-[280px] flex-col overflow-y-auto">
+      {items.length === 0 ? (
+        <p className="flex flex-1 items-center justify-center text-sm text-text-muted">
+          {t.common.noData}
+        </p>
+      ) : (
+        <div className="space-y-1">
       {items.map((item, index) => (
         <div
           key={item.code}
@@ -80,6 +82,8 @@ export function TopUsedList({
           </div>
         </div>
       ))}
+        </div>
+      )}
     </div>
   );
 }

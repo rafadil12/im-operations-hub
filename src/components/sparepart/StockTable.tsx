@@ -126,8 +126,9 @@ export function StockTable({
             </colgroup>
           ) : showItemStatus ? (
             <colgroup>
+              <col style={{ width: "11%" }} />
               <col style={{ width: "12%" }} />
-              <col style={{ width: "22%" }} />
+              <col style={{ width: "18%" }} />
               <col style={{ width: "14%" }} />
               <col style={{ width: "16%" }} />
               <col style={{ width: "10%" }} />
@@ -141,6 +142,7 @@ export function StockTable({
               {sortable && onSortChange ? (
                 <>
                   {renderSortHeader(t.sparepart.code, "code")}
+                  {showItemStatus ? <th className={th}>{t.sparepart.erpItemCode}</th> : null}
                   {renderSortHeader(t.sparepart.name, "name")}
                   {renderSortHeader(t.sparepart.brand, "brand")}
                   {renderSortHeader(t.sparepart.model, "model")}
@@ -159,6 +161,7 @@ export function StockTable({
               ) : (
                 <>
                   <th className={th}>{t.sparepart.code}</th>
+                  {showItemStatus ? <th className={th}>{t.sparepart.erpItemCode}</th> : null}
                   <th className={th}>{t.sparepart.name}</th>
                   <th className={th}>{t.sparepart.brand}</th>
                   <th className={th}>{t.sparepart.model}</th>
@@ -191,6 +194,13 @@ export function StockTable({
                 <td className={`${td} font-medium text-text`}>
                   <span className="line-clamp-2 break-words">{row.code}</span>
                 </td>
+                {showItemStatus ? (
+                  <td className={td}>
+                    <span className="line-clamp-2 break-words">
+                      {"erp_item_code" in row ? row.erp_item_code || "-" : "-"}
+                    </span>
+                  </td>
+                ) : null}
                 <td className={td}>
                   <span className="line-clamp-2 break-words text-text">
                     {localizedName(row, lang)}
@@ -260,8 +270,15 @@ export function StockTable({
                     {!isBalanceRow(row) && onDelete ? (
                       <button
                         type="button"
-                        onClick={() => onDelete(row)}
-                        className="text-danger hover:underline"
+                        disabled={rowStock(row) !== 0}
+                        title={
+                          rowStock(row) !== 0 ? t.sparepart.cannotDeleteWithStock : undefined
+                        }
+                        onClick={() => {
+                          if (rowStock(row) !== 0) return;
+                          onDelete(row);
+                        }}
+                        className="text-danger hover:underline disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {t.common.delete}
                       </button>

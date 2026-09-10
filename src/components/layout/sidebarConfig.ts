@@ -94,14 +94,25 @@ export const navItems: NavItem[] = [
             href: "/sparepart/stock",
           },
           {
-            id: "post",
-            labelKey: "sparepartPost",
-            href: "/sparepart/post",
-          },
-          {
-            id: "documents",
-            labelKey: "sparepartDocuments",
-            href: "/sparepart/documents",
+            id: "material-movement",
+            labelKey: "sparepartMaterialMovement",
+            children: [
+              {
+                id: "documents",
+                labelKey: "sparepartDocuments",
+                href: "/sparepart/documents",
+              },
+              {
+                id: "movement-history",
+                labelKey: "sparepartMovementHistory",
+                href: "/sparepart/movement-history",
+              },
+              {
+                id: "post",
+                labelKey: "sparepartPost",
+                href: "/sparepart/post",
+              },
+            ],
           },
           {
             id: "materials",

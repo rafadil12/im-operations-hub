@@ -53,6 +53,15 @@ export type SparepartUom = {
   updated_at?: string | null;
 };
 
+export type SparepartStockLevel = {
+  id: number;
+  code: string;
+  name_en: string;
+  name_cn: string;
+  sort_order: number;
+  is_active: number | boolean;
+};
+
 export type SparepartStorageLocation = {
   id: number;
   code: string;
@@ -72,6 +81,10 @@ export type SparepartStockBalance = {
   location_name?: string;
   location_name_en?: string | null;
   location_name_cn?: string | null;
+  level_id: number;
+  level_code?: string | null;
+  level_name_en?: string | null;
+  level_name_cn?: string | null;
   updated_at?: string | null;
 };
 
@@ -96,11 +109,13 @@ export type SparepartStockBalanceRow = {
   uom_name_en?: string | null;
   uom_name_cn?: string | null;
   notes: string | null;
+  erp_item_code?: string | null;
 };
 
 export type SparepartItem = {
   id: number;
   code: string;
+  erp_item_code?: string | null;
   name_en: string | null;
   name_cn: string | null;
   brand_en: string | null;
@@ -127,6 +142,7 @@ export type SparepartItem = {
 
 export type SparepartItemInput = {
   code: string;
+  erp_item_code?: string;
   name_en: string;
   name_cn: string;
   brand_en: string;
@@ -147,17 +163,25 @@ export type SparepartMatDocLine = {
   qty: number;
   storage_location: string | null;
   storage_location_id?: number | null;
+  storage_level_id?: number | null;
   to_storage_location_id?: number | null;
+  to_storage_level_id?: number | null;
   /** Joined label for storage_location_id */
   from_storage_location?: string | null;
   from_location_code?: string | null;
   from_location_name_en?: string | null;
   from_location_name_cn?: string | null;
+  from_level_code?: string | null;
+  from_level_name_en?: string | null;
+  from_level_name_cn?: string | null;
   /** Joined label for to_storage_location_id */
   to_storage_location?: string | null;
   to_location_code?: string | null;
   to_location_name_en?: string | null;
   to_location_name_cn?: string | null;
+  to_level_code?: string | null;
+  to_level_name_en?: string | null;
+  to_level_name_cn?: string | null;
   note: string | null;
   item_code?: string | null;
   item_name?: string | null;
@@ -190,8 +214,10 @@ export type SparepartGoodsMovementLineInput = {
   qty: number;
   note: string;
   storage_location_id: number;
+  storage_level_id: number;
   /** Required for 311 transfer */
   to_storage_location_id?: number;
+  to_storage_level_id?: number;
 };
 
 export type SparepartGoodsMovementInput = {
@@ -204,4 +230,30 @@ export type SparepartGoodsMovementInput = {
   created_by?: string;
   client_request_id?: string;
   reversal_of_doc_id?: number;
+};
+
+export type SparepartMovementHistoryRow = {
+  doc_id: number;
+  doc_number: string;
+  movement_type: MovementType;
+  posting_date: string;
+  line_no: number;
+  qty: number;
+  note: string | null;
+  item_id: number;
+  item_code: string;
+  item_name_en: string | null;
+  item_name_cn: string | null;
+  from_location_code: string | null;
+  from_location_name_en: string | null;
+  from_location_name_cn: string | null;
+  from_level_code: string | null;
+  from_level_name_en: string | null;
+  from_level_name_cn: string | null;
+  to_location_code: string | null;
+  to_location_name_en: string | null;
+  to_location_name_cn: string | null;
+  to_level_code: string | null;
+  to_level_name_en: string | null;
+  to_level_name_cn: string | null;
 };

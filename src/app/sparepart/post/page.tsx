@@ -3,7 +3,7 @@ import PostGoodsMovementPage from "./PostClient";
 
 export const metadata = pageMetadata({
   title: "Stock Transactions · Sparepart",
-  description: "Receive, issue, or transfer stock between storage locations.",
+  description: "Receive, issue, or transfer stock between storage locations and levels.",
   path: "/sparepart/post",
 });
 
