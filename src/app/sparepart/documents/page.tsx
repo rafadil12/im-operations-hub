@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { pageMetadata } from "@/lib/seo";
+import { SkeletonPage } from "@/components/ui/skeletons";
 import MaterialDocumentsPage from "./DocumentsClient";
 
 export const metadata = pageMetadata({
@@ -10,13 +11,7 @@ export const metadata = pageMetadata({
 
 export default function DocumentsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          Loading...
-        </div>
-      }
-    >
+    <Suspense fallback={<SkeletonPage />}>
       <MaterialDocumentsPage />
     </Suspense>
   );

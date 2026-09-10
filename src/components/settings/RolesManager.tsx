@@ -5,6 +5,7 @@ import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { PermissionTreePicker } from "./PermissionTreePicker";
 import { SettingsTabs } from "./SettingsTabs";
 
@@ -168,9 +169,7 @@ export function RolesManager() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
+        <SkeletonTable />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface">
           <table className="w-full border-collapse">

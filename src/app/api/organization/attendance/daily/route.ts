@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ function pad(value: number) {
 }
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { searchParams } = new URL(request.url);
 

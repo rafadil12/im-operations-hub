@@ -56,6 +56,41 @@ const ACCOUNT_SELECT = `
   r.name AS role_name
 `;
 
+const PERMISSIONS_CACHE_TTL_MS = 30_000;
+
+type PermissionsCacheEntry = {
+  permissions: string[];
+  expiresAt: number;
+};
+
+const permissionsCache = new Map<string, PermissionsCacheEntry>();
+
+function permissionsCacheKey(systemUserId: number, sessionVersion: number): string {
+  return `${systemUserId}:${sessionVersion}`;
+}
+
+async function getCachedPermissions(
+  roleId: number | null,
+  systemUserId: number,
+  sessionVersion: number,
+): Promise<string[]> {
+  const key = permissionsCacheKey(systemUserId, sessionVersion);
+  const cached = permissionsCache.get(key);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    return cached.permissions;
+  }
+
+  const permissions = await loadPermissionsForRole(roleId);
+  permissionsCache.set(key, {
+    permissions,
+    expiresAt: now + PERMISSIONS_CACHE_TTL_MS,
+  });
+
+  return permissions;
+}
+
 export async function loadPermissionsForRole(roleId: number | null): Promise<string[]> {
   if (!roleId) return [];
   const rows = await query<RowDataPacket[]>(
@@ -98,7 +133,8 @@ export async function findAccountBySystemUserId(systemUserId: number): Promise<A
 export async function getAccountPublic(systemUserId: number): Promise<AuthAccountPublic | null> {
   const row = await findAccountBySystemUserId(systemUserId);
   if (!row || !row.is_active) return null;
-  const permissions = await loadPermissionsForRole(row.role_id);
+  const sessionVersion = Number(row.session_version) || 1;
+  const permissions = await getCachedPermissions(row.role_id, row.system_user_id, sessionVersion);
   return toPublic(row, permissions);
 }
 

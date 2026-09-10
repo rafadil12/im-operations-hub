@@ -9,6 +9,9 @@ import {
 } from "react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
+import { useGuestWriteGuard } from "@/hooks/useGuestWriteGuard";
 import { useLang } from "@/lib/i18n";
 
 /* =========================================================
@@ -569,6 +572,7 @@ function mapEmployee(
 
 export default function OrganizationManagementPage() {
   const { t } = useLang();
+  const guardWrite = useGuestWriteGuard();
 
   const organizationLanguage: OrganizationLanguage =
     t.safety.management ===
@@ -595,6 +599,11 @@ export default function OrganizationManagementPage() {
     loadingPositions,
     setLoadingPositions,
   ] = useState(true);
+
+  const [
+    positionsError,
+    setPositionsError,
+  ] = useState<string | null>(null);
 
   const [
     saving,
@@ -774,6 +783,7 @@ export default function OrganizationManagementPage() {
     useCallback(
       async () => {
         setLoadingPositions(true);
+        setPositionsError(null);
 
         try {
           const response =
@@ -809,9 +819,14 @@ export default function OrganizationManagementPage() {
               : [],
           );
         } catch (error) {
-          console.error(
-            "loadPositions failed",
-            error,
+          setPositions([]);
+          setPositionsError(
+            error instanceof Error
+              ? error.message
+              : organizationText(
+                  "loadingPositions",
+                  organizationLanguage,
+                ),
           );
         } finally {
           setLoadingPositions(false);
@@ -1165,6 +1180,10 @@ export default function OrganizationManagementPage() {
   ======================================================= */
 
   async function saveEmployee() {
+    if (!guardWrite()) {
+      return;
+    }
+
     if (
       !form.userId ||
       !form.employeeId.trim() ||
@@ -1247,6 +1266,9 @@ export default function OrganizationManagementPage() {
       }
 
       if (!response.ok) {
+        if (handleGuestForbiddenResponse(response.status, payload, isEditing ? "PUT" : "POST")) {
+          return;
+        }
         throw new Error(
           payload?.error ||
             organizationText(
@@ -1296,6 +1318,10 @@ export default function OrganizationManagementPage() {
   ======================================================= */
 
   function deactivateEmployee(employee: Employee) {
+    if (!guardWrite()) {
+      return;
+    }
+
     setConfirmDialog({
       action: "deactivate",
       employee,
@@ -1321,6 +1347,9 @@ export default function OrganizationManagementPage() {
       const payload = await response.json();
 
       if (!response.ok) {
+        if (handleGuestForbiddenResponse(response.status, payload, "PATCH")) {
+          return;
+        }
         throw new Error(
           payload?.error ||
             organizationText(
@@ -1356,6 +1385,10 @@ export default function OrganizationManagementPage() {
   }
 
   function reactivateEmployee(employee: Employee) {
+    if (!guardWrite()) {
+      return;
+    }
+
     setConfirmDialog({
       action: "reactivate",
       employee,
@@ -1381,6 +1414,9 @@ export default function OrganizationManagementPage() {
       const payload = await response.json();
 
       if (!response.ok) {
+        if (handleGuestForbiddenResponse(response.status, payload, "PATCH")) {
+          return;
+        }
         throw new Error(
           payload?.error ||
             (organizationLanguage === "cn"
@@ -1480,6 +1516,7 @@ export default function OrganizationManagementPage() {
   ======================================================= */
 
   return (
+    <OrganizationGate allow={(access) => access.canViewOrganizationEmployees}>
     <AppShell
       title={organizationText(
         "title",
@@ -2976,6 +3013,7 @@ export default function OrganizationManagementPage() {
         )}
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

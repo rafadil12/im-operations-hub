@@ -4,6 +4,8 @@ export type ReportWeekLineDraft = {
   key: string;
   id?: number;
   subItemId: number | "";
+  /** Displayed free-text label; used for Excel paste matching / unmatched state. */
+  subItemLabel: string;
   targetEn: string;
   targetCn: string;
   completionPct: number;
@@ -19,6 +21,7 @@ export function newWeekLineDraft(): ReportWeekLineDraft {
   return {
     key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     subItemId: "",
+    subItemLabel: "",
     targetEn: "",
     targetCn: "",
     completionPct: 100,
@@ -29,11 +32,16 @@ export function newWeekLineDraft(): ReportWeekLineDraft {
   };
 }
 
-export function lineToDraft(row: ReportLine): ReportWeekLineDraft {
+export function lineToDraft(row: ReportLine, lang: "en" | "cn" = "en"): ReportWeekLineDraft {
+  const label =
+    lang === "cn"
+      ? row.subItemNameCn || row.subItemNameEn || ""
+      : row.subItemNameEn || row.subItemNameCn || "";
   return {
     key: `line-${row.id}`,
     id: row.id,
     subItemId: row.subItemId ?? "",
+    subItemLabel: label,
     targetEn: row.workTargetEn,
     targetCn: row.workTargetCn,
     completionPct:

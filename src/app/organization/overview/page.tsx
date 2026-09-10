@@ -6,6 +6,9 @@ import React, {
   useState,
 } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 
 type OrganizationLanguage = "en" | "cn";
@@ -610,7 +613,14 @@ function DonutChart({
   const circumference =
     2 * Math.PI * radius;
 
-  let accumulated = 0;
+  const segmentOffsets: number[] = [];
+  {
+    let accumulated = 0;
+    for (const item of values) {
+      segmentOffsets.push(accumulated);
+      accumulated += total > 0 ? item.value / total : 0;
+    }
+  }
 
   return (
     <div className="relative size-52">
@@ -641,11 +651,8 @@ function DonutChart({
             const gap = 3;
 
             const offset =
-              -accumulated *
+              -segmentOffsets[index] *
               circumference;
-
-            accumulated +=
-              percentage;
 
             return (
               <circle
@@ -1806,6 +1813,7 @@ function DaySelector({
 export default function AttendanceOverviewPage() {
   const { t } = useLang();
   const ao = t.attendanceOverview;
+  const { canManageOrganizationAttendance } = useRoleAccess();
 
   const language: OrganizationLanguage =
     t.safety.management ===
@@ -1865,6 +1873,13 @@ export default function AttendanceOverviewPage() {
     string | null
   >(null);
 
+  const [
+    syncError,
+    setSyncError,
+  ] = useState<
+    string | null
+  >(null);
+
   const year =
     selectedDate.getFullYear();
 
@@ -1887,6 +1902,7 @@ export default function AttendanceOverviewPage() {
     async function loadOverview() {
       setLoading(true);
       setError(null);
+      setSyncError(null);
 
       try {
         /*
@@ -2004,105 +2020,6 @@ export default function AttendanceOverviewPage() {
         );
 
         setLoading(false);
-
-        /*
-         * -------------------------------------------------
-         * BACKGROUND SYNC
-         * -------------------------------------------------
-         */
-        setSyncing(true);
-
-        void fetch(
-          API_DAILY_SYNC,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            cache: "no-store",
-            body: JSON.stringify({
-              year,
-              month,
-            }),
-          },
-        )
-          .then(
-            async (
-              syncResponse,
-            ) => {
-              if (
-                !syncResponse.ok
-              ) {
-                const syncPayload =
-                  (await syncResponse
-                    .json()
-                    .catch(
-                      () => ({}),
-                    )) as {
-                    error?: string;
-                  };
-
-                throw new Error(
-                  syncPayload.error ||
-                    `Attendance sync failed: ${syncResponse.status}`,
-                );
-              }
-
-              /*
-               * Refresh attendance after sync.
-               */
-              const refreshResponse =
-                await fetch(
-                  `${API_DAILY}?year=${year}&month=${month}`,
-                  {
-                    cache:
-                      "no-store",
-                  },
-                );
-
-              if (
-                !refreshResponse.ok
-              ) {
-                throw new Error(
-                  `Attendance refresh failed: ${refreshResponse.status}`,
-                );
-              }
-
-              const refreshPayload =
-                (await refreshResponse.json()) as {
-                  data?: AttendanceDailyRow[];
-                };
-
-              if (
-                !cancelled
-              ) {
-                setAttendanceRows(
-                  refreshPayload.data ??
-                    [],
-                );
-              }
-            },
-          )
-          .catch(
-            (
-              syncError,
-            ) => {
-              console.error(
-                "Background attendance sync failed:",
-                syncError,
-              );
-            },
-          )
-          .finally(() => {
-            if (
-              !cancelled
-            ) {
-              setSyncing(
-                false,
-              );
-            }
-          });
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -2128,6 +2045,64 @@ export default function AttendanceOverviewPage() {
     month,
     language,
   ]);
+
+  async function runAttendanceSync() {
+    setSyncing(true);
+    setSyncError(null);
+
+    try {
+      const syncResponse = await fetch(API_DAILY_SYNC, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          year,
+          month,
+        }),
+      });
+
+      if (!syncResponse.ok) {
+        const syncPayload = (await syncResponse.json().catch(() => ({}))) as {
+          error?: string;
+        };
+
+        if (handleGuestForbiddenResponse(syncResponse.status, syncPayload, "POST")) {
+          return;
+        }
+
+        throw new Error(
+          syncPayload.error ||
+            `Attendance sync failed: ${syncResponse.status}`,
+        );
+      }
+
+      const refreshResponse = await fetch(`${API_DAILY}?year=${year}&month=${month}`, {
+        cache: "no-store",
+      });
+
+      if (!refreshResponse.ok) {
+        throw new Error(`Attendance refresh failed: ${refreshResponse.status}`);
+      }
+
+      const refreshPayload = (await refreshResponse.json()) as {
+        data?: AttendanceDailyRow[];
+      };
+
+      setAttendanceRows(refreshPayload.data ?? []);
+    } catch (err) {
+      setSyncError(
+        err instanceof Error
+          ? err.message
+          : language === "cn"
+            ? "考勤同步失败。"
+            : "Attendance sync failed.",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   /* =======================================================
      MAPS
@@ -3181,7 +3156,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
           continue;
         }
 
-        let start =
+        const start =
           sh * 60 + sm;
 
         let end =
@@ -3254,6 +3229,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
   ======================================================= */
 
   return (
+    <OrganizationGate allow={(access) => access.canViewOrganizationOverview}>
     <AppShell title="">
       <style>{`
         @keyframes attendanceOverviewFadeUp {
@@ -3539,27 +3515,21 @@ const recentRequests = allRecentRequests.slice(0, 4);
               {ao.thisMonth}
             </button>
 
-            <div
-              className={[
-                "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold",
-                syncing
-                  ? "border border-cyan-400/30 bg-cyan-500/10 text-cyan-300"
-                  : "border border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
-              ].join(" ")}
-            >
-              <span
+            {canManageOrganizationAttendance ? (
+              <button
+                type="button"
+                onClick={() => void runAttendanceSync()}
+                disabled={syncing || loading}
                 className={[
-                  "size-2 rounded-full",
-                  syncing
-                    ? "animate-pulse bg-cyan-400"
-                    : "bg-emerald-500",
+                  "rounded-lg border px-3 py-2 text-xs font-bold transition",
+                  syncing || loading
+                    ? "cursor-not-allowed border-border bg-surface text-text-dim opacity-60"
+                    : "border-cyan-400/40 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/60 hover:bg-cyan-500/15",
                 ].join(" ")}
-              />
-
-              {syncing
-                ? ao.syncing
-                : ao.synced}
-            </div>
+              >
+                {syncing ? ao.syncing : ao.synced}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -3570,6 +3540,12 @@ const recentRequests = allRecentRequests.slice(0, 4);
         {error ? (
           <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-300">
             {error}
+          </div>
+        ) : null}
+
+        {syncError ? (
+          <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-300">
+            {syncError}
           </div>
         ) : null}
 
@@ -5410,5 +5386,6 @@ const recentRequests = allRecentRequests.slice(0, 4);
         </div>
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }

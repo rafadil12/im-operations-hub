@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { Modal } from "@/components/ui/Modal";
+import { SkeletonText } from "@/components/ui/Skeleton";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang, localizedField, localizedName } from "@/lib/i18n";
 import type { SparepartItem, SparepartStockBalance } from "@/lib/types";
@@ -147,7 +148,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
         <div className="mt-4">
           <h3 className="mb-3 text-sm font-semibold text-text">{t.sparepart.stockByLocation}</h3>
           {showLoading ? (
-            <p className="text-xs text-text-muted">{t.common.loading}</p>
+            <SkeletonText lines={3} />
           ) : balances.length === 0 ? (
             <p className="text-xs text-text-muted">{t.sparepart.noBalances}</p>
           ) : (

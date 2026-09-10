@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Modal } from "@/components/ui/Modal";
+import { Spinner } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/ToastProvider";
 import { categoriesForDivision, subcategoriesForCategory, usersForDivision } from "@/lib/cascade";
 import { toDateTimeLocal } from "@/lib/datetime";
@@ -205,10 +206,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
           >
             {saving ? (
               <>
-                <span
-                  className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                  aria-hidden
-                />
+                <Spinner />
                 {t.common.loading}
               </>
             ) : (

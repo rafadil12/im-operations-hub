@@ -185,3 +185,46 @@ body {
 .animate-bubble-in {
   animation: bubbleIn 0.8s cubic-bezier(.22,1,.36,1) forwards;
 }
+
+/* CJK: uppercase / letter-spacing do not apply to Chinese characters. */
+html[lang="zh-CN"] .uppercase {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--surface-hover);
+  border-radius: 6px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--text-dim) 14%, transparent) 50%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+
+  .skeleton {
+    animation: pulse 2s ease-in-out infinite;
+  }
+}

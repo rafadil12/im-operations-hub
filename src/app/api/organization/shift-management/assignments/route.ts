@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,9 @@ async function resolveEmployeeOrganizationId(
 }
 
 export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.organizationShiftRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const rows = await query<AssignmentRow[]>(
       `
@@ -76,6 +80,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationShiftManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = await request.json();
 

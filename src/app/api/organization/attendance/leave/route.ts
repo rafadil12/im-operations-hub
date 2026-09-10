@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query, withTransaction } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -150,6 +151,9 @@ function isValidRequestTime(
    ========================================================= */
 
 export async function GET(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -457,6 +461,9 @@ export async function GET(request: NextRequest) {
    ========================================================= */
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       employeeNo?: unknown;
@@ -742,6 +749,9 @@ export async function POST(request: NextRequest) {
    ========================================================= */
 
 export async function PATCH(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       id?: unknown;
@@ -1576,6 +1586,9 @@ export async function PATCH(request: NextRequest) {
    ========================================================= */
 
 export async function DELETE(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json()) as {
       id?: unknown;

@@ -5,6 +5,7 @@ import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { isProtectedAccountEmployeeNo, isProtectedRoleName } from "@/lib/auth/access";
 import { useLang } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { SettingsTabs } from "./SettingsTabs";
 import { AccountFormModal } from "./accounts/AccountFormModal";
 import { AccountsTable } from "./accounts/AccountsTable";
@@ -272,9 +273,7 @@ export function AccountsManager() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
+        <SkeletonTable />
       ) : (
         <AccountsTable
           rows={rows}

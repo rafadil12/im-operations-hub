@@ -57,8 +57,8 @@ export function ReportWeeklyTrendChart({
           width={40}
         />
         <Tooltip
-          formatter={(value: number, name: string) => [
-            `${Math.round(value)}%`,
+          formatter={(value, name) => [
+            `${Math.round(Number(value ?? 0))}%`,
             name === "work" ? workLabel : projectLabel,
           ]}
           contentStyle={{

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { accountHasPermission, guestHasPermission } from "./access";
+import { jsonGuestForbidden } from "./guestForbidden";
 import { getAccountPublic } from "./accounts";
 import { clearSessionCookie, readSession } from "./session";
 import type { AuthAccountPublic, SessionPayload } from "./types";
@@ -74,7 +75,7 @@ export async function requirePermission(code: string): Promise<AuthGate | NextRe
     if (guestHasPermission(code)) {
       return { session: null, account: null };
     }
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return jsonGuestForbidden();
   }
   const account = await getAccountPublic(session.systemUserId);
   if (!account) {
@@ -95,7 +96,7 @@ export async function requireAnyPermission(codes: string[]): Promise<AuthGate | 
     if (codes.some((code) => guestHasPermission(code))) {
       return { session: null, account: null };
     }
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return jsonGuestForbidden();
   }
   const account = await getAccountPublic(session.systemUserId);
   if (!account) {

@@ -24,10 +24,12 @@ export async function GET(request: NextRequest) {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
+    const limitRaw = sp.get("limit");
+    const limit = Math.min(Math.max(Number(limitRaw) || 500, 1), 5000);
+
     if (start && end) {
       conditions.push(`
-        STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p')
-        BETWEEN ? AND DATE_ADD(?, INTERVAL 1 DAY)
+        created_at BETWEEN ? AND DATE_ADD(?, INTERVAL 1 DAY)
       `);
 
       params.push(start, end);
@@ -97,9 +99,11 @@ export async function GET(request: NextRequest) {
         is_service_request
       FROM itsm_requests
       ${conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""}
-      ORDER BY
-        STR_TO_DATE(created_date,'%d/%m/%Y %h:%i %p') DESC
+      ORDER BY created_at DESC
+      LIMIT ?
     `;
+
+    params.push(limit);
 
     const rows = await query<ItsmRequest[]>(sql, params);
 

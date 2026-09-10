@@ -2,9 +2,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
+import { organizationLanguageValue } from "@/lib/organization/copy";
+import { organizationText } from "@/lib/organization/copy";
+import type { OrganizationLanguage } from "@/lib/organization/copy";
 
-type OrganizationLanguage = "en" | "cn";
 
 type RawScheduleType =
   | "D"
@@ -108,7 +113,7 @@ function weekdayLabel(
   language: OrganizationLanguage,
 ) {
   return new Date(year, monthIndex, day).toLocaleDateString(
-    language === "cn" ? "zh-CN" : "en-US",
+    organizationLanguageValue(language, "en-US", "zh-CN"),
     {
       weekday: "short",
     },
@@ -153,10 +158,7 @@ function normalizeSchedule(
   return null;
 }
 
-function cellClass(
-  value: AttendanceValue,
-  language: OrganizationLanguage,
-) {
+function cellClass(value: AttendanceValue) {
   const base =
     "h-10 min-w-[58px] border-r border-b px-2 text-center align-middle text-[10px] font-extrabold transition-all";
 
@@ -218,13 +220,11 @@ function LegendItem({
 }
 
 export default function DailyAttendancePage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const dailyAttendance = t.dailyAttendance;
+  const { canManageOrganizationAttendance } = useRoleAccess();
 
-  const language: OrganizationLanguage =
-    t.safety.management === "安全管理"
-      ? "cn"
-      : "en";
+  const language: OrganizationLanguage = lang === "cn" ? "cn" : "en";
 
   const [selectedDate, setSelectedDate] = useState(
     () => new Date(),
@@ -256,7 +256,13 @@ export default function DailyAttendancePage() {
   const [loading, setLoading] =
     useState(true);
 
+  const [syncing, setSyncing] =
+    useState(false);
+
   const [error, setError] =
+    useState<string | null>(null);
+
+  const [syncError, setSyncError] =
     useState<string | null>(null);
 
   const year = selectedDate.getFullYear();
@@ -348,6 +354,7 @@ export default function DailyAttendancePage() {
     async function loadData() {
       setLoading(true);
       setError(null);
+      setSyncError(null);
 
       try {
         /*
@@ -450,87 +457,7 @@ export default function DailyAttendancePage() {
           attendancePayload.data ?? [],
         );
 
-        /*
-         * Jangan tunggu sync.
-         * Table langsung boleh dirender.
-         */
         setLoading(false);
-
-        /*
-         * --------------------------------------------------
-         * BACKGROUND SYNC
-         * --------------------------------------------------
-         *
-         * Sync berjalan setelah data sudah tampil.
-         */
-        void fetch(
-          API_ATTENDANCE_SYNC,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            cache: "no-store",
-            body: JSON.stringify({
-              year,
-              month: monthIndex + 1,
-            }),
-          },
-        )
-          .then(
-            async (syncResponse) => {
-              if (!syncResponse.ok) {
-                throw new Error(
-                  `Attendance sync failed: ${syncResponse.status}`,
-                );
-              }
-
-              /*
-               * Setelah sync selesai,
-               * ambil attendance terbaru.
-               */
-              const refreshedResponse =
-                await fetch(
-                  `${API_ATTENDANCE_DAILY}?year=${year}&month=${
-                    monthIndex + 1
-                  }`,
-                  {
-                    cache: "no-store",
-                  },
-                );
-
-              if (!refreshedResponse.ok) {
-                throw new Error(
-                  `Attendance refresh failed: ${refreshedResponse.status}`,
-                );
-              }
-
-              const refreshedPayload =
-                (await refreshedResponse.json()) as {
-                  data?: AttendanceDailyApiRow[];
-                };
-
-              if (cancelled) {
-                return;
-              }
-
-              setAttendanceDaily(
-                refreshedPayload.data ?? [],
-              );
-            },
-          )
-          .catch((syncError) => {
-            /*
-             * Background sync gagal tidak membuat
-             * halaman utama menjadi error.
-             *
-             * Data awal tetap ditampilkan.
-             */
-            console.error(
-              "Background attendance sync failed:",
-              syncError,
-            );
-          });
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -554,6 +481,65 @@ export default function DailyAttendancePage() {
     monthIndex,
     language,
   ]);
+
+  async function runAttendanceSync() {
+    setSyncing(true);
+    setSyncError(null);
+
+    try {
+      const syncResponse = await fetch(API_ATTENDANCE_SYNC, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          year,
+          month: monthIndex + 1,
+        }),
+      });
+
+      if (!syncResponse.ok) {
+        const syncPayload = (await syncResponse.json().catch(() => ({}))) as {
+          error?: string;
+        };
+
+        if (handleGuestForbiddenResponse(syncResponse.status, syncPayload, "POST")) {
+          return;
+        }
+
+        throw new Error(
+          syncPayload.error ||
+            `Attendance sync failed: ${syncResponse.status}`,
+        );
+      }
+
+      const refreshedResponse = await fetch(
+        `${API_ATTENDANCE_DAILY}?year=${year}&month=${monthIndex + 1}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!refreshedResponse.ok) {
+        throw new Error(`Attendance refresh failed: ${refreshedResponse.status}`);
+      }
+
+      const refreshedPayload = (await refreshedResponse.json()) as {
+        data?: AttendanceDailyApiRow[];
+      };
+
+      setAttendanceDaily(refreshedPayload.data ?? []);
+    } catch (err) {
+      setSyncError(
+        err instanceof Error
+          ? err.message
+          : organizationText("attendanceSyncFailed", language),
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   /*
    * ------------------------------------------------------
@@ -607,11 +593,9 @@ export default function DailyAttendancePage() {
       new Set(
         employees
           .map((employee) =>
-            language === "cn"
-              ? employee.division_name_cn ||
-                employee.division_name_en
-              : employee.division_name_en ||
-                employee.division_name_cn,
+            organizationLanguageValue(language, employee.division_name_en ||
+                employee.division_name_cn, employee.division_name_cn ||
+                employee.division_name_en),
           )
           .filter(Boolean),
       ),
@@ -640,11 +624,9 @@ export default function DailyAttendancePage() {
     return employees
       .map((employee) => {
         const employeeDepartment =
-          (language === "cn"
-            ? employee.division_name_cn ||
-              employee.division_name_en
-            : employee.division_name_en ||
-              employee.division_name_cn) || "—";
+          (organizationLanguageValue(language, employee.division_name_en ||
+              employee.division_name_cn, employee.division_name_cn ||
+              employee.division_name_en)) || "—";
 
         /*
          * -----------------------------------------------
@@ -886,9 +868,7 @@ export default function DailyAttendancePage() {
    */
   const monthLabel =
     selectedDate.toLocaleDateString(
-      language === "cn"
-        ? "zh-CN"
-        : "en-US",
+      organizationLanguageValue(language, "en-US", "zh-CN"),
       {
         month: "long",
         year: "numeric",
@@ -925,15 +905,18 @@ export default function DailyAttendancePage() {
   const employeeName = (
     employee: OrganizationEmployee,
   ) =>
-    language === "cn"
-      ? employee.name_cn ||
-        employee.name_en ||
-        employee.employee_no
-      : employee.name_en ||
+    organizationLanguageValue(language, employee.name_en ||
         employee.name_cn ||
-        employee.employee_no;
+        employee.employee_no, employee.name_cn ||
+        employee.name_en ||
+        employee.employee_no);
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationAttendance || access.canManageOrganizationAttendance
+      }
+    >
     <AppShell
       title={
         dailyAttendance.title
@@ -1006,6 +989,24 @@ export default function DailyAttendancePage() {
             >
               →
             </button>
+
+            {canManageOrganizationAttendance ? (
+              <button
+                type="button"
+                onClick={() => void runAttendanceSync()}
+                disabled={syncing || loading}
+                className={[
+                  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-[10px] font-extrabold shadow-sm transition-all duration-200",
+                  syncing || loading
+                    ? "cursor-not-allowed border-border bg-surface text-text-dim opacity-60"
+                    : "border-cyan-400/40 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/60 hover:bg-cyan-500/15",
+                ].join(" ")}
+              >
+                {syncing
+                  ? organizationText("syncing", language)
+                  : organizationText("syncAttendance", language)}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -1236,10 +1237,20 @@ export default function DailyAttendancePage() {
               </p>
 
               <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-300">
-                {dailyAttendance.summary.automatic} 
+                {canManageOrganizationAttendance
+                  ? syncing
+                    ? organizationText("syncing2", language)
+                    : dailyAttendance.summary.automatic
+                  : organizationText("readOnly", language)}
               </p>
             </div>
           </div>
+
+          {syncError ? (
+            <div className="border-b border-border-subtle px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-200">
+              {syncError}
+            </div>
+          ) : null}
 
           {/* ERROR */}
           {error && (
@@ -1458,7 +1469,6 @@ export default function DailyAttendancePage() {
                                 }
                                 className={`${cellClass(
                                   value,
-                                  language,
                                 )} ${
                                   isToday
                                     ? "bg-cyan-50/70 shadow-[inset_0_0_0_1px_rgb(34_211_238_/_0.18)] dark:bg-cyan-500/5 dark:shadow-[inset_0_0_18px_rgb(34_211_238_/_0.08)]"
@@ -1525,6 +1535,7 @@ export default function DailyAttendancePage() {
         </Card>
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

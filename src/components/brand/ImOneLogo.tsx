@@ -1,3 +1,7 @@
+"use client";
+
+import { useLang } from "@/lib/i18n";
+
 type ImOneLogoProps = {
   /** "mark" renders only the glyph, for the collapsed sidebar. */
   variant?: "full" | "mark";
@@ -55,11 +59,12 @@ function ZhiZaoSeal() {
 }
 
 export function ImOneLogo({ variant = "full", className = "" }: ImOneLogoProps) {
+  const { t } = useLang();
   return (
     <div
       className={`flex items-center gap-2 ${className}`}
       role="img"
-      aria-label="IM ONE — Intelligent Operations, One Platform"
+      aria-label={t.common.brandLabel}
     >
       <ImOneMark className={variant === "mark" ? "h-6 w-auto" : "h-7 w-auto"} />
 

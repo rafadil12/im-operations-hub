@@ -141,7 +141,7 @@ export function DocumentDetailModal({
 
         <div>
           <h4 className="mb-2 text-sm font-semibold text-text">{t.sparepart.documentItems}</h4>
-          <div className="overflow-hidden rounded-md border border-border-subtle">
+          <div className="overflow-x-auto rounded-md border border-border-subtle">
             <table className="w-full border-collapse text-xs">
               <thead className="bg-bg/50">
                 <tr>

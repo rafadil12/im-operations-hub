@@ -239,26 +239,42 @@ export function ReportWeekAttachments({
   );
 }
 
+export type PendingAttachmentUploadResult = {
+  succeeded: ReportWeekAttachment[];
+  failed: File[];
+};
+
 export async function uploadPendingReportAttachments(
   year: number,
   weekNumber: number,
   areaId: number,
   files: File[]
-): Promise<void> {
-  for (const file of files) {
-    const form = new FormData();
-    form.append("year", String(year));
-    form.append("weekNumber", String(weekNumber));
-    form.append("areaId", String(areaId));
-    form.append("file", file);
+): Promise<PendingAttachmentUploadResult> {
+  const succeeded: ReportWeekAttachment[] = [];
+  const failed: File[] = [];
 
-    const res = await fetch("/api/report/week-attachments", {
-      method: "POST",
-      body: form,
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error ?? `Failed to upload ${file.name}`);
+  for (const file of files) {
+    try {
+      const form = new FormData();
+      form.append("year", String(year));
+      form.append("weekNumber", String(weekNumber));
+      form.append("areaId", String(areaId));
+      form.append("file", file);
+
+      const res = await fetch("/api/report/week-attachments", {
+        method: "POST",
+        body: form,
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        failed.push(file);
+        continue;
+      }
+      succeeded.push(json.data as ReportWeekAttachment);
+    } catch {
+      failed.push(file);
     }
   }
+
+  return { succeeded, failed };
 }

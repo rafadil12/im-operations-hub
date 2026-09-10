@@ -16,7 +16,6 @@ export function HorizontalBarChart({
         <div key={item.label}>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-text">{item.label}</span>
-
             <span className="text-xs font-semibold text-text">
               {item.value}
               {suffix}

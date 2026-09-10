@@ -296,7 +296,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                     title={t.sparepart.image}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- local object URL or API image */}
-                    <img src={previewSrc} alt="" className="size-full object-contain" />
+                    <img src={previewSrc} alt={t.common.materialPreview} className="size-full object-contain" />
                   </button>
                 ) : (
                   <label

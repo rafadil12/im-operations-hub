@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -1296,6 +1297,9 @@ async function buildSchedule(
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationShiftManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = await request.json();
     const year = Number(body?.year);

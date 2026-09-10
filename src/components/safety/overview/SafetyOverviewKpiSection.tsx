@@ -26,8 +26,8 @@ export function SafetyOverviewKpiSection({
   overallCompletion,
 }: SafetyOverviewKpiSectionProps) {
   return (
-    <div className="safety-scroll-animate grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      <div className="safety-animate-card rounded-xl border border-border bg-surface p-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="rounded-xl border border-border bg-surface p-4">
         <KpiTop title={safetyText("safetyTraining", safetyLanguage)} icon="🎓" tone="accent" />
 
         <div className="mt-3 flex items-center justify-between">

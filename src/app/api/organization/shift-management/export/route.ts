@@ -3,6 +3,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import ExcelJS from "exceljs";
 
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -247,6 +248,9 @@ function applyRowStyles(
 export async function GET(
   request: NextRequest,
 ) {
+  const gate = await requirePermission(PERMISSIONS.organizationShiftRead);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     /* =======================================================
        READ QUERY PARAMETER

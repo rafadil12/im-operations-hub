@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { useLang } from "@/lib/i18n";
 
 type AlertDialogProps = {
   open: boolean;
@@ -22,6 +23,7 @@ export function AlertDialog({
   onClose,
   confirmLabel = "OK",
 }: AlertDialogProps) {
+  const { t } = useLang();
   const mounted = useSyncExternalStore(
     subscribe,
     () => true,
@@ -43,7 +45,7 @@ export function AlertDialog({
     <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
       <button
         type="button"
-        aria-label="Close overlay"
+        aria-label={t.common.closeOverlay}
         className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
         onClick={onClose}
       />

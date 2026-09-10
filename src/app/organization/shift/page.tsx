@@ -2,7 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { OrganizationGate } from "@/components/organization/OrganizationGate";
+import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
+import { useToast } from "@/components/ui/ToastProvider";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { SkeletonKpiGrid } from "@/components/ui/skeletons";
 
 type ShiftCode = "D/S" | "N/S" | "1" | "4";
 
@@ -328,6 +333,9 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
+    if (handleGuestForbiddenResponse(response.status, payload, init?.method)) {
+      throw new Error("Not allowed, please login.");
+    }
     const error =
       typeof payload === "object" && payload !== null && "error" in payload
         ? String((payload as { error?: unknown }).error ?? "API request failed")
@@ -575,6 +583,7 @@ function MyOffCalendar({
   onPersonalOffDaysChange: (days: PersonalOffDay[]) => void;
   onScheduleChanged?: () => void;
 }) {
+  const { error: toastError } = useToast();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -790,8 +799,10 @@ function MyOffCalendar({
       onScheduleChanged?.();
       return true;
     } catch (error) {
-      console.error("Failed to save work schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to save work schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save work schedule.";
+      toastError(message);
+      setMessage(message);
       return false;
     }
   }
@@ -818,8 +829,10 @@ function MyOffCalendar({
       onScheduleChanged?.();
       return true;
     } catch (error) {
-      console.error("Failed to delete work schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to delete work schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to delete work schedule.";
+      toastError(message);
+      setMessage(message);
       return false;
     }
   }
@@ -905,8 +918,10 @@ function MyOffCalendar({
       // clear -> 1
       await saveWorkSchedule(key, "1");
     } catch (error) {
-      console.error("Failed to change calendar schedule", error);
-      setMessage(error instanceof Error ? error.message : "Failed to change calendar schedule.");
+      const message =
+        error instanceof Error ? error.message : "Failed to change calendar schedule.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -937,8 +952,10 @@ function MyOffCalendar({
         ),
       );
     } catch (error) {
-      console.error("Failed to reset OFF days", error);
-      setMessage(error instanceof Error ? error.message : "Failed to reset OFF days.");
+      const message =
+        error instanceof Error ? error.message : "Failed to reset OFF days.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -982,8 +999,10 @@ function MyOffCalendar({
       onPersonalOffDaysChange([...otherEmployees, ...fixedRows]);
       setMessage(text("saveSuccess", language));
     } catch (error) {
-      console.error("Failed to save personal OFF days", error);
-      setMessage(error instanceof Error ? error.message : "Failed to save personal OFF days.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save personal OFF days.";
+      toastError(message);
+      setMessage(message);
     } finally {
       setSaving(false);
     }
@@ -1256,6 +1275,7 @@ function MyOffCalendar({
 
 function ShiftManagementView() {
   const { t } = useLang();
+  const { error: toastError } = useToast();
   const language: OrganizationLanguage = t.safety.management === "安全管理" ? "cn" : "en";
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
@@ -1737,16 +1757,13 @@ function ShiftManagementView() {
 
     return true;
   } catch (error) {
-    console.error(
-      "Failed to save rotation pairs",
-      error,
-    );
-
-    setShiftDataError(
+    const message =
       error instanceof Error
         ? error.message
-        : "Failed to save rotation pairs.",
-    );
+        : "Failed to save rotation pairs.";
+    toastError(message);
+
+    setShiftDataError(message);
 
     return false;
   } finally {
@@ -1789,8 +1806,10 @@ function ShiftManagementView() {
         [employeeId]: nextAssignment,
       }));
     } catch (error) {
-      console.error("Failed to save shift assignment", error);
-      setShiftDataError(error instanceof Error ? error.message : "Failed to save shift assignment.");
+      const message =
+        error instanceof Error ? error.message : "Failed to save shift assignment.";
+      toastError(message);
+      setShiftDataError(message);
     } finally {
       setSavingEmployee(null);
     }
@@ -1922,12 +1941,12 @@ function ShiftManagementView() {
         window.URL.revokeObjectURL(blobUrl);
       }, 1000);
     } catch (error) {
-      console.error("Failed to export schedule", error);
-      setShiftDataError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Failed to export schedule.",
-      );
+          : "Failed to export schedule.";
+      toastError(message);
+      setShiftDataError(message);
     } finally {
       setExportingExcel(false);
     }
@@ -1962,10 +1981,10 @@ function ShiftManagementView() {
       setGenerated(true);
       setActiveTab("schedule");
     } catch (error) {
-      console.error("Failed to generate schedule", error);
-      setShiftDataError(
-        error instanceof Error ? error.message : "Failed to generate schedule.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Failed to generate schedule.";
+      toastError(message);
+      setShiftDataError(message);
     }
   }
 
@@ -2014,6 +2033,11 @@ function ShiftManagementView() {
   const todayKey = dateKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
   return (
+    <OrganizationGate
+      allow={(access) =>
+        access.canViewOrganizationShift || access.canManageOrganizationShift
+      }
+    >
     <AppShell title={text("title", language)}>
       <div className="shift-management-page min-h-full space-y-4 bg-slate-50/70 p-4 text-slate-800 dark:bg-slate-950 dark:text-slate-100 ">
         <style>{`
@@ -2900,9 +2924,7 @@ function ShiftManagementView() {
               />
 
               {loadingEmployees || loadingShiftData ? (
-                <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
-                  {text("loading", language)}
-                </div>
+                <SkeletonKpiGrid count={5} />
               ) : filteredMembers.length === 0 ? (
                 <div className="rounded-lg border border-border-subtle bg-surface-hover p-4 text-xs font-semibold text-text-muted">
                   {text("noData", language)}
@@ -3549,11 +3571,18 @@ function ShiftManagementView() {
                 </thead>
                 <tbody>
                   {loadingEmployees || loadingShiftData ? (
-                    <tr>
-                      <td colSpan={daysInMonth + 1} className="px-4 py-10 text-center text-xs font-semibold text-text-dim">
-                        {text("loading", language)}
-                      </td>
-                    </tr>
+                    Array.from({ length: 6 }, (_, rowIndex) => (
+                      <tr key={rowIndex}>
+                        <td className="px-4 py-3">
+                          <Skeleton className="h-3 w-28" />
+                        </td>
+                        {Array.from({ length: Math.min(daysInMonth, 14) }, (_, cellIndex) => (
+                          <td key={cellIndex} className="px-2 py-3">
+                            <Skeleton className="h-3 w-8" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
                   ) : scheduleRows.filter((row) => {
                     const member = filteredMembers.find((item) => item.employeeId === row.employeeId);
                     return Boolean(member);
@@ -3632,6 +3661,7 @@ function ShiftManagementView() {
         )}
       </div>
     </AppShell>
+    </OrganizationGate>
   );
 }
 

@@ -80,7 +80,7 @@ export function TopRequesterCard({
               <defs>
                 {BAR_COLORS.map((color, index) => (
                   <linearGradient
-                    key={index}
+                    key={`expand-${color}`}
                     id={`gradient-expand-${index}`}
                     x1="0"
                     y1="1"
@@ -158,8 +158,8 @@ export function TopRequesterCard({
                 }}
               />
               <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={40}>
-                {requesterBar.map((_, index) => (
-                  <Cell key={index} fill={`url(#gradient-expand-${index % BAR_COLORS.length})`} />
+                {requesterBar.map((row, index) => (
+                  <Cell key={row.label} fill={`url(#gradient-expand-${index % BAR_COLORS.length})`} />
                 ))}
 
                 <LabelList
@@ -186,7 +186,7 @@ export function TopRequesterCard({
         >
           <defs>
             {BAR_COLORS.map((color, index) => (
-              <linearGradient key={index} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="0">
+              <linearGradient key={color} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor={color} />
                 <stop offset="100%" stopColor={lighten(color)} />
               </linearGradient>
@@ -257,8 +257,8 @@ export function TopRequesterCard({
           />
 
           <Bar dataKey="count" radius={[8, 8, 8, 8]} barSize={18}>
-            {requesterBarCompact.map((_, index) => (
-              <Cell key={index} fill={`url(#gradient-${index % BAR_COLORS.length})`} />
+            {requesterBarCompact.map((row, index) => (
+              <Cell key={row.label} fill={`url(#gradient-${index % BAR_COLORS.length})`} />
             ))}
 
             <LabelList

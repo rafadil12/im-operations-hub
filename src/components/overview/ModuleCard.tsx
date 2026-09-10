@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import type { ModuleCardData } from "@/data/overview";
 import { StatPill } from "@/components/ui/StatPill";
+import { useLang } from "@/lib/i18n";
 import { CardBody } from "./ModuleCardBodies";
 
 type ModuleCardProps = {
@@ -138,10 +139,12 @@ function CardIcon({ type, color }: { type: ModuleCardData["icon"]; color: string
 }
 
 export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) {
+  const { t } = useLang();
   return (
     <article
       role={onOpen ? "button" : undefined}
       tabIndex={onOpen ? 0 : undefined}
+      aria-label={onOpen ? `${t.common.expandDetails}: ${data.title}` : undefined}
       onClick={onOpen}
       onKeyDown={
         onOpen
@@ -168,10 +171,22 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
       <header className="mb-4 flex items-center gap-2.5">
         <CardIcon type={data.icon} color={data.accentColor} />
 
-        <h3 className="text-sm font-semibold tracking-wide text-text">
+        <h3 className="min-w-0 truncate text-sm font-semibold tracking-wide text-text">
           {data.number}. {data.title}
         </h3>
+
+        {data.loadFailed ? (
+          <span className="ml-auto rounded-md border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+            Failed to load
+          </span>
+        ) : null}
       </header>
+
+      {data.loadFailed ? (
+        <div className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          {data.loadError ?? "Live data could not be loaded for this module."}
+        </div>
+      ) : null}
 
       <div
         className={[

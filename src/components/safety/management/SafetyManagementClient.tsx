@@ -9,7 +9,8 @@ import { SafetyProgressOverview } from "@/components/safety/management/SafetyPro
 import { useSafetyManagement } from "@/components/safety/management/useSafetyManagement";
 import { WeekActivityPanel } from "@/components/safety/management/WeekActivityPanel";
 import { WeeklyControlGrid } from "@/components/safety/management/WeeklyControlGrid";
-import { MONTHLY_ACTIVITIES, WEEKLY_ACTIVITIES, localizeActivity, safetyText } from "@/lib/safety";
+import { MONTHLY_ACTIVITIES, WEEKLY_ACTIVITIES, localizeActivity } from "@/lib/safety";
+import { SkeletonKpiGrid, SkeletonTable } from "@/components/ui/skeletons";
 
 export function SafetyManagementClient() {
   const {
@@ -83,12 +84,13 @@ export function SafetyManagementClient() {
         onChangeMonth={changeMonth}
       />
 
-      {loading && (
-        <div className="rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-xs text-accent">
-          {safetyText("loadingDatabase", safetyLanguage)}
+      {loading ? (
+        <div className="space-y-6">
+          <SkeletonKpiGrid count={4} />
+          <SkeletonTable rows={4} columns={6} />
         </div>
-      )}
-
+      ) : (
+        <>
       <SafetyProgressOverview
         language={safetyLanguage}
         monthLabel={monthLabel}
@@ -170,6 +172,8 @@ export function SafetyManagementClient() {
         onSafetyPointsChange={handleSafetyPointsChange}
         allActivities={allActivities}
       />
+        </>
+      )}
 
       {showUploadModal && selectedActivity && (
         <UploadModal
