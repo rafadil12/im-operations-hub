@@ -9,7 +9,6 @@ import { useLang } from "@/lib/i18n";
 import { organizationLanguageValue } from "@/lib/organization/copy";
 import { organizationText } from "@/lib/organization/copy";
 import type { OrganizationLanguage } from "@/lib/organization/copy";
-import { Skeleton } from "@/components/ui/Skeleton";
 
 
 type RawScheduleType =
@@ -221,7 +220,8 @@ function LegendItem({
 }
 
 export default function DailyAttendancePage() {
-  const { lang } = useLang();
+  const { t, lang } = useLang();
+  const dailyAttendance = t.dailyAttendance;
   const { canManageOrganizationAttendance } = useRoleAccess();
 
   const language: OrganizationLanguage = lang === "cn" ? "cn" : "en";
@@ -463,7 +463,7 @@ export default function DailyAttendancePage() {
           setError(
             err instanceof Error
               ? err.message
-              : organizationText("failedToLoadAttendanceData", language),
+              : dailyAttendance.loadError,
           );
 
           setLoading(false);
@@ -919,7 +919,7 @@ export default function DailyAttendancePage() {
     >
     <AppShell
       title={
-        organizationText("dailyAttendance", language)
+        dailyAttendance.title
       }
     >
       <div className="min-h-full space-y-5 p-5 md:p-6 xl:p-8">
@@ -933,11 +933,11 @@ export default function DailyAttendancePage() {
 
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-text">
-                  {organizationText("dailyAttendance", language)}
+                  {dailyAttendance.title}
                 </h1>
 
                 <p className="mt-1 text-xs text-text-muted">
-                  {organizationText("viewEmployeeAttendanceResultsAndHoursByDay", language)}
+                  {dailyAttendance.description}
                 </p>
               </div>
             </div>
@@ -967,7 +967,7 @@ export default function DailyAttendancePage() {
               }
               className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[10px] font-extrabold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
             >
-              {organizationText("thisMonth", language)}
+              {dailyAttendance.thisMonth}
             </button>
 
             <div className="inline-flex h-9 min-w-36 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500 px-4 text-[10px] font-extrabold text-white shadow-md shadow-cyan-500/20">
@@ -1015,7 +1015,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="10.5"
             label={
-              organizationText("dSNS", language)
+              dailyAttendance.legend.dayNight
             }
             tone="bg-cyan-500"
           />
@@ -1023,7 +1023,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="8"
             label={
-              organizationText("shift1", language)
+              dailyAttendance.legend.shift1
             }
             tone="bg-emerald-500"
           />
@@ -1031,7 +1031,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="4"
             label={
-              organizationText("shift4", language)
+              dailyAttendance.legend.shift4
             }
             tone="bg-amber-500"
           />
@@ -1039,7 +1039,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="OFF"
             label={
-              organizationText("rest", language)
+              dailyAttendance.legend.rest
             }
             tone="bg-slate-500"
           />
@@ -1047,7 +1047,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="AL"
             label={
-              organizationText("annualLeave", language)
+              dailyAttendance.legend.annualLeave
             }
             tone="bg-blue-500"
           />
@@ -1055,7 +1055,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="MC"
             label={
-              organizationText("sickLeave", language)
+              dailyAttendance.legend.sickLeave
             }
             tone="bg-violet-500"
           />
@@ -1063,7 +1063,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="UPL"
             label={
-              organizationText("permission2", language)
+              dailyAttendance.legend.permission
             }
             tone="bg-indigo-500"
           />
@@ -1075,7 +1075,7 @@ export default function DailyAttendancePage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {organizationText("searchEmployee", language)}
+                  {dailyAttendance.filters.searchEmployee}
                 </label>
 
                 <input
@@ -1086,7 +1086,7 @@ export default function DailyAttendancePage() {
                     )
                   }
                   placeholder={
-                    organizationText("nameEmployeeNo", language)
+                    dailyAttendance.filters.searchPlaceholder
                   }
                   className="cursor-text rounded-md border border-border bg-surface px-3 py-2 text-xs text-text outline-none transition focus:border-cyan-400/50"
                 />
@@ -1094,7 +1094,7 @@ export default function DailyAttendancePage() {
 
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {organizationText("department", language)}
+                  {dailyAttendance.filters.department}
                 </label>
 
                 <select
@@ -1107,7 +1107,7 @@ export default function DailyAttendancePage() {
                   className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
-                    {organizationText("allDepartments2", language)}
+                    {dailyAttendance.filters.allDepartments}
                   </option>
 
                   {departments.map(
@@ -1125,7 +1125,7 @@ export default function DailyAttendancePage() {
 
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {organizationText("shift", language)}
+                  {dailyAttendance.filters.shift}
                 </label>
 
                 <select
@@ -1138,23 +1138,23 @@ export default function DailyAttendancePage() {
                   className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
-                    {organizationText("allShifts", language)}
+                    {dailyAttendance.filters.allShifts}
                   </option>
 
                   <option value="D">
-                    D/S / Day
+                    {dailyAttendance.filters.dayShift}
                   </option>
 
                   <option value="N">
-                    N/S / Night
+                    {dailyAttendance.filters.nightShift}
                   </option>
 
                   <option value="1">
-                    1 / 08:00–17:00
+                    {dailyAttendance.filters.shift1Hours}
                   </option>
 
                   <option value="4">
-                    4 / 4 Hours
+                    {dailyAttendance.filters.shift4Hours}
                   </option>
 
                   <option value="OFF">
@@ -1173,7 +1173,7 @@ export default function DailyAttendancePage() {
                   }}
                   className="w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-extrabold text-text shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                 >
-                  {organizationText("resetFilters", language)}
+                  {dailyAttendance.filters.reset}
                 </button>
               </div>
             </div>
@@ -1183,7 +1183,7 @@ export default function DailyAttendancePage() {
           <div className="grid grid-cols-3 border-b border-border-subtle md:grid-cols-6">
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {organizationText("employees", language)}
+                {dailyAttendance.summary.employees}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-text">
@@ -1193,7 +1193,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {organizationText("plannedHours", language)}
+                {dailyAttendance.summary.plannedHours}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-300">
@@ -1203,7 +1203,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                OFF
+                {dailyAttendance.summary.off}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-slate-600 dark:text-slate-300">
@@ -1213,7 +1213,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {organizationText("month", language)}
+                {dailyAttendance.summary.month}
               </p>
 
               <p className="mt-1 text-sm font-bold text-text">
@@ -1223,24 +1223,24 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {organizationText("source", language)}
+                {dailyAttendance.summary.source}
               </p>
 
               <p className="mt-1 text-sm font-bold text-text">
-                {organizationText("shiftApi", language)}
+                {dailyAttendance.summary.shiftApi}
               </p>
             </div>
 
             <div className="p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {organizationText("mode", language)}
+                {dailyAttendance.summary.mode}
               </p>
 
-              <p className="mt-1 text-sm font-bold text-text-muted">
+              <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-300">
                 {canManageOrganizationAttendance
                   ? syncing
                     ? organizationText("syncing2", language)
-                    : organizationText("onDemand", language)
+                    : dailyAttendance.summary.automatic
                   : organizationText("readOnly", language)}
               </p>
             </div>
@@ -1272,11 +1272,11 @@ export default function DailyAttendancePage() {
                   </th>
 
                   <th className="sticky left-[52px] z-20 min-w-[190px] border-r border-b border-border bg-surface-hover px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wide text-text-muted">
-                    {organizationText("employee", language)}
+                    {dailyAttendance.table.employee}
                   </th>
 
                   <th className="sticky left-[242px] z-20 min-w-[120px] border-r border-b border-border bg-surface-hover px-3 py-3 text-left text-[10px] font-extrabold uppercase tracking-wide text-text-muted">
-                    {organizationText("department", language)}
+                    {dailyAttendance.filters.department}
                   </th>
 
                   {Array.from(
@@ -1341,7 +1341,7 @@ export default function DailyAttendancePage() {
                   )}
 
                   <th className="min-w-[90px] border-r-2 border-b border-l border-border bg-slate-100 px-3 py-3 text-center text-[10px] font-black text-slate-800 dark:bg-slate-800 dark:text-white">
-                    {organizationText("totalHours", language)}
+                    {dailyAttendance.table.totalHours}
                   </th>
 
                   <th className="min-w-[50px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
@@ -1353,38 +1353,39 @@ export default function DailyAttendancePage() {
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {organizationText("al", language)}
+                    {dailyAttendance.table.annualLeave}
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {organizationText("mc", language)}
+                    {dailyAttendance.table.sickLeave}  
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {organizationText("upl", language)}
+                    {dailyAttendance.table.permission}
                   </th> 
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {organizationText("a", language)}
+                    {dailyAttendance.table.absent} 
                   </th>
 
                   <th className="min-w-[55px] border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {organizationText("off", language)}
+                    {dailyAttendance.table.off}   
                   </th> 
                 </tr>
               </thead>
 
               <tbody>
                 {loading ? (
-                    Array.from({ length: 6 }, (_, rowIndex) => (
-                      <tr key={rowIndex}>
-                        {Array.from({ length: Math.min(12, totalDays + 11) }, (_, cellIndex) => (
-                          <td key={cellIndex} className="px-3 py-3">
-                            <Skeleton className="h-3 w-12" />
-                          </td>
-                        ))}
-                      </tr>
-                    ))
+                  <tr>
+                    <td
+                      colSpan={
+                        totalDays + 11
+                      }
+                      className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
+                    >
+                      {dailyAttendance.table.loading}
+                    </td>
+                  </tr>
                 ) : rows.length === 0 ? (
                   <tr>
                     <td
@@ -1393,7 +1394,7 @@ export default function DailyAttendancePage() {
                       }
                       className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
                     >
-                      {organizationText("noAttendanceDataFound", language)}
+                      {dailyAttendance.table.empty}
                     </td>
                   </tr>
                 ) : (
@@ -1479,7 +1480,7 @@ export default function DailyAttendancePage() {
                                 }`}
                               >
                                {value === "OFF"
-                                ? organizationText("off", language)
+                                ? dailyAttendance.table.off
                                 : value || "—"}
                               </td>
                             );
@@ -1529,7 +1530,7 @@ export default function DailyAttendancePage() {
 
           {/* FOOTER NOTE */}
           <div className="border-t border-border-subtle bg-surface-hover px-5 py-3 text-[10px] font-medium text-text-muted">
-            {organizationText("dailyAttendanceIsStoredInAttendanceDailyAlMcUpl", language)}
+            {dailyAttendance.footerNote}
           </div>
         </Card>
       </div>
