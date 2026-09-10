@@ -11,7 +11,7 @@ import {
 } from "@/lib/sparepart/documentDisplay";
 import type { SparepartMatDoc } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
-import type { Dict } from "@/lib/i18n";
+import { localizedField, type Dict } from "@/lib/i18n";
 
 type Props = {
   detail: SparepartMatDoc;
@@ -178,11 +178,18 @@ export function DocumentDetailModal({
                   );
                   const isTransfer =
                     detail.movement_type === "311" || detail.movement_type === "312";
+                  const localizedItemName = localizedField(
+                    line.item_name_en,
+                    line.item_name_cn,
+                    lang
+                  );
+                  const itemName =
+                    localizedItemName !== "-" ? localizedItemName : line.item_name || "-";
                   return (
                     <tr key={line.id} className="border-t border-border-subtle/60">
                       <td className={td}>{line.line_no}</td>
                       <td className={`${td} font-medium text-text`}>{line.item_code}</td>
-                      <td className={td}>{line.item_name}</td>
+                      <td className={td}>{itemName}</td>
                       <td className={`${td} tabular-nums text-text`}>{line.qty}</td>
                       {isTransfer ? (
                         <>
