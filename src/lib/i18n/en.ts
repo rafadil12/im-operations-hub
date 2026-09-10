@@ -404,6 +404,64 @@ const en = {
     week: "Week {week}",
     total: "Total",
   },
+ dailyAttendance: {
+    title: "Daily Attendance",
+    description: "View employee attendance results and hours by day.",
+    thisMonth: "This Month",
+
+    legend: {
+      dayNight: "D/S / N/S",
+      shift1: "Shift 1",
+      shift4: "Shift 4",
+      rest: "Rest",
+      annualLeave: "Annual Leave",
+      sickLeave: "Sick Leave",
+      permission: "Permission",
+    },
+
+    filters: {
+      searchEmployee: "Search Employee",
+      searchPlaceholder: "Name / employee no...",
+      department: "Department",
+      allDepartments: "All Departments",
+      shift: "Shift",
+      allShifts: "All Shifts",
+      dayShift: "D/S / Day",
+      nightShift: "N/S / Night",
+      shift1Hours: "1 / 08:00–17:00",
+      shift4Hours: "4 / 4 Hours",
+      reset: "Reset Filters",
+    },
+
+    summary: {
+      employees: "Employees",
+      plannedHours: "Planned Hours",
+      off: "OFF",
+      month: "Month",
+      source: "Source",
+      shiftApi: "Shift API",
+      mode: "Mode",
+      automatic: "Automatic",
+    },
+
+    table: {
+      employee: "Employee",
+      department: "Department",
+      totalHours: "Total Hours",
+      annualLeave: "AL",
+      sickLeave: "MC",
+      permission: "UPL",
+      absent: "A",
+      off: "OFF",
+      loading: "Loading attendance data...",
+      empty: "No attendance data found",
+    },
+
+    loadError: "Failed to load attendance data.",
+
+    footerNote:
+      "Daily Attendance is stored in attendance_daily. AL / MC / UPL / A immediately override the corresponding date; OT does not affect Daily Attendance; future dates remain blank.",
+  },
   dashboard: {
     title: "Dashboard",
     subtitle: "Dashboard — click a card to expand, then open the module detail.",

@@ -219,6 +219,7 @@ function LegendItem({
 
 export default function DailyAttendancePage() {
   const { t } = useLang();
+  const dailyAttendance = t.dailyAttendance;
 
   const language: OrganizationLanguage =
     t.safety.management === "安全管理"
@@ -535,9 +536,7 @@ export default function DailyAttendancePage() {
           setError(
             err instanceof Error
               ? err.message
-              : language === "cn"
-                ? "加载考勤数据失败。"
-                : "Failed to load attendance data.",
+              : dailyAttendance.loadError,
           );
 
           setLoading(false);
@@ -937,9 +936,7 @@ export default function DailyAttendancePage() {
   return (
     <AppShell
       title={
-        language === "cn"
-          ? "每日考勤"
-          : "Daily Attendance"
+        dailyAttendance.title
       }
     >
       <div className="min-h-full space-y-5 p-5 md:p-6 xl:p-8">
@@ -953,15 +950,11 @@ export default function DailyAttendancePage() {
 
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-text">
-                  {language === "cn"
-                    ? "每日考勤"
-                    : "Daily Attendance"}
+                  {dailyAttendance.title}
                 </h1>
 
                 <p className="mt-1 text-xs text-text-muted">
-                  {language === "cn"
-                    ? "按月份查看员工每日考勤结果与工时。"
-                    : "View employee attendance results and hours by day."}
+                  {dailyAttendance.description}
                 </p>
               </div>
             </div>
@@ -991,9 +984,7 @@ export default function DailyAttendancePage() {
               }
               className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-surface px-3 text-[10px] font-extrabold text-text-muted shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
             >
-              {language === "cn"
-                ? "本月"
-                : "This Month"}
+              {dailyAttendance.thisMonth}
             </button>
 
             <div className="inline-flex h-9 min-w-36 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500 px-4 text-[10px] font-extrabold text-white shadow-md shadow-cyan-500/20">
@@ -1023,9 +1014,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="10.5"
             label={
-              language === "cn"
-                ? "D/S / N/S"
-                : "D/S / N/S"
+              dailyAttendance.legend.dayNight
             }
             tone="bg-cyan-500"
           />
@@ -1033,9 +1022,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="8"
             label={
-              language === "cn"
-                ? "班次 1"
-                : "Shift 1"
+              dailyAttendance.legend.shift1
             }
             tone="bg-emerald-500"
           />
@@ -1043,9 +1030,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="4"
             label={
-              language === "cn"
-                ? "班次 4"
-                : "Shift 4"
+              dailyAttendance.legend.shift4
             }
             tone="bg-amber-500"
           />
@@ -1053,9 +1038,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="OFF"
             label={
-              language === "cn"
-                ? "休息"
-                : "Rest"
+              dailyAttendance.legend.rest
             }
             tone="bg-slate-500"
           />
@@ -1063,9 +1046,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="AL"
             label={
-              language === "cn"
-                ? "年假"
-                : "Annual Leave"
+              dailyAttendance.legend.annualLeave
             }
             tone="bg-blue-500"
           />
@@ -1073,9 +1054,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="MC"
             label={
-              language === "cn"
-                ? "病假"
-                : "Sick Leave"
+              dailyAttendance.legend.sickLeave
             }
             tone="bg-violet-500"
           />
@@ -1083,9 +1062,7 @@ export default function DailyAttendancePage() {
           <LegendItem
             value="UPL"
             label={
-              language === "cn"
-                ? "请假/外出"
-                : "Permission"
+              dailyAttendance.legend.permission
             }
             tone="bg-indigo-500"
           />
@@ -1097,9 +1074,7 @@ export default function DailyAttendancePage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {language === "cn"
-                    ? "搜索员工"
-                    : "Search Employee"}
+                  {dailyAttendance.filters.searchEmployee}
                 </label>
 
                 <input
@@ -1110,9 +1085,7 @@ export default function DailyAttendancePage() {
                     )
                   }
                   placeholder={
-                    language === "cn"
-                      ? "姓名 / 工号..."
-                      : "Name / employee no..."
+                    dailyAttendance.filters.searchPlaceholder
                   }
                   className="cursor-text rounded-md border border-border bg-surface px-3 py-2 text-xs text-text outline-none transition focus:border-cyan-400/50"
                 />
@@ -1120,9 +1093,7 @@ export default function DailyAttendancePage() {
 
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {language === "cn"
-                    ? "部门"
-                    : "Department"}
+                  {dailyAttendance.filters.department}
                 </label>
 
                 <select
@@ -1135,9 +1106,7 @@ export default function DailyAttendancePage() {
                   className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
-                    {language === "cn"
-                      ? "全部部门"
-                      : "All Departments"}
+                    {dailyAttendance.filters.allDepartments}
                   </option>
 
                   {departments.map(
@@ -1155,9 +1124,7 @@ export default function DailyAttendancePage() {
 
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                  {language === "cn"
-                    ? "班次"
-                    : "Shift"}
+                  {dailyAttendance.filters.shift}
                 </label>
 
                 <select
@@ -1170,25 +1137,23 @@ export default function DailyAttendancePage() {
                   className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-xs font-semibold text-text outline-none transition focus:border-cyan-400/50"
                 >
                   <option value="all">
-                    {language === "cn"
-                      ? "全部班次"
-                      : "All Shifts"}
+                    {dailyAttendance.filters.allShifts}
                   </option>
 
                   <option value="D">
-                    D/S / Day
+                    {dailyAttendance.filters.dayShift}
                   </option>
 
                   <option value="N">
-                    N/S / Night
+                    {dailyAttendance.filters.nightShift}
                   </option>
 
                   <option value="1">
-                    1 / 08:00–17:00
+                    {dailyAttendance.filters.shift1Hours}
                   </option>
 
                   <option value="4">
-                    4 / 4 Hours
+                    {dailyAttendance.filters.shift4Hours}
                   </option>
 
                   <option value="OFF">
@@ -1207,9 +1172,7 @@ export default function DailyAttendancePage() {
                   }}
                   className="w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-extrabold text-text shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-cyan-50 hover:text-cyan-700 hover:shadow-sm dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
                 >
-                  {language === "cn"
-                    ? "重置筛选"
-                    : "Reset Filters"}
+                  {dailyAttendance.filters.reset}
                 </button>
               </div>
             </div>
@@ -1219,9 +1182,7 @@ export default function DailyAttendancePage() {
           <div className="grid grid-cols-3 border-b border-border-subtle md:grid-cols-6">
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "员工"
-                  : "Employees"}
+                {dailyAttendance.summary.employees}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-text">
@@ -1231,9 +1192,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "计划工时"
-                  : "Planned Hours"}
+                {dailyAttendance.summary.plannedHours}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-300">
@@ -1243,7 +1202,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                OFF
+                {dailyAttendance.summary.off}
               </p>
 
               <p className="mt-1 text-2xl font-bold text-slate-600 dark:text-slate-300">
@@ -1253,9 +1212,7 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "当前月份"
-                  : "Month"}
+                {dailyAttendance.summary.month}
               </p>
 
               <p className="mt-1 text-sm font-bold text-text">
@@ -1265,29 +1222,21 @@ export default function DailyAttendancePage() {
 
             <div className="border-r border-border-subtle p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "数据来源"
-                  : "Source"}
+                {dailyAttendance.summary.source}
               </p>
 
               <p className="mt-1 text-sm font-bold text-text">
-                {language === "cn"
-                  ? "班次接口"
-                  : "Shift API"}
+                {dailyAttendance.summary.shiftApi}
               </p>
             </div>
 
             <div className="p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-text-dim">
-                {language === "cn"
-                  ? "状态"
-                  : "Mode"}
+                {dailyAttendance.summary.mode}
               </p>
 
               <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-300">
-                {language === "cn"
-                  ? "自动"
-                  : "Automatic"} 
+                {dailyAttendance.summary.automatic} 
               </p>
             </div>
           </div>
@@ -1312,15 +1261,11 @@ export default function DailyAttendancePage() {
                   </th>
 
                   <th className="sticky left-[52px] z-20 min-w-[190px] border-r border-b border-border bg-surface-hover px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wide text-text-muted">
-                    {language === "cn"
-                      ? "员工"
-                      : "Employee"}
+                    {dailyAttendance.table.employee}
                   </th>
 
                   <th className="sticky left-[242px] z-20 min-w-[120px] border-r border-b border-border bg-surface-hover px-3 py-3 text-left text-[10px] font-extrabold uppercase tracking-wide text-text-muted">
-                    {language === "cn"
-                      ? "部门"
-                      : "Department"}
+                    {dailyAttendance.filters.department}
                   </th>
 
                   {Array.from(
@@ -1385,9 +1330,7 @@ export default function DailyAttendancePage() {
                   )}
 
                   <th className="min-w-[90px] border-r-2 border-b border-l border-border bg-slate-100 px-3 py-3 text-center text-[10px] font-black text-slate-800 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "总工时"
-                      : "Total Hours"}
+                    {dailyAttendance.table.totalHours}
                   </th>
 
                   <th className="min-w-[50px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
@@ -1399,33 +1342,23 @@ export default function DailyAttendancePage() {
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "年假"
-                      : "AL"}
+                    {dailyAttendance.table.annualLeave}
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "病假"
-                      : "MC"}  
+                    {dailyAttendance.table.sickLeave}  
                   </th>
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "外出"
-                      : "UPL"}
+                    {dailyAttendance.table.permission}
                   </th> 
 
                   <th className="min-w-[55px] border-r border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "旷工"
-                      : "A"} 
+                    {dailyAttendance.table.absent} 
                   </th>
 
                   <th className="min-w-[55px] border-b border-border bg-slate-100 px-2 py-3 text-center text-[10px] font-black text-slate-700 dark:bg-slate-800 dark:text-white">
-                    {language === "cn"
-                      ? "休息"
-                      : "OFF"}   
+                    {dailyAttendance.table.off}   
                   </th> 
                 </tr>
               </thead>
@@ -1439,9 +1372,7 @@ export default function DailyAttendancePage() {
                       }
                       className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
                     >
-                      {language === "cn"
-                        ? "加载中..."
-                        : "Loading attendance data..."}
+                      {dailyAttendance.table.loading}
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
@@ -1452,9 +1383,7 @@ export default function DailyAttendancePage() {
                       }
                       className="px-6 py-16 text-center text-xs font-semibold text-text-muted"
                     >
-                      {language === "cn"
-                        ? "没有找到考勤数据"
-                        : "No attendance data found"}
+                      {dailyAttendance.table.empty}
                     </td>
                   </tr>
                 ) : (
@@ -1541,9 +1470,7 @@ export default function DailyAttendancePage() {
                                 }`}
                               >
                                {value === "OFF"
-                                ? language === "cn"
-                                    ? "休息"
-                                    : "OFF"
+                                ? dailyAttendance.table.off
                                 : value || "—"}
                               </td>
                             );
@@ -1593,9 +1520,7 @@ export default function DailyAttendancePage() {
 
           {/* FOOTER NOTE */}
           <div className="border-t border-border-subtle bg-surface-hover px-5 py-3 text-[10px] font-medium text-text-muted">
-            {language === "cn"
-              ? "每日考勤数据保存于 attendance_daily；AL / MC / UPL / A 直接覆盖对应日期，OT 不影响每日考勤，未来日期保持空白。"
-              : "Daily Attendance is stored in attendance_daily. AL / MC / UPL / A immediately override the corresponding date; OT does not affect Daily Attendance; future dates remain blank."}
+            {dailyAttendance.footerNote}
           </div>
         </Card>
       </div>

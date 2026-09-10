@@ -100,6 +100,8 @@ type LeaveStatus =
 type LeaveRow = {
   id: number;
   employee_no: string;
+  employee_name_en: string | null;
+  employee_name_cn: string | null;
   request_date: string;
   request_type: LeaveType;
   start_time: string | null;
@@ -208,7 +210,9 @@ function daysInMonth(
 }
 
 function employeeName(
-  employee: Employee | undefined,
+  employee:
+    | Pick<Employee, "employee_no" | "name_en" | "name_cn">
+    | undefined,
   language: OrganizationLanguage,
 ) {
   if (!employee) return "—";
@@ -279,31 +283,31 @@ function requestTypeStyle(requestType: LeaveType) {
   > = {
     AL: {
       card: "border-sky-400/30 bg-sky-500/[0.04]",
-      label: "bg-sky-500/10 text-sky-300",
+      label: "bg-sky-500/10 text-sky-500",
     },
     MC: {
       card: "border-rose-400/30 bg-rose-500/[0.04]",
-      label: "bg-rose-500/10 text-rose-300",
+      label: "bg-rose-500/10 text-rose-500",
     },
     UPL: {
       card: "border-amber-400/30 bg-amber-500/[0.04]",
-      label: "bg-amber-500/10 text-amber-300",
+      label: "bg-amber-500/10 text-amber-500",
     },
     A: {
       card: "border-slate-400/30 bg-slate-500/[0.04]",
-      label: "bg-slate-500/10 text-slate-300",
+      label: "bg-slate-500/10 text-slate-500",
     },
     ALPA: {
       card: "border-fuchsia-400/30 bg-fuchsia-500/[0.04]",
-      label: "bg-fuchsia-500/10 text-fuchsia-300",
+      label: "bg-fuchsia-500/10 text-fuchsia-500",
     },
     OT: {
       card: "border-violet-400/30 bg-violet-500/[0.04]",
-      label: "bg-violet-500/10 text-violet-300",
+      label: "bg-violet-500/10 text-violet-500",
     },
     NO_ATTENDANCE: {
       card: "border-slate-400/30 bg-slate-500/[0.04]",
-      label: "bg-slate-500/10 text-slate-300",
+      label: "bg-slate-500/10 text-slate-500",
     },
   };
 
@@ -5337,11 +5341,14 @@ const recentRequests = allRecentRequests.slice(0, 4);
             ) : (
               recentRequests.map(
                 (request, index) => {
-                  const employee =
-                    employeeMap.get(
-                      request.employee_no,
-                    );
-
+                  const employee = {
+                    employee_no: request.employee_no,
+                    name_en: request.employee_name_en,
+                    name_cn: request.employee_name_cn,
+                    division_name_en: null,
+                    division_name_cn: null,
+                    employment_status: null,
+                  };
                  const label =
                   request.request_type === "ALPA"
                     ? language === "cn"
@@ -5473,7 +5480,11 @@ const recentRequests = allRecentRequests.slice(0, 4);
               <div className="overflow-y-auto p-3 md:p-5">
                 <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                   {allRecentRequests.map((request, index) => {
-                    const employee = employeeMap.get(request.employee_no);
+                    const employee = {
+                      employee_no: request.employee_no,
+                      name_en: request.employee_name_en,
+                      name_cn: request.employee_name_cn,
+                    };
                     const label =
                       request.request_type === "ALPA"
                         ? language === "cn"

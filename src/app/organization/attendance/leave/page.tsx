@@ -800,14 +800,36 @@ export default function LeavePermissionPage() {
       return;
     }
 
-    if (type !== "NO_ATTENDANCE" && startTime >= endTime) {
-      setRequestsError(
-        language === "cn"
-          ? "结束时间必须晚于开始时间。"
-          : "End time must be later than start time.",
-      );
-      return;
-    }
+    if (type !== "NO_ATTENDANCE") {
+        const startMinutes =
+          Number(startTime.slice(0, 2)) * 60 +
+          Number(startTime.slice(3, 5));
+
+        const endMinutes =
+          Number(endTime.slice(0, 2)) * 60 +
+          Number(endTime.slice(3, 5));
+
+        // Same time is invalid
+        if (startMinutes === endMinutes) {
+          setRequestsError(
+            language === "cn"
+              ? "开始时间和结束时间不能相同。"
+              : "Start time and end time cannot be the same.",
+          );
+          return;
+        }
+
+        // Earlier end time = overnight request
+        // Overnight is only allowed when starting at 18:00 or later.
+        if (endMinutes < startMinutes && startMinutes < 18 * 60) {
+          setRequestsError(
+            language === "cn"
+              ? "跨天申请的开始时间必须为18:00以后。"
+              : "Overnight requests must start at 18:00 or later.",
+          );
+          return;
+        }
+      }
 
     if (editingRequest && !canEditRequest(editingRequest)) {
       setRequestsError(
@@ -1210,8 +1232,8 @@ export default function LeavePermissionPage() {
             </select>
           </div>
 
-          {requestsError && (
-            <div className="mx-4 mt-4 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-xs font-semibold text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-yelow">
+         {requestsError && !showForm && (
+            <div className="mx-4 mt-4 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-xs font-semibold text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
               {requestsError}
             </div>
           )}
@@ -1524,6 +1546,40 @@ export default function LeavePermissionPage() {
                   ×
                 </button>
               </div>
+              {requestsError && (
+                <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
+                  <div className="w-full max-w-md overflow-hidden rounded-2xl border border-red-200 bg-white shadow-2xl dark:border-red-400 dark:bg-white">
+                    
+                    {/* Header */}
+                    <div className="flex items-center gap-4 px-6 pt-6">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-red-100 text-xl text-red-600">
+                        ⚠
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-extrabold text-slate-900">
+                          {language === "cn" ? "申请失败" : "Request Error"}
+                        </h3>
+
+                        <p className="mt-1 text-sm font-medium leading-5 text-slate-600">
+                          {requestsError}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-6 flex justify-end border-t border-slate-200 bg-slate-50 px-6 py-4">
+                      <button
+                        type="button"
+                        onClick={() => setRequestsError(null)}
+                        className="rounded-lg bg-red-500 px-6 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-red-600"
+                      >
+                        {language === "cn" ? "确定" : "OK"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {editingRequest && (
                 <div className="mx-5 mt-4 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-[10px] font-semibold text-cyan-800 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-500">

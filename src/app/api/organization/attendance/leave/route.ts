@@ -112,6 +112,31 @@ function timeToMinutes(value: string): number {
   return hour * 60 + minute;
 }
 
+function isValidRequestTime(
+  startTime: string,
+  endTime: string,
+): boolean {
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+
+  if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) {
+    return false;
+  }
+
+  // Same time is never allowed.
+  if (startMinutes === endMinutes) {
+    return false;
+  }
+
+  // Normal same-day request.
+  if (endMinutes > startMinutes) {
+    return true;
+  }
+
+  // Overnight request is allowed only when it starts at 18:00 or later.
+  return startMinutes >= 18 * 60;
+}
+
 /* =========================================================
    GET
    /api/organization/attendance/leave
@@ -526,26 +551,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const startMinutes = timeToMinutes(startTime);
-      const endMinutes = timeToMinutes(endTime);
-
-      // AL / MC / UPL / ALPA must stay within the same day.
-      // OT may cross midnight (e.g. 22:00 -> 02:00).
-      if (requestType !== "OT" && startMinutes >= endMinutes) {
+      if (!isValidRequestTime(startTime, endTime)) {
         return NextResponse.json(
           {
             success: false,
-            error: "End time must be later than start time.",
-          },
-          { status: 400 },
-        );
-      }
-
-      if (requestType === "OT" && startMinutes === endMinutes) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "OT start time and end time cannot be the same.",
+            error:
+              "Invalid time range. Same time is not allowed, and overnight requests must start at 18:00 or later.",
           },
           { status: 400 },
         );
@@ -873,24 +884,12 @@ export async function PATCH(request: NextRequest) {
           );
         }
 
-        const startMinutes = timeToMinutes(startTime);
-        const endMinutes = timeToMinutes(endTime);
-
-        if (requestType !== "OT" && startMinutes >= endMinutes) {
+        if (!isValidRequestTime(startTime, endTime)) {
           return NextResponse.json(
             {
               success: false,
-              error: "End time must be later than start time.",
-            },
-            { status: 400 },
-          );
-        }
-
-        if (requestType === "OT" && startMinutes === endMinutes) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: "OT start time and end time cannot be the same.",
+              error:
+                "Invalid time range. Same time is not allowed, and overnight requests must start at 18:00 or later.",
             },
             { status: 400 },
           );

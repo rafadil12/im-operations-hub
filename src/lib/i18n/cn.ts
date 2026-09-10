@@ -393,6 +393,64 @@ const cn: Dict = {
     week: "第 {week} 周",
     total: "总计",
   },
+  dailyAttendance: {
+    title: "每日考勤",
+    description: "按月份查看员工每日考勤结果与工时。",
+    thisMonth: "本月",
+
+    legend: {
+      dayNight: "D/S / N/S",
+      shift1: "班次 1",
+      shift4: "班次 4",
+      rest: "休息",
+      annualLeave: "年假",
+      sickLeave: "病假",
+      permission: "请假/外出",
+    },
+
+    filters: {
+      searchEmployee: "搜索员工",
+      searchPlaceholder: "姓名 / 工号...",
+      department: "部门",
+      allDepartments: "全部部门",
+      shift: "班次",
+      allShifts: "全部班次",
+      dayShift: "D/S / 白班",
+      nightShift: "N/S / 夜班",
+      shift1Hours: "1 / 08:00–17:00",
+      shift4Hours: "4 / 4小时",
+      reset: "重置筛选",
+    },
+
+    summary: {
+      employees: "员工",
+      plannedHours: "计划工时",
+      off: "休息",
+      month: "当前月份",
+      source: "数据来源",
+      shiftApi: "班次接口",
+      mode: "状态",
+      automatic: "自动",
+    },
+
+    table: {
+      employee: "员工",
+      department: "部门",
+      totalHours: "总工时",
+      annualLeave: "年假",
+      sickLeave: "病假",
+      permission: "外出",
+      absent: "旷工",
+      off: "休息",
+      loading: "加载中...",
+      empty: "没有找到考勤数据",
+    },
+
+    loadError: "加载考勤数据失败。",
+
+    footerNote:
+      "每日考勤数据保存于 attendance_daily；AL / MC / UPL / A 直接覆盖对应日期，OT 不影响每日考勤，未来日期保持空白。",
+  },
   dashboard: {
     title: "仪表盘",
     subtitle: "仪表盘 — 点击卡片展开，然后进入模块详情。",
