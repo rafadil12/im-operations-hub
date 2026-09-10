@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
 import { NavIcon } from "@/components/layout/NavIcons";
 import type { Dict } from "@/lib/i18n";
 import type { NavChild, NavItem } from "./sidebarConfig";
 import { flattenNavLeaves, isChildActive, isParentActive } from "./sidebarNavUtils";
+
+// Survives AppShell remounts during client-side navigations.
+let cachedSidebarScrollTop = 0;
 
 type SidebarNavProps = {
   pathname: string;
@@ -34,6 +43,25 @@ export function SidebarNav({
   setFlyoutKey,
   updateOpenMenus,
 }: SidebarNavProps) {
+  const navRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    el.scrollTop = cachedSidebarScrollTop;
+    const active = el.querySelector<HTMLElement>("[data-sidebar-active='true']");
+    if (active) {
+      const navRect = el.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      if (activeRect.top < navRect.top) {
+        el.scrollTop -= navRect.top - activeRect.top;
+      } else if (activeRect.bottom > navRect.bottom) {
+        el.scrollTop += activeRect.bottom - navRect.bottom;
+      }
+    }
+    cachedSidebarScrollTop = el.scrollTop;
+  }, [pathname]);
+
   const navItemRowBase = [
     "flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1 text-left text-sm transition-colors",
     collapsed ? "justify-center px-2" : "",
@@ -166,6 +194,7 @@ export function SidebarNav({
           }));
         }}
         className={childClass(active)}
+        data-sidebar-active={active ? "true" : undefined}
       >
         <span className="flex-1 truncate">{label}</span>
       </Link>
@@ -173,7 +202,13 @@ export function SidebarNav({
   };
 
   return (
-    <nav className="sidebar-scroll flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3">
+    <nav
+      ref={navRef}
+      className="sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto px-2 py-3"
+      onScroll={(event) => {
+        cachedSidebarScrollTop = event.currentTarget.scrollTop;
+      }}
+    >
       {visibleNavItems.map((item) => {
         const active = isParentActive(pathname, item);
         const label = t.nav[item.labelKey];
@@ -292,6 +327,7 @@ export function SidebarNav({
             href={item.href}
             className={itemClass(active)}
             title={collapsed ? label : undefined}
+            data-sidebar-active={active ? "true" : undefined}
           >
             <span className={navIconWrap("opacity-90")}>
               <NavIcon id={item.icon} active={active} />
