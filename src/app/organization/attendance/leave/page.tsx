@@ -566,7 +566,7 @@ export default function LeavePermissionPage() {
         error?: string;
       };
 
-      if (!response.ok || payload.success === false || !payload.data) {
+      if (!response.ok || payload.success === false) {
         if (handleGuestForbiddenResponse(response.status, payload, "PATCH")) {
           return;
         }
@@ -576,7 +576,8 @@ export default function LeavePermissionPage() {
       }
 
       // Reject is stored in attendance_leave_history and removed from the
-      // pending table. Reload the list so the new Rejected history row appears.
+      // pending table. The API returns data: null on purpose, so reload
+      // the list instead of treating a 200 as a missing-row failure.
       if (status === "Rejected") {
         await loadRequests();
         return;
