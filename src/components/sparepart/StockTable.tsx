@@ -210,7 +210,7 @@ export function StockTable({
                   </span>
                 </td>
                 <td className={`${td} text-center whitespace-nowrap tabular-nums`}>
-                  {formatQty(rowMinStock(row), rowUom(row))}
+                  {formatQty(rowMinStock(row), rowUom(row, lang))}
                 </td>
                 {showCurrentStock ? (
                   <td
@@ -218,7 +218,7 @@ export function StockTable({
                       rowStock(row) <= 0 ? "text-danger" : "text-text"
                     }`}
                   >
-                    {formatQty(rowStock(row), rowUom(row))}
+                    {formatQty(rowStock(row), rowUom(row, lang))}
                   </td>
                 ) : null}
                 {showCurrentStock ? (

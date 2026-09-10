@@ -33,6 +33,8 @@ export async function GET(_request: NextRequest, context: Ctx) {
               li.storage_location, li.storage_location_id, li.to_storage_location_id,
               li.note,
               i.code AS item_code,
+              i.name_en AS item_name_en,
+              i.name_cn AS item_name_cn,
               COALESCE(i.name_en, i.name_cn) AS item_name,
               COALESCE(i.brand_en, i.brand_cn) AS item_brand,
               i.model AS item_model,

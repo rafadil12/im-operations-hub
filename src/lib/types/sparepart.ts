@@ -93,6 +93,8 @@ export type SparepartStockBalanceRow = {
   category_name_cn: string | null;
   uom_id?: number;
   uom_code?: string | null;
+  uom_name_en?: string | null;
+  uom_name_cn?: string | null;
   notes: string | null;
 };
 
@@ -159,6 +161,8 @@ export type SparepartMatDocLine = {
   note: string | null;
   item_code?: string | null;
   item_name?: string | null;
+  item_name_en?: string | null;
+  item_name_cn?: string | null;
   item_brand?: string | null;
   item_model?: string | null;
 };

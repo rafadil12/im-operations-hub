@@ -25,6 +25,8 @@ type Props = {
     | "category_name_en"
     | "category_name_cn"
     | "uom_code"
+    | "uom_name_en"
+    | "uom_name_cn"
     | "image_url"
   > & { balances?: SparepartStockBalance[] };
   onClose: () => void;
@@ -66,6 +68,14 @@ export function MaterialDetailModal({ item, onClose }: Props) {
 
   const description = localizedName(item, lang) || "-";
   const brand = localizedField(item.brand_en, item.brand_cn, lang) || "-";
+  const localizedUom = localizedName(
+    {
+      name_en: item.uom_name_en ?? null,
+      name_cn: item.uom_name_cn ?? null,
+    },
+    lang
+  );
+  const uomLabel = localizedUom !== "-" ? localizedUom : item.uom_code || "";
 
   const detailGroups: { label: string; value: string | number }[][] = [
     [
@@ -90,13 +100,13 @@ export function MaterialDetailModal({ item, onClose }: Props) {
           item.category_code ||
           "-",
       },
-      { label: t.sparepart.uom, value: item.uom_code || "-" },
+      { label: t.sparepart.uom, value: uomLabel || "-" },
     ],
     [
       { label: t.sparepart.minStock, value: item.min_stock ?? 0 },
       {
         label: t.sparepart.stockCurrent,
-        value: item.uom_code ? `${item.stock_current} ${item.uom_code}` : item.stock_current,
+        value: uomLabel ? `${item.stock_current} ${uomLabel}` : item.stock_current,
       },
     ],
     [{ label: t.sparepart.notes, value: item.notes || "-" }],
@@ -175,7 +185,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                         )}
                       </td>
                       <td className={`${td} text-right tabular-nums`}>
-                        {item.uom_code ? `${b.qty} ${item.uom_code}` : b.qty}
+                        {uomLabel ? `${b.qty} ${uomLabel}` : b.qty}
                       </td>
                     </tr>
                   ))}

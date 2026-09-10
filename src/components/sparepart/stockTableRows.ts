@@ -33,7 +33,15 @@ export function rowIsActive(row: StockTableRow): boolean {
   return isItemActive(row.is_active);
 }
 
-export function rowUom(row: StockTableRow): string {
+export function rowUom(row: StockTableRow, lang: "en" | "cn"): string {
+  const name = localizedName(
+    {
+      name_en: row.uom_name_en ?? null,
+      name_cn: row.uom_name_cn ?? null,
+    },
+    lang
+  );
+  if (name && name !== "-") return name;
   return row.uom_code?.trim() || "";
 }
 

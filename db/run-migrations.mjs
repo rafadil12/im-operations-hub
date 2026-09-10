@@ -558,7 +558,7 @@ if (await tableExists("sparepart_categories")) {
     }
     await conn.query(
       `UPDATE sparepart_categories
-       SET code = 'ASM', name_en = 'ASSEMBLY', name_cn = '管道',
+       SET code = 'ASM', name_en = 'ASSEMBLY', name_cn = '流水线',
            sort_order = 3, is_active = 1
        WHERE id = ?`,
       [keepId],
@@ -572,7 +572,7 @@ await conn.query(
    VALUES
      ('IT', 'IT', 'IT', 1, 1),
      ('AGV', 'AGV', 'AGV', 2, 1),
-     ('ASM', 'ASSEMBLY', '管道', 3, 1),
+     ('ASM', 'ASSEMBLY', '流水线', 3, 1),
      ('MES', 'MES', 'MES', 4, 1)
    ON DUPLICATE KEY UPDATE
      name_en = VALUES(name_en),
@@ -735,12 +735,12 @@ if (await tableExists("sparepart_items")) {
 if (await tableExists("sparepart_storage_locations")) {
   const rackLocations = [
     ["AGV-RACK", "AGV RACK", "AGV货架"],
-    ["ASM-RACK-A", "ASSEMBLY RACK A", "管道货架 A"],
-    ["ASM-RACK-B", "ASSEMBLY RACK B", "管道货架 B"],
-    ["ASM-RACK-C", "ASSEMBLY RACK C", "管道货架 C"],
-    ["ASM-RACK-D", "ASSEMBLY RACK D", "管道货架 D"],
-    ["ASM-RACK-E", "ASSEMBLY RACK E", "管道货架 E"],
-    ["ASM-RACK-F", "ASSEMBLY RACK F", "管道货架 F"],
+    ["ASM-RACK-A", "ASSEMBLY RACK A", "流水线货架 A"],
+    ["ASM-RACK-B", "ASSEMBLY RACK B", "流水线货架 B"],
+    ["ASM-RACK-C", "ASSEMBLY RACK C", "流水线货架 C"],
+    ["ASM-RACK-D", "ASSEMBLY RACK D", "流水线货架 D"],
+    ["ASM-RACK-E", "ASSEMBLY RACK E", "流水线货架 E"],
+    ["ASM-RACK-F", "ASSEMBLY RACK F", "流水线货架 F"],
   ];
   const hasNameEn = await columnExists("sparepart_storage_locations", "name_en");
   for (const [code, nameEn, nameCn] of rackLocations) {
@@ -783,21 +783,10 @@ if (await columnExists("sparepart_items", "is_active")) {
 }
 
 // ---------------------------------------------------------------------------
-// 018: ASSEMBLY category CN label 组装 → 管道
+// 018: ASSEMBLY category CN label 组装 → 管道 (superseded by 037 流水线)
 // ---------------------------------------------------------------------------
 if (await tableExists("sparepart_categories")) {
-  const [updated] = await conn.query(
-    `UPDATE sparepart_categories
-     SET name_cn = '管道'
-     WHERE UPPER(code) IN ('ASM', 'ASSEMBLY')
-       AND name_cn <> '管道'`,
-  );
-  const count = /** @type {{ affectedRows?: number }} */ (updated).affectedRows ?? 0;
-  if (count > 0) {
-    console.log(`Updated ASSEMBLY category name_cn to 管道 (${count} row(s)).`);
-  } else {
-    console.log("ASSEMBLY category name_cn already 管道.");
-  }
+  console.log("018 ASSEMBLY CN update superseded by 037 (流水线); skipped.");
 }
 
 // ---------------------------------------------------------------------------
@@ -846,20 +835,20 @@ if (await tableExists("sparepart_storage_locations")) {
     ["SL006", "内部仓库"],
     ["SL007", "会议室"],
     ["SL008", "AGV货架"],
-    ["SL009", "管道货架 A"],
-    ["SL010", "管道货架 B"],
-    ["SL011", "管道货架 C"],
-    ["SL012", "管道货架 D"],
-    ["SL013", "管道货架 E"],
-    ["SL014", "管道货架 F"],
+    ["SL009", "流水线货架 A"],
+    ["SL010", "流水线货架 B"],
+    ["SL011", "流水线货架 C"],
+    ["SL012", "流水线货架 D"],
+    ["SL013", "流水线货架 E"],
+    ["SL014", "流水线货架 F"],
     ["SL015", "AGV工作站"],
     ["AGV-RACK", "AGV货架"],
-    ["ASM-RACK-A", "管道货架 A"],
-    ["ASM-RACK-B", "管道货架 B"],
-    ["ASM-RACK-C", "管道货架 C"],
-    ["ASM-RACK-D", "管道货架 D"],
-    ["ASM-RACK-E", "管道货架 E"],
-    ["ASM-RACK-F", "管道货架 F"],
+    ["ASM-RACK-A", "流水线货架 A"],
+    ["ASM-RACK-B", "流水线货架 B"],
+    ["ASM-RACK-C", "流水线货架 C"],
+    ["ASM-RACK-D", "流水线货架 D"],
+    ["ASM-RACK-E", "流水线货架 E"],
+    ["ASM-RACK-F", "流水线货架 F"],
   ];
   /** @type {Array<[string, string]>} */
   const cnByNameEn = [
@@ -872,12 +861,12 @@ if (await tableExists("sparepart_storage_locations")) {
     ["INTERNAL WAREHOUSE", "内部仓库"],
     ["MEETING ROOM", "会议室"],
     ["AGV RACK", "AGV货架"],
-    ["ASSEMBLY RACK A", "管道货架 A"],
-    ["ASSEMBLY RACK B", "管道货架 B"],
-    ["ASSEMBLY RACK C", "管道货架 C"],
-    ["ASSEMBLY RACK D", "管道货架 D"],
-    ["ASSEMBLY RACK E", "管道货架 E"],
-    ["ASSEMBLY RACK F", "管道货架 F"],
+    ["ASSEMBLY RACK A", "流水线货架 A"],
+    ["ASSEMBLY RACK B", "流水线货架 B"],
+    ["ASSEMBLY RACK C", "流水线货架 C"],
+    ["ASSEMBLY RACK D", "流水线货架 D"],
+    ["ASSEMBLY RACK E", "流水线货架 E"],
+    ["ASSEMBLY RACK F", "流水线货架 F"],
     ["AGV WORKSTATION", "AGV工作站"],
   ];
 
@@ -1479,6 +1468,12 @@ if (await indexExists("report_lines", "uk_report_lines_week_area_subitem")) {
 } else {
   console.log("uk_report_lines_week_area_subitem already absent.");
 }
+
+await applySqlFile(
+  "037_assembly_category_name_cn_liushui.sql",
+  readMigrationSql,
+  "Updated ASSEMBLY category CN label to 流水线.",
+);
 
 await conn.end();
 console.log("Migrations complete.");
