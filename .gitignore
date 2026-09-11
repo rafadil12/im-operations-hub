@@ -24,8 +24,12 @@
 .DS_Store
 *.pem
 
-# cursor
-.cursor/
+# cursor — ignore local cache/plans; keep shared rules and skills in git
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 debug-*.log
 
 
