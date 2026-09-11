@@ -181,29 +181,30 @@ export async function POST(request: NextRequest) {
       ),
 
       query<LeaveRow[]>(
-        `
-          SELECT
-            id,
-            employee_no,
-            request_date,
-            request_type,
-            status
-          FROM attendance_leave_requests
-          WHERE request_date >= ?
-            AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
-            AND request_type IN (
-              'AL',
-              'MC',
-              'UPL',
-              'A',
-              'ALPA',
-              'OT',
-              'NO_ATTENDANCE'
-            )
-          ORDER BY employee_no, request_date, id ASC
-        `,
-        [monthStart, monthStart],
-      ),
+  `
+    SELECT
+      id,
+      employee_no,
+      request_date,
+      request_type,
+      status
+    FROM attendance_leave_requests
+    WHERE request_date >= ?
+      AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
+      AND status = 'Approved'
+      AND request_type IN (
+        'AL',
+        'MC',
+        'UPL',
+        'A',
+        'ALPA',
+        'OT',
+        'NO_ATTENDANCE'
+      )
+    ORDER BY employee_no, request_date, id ASC
+  `,
+  [monthStart, monthStart],
+),
 
       query<ExistingAttendanceRow[]>(
         `
