@@ -63,12 +63,18 @@ export async function GET() {
       query<OrganizationAttendanceRow[]>(
         `
         SELECT
-          employee_no,
-          attendance_date,
-          attendance_value
-        FROM attendance_daily
-        WHERE attendance_date >= ?
-          AND attendance_date <= ?
+          ad.employee_no,
+          ad.attendance_date,
+          CASE
+            WHEN ad.source = 'LEAVE' AND lr.request_type = 'ALPA' THEN 'A'
+            WHEN ad.source = 'LEAVE' THEN COALESCE(lr.request_type, 'OFF')
+            ELSE ad.attendance_value
+          END AS attendance_value
+        FROM attendance_daily ad
+        LEFT JOIN attendance_leave_requests lr
+          ON lr.id = ad.leave_request_id
+        WHERE ad.attendance_date >= ?
+          AND ad.attendance_date <= ?
         `,
         [start, end]
       ),

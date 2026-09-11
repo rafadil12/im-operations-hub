@@ -4,11 +4,20 @@ import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+type AttendanceDailyStoredValue = "10.5" | "8" | "4" | "OFF";
 type AttendanceDailyRow = {
   id: number;
   employee_no: string;
   attendance_date: string;
-  attendance_value: "10.5" | "8" | "4" | "OFF" | "AL" | "MC" | "UPL" | "A";
+  attendance_value:
+    | AttendanceDailyStoredValue
+    | "AL"
+    | "MC"
+    | "UPL"
+    | "A"
+    | "ALPA"
+    | "OT"
+    | "NO_ATTENDANCE";
   planned_hours: number;
   source: "SHIFT" | "LEAVE";
   leave_request_id: number | null;

@@ -16,15 +16,7 @@ type LeaveType =
   | "OT"
   | "NO_ATTENDANCE";
 
-type AttendanceValue =
-  | "10.5"
-  | "8"
-  | "4"
-  | "OFF"
-  | "AL"
-  | "MC"
-  | "UPL"
-  | "A";
+type AttendanceValue = "10.5" | "8" | "4" | "OFF";
 
 type EmployeeRow = {
   employee_no: string;
@@ -339,13 +331,14 @@ export async function POST(request: NextRequest) {
         let leaveRequestId: number | null = null;
 
         /*
-         * Leave tetap memiliki prioritas.
+         * Leave remains priority, but attendance_daily.attendance_value only
+         * stores shift hours (4/8/10.5/OFF). Leave type lives on
+         * attendance_leave_requests and is resolved via leave_request_id.
          *
-         * NO_ATTENDANCE tidak pernah masuk leaveMap,
-         * sehingga otomatis lanjut ke SHIFT.
+         * NO_ATTENDANCE never enters leaveMap, so it falls through to SHIFT.
          */
         if (leave) {
-          value = leave.requestType;
+          value = "OFF";
           plannedHours = 0;
           source = "LEAVE";
           leaveRequestId = leave.id;

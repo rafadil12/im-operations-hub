@@ -1475,5 +1475,305 @@ await applySqlFile(
   "Updated ASSEMBLY category CN label to 流水线.",
 );
 
+// ---------------------------------------------------------------------------
+// 038: sparepart_items.erp_item_code
+// ---------------------------------------------------------------------------
+if (await tableExists("sparepart_items")) {
+  if (!(await columnExists("sparepart_items", "erp_item_code"))) {
+    await applySqlFile(
+      "038_sparepart_erp_item_code.sql",
+      readMigrationSql,
+      "Added sparepart_items.erp_item_code.",
+    );
+  } else {
+    console.log("sparepart_items.erp_item_code already exists.");
+  }
+} else {
+  console.log("sparepart_items missing; skipped 038 erp_item_code.");
+}
+
+// ---------------------------------------------------------------------------
+// 039: sparepart stock levels + balance/doc level columns
+// ---------------------------------------------------------------------------
+if (!(await tableExists("sparepart_stock_levels"))) {
+  await applySqlFile(
+    "039_sparepart_stock_levels.sql",
+    readMigrationSql,
+    "Created sparepart_stock_levels and seeded L01–L04.",
+  );
+} else {
+  await applySqlFile(
+    "039_sparepart_stock_levels.sql",
+    readMigrationSql,
+    "Ensured sparepart_stock_levels L01–L04 seed.",
+  );
+}
+
+if (await tableExists("sparepart_stock_balances")) {
+  if (!(await columnExists("sparepart_stock_balances", "level_id"))) {
+    await conn.query(
+      `ALTER TABLE sparepart_stock_balances
+         ADD COLUMN level_id INT NULL AFTER storage_location_id`,
+    );
+    console.log("Added sparepart_stock_balances.level_id.");
+  } else {
+    console.log("sparepart_stock_balances.level_id already exists.");
+  }
+
+  await conn.query(
+    `UPDATE sparepart_stock_balances b
+     JOIN sparepart_stock_levels l ON l.code = 'L01'
+     SET b.level_id = l.id
+     WHERE b.level_id IS NULL`,
+  );
+
+  const levelNullable = await columnNullable("sparepart_stock_balances", "level_id");
+  if (levelNullable) {
+    await conn.query(
+      `ALTER TABLE sparepart_stock_balances
+         MODIFY level_id INT NOT NULL`,
+    );
+    console.log("sparepart_stock_balances.level_id is now NOT NULL.");
+  }
+
+  await tryAddFk(
+    `ALTER TABLE sparepart_stock_balances
+       ADD CONSTRAINT fk_sparepart_stock_balances_level
+       FOREIGN KEY (level_id) REFERENCES sparepart_stock_levels (id)
+       ON DELETE RESTRICT ON UPDATE CASCADE`,
+    "fk_sparepart_stock_balances_level",
+  );
+
+  if (!(await indexExists("sparepart_stock_balances", "uk_sparepart_stock_balances_item_loc_level"))) {
+    await conn.query(
+      `ALTER TABLE sparepart_stock_balances
+         ADD UNIQUE KEY uk_sparepart_stock_balances_item_loc_level
+         (item_id, storage_location_id, level_id)`,
+    );
+    console.log("Added uk_sparepart_stock_balances_item_loc_level.");
+  } else {
+    console.log("uk_sparepart_stock_balances_item_loc_level already exists.");
+  }
+
+  if (await indexExists("sparepart_stock_balances", "uk_sparepart_stock_balances_item_loc")) {
+    await conn.query(
+      `ALTER TABLE sparepart_stock_balances
+         DROP INDEX uk_sparepart_stock_balances_item_loc`,
+    );
+    console.log("Dropped uk_sparepart_stock_balances_item_loc.");
+  }
+} else {
+  console.log("sparepart_stock_balances missing; skipped level_id migration.");
+}
+
+if (await tableExists("sparepart_mat_doc_items")) {
+  if (!(await columnExists("sparepart_mat_doc_items", "storage_level_id"))) {
+    await conn.query(
+      `ALTER TABLE sparepart_mat_doc_items
+         ADD COLUMN storage_level_id INT NULL AFTER storage_location_id`,
+    );
+    console.log("Added sparepart_mat_doc_items.storage_level_id.");
+  }
+  if (!(await columnExists("sparepart_mat_doc_items", "to_storage_level_id"))) {
+    await conn.query(
+      `ALTER TABLE sparepart_mat_doc_items
+         ADD COLUMN to_storage_level_id INT NULL AFTER to_storage_location_id`,
+    );
+    console.log("Added sparepart_mat_doc_items.to_storage_level_id.");
+  }
+
+  await conn.query(
+    `UPDATE sparepart_mat_doc_items i
+     JOIN sparepart_stock_levels l ON l.code = 'L01'
+     SET i.storage_level_id = l.id
+     WHERE i.storage_level_id IS NULL`,
+  );
+  await conn.query(
+    `UPDATE sparepart_mat_doc_items i
+     JOIN sparepart_stock_levels l ON l.code = 'L01'
+     SET i.to_storage_level_id = l.id
+     WHERE i.to_storage_location_id IS NOT NULL AND i.to_storage_level_id IS NULL`,
+  );
+
+  await tryAddFk(
+    `ALTER TABLE sparepart_mat_doc_items
+       ADD CONSTRAINT fk_sparepart_mat_doc_items_level
+       FOREIGN KEY (storage_level_id) REFERENCES sparepart_stock_levels (id)
+       ON DELETE RESTRICT ON UPDATE CASCADE`,
+    "fk_sparepart_mat_doc_items_level",
+  );
+  await tryAddFk(
+    `ALTER TABLE sparepart_mat_doc_items
+       ADD CONSTRAINT fk_sparepart_mat_doc_items_to_level
+       FOREIGN KEY (to_storage_level_id) REFERENCES sparepart_stock_levels (id)
+       ON DELETE RESTRICT ON UPDATE CASCADE`,
+    "fk_sparepart_mat_doc_items_to_level",
+  );
+} else {
+  console.log("sparepart_mat_doc_items missing; skipped document level columns.");
+}
+
+// ---------------------------------------------------------------------------
+// 040: drop legacy mes_data + safety_files
+// ---------------------------------------------------------------------------
+if ((await tableExists("mes_data")) || (await tableExists("safety_files"))) {
+  await applySqlFile(
+    "040_drop_legacy_mes_data_safety_files.sql",
+    readMigrationSql,
+    "Dropped legacy mes_data and safety_files (if present).",
+  );
+} else {
+  console.log("mes_data and safety_files already absent.");
+}
+
+// ---------------------------------------------------------------------------
+// 041: attendance_leave_pending / history DDL + align pending with PROD
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "041_attendance_leave_pending_history.sql",
+  readMigrationSql,
+  "Ensured attendance_leave_pending and attendance_leave_history exist.",
+);
+
+if (await tableExists("attendance_leave_pending")) {
+  await conn.query(
+    `UPDATE attendance_leave_pending
+     SET created_by = COALESCE(NULLIF(TRIM(created_by), ''), employee_no)
+     WHERE created_by IS NULL OR TRIM(created_by) = ''`,
+  );
+
+  const [pendingColRows] = await conn.query(
+    `SELECT COLUMN_NAME AS name, COLUMN_TYPE AS type, IS_NULLABLE AS nullable
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'attendance_leave_pending'`,
+    [process.env.DB_NAME],
+  );
+  const pendingCols = Object.fromEntries(
+    pendingColRows.map((r) => [r.name, r]),
+  );
+
+  const pendingNeedsAlign =
+    !String(pendingCols.id?.type ?? "").includes("bigint") ||
+    String(pendingCols.employee_no?.type ?? "") !== "varchar(50)" ||
+    !String(pendingCols.request_type?.type ?? "").startsWith("enum(") ||
+    String(pendingCols.oa_number?.type ?? "") !== "varchar(100)" ||
+    !String(pendingCols.no_attendance_type?.type ?? "").startsWith("enum(") ||
+    String(pendingCols.created_by?.type ?? "") !== "varchar(50)" ||
+    pendingCols.created_by?.nullable === "YES" ||
+    String(pendingCols.created_at?.type ?? "") !== "timestamp" ||
+    String(pendingCols.updated_at?.type ?? "") !== "timestamp";
+
+  if (pendingNeedsAlign) {
+    await conn.query(
+      `ALTER TABLE attendance_leave_pending
+         MODIFY id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+         MODIFY employee_no VARCHAR(50) NOT NULL,
+         MODIFY request_type ENUM('AL','MC','UPL','OT','ALPA','NO_ATTENDANCE') NOT NULL,
+         MODIFY oa_number VARCHAR(100) NULL,
+         MODIFY no_attendance_type ENUM('NO_CHECK_IN','NO_CHECK_OUT','NO_CHECK_IN_OUT') NULL,
+         MODIFY created_by VARCHAR(50) NOT NULL,
+         MODIFY created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         MODIFY updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`,
+    );
+    console.log("Aligned attendance_leave_pending columns with production.");
+  } else {
+    console.log("attendance_leave_pending columns already match production.");
+  }
+
+  if (await indexExists("attendance_leave_pending", "uk_leave_pending_employee_date")) {
+    await conn.query(
+      `ALTER TABLE attendance_leave_pending DROP INDEX uk_leave_pending_employee_date`,
+    );
+    console.log("Dropped uk_leave_pending_employee_date.");
+  }
+
+  if (await indexExists("attendance_leave_pending", "idx_leave_pending_date")) {
+    await conn.query(
+      `ALTER TABLE attendance_leave_pending DROP INDEX idx_leave_pending_date`,
+    );
+    console.log("Dropped idx_leave_pending_date.");
+  }
+
+  if (!(await indexExists("attendance_leave_pending", "idx_pending_employee_date"))) {
+    await conn.query(
+      `ALTER TABLE attendance_leave_pending
+         ADD KEY idx_pending_employee_date (employee_no, request_date)`,
+    );
+    console.log("Added idx_pending_employee_date.");
+  }
+
+  if (!(await indexExists("attendance_leave_pending", "idx_pending_created_at"))) {
+    await conn.query(
+      `ALTER TABLE attendance_leave_pending
+         ADD KEY idx_pending_created_at (created_at)`,
+    );
+    console.log("Added idx_pending_created_at.");
+  }
+}
+
+if (await tableExists("attendance_leave_history")) {
+  if (!(await indexExists("attendance_leave_history", "idx_leave_history_employee_date"))) {
+    await conn.query(
+      `ALTER TABLE attendance_leave_history
+         ADD KEY idx_leave_history_employee_date (employee_no, request_date)`,
+    );
+    console.log("Added idx_leave_history_employee_date.");
+  }
+  if (!(await indexExists("attendance_leave_history", "idx_leave_history_rejected_at"))) {
+    await conn.query(
+      `ALTER TABLE attendance_leave_history
+         ADD KEY idx_leave_history_rejected_at (rejected_at)`,
+    );
+    console.log("Added idx_leave_history_rejected_at.");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 042: attendance_daily.attendance_value enum (shift hours only)
+// ---------------------------------------------------------------------------
+if (await tableExists("attendance_daily")) {
+  const [dailyTypeRows] = await conn.query(
+    `SELECT COLUMN_TYPE AS type
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'attendance_daily' AND COLUMN_NAME = 'attendance_value'`,
+    [process.env.DB_NAME],
+  );
+  const dailyType = String(dailyTypeRows[0]?.type ?? "");
+  const prodDailyEnum = "enum('4','8','10.5','OFF')";
+
+  if (dailyType !== prodDailyEnum && dailyType.includes("AL")) {
+    await conn.query(
+      `UPDATE attendance_daily
+       SET attendance_value = 'OFF'
+       WHERE attendance_value IN ('AL', 'MC', 'UPL', 'A')`,
+    );
+    await conn.query(
+      `ALTER TABLE attendance_daily
+         MODIFY COLUMN attendance_value ENUM('4','8','10.5','OFF') NOT NULL`,
+    );
+    console.log("Normalized attendance_daily.attendance_value to PROD enum.");
+  } else if (dailyType === prodDailyEnum) {
+    console.log("attendance_daily.attendance_value already matches production.");
+  } else {
+    // Unexpected shape: still force PROD enum after best-effort remap of known leave tokens.
+    try {
+      await conn.query(
+        `UPDATE attendance_daily
+         SET attendance_value = 'OFF'
+         WHERE CAST(attendance_value AS CHAR) IN ('AL', 'MC', 'UPL', 'A')`,
+      );
+    } catch {
+      // Ignore if enum cannot cast leave tokens.
+    }
+    await conn.query(
+      `ALTER TABLE attendance_daily
+         MODIFY COLUMN attendance_value ENUM('4','8','10.5','OFF') NOT NULL`,
+    );
+    console.log("Forced attendance_daily.attendance_value to PROD enum.");
+  }
+} else {
+  console.log("attendance_daily missing; skipped 042 enum normalize.");
+}
+
 await conn.end();
 console.log("Migrations complete.");
