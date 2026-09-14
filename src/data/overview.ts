@@ -287,7 +287,7 @@ export const dashboardModules: ModuleCardData[] = [
     title: "ORGANIZATION DASHBOARD",
     icon: "organization",
     accentColor: "#38bdf8",
-    href: "/organization/employees",
+    href: "/organization/overview",
     layout: "organization",
     stats: [
       { label: "Total Personel", value: EMPTY, tone: "accent" },
