@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/daily-operation",
+        destination: "/daily-operation/activities",
+        permanent: true,
+      },
+      {
         source: "/daily-operation/management",
         destination: "/daily-operation/activities",
         permanent: true,
