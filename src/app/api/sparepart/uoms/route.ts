@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import { isValidCnText } from "@/lib/daily-operation/mesRecordValidation";
 import type { SparepartUom } from "@/lib/types";
 
 export async function GET() {
@@ -41,14 +42,20 @@ export async function POST(request: NextRequest) {
     const code = String(body.code ?? "").trim().toUpperCase();
     const name_en = String(body.name_en ?? "").trim();
     const name_cn = String(body.name_cn ?? "").trim();
-    if (!code || !/^[A-Z0-9]{1,16}$/.test(code)) {
+    if (!code || !/^[A-Z0-9]{1,4}$/.test(code)) {
       return NextResponse.json(
-        { error: "UoM code is required (letters/numbers, max 16)." },
+        { error: "UoM code is required (letters/numbers, max 4)." },
         { status: 400 }
       );
     }
     if (!name_en || !name_cn) {
       return NextResponse.json({ error: "UoM name EN and CN are required." }, { status: 400 });
+    }
+    if (!isValidCnText(name_cn)) {
+      return NextResponse.json(
+        { error: "UoM name CN must include Chinese characters." },
+        { status: 400 }
+      );
     }
 
     const maxRows = await query<{ max_sort: number | null }[]>(

@@ -54,14 +54,10 @@ export function parseSparepartItemBody(
       message: "At least one description (EN or CN) is required.",
     });
   }
-  if (!brand_en) {
-    errors.push({ field: "brand_en", message: "Brand (EN) is required." });
-  } else if (!isValidEnText(brand_en)) {
+  if (brand_en && !isValidEnText(brand_en)) {
     errors.push({ field: "brand_en", message: "Brand (EN) cannot contain Chinese characters." });
   }
-  if (!brand_cn) {
-    errors.push({ field: "brand_cn", message: "Brand (CN) is required." });
-  } else if (!isValidCnText(brand_cn)) {
+  if (brand_cn && !isValidCnText(brand_cn)) {
     errors.push({ field: "brand_cn", message: "Brand (CN) must contain Chinese characters." });
   }
   if (erp_item_code.length > 64) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import { isValidCnText } from "@/lib/daily-operation/mesRecordValidation";
 import type { SparepartCategory } from "@/lib/types";
 
 export async function GET() {
@@ -41,15 +42,21 @@ export async function POST(request: NextRequest) {
     const code = String(body.code ?? "").trim().toUpperCase();
     const name_en = String(body.name_en ?? "").trim();
     const name_cn = String(body.name_cn ?? "").trim();
-    if (!code || !/^[A-Z0-9]{1,16}$/.test(code)) {
+    if (!code || !/^[A-Z]{1,3}$/.test(code)) {
       return NextResponse.json(
-        { error: "Category code is required (letters/numbers, max 16)." },
+        { error: "Category code is required (1–3 letters A–Z)." },
         { status: 400 }
       );
     }
     if (!name_en || !name_cn) {
       return NextResponse.json(
         { error: "Category name EN and CN are required." },
+        { status: 400 }
+      );
+    }
+    if (!isValidCnText(name_cn)) {
+      return NextResponse.json(
+        { error: "Category name CN must include Chinese characters." },
         { status: 400 }
       );
     }

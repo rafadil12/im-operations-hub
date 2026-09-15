@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { isValidCnText } from "@/lib/daily-operation/mesRecordValidation";
 import { useLang } from "@/lib/i18n";
 
 type Props = {
@@ -11,8 +12,23 @@ type Props = {
   endpoint: "/api/sparepart/categories" | "/api/sparepart/uoms";
 };
 
+function sanitizeCategoryCode(value: string): string {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .slice(0, 3);
+}
+
+function sanitizeUomCode(value: string): string {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 4);
+}
+
 export function SparepartMasterCreateDialog({ title, onClose, onCreated, endpoint }: Props) {
   const { t } = useLang();
+  const isCategory = endpoint === "/api/sparepart/categories";
   const [code, setCode] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [nameCn, setNameCn] = useState("");
@@ -25,6 +41,22 @@ export function SparepartMasterCreateDialog({ title, onClose, onCreated, endpoin
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    const nextCode = code.trim().toUpperCase();
+    const nextNameCn = nameCn.trim();
+
+    if (isCategory && !/^[A-Z]{1,3}$/.test(nextCode)) {
+      setError(t.sparepart.categoryCodeInvalid);
+      return;
+    }
+    if (!isCategory && !/^[A-Z0-9]{1,4}$/.test(nextCode)) {
+      setError(t.sparepart.uomCodeInvalid);
+      return;
+    }
+    if (!isValidCnText(nextNameCn)) {
+      setError(t.sparepart.nameCnMustBeChinese);
+      return;
+    }
+
     setBusy(true);
     setError(null);
     try {
@@ -32,9 +64,9 @@ export function SparepartMasterCreateDialog({ title, onClose, onCreated, endpoin
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code: code.trim().toUpperCase(),
+          code: nextCode,
           name_en: nameEn.trim(),
-          name_cn: nameCn.trim(),
+          name_cn: nextNameCn,
         }),
       });
       const payload = (await response.json()) as {
@@ -85,29 +117,58 @@ export function SparepartMasterCreateDialog({ title, onClose, onCreated, endpoin
           </p>
         ) : null}
         <div>
-          <label className={label}>{t.sparepart.code} *</label>
+          <label className={label}>
+            {t.sparepart.masterCode} <span className="text-danger">*</span>
+          </label>
           <input
             className={field}
             value={code}
-            onChange={(event) => setCode(event.target.value.toUpperCase())}
+            onChange={(event) =>
+              setCode(
+                isCategory
+                  ? sanitizeCategoryCode(event.target.value)
+                  : sanitizeUomCode(event.target.value)
+              )
+            }
+            maxLength={isCategory ? 3 : 4}
+            placeholder={
+              isCategory ? t.sparepart.categoryCodePlaceholder : t.sparepart.uomCodePlaceholder
+            }
             required
           />
+          {isCategory ? (
+            <p className="mt-1 text-[11px] text-text-dim">{t.sparepart.categoryCodeHint}</p>
+          ) : null}
         </div>
         <div>
-          <label className={label}>{t.sparepart.nameEn} *</label>
+          <label className={label}>
+            {t.sparepart.nameEn} <span className="text-danger">*</span>
+          </label>
           <input
             className={field}
             value={nameEn}
-            onChange={(event) => setNameEn(event.target.value)}
+            onChange={(event) => setNameEn(event.target.value.toUpperCase())}
+            placeholder={
+              isCategory
+                ? t.sparepart.categoryNameEnPlaceholder
+                : t.sparepart.uomNameEnPlaceholder
+            }
             required
           />
         </div>
         <div>
-          <label className={label}>{t.sparepart.nameCn} *</label>
+          <label className={label}>
+            {t.sparepart.nameCn} <span className="text-danger">*</span>
+          </label>
           <input
             className={field}
             value={nameCn}
             onChange={(event) => setNameCn(event.target.value)}
+            placeholder={
+              isCategory
+                ? t.sparepart.categoryNameCnPlaceholder
+                : t.sparepart.uomNameCnPlaceholder
+            }
             required
           />
         </div>

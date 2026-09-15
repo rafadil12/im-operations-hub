@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { ModuleTabs } from "@/components/sparepart/ModuleTabs";
 import { pageMetadata } from "@/lib/seo";
 
 // Index page is a Client Component and cannot export metadata; child routes
@@ -13,10 +12,5 @@ export const metadata = pageMetadata({
 });
 
 export default function SparepartLayout({ children }: { children: ReactNode }) {
-  return (
-    <AppShell title="Sparepart">
-      <ModuleTabs />
-      {children}
-    </AppShell>
-  );
+  return <AppShell title="Sparepart">{children}</AppShell>;
 }

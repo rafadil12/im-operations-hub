@@ -45,8 +45,8 @@ describe("parseSparepartItemBody", () => {
     }
   });
 
-  it("rejects missing brand_en or brand_cn and invalid charset", () => {
-    expect(parseSparepartItemBody({ ...validBody, brand_en: "  " }).ok).toBe(false);
+  it("allows empty brand and rejects invalid charset when provided", () => {
+    expect(parseSparepartItemBody({ ...validBody, brand_en: "  ", brand_cn: "  " }).ok).toBe(true);
     expect(parseSparepartItemBody({ ...validBody, brand_cn: "Acme" }).ok).toBe(false);
     expect(parseSparepartItemBody({ ...validBody, brand_en: "Acme 线" }).ok).toBe(false);
   });
