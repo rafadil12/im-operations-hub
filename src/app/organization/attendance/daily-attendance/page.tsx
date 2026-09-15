@@ -458,6 +458,11 @@ export default function DailyAttendancePage() {
         );
 
         setLoading(false);
+
+        // AUTO SYNC: jalankan setelah data awal selesai dimuat.
+        if (!cancelled && canManageOrganizationAttendance) {
+          await runAttendanceSync();
+        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -990,23 +995,6 @@ export default function DailyAttendancePage() {
               →
             </button>
 
-            {canManageOrganizationAttendance ? (
-              <button
-                type="button"
-                onClick={() => void runAttendanceSync()}
-                disabled={syncing || loading}
-                className={[
-                  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-[10px] font-extrabold shadow-sm transition-all duration-200",
-                  syncing || loading
-                    ? "cursor-not-allowed border-border bg-surface text-text-dim opacity-60"
-                    : "border-cyan-400/40 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/60 hover:bg-cyan-500/15",
-                ].join(" ")}
-              >
-                {syncing
-                  ? organizationText("syncing", language)
-                  : organizationText("syncAttendance", language)}
-              </button>
-            ) : null}
           </div>
         </div>
 

@@ -11,7 +11,7 @@ export function mapOrganizationToOverview(
   const t = getDict(lang);
   return {
     ...module,
-    href: "/organization/employees",
+    href: "/organization/overview",
     stats: [
       { label: t.dashboard.totalPersonel, value: String(metrics.totalPersonel), tone: "accent" },
       {

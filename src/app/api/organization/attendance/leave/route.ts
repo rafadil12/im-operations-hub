@@ -138,6 +138,47 @@ function isValidRequestTime(
   return startMinutes >= 18 * 60;
 }
 
+async function syncSingleAttendanceDaily(params: {
+  employeeNo: string;
+  attendanceDate: string;
+  leaveRequestId: number;
+  requestType: LeaveType;
+}) {
+  const {
+    employeeNo,
+    attendanceDate,
+    leaveRequestId,
+    requestType,
+  } = params;
+
+  // Keep the same behavior as the monthly daily sync:
+  // OT and NO_ATTENDANCE do not overwrite attendance_daily.
+  if (requestType === "OT" || requestType === "NO_ATTENDANCE") {
+    return;
+  }
+
+  await execute(
+    `
+      INSERT INTO attendance_daily (
+        employee_no,
+        attendance_date,
+        attendance_value,
+        planned_hours,
+        source,
+        leave_request_id
+      )
+      VALUES (?, ?, 'OFF', 0, 'LEAVE', ?)
+      ON DUPLICATE KEY UPDATE
+        attendance_value = 'OFF',
+        planned_hours = 0,
+        source = 'LEAVE',
+        leave_request_id = VALUES(leave_request_id),
+        updated_at = CURRENT_TIMESTAMP
+    `,
+    [employeeNo, attendanceDate, leaveRequestId],
+  );
+}
+
 /* =========================================================
    GET
    /api/organization/attendance/leave
@@ -1556,9 +1597,18 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Automatically synchronize the approved OA into attendance_daily.
+    await syncSingleAttendanceDaily({
+      employeeNo: saved.employee_no,
+      attendanceDate: String(saved.request_date).slice(0, 10),
+      leaveRequestId: saved.id,
+      requestType: saved.request_type,
+    });
+
     return NextResponse.json({
       success: true,
-      message: "Leave / permission request approved successfully.",
+      message:
+        "Leave / permission request approved and attendance daily synchronized successfully.",
       data: {
         ...saved,
         source: "final" as const,
