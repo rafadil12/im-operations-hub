@@ -21,6 +21,8 @@ type Props = {
   value: string;
   onChange: (itemId: string, item?: SparepartItem | null) => void;
   className?: string;
+  /** Hide brand/model/stock under the input (keeps posting lines single-height). */
+  compact?: boolean;
 };
 
 function labelFor(item: SparepartItem, lang: "en" | "cn"): string {
@@ -34,7 +36,7 @@ function isAbortError(err: unknown): boolean {
   );
 }
 
-export function MaterialCombobox({ value, onChange, className }: Props) {
+export function MaterialCombobox({ value, onChange, className, compact = false }: Props) {
   const { t, lang } = useLang();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -210,6 +212,14 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
 
   const showList = open && (suggestions.length > 0 || searching);
 
+  const selectedMeta = selected
+    ? `${localizedField(selected.brand_en, selected.brand_cn, lang)} / ${selected.model ?? "-"} · stock: ${
+        selected.uom_code
+          ? `${selected.stock_current} ${selected.uom_code}`
+          : selected.stock_current
+      }`
+    : undefined;
+
   return (
     <div ref={rootRef} className="relative">
       <input
@@ -220,6 +230,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
         aria-autocomplete="list"
         className={className}
         value={query}
+        title={compact ? selectedMeta : undefined}
         placeholder={`${t.sparepart.code} / ${t.sparepart.name} / ${t.sparepart.brand} / ${t.sparepart.model}`}
         onChange={(e) => {
           const next = e.target.value;
@@ -284,14 +295,8 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       {searchError ? (
         <p className="mt-1 text-[11px] text-rose-400">{searchError}</p>
       ) : null}
-      {selected ? (
-        <p className="mt-1 text-[11px] text-text-dim">
-          {localizedField(selected.brand_en, selected.brand_cn, lang)} / {selected.model ?? "-"} ·
-          stock:{" "}
-          {selected.uom_code
-            ? `${selected.stock_current} ${selected.uom_code}`
-            : selected.stock_current}
-        </p>
+      {!compact && selected ? (
+        <p className="mt-1 text-[11px] text-text-dim">{selectedMeta}</p>
       ) : null}
     </div>
   );
