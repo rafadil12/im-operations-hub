@@ -4,8 +4,7 @@ import KpiCards from "./KpiCards";
 import Highlights from "./Highlights";
 import TopTechnician from "./TopTechnician";
 import TopRequester from "./TopRequester";
-import RecentTickets from "./RecentTickets";
-import OldestTickets from "./OldestTickets";
+import TicketMonitoring from "./TicketMonitoring";
 
 import type { ItsmOverviewData } from "./types";
 
@@ -28,11 +27,11 @@ export default function ItsmOverview({ data }: Props) {
         <TopRequester rows={data.topRequesters} />
       </div>
 
-      {/* Ticket */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:[&>*]:min-w-0">
-        <RecentTickets rows={data.recentTickets} />
-        <OldestTickets rows={data.oldestTickets} />
-      </div>
+      {/* Ticket Monitoring */}
+      <TicketMonitoring
+        recentRows={data.recentTickets}
+        oldestRows={data.oldestTickets}
+      />
     </div>
   );
 }

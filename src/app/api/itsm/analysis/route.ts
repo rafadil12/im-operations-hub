@@ -20,6 +20,12 @@ type GroupRow = {
 
 type TechnicianRow = {
   technician: string | null;
+  is_service_request: string | null;
+  count: number;
+};
+
+type TechnicianComparisonRow = {
+  technician: string | null;
   count: number;
 };
 
@@ -103,6 +109,7 @@ export async function GET(request: NextRequest) {
       statusRows,
       groupRows,
       technicianRows,
+      previousTechnicianRows,
       requesterRows,
       priorityRows,
       trendRows,
@@ -152,22 +159,45 @@ export async function GET(request: NextRequest) {
       ),
 
       // 4. TECHNICIAN RANKING
+      // Keep Incident / Service Request separated for each technician.
+      // Do NOT LIMIT here, otherwise one request type can be cut off before
+      // the technician totals are aggregated.
       query<TechnicianRow[]>(
         `
         SELECT
           technician,
+          is_service_request,
           COUNT(*) AS count
         FROM itsm_requests
         WHERE ${filter}
           AND technician IS NOT NULL
           AND TRIM(technician) <> ''
           AND TRIM(technician) <> '-'
-        GROUP BY technician
-        ORDER BY count DESC
-        LIMIT 10
+        GROUP BY technician, is_service_request
+        ORDER BY technician, count DESC
         `,
         params
       ),
+      // 4B. PREVIOUS TECHNICIAN RANKING
+        query<TechnicianComparisonRow[]>(
+          `
+          SELECT
+            technician,
+            COUNT(*) AS count
+          FROM itsm_requests
+          WHERE
+            ${createdDateSql} >= ?
+            AND ${createdDateSql} < DATE_ADD(?, INTERVAL 1 DAY)
+            ${group && group !== "All" ? "AND group_name = ?" : ""}
+            AND technician IS NOT NULL
+            AND TRIM(technician) <> ''
+            AND TRIM(technician) <> '-'
+          GROUP BY technician
+          ORDER BY count DESC
+          `,
+          previousParams
+        ),
+
       // 5. REQUESTER RANKING
       query<RequesterRow[]>(
         `
@@ -326,10 +356,57 @@ export async function GET(request: NextRequest) {
       count: Number(row.count),
     }));
 
-    const technicianRanking = technicianRows.map((row) => ({
-      name: row.technician ?? "Unknown",
-      count: Number(row.count),
-    }));
+    // Aggregate Incident / Service Request counts per technician.
+    // `isServiceRequestValue` is the same logic already used by
+    // `byRequestType`, so the classification stays consistent.
+    const technicianMap = new Map<
+      string,
+      {
+        name: string;
+        incidentCount: number;
+        requestCount: number;
+      }
+    >();
+
+    for (const row of technicianRows) {
+      const name = row.technician?.trim() || "Unknown";
+      const count = Number(row.count ?? 0);
+      const current = technicianMap.get(name) ?? {
+        name,
+        incidentCount: 0,
+        requestCount: 0,
+      };
+
+      if (isServiceRequestValue(row.is_service_request)) {
+        current.requestCount += count;
+      } else {
+        current.incidentCount += count;
+      }
+
+      technicianMap.set(name, current);
+    }
+
+   const previousTechnicianMap = new Map(
+      previousTechnicianRows.map((row) => [
+        row.technician?.trim() || "Unknown",
+        Number(row.count ?? 0),
+      ])
+    );
+
+    const technicianRanking = Array.from(
+      technicianMap.values()
+    )
+      .map((item) => ({
+        name: item.name,
+        count: item.incidentCount + item.requestCount,
+        incidentCount: item.incidentCount,
+        requestCount: item.requestCount,
+        currentCount: item.incidentCount + item.requestCount,
+        previousCount:
+          previousTechnicianMap.get(item.name) ?? 0,
+      }))
+      .sort((a, b) => b.currentCount - a.currentCount)
+      .slice(0, 10);
 
     const requesterRanking = requesterRows.map((row) => ({
       name: row.requester ?? "Unknown",
