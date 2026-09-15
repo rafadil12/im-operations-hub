@@ -1,19 +1,31 @@
 "use client";
 
+import { useMemo } from "react";
+
 import {
   CartesianGrid,
   LabelList,
   Legend,
   Line,
   LineChart,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+
 import type { ChartColors } from "@/lib/theme";
+import { useLang } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
+
 import { ChartCard } from "./ChartCard";
+
+type ChartPoint = {
+  date: string;
+  current: number;
+  previous: number;
+};
 
 export function TicketTrendCard({
   title,
@@ -24,287 +36,730 @@ export function TicketTrendCard({
   activeFilter,
 }: {
   title: string;
-  chartData: { date: string; current: number; previous: number }[];
+  chartData: ChartPoint[];
   colors: ChartColors;
   theme: string;
   lang: Lang;
   activeFilter: "week" | "month" | "year" | null;
 }) {
+  const { t } = useLang();
+
+  const isDark = theme === "dark";
+
+  const textColor = isDark ? "#F8FAFC" : "#141B33";
+  const mutedColor = isDark ? "#94A3B8" : "#64748B";
+  const gridColor = isDark ? "#334155" : "#CBD5E1";
+
+  /* ============================================================
+     TOTALS
+  ============================================================ */
+
+  const currentTotal = useMemo(
+    () =>
+      chartData.reduce(
+        (sum, item) => sum + Number(item.current ?? 0),
+        0
+      ),
+    [chartData]
+  );
+
+  const previousTotal = useMemo(
+    () =>
+      chartData.reduce(
+        (sum, item) => sum + Number(item.previous ?? 0),
+        0
+      ),
+    [chartData]
+  );
+
+  const changeCount = currentTotal - previousTotal;
+
+  const changePercent =
+    previousTotal > 0
+      ? ((changeCount / previousTotal) * 100)
+      : 0;
+
+  const trendType =
+    changePercent > 0
+      ? "increase"
+      : changePercent < 0
+        ? "decrease"
+        : "neutral";
+
+  /* ============================================================
+     PEAK
+  ============================================================ */
+
+  const peak = useMemo(() => {
+    if (!chartData.length) return null;
+
+    return chartData.reduce((highest, item) => {
+      return Number(item.current ?? 0) >
+        Number(highest.current ?? 0)
+        ? item
+        : highest;
+    });
+  }, [chartData]);
+
+  /* ============================================================
+     DATE FORMAT
+  ============================================================ */
+
+  const formatDateLabel = (value: string) => {
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      const [year, month] = value.split("-");
+
+      return new Date(
+        Number(year),
+        Number(month) - 1
+      ).toLocaleDateString(
+        lang === "cn" ? "zh-CN" : "en-US",
+        {
+          month: "short",
+        }
+      );
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    if (lang === "cn") {
+      return `${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  /* ============================================================
+     TOOLTIP PERIOD LABEL
+  ============================================================ */
+
+  const getPeriodLabels = (value: string) => {
+    if (activeFilter === "week") {
+      return {
+        current: t.itsmAnalysis.thisWeek,
+        previous: t.itsmAnalysis.lastWeek,
+      };
+    }
+
+    if (activeFilter === "month") {
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return {
+          current: t.itsmAnalysis.currentPeriod,
+          previous: t.itsmAnalysis.previousPeriod,
+        };
+      }
+
+      const previousDate = new Date(date);
+
+      previousDate.setMonth(
+        previousDate.getMonth() - 1
+      );
+
+      return {
+        current: date.toLocaleDateString(
+          lang === "cn" ? "zh-CN" : "en-US",
+          {
+            month: "long",
+          }
+        ),
+        previous: previousDate.toLocaleDateString(
+          lang === "cn" ? "zh-CN" : "en-US",
+          {
+            month: "long",
+          }
+        ),
+      };
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return {
+        current: t.itsmAnalysis.currentPeriod,
+        previous: t.itsmAnalysis.previousPeriod,
+      };
+    }
+
+    return {
+      current: String(date.getFullYear()),
+      previous: String(date.getFullYear() - 1),
+    };
+  };
+
+  /* ============================================================
+     EMPTY STATE
+  ============================================================ */
+
+  if (!chartData.length) {
+    return (
+      <ChartCard title={title}>
+        <div
+          className="flex h-[320px] items-center justify-center text-sm"
+          style={{ color: mutedColor }}
+        >
+          {t.itsmAnalysis.noData}
+        </div>
+      </ChartCard>
+    );
+  }
+
   return (
     <ChartCard title={title}>
-      <ResponsiveContainer width="100%" height={280}>
-        <LineChart
-          data={chartData}
-          margin={{
-            top: 20,
-            right: 20,
-            left: 0,
-            bottom: 0,
-          }}
-        >
-          <defs>
-            <linearGradient id="ticketTrendGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#25ebb3" />
-              <stop offset="50%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#cd7364" />
-            </linearGradient>
-          </defs>
+      <div className="w-full">
+        {/* ======================================================
+            HEADER
+        ======================================================= */}
+        <div className="mb-2 flex items-start justify-between gap-4">
+          {/* LEFT */}
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span
+                className="font-mono text-2xl font-bold leading-none"
+                style={{ color: textColor }}
+              >
+                {currentTotal}
+              </span>
 
-          <CartesianGrid
-            vertical={false}
-            stroke={theme === "dark" ? "#E5E7EB" : "#cbd5e1ab"}
-            strokeWidth={theme === "dark" ? 0.5 : 0.8}
-            strokeOpacity={theme === "dark" ? 0.5 : 0.8}
-            strokeDasharray="5 5"
-          />
+              <span
+                className="text-[11px] font-semibold"
+                style={{ color: mutedColor }}
+              >
+                {t.itsmAnalysis.tickets}
+              </span>
+            </div>
 
-          <XAxis
-            dataKey="date"
-            stroke={colors.axis}
-            tick={{
-              fill: theme === "dark" ? "#FFFFFF" : "#475569",
-              fontSize: 11,
-            }}
-            tickFormatter={(value) => {
-              if (/^\d{4}-\d{2}$/.test(value)) {
-                const [year, month] = value.split("-");
+            <div
+              className="mt-1 text-[10px] font-medium"
+              style={{ color: mutedColor }}
+            >
+              {t.itsmAnalysis.currentPeriod}
+            </div>
+          </div>
 
-                return new Date(Number(year), Number(month) - 1).toLocaleDateString(
-                  lang === "cn" ? "zh-CN" : "en-US",
-                  {
-                    month: "short",
-                  }
-                );
-              }
+          {/* RIGHT */}
+          <div className="text-right">
+            <div
+              className="inline-flex items-center rounded-full px-3 py-1"
+              style={{
+                background:
+                  trendType === "increase"
+                    ? "rgba(16,185,129,0.10)"
+                    : trendType === "decrease"
+                      ? "rgba(239,68,68,0.10)"
+                      : "rgba(148,163,184,0.10)",
+                color:
+                  trendType === "increase"
+                    ? "#059669"
+                    : trendType === "decrease"
+                      ? "#DC2626"
+                      : mutedColor,
+              }}
+            >
+              <span className="text-[11px] font-bold">
+                {trendType === "increase"
+                  ? "↑"
+                  : trendType === "decrease"
+                    ? "↓"
+                    : "→"}{" "}
+                {Math.abs(changePercent).toFixed(1)}%
+              </span>
+            </div>
 
-              const date = new Date(value);
+            <div
+              className="mt-1 text-[10px] font-medium"
+              style={{ color: mutedColor }}
+            >
+              {trendType === "increase"
+                ? t.itsmAnalysis.increased
+                : trendType === "decrease"
+                  ? t.itsmAnalysis.decreased
+                  : t.itsmAnalysis.noChange}
+            </div>
+          </div>
+        </div>
 
-              if (lang === "cn") {
-                return `${date.getMonth() + 1}月${date.getDate()}日`;
-              }
+        {/* ======================================================
+            CHART
+        ======================================================= */}
+        <div className="w-full">
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart
+              data={chartData}
+              margin={{
+                top: 28,
+                right: 16,
+                left: 0,
+                bottom: 10,
+              }}
+            >
+              {/* GRADIENT */}
+              <defs>
+                <linearGradient
+                  id="ticketTrendGradient"
+                  x1="0"
+                  y1="0"
+                  x2="1"
+                  y2="0"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor="#25EBB3"
+                  />
+                  <stop
+                    offset="50%"
+                    stopColor="#3B82F6"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="#CD7364"
+                  />
+                </linearGradient>
+              </defs>
 
-              return date.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              });
-            }}
-          />
+              {/* GRID */}
+              <CartesianGrid
+                vertical={false}
+                stroke={gridColor}
+                strokeWidth={0.8}
+                strokeOpacity={
+                  isDark ? 0.4 : 0.65
+                }
+                strokeDasharray="5 5"
+              />
 
-          <YAxis
-            allowDecimals={false}
-            stroke="#94A3B8"
-            tickMargin={12}
-            tick={{
-              fill: theme === "dark" ? "#FFFFFF" : "#475569",
-              fontSize: 11,
-            }}
-          />
+              {/* X AXIS */}
+              <XAxis
+                dataKey="date"
+                stroke={colors.axis}
+                tickLine={false}
+                axisLine={{
+                  stroke: isDark
+                    ? "#64748B"
+                    : "#94A3B8",
+                }}
+                tick={{
+                  fill: isDark
+                    ? "#FFFFFF"
+                    : "#475569",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  fontFamily:
+                    "'JetBrains Mono', monospace",
+                }}
+                tickFormatter={formatDateLabel}
+              />
 
-          <Legend
-            verticalAlign="bottom"
-            align="center"
-            wrapperStyle={{
-              paddingBottom: 10,
-              fontSize: 14,
-              fontWeight: 600,
-              color: theme === "dark" ? "#CBD5E1" : "#475569",
-            }}
-            formatter={(value) => {
-              if (value === "current") {
-                return (
+              {/* Y AXIS */}
+              <YAxis
+                allowDecimals={false}
+                stroke={colors.axis}
+                tickLine={false}
+                axisLine={{
+                  stroke: isDark
+                    ? "#64748B"
+                    : "#94A3B8",
+                }}
+                tickMargin={10}
+                tick={{
+                  fill: isDark
+                    ? "#FFFFFF"
+                    : "#475569",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  fontFamily:
+                    "'JetBrains Mono', monospace",
+                }}
+              />
+
+              {/* ==================================================
+                  LEGEND
+              =================================================== */}
+              <Legend
+                verticalAlign="bottom"
+                align="center"
+                wrapperStyle={{
+                  paddingTop: 8,
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+                formatter={(value) => (
                   <span
                     style={{
-                      color: theme === "dark" ? "#CBD5E1" : "#475569",
+                      color: isDark
+                        ? "#CBD5E1"
+                        : "#475569",
                     }}
                   >
-                    {lang === "cn" ? "当前时间段" : "Current Period"}
+                    {value === "current"
+                      ? t.itsmAnalysis.currentPeriod
+                      : t.itsmAnalysis.previousPeriod}
                   </span>
-                );
-              }
+                )}
+              />
 
-              return (
-                <span
+              {/* ==================================================
+                  TOOLTIP
+              =================================================== */}
+              <Tooltip
+                cursor={{
+                  stroke: isDark
+                    ? "#475569"
+                    : "#CBD5E1",
+                  strokeWidth: 1,
+                }}
+                content={({
+                  active,
+                  payload,
+                  label,
+                }) => {
+                  if (
+                    !active ||
+                    !payload?.length
+                  ) {
+                    return null;
+                  }
+
+                  const current = Number(
+                    payload.find(
+                      (item) =>
+                        item.dataKey === "current"
+                    )?.value ?? 0
+                  );
+
+                  const previous = Number(
+                    payload.find(
+                      (item) =>
+                        item.dataKey === "previous"
+                    )?.value ?? 0
+                  );
+
+                  const difference =
+                    current - previous;
+
+                  const percentage =
+                    previous > 0
+                      ? (
+                          (difference /
+                            previous) *
+                          100
+                        ).toFixed(1)
+                      : "0.0";
+
+                  const periodLabels =
+                    getPeriodLabels(
+                      String(label)
+                    );
+
+                  return (
+                    <div
+                      style={{
+                        minWidth: 190,
+                        background: isDark
+                          ? "#0F172A"
+                          : "#FFFFFF",
+                        color: textColor,
+                        border: `1px solid ${
+                          isDark
+                            ? "#334155"
+                            : "#E2E8F0"
+                        }`,
+                        borderRadius: 12,
+                        padding:
+                          "12px 14px",
+                        boxShadow:
+                          "0 10px 30px rgba(15,23,42,0.16)",
+                      }}
+                    >
+                      {/* DATE */}
+                      <div
+                        style={{
+                          marginBottom: 10,
+                          fontSize: 13,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {formatDateLabel(
+                          String(label)
+                        )}
+                      </div>
+
+                      {/* CURRENT */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems:
+                            "center",
+                          justifyContent:
+                            "space-between",
+                          gap: 12,
+                          marginBottom: 6,
+                          fontSize: 11,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: "#3B82F6",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {
+                            t.itsmAnalysis
+                              .currentPeriod
+                          }{" "}
+                          (
+                          {
+                            periodLabels.current
+                          }
+                          )
+                        </span>
+
+                        <strong
+                          style={{
+                            color: textColor,
+                            fontFamily:
+                              "'JetBrains Mono', monospace",
+                          }}
+                        >
+                          {current}
+                        </strong>
+                      </div>
+
+                      {/* PREVIOUS */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems:
+                            "center",
+                          justifyContent:
+                            "space-between",
+                          gap: 12,
+                          marginBottom: 10,
+                          fontSize: 11,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: "#94A3B8",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {
+                            t.itsmAnalysis
+                              .previousPeriod
+                          }{" "}
+                          (
+                          {
+                            periodLabels.previous
+                          }
+                          )
+                        </span>
+
+                        <strong
+                          style={{
+                            color: textColor,
+                            fontFamily:
+                              "'JetBrains Mono', monospace",
+                          }}
+                        >
+                          {previous}
+                        </strong>
+                      </div>
+
+                      {/* CHANGE */}
+                      <div
+                        style={{
+                          borderTop: `1px solid ${
+                            isDark
+                              ? "#334155"
+                              : "#E2E8F0"
+                          }`,
+                          paddingTop: 8,
+                          display: "flex",
+                          alignItems:
+                            "center",
+                          justifyContent:
+                            "space-between",
+                          gap: 12,
+                          fontSize: 11,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: mutedColor,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {t.itsmAnalysis.change}
+                        </span>
+
+                        <strong
+                          style={{
+                            color:
+                              difference > 0
+                                ? "#10B981"
+                                : difference <
+                                    0
+                                  ? "#EF4444"
+                                  : mutedColor,
+                            fontFamily:
+                              "'JetBrains Mono', monospace",
+                          }}
+                        >
+                          {difference > 0
+                            ? "+"
+                            : ""}
+                          {difference}{" "}
+                          ({percentage}%)
+                        </strong>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+
+              {/* ==================================================
+                  PREVIOUS PERIOD
+              =================================================== */}
+              <Line
+                type="natural"
+                dataKey="previous"
+                name="previous"
+                stroke="#CBD5E1"
+                strokeWidth={2.5}
+                animationDuration={1000}
+                animationEasing="ease-in-out"
+                dot={{
+                  r: 3.5,
+                  fill: "#CBD5E1",
+                  stroke: "#FFFFFF",
+                  strokeWidth: 2,
+                }}
+                activeDot={{
+                  r: 5,
+                  fill: "#94A3B8",
+                  stroke: "#FFFFFF",
+                  strokeWidth: 2,
+                }}
+              >
+                <LabelList
+                  dataKey="previous"
+                  position="top"
+                  offset={8}
                   style={{
-                    color: theme === "dark" ? "#CBD5E1" : "#475569",
+                    fontFamily:
+                      "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    fill: isDark
+                      ? "#CBD5E1"
+                      : "#64748B",
                   }}
-                >
-                  {lang === "cn" ? "对比时间段" : "Previous Period"}
-                </span>
-              );
-            }}
-          />
+                />
+              </Line>
 
-          <Tooltip
-            content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null;
-
-              const current = payload.find((p) => p.dataKey === "current")?.value;
-              const previous = payload.find((p) => p.dataKey === "previous")?.value;
-
-              let currentLabel = "";
-              let previousLabel = "";
-
-              if (activeFilter === "week") {
-                currentLabel = lang === "cn" ? "本周" : "This Week";
-                previousLabel = lang === "cn" ? "上周" : "Last Week";
-              } else if (activeFilter === "month") {
-                const date = new Date(String(label));
-
-                currentLabel = date.toLocaleDateString(lang === "cn" ? "zh-CN" : "en-US", {
-                  month: "long",
-                });
-
-                const prev = new Date(date);
-                prev.setMonth(prev.getMonth() - 1);
-
-                previousLabel = prev.toLocaleDateString(lang === "cn" ? "zh-CN" : "en-US", {
-                  month: "long",
-                });
-              } else {
-                const date = new Date(String(label));
-
-                currentLabel = String(date.getFullYear());
-                previousLabel = String(date.getFullYear() - 1);
-              }
-
-              return (
-                <div
+              {/* ==================================================
+                  CURRENT PERIOD
+              =================================================== */}
+              <Line
+                type="natural"
+                dataKey="current"
+                name="current"
+                stroke="url(#ticketTrendGradient)"
+                strokeWidth={3.5}
+                animationDuration={1200}
+                animationEasing="ease-in-out"
+                dot={{
+                  r: 4.5,
+                  fill: "#2563EB",
+                  stroke: "#FFFFFF",
+                  strokeWidth: 2,
+                }}
+                activeDot={{
+                  r: 6,
+                  fill: "#2563EB",
+                  stroke: "#FFFFFF",
+                  strokeWidth: 2,
+                }}
+              >
+                <LabelList
+                  dataKey="current"
+                  position="top"
+                  offset={8}
                   style={{
-                    background: "#1E293B",
-                    color: "#fff",
-                    borderRadius: 12,
-                    padding: "12px 16px",
-                    boxShadow: "0 8px 20px rgba(0,0,0,.25)",
+                    fontFamily:
+                      "'JetBrains Mono', monospace",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    fill: isDark
+                      ? "#F8FAFC"
+                      : "#334155",
                   }}
-                >
-                  <div
-                    style={{
-                      marginBottom: 10,
-                      fontWeight: 700,
-                      fontSize: 18,
-                    }}
-                  >
-                    {label}
-                  </div>
+                />
+              </Line>
 
-                  <div
-                    style={{
-                      color: "#60A5FA",
-                      fontWeight: 700,
-                      fontSize: 16,
-                      marginBottom: 6,
-                    }}
-                  >
-                    {lang === "cn" ? "当前" : "Current"} ({currentLabel}) : {current}
-                  </div>
-
-                  <div
-                    style={{
-                      color: "#CBD5E1",
-                      fontWeight: 700,
-                      fontSize: 16,
-                    }}
-                  >
-                    {lang === "cn" ? "上期" : "Previous"} ({previousLabel}) : {previous}
-                  </div>
-                </div>
-              );
-            }}
-          />
-          {/* Previous */}
-          <Line
-            type="natural"
-            dataKey="previous"
-            stroke="#C9D1DB"
-            name="previous"
-            strokeWidth={2.5}
-            animationDuration={1800}
-            animationEasing="ease-in-out"
-            dot={{
-              r: 4,
-              fill: "#BFC7D4",
-              stroke: "#FFFFFF",
-              strokeWidth: 2,
-            }}
-            activeDot={{
-              r: 5,
-              fill: "#AAB4C3",
-              stroke: "#FFFFFF",
-              strokeWidth: 2,
-            }}
-          >
-            <LabelList
-              dataKey="previous"
-              content={(props) => {
-                const x = Number(props.x ?? 0);
-                const y = Number(props.y ?? 0);
-                const width = Number(props.width ?? 0);
-                const index = props.index ?? 0;
-
-                return (
-                  <text
-                    x={x + width / 2 + (index === 0 ? 12 : 0)}
-                    y={y - 20}
-                    textAnchor="middle"
-                    fontSize={15}
-                    fontWeight={700}
-                    fill={theme === "dark" ? "#f8fafc76" : "#33415553"}
-                  >
-                    {props.value}
-                  </text>
-                );
-              }}
-            />
-          </Line>
-          {/* Current */}
-          <Line
-            type="natural"
-            dataKey="current"
-            name="current"
-            stroke="url(#ticketTrendGradient)"
-            strokeWidth={3}
-            animationDuration={1800}
-            animationEasing="ease-in-out"
-            dot={(props) => {
-              const { cx, cy, payload } = props;
-
-              return (
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={payload.current >= 15 ? 6 : 4}
-                  fill={payload.current >= 15 ? "#EF4444" : "#2563EB"}
-                  stroke="#ffffff"
+              {/* ==================================================
+                  PEAK MARKER
+              =================================================== */}
+              {peak && (
+                <ReferenceDot
+                  x={peak.date}
+                  y={peak.current}
+                  r={5}
+                  fill="#F59E0B"
+                  stroke="#FFFFFF"
                   strokeWidth={2}
                 />
-              );
-            }}
-          >
-            <LabelList
-              dataKey="current"
-              content={(props) => {
-                const x = Number(props.x ?? 0);
-                const y = Number(props.y ?? 0);
-                const width = Number(props.width ?? 0);
-                const index = props.index ?? 0;
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
 
-                return (
-                  <text
-                    x={x + width / 2 + (index === 0 ? 12 : 0)}
-                    y={y - 20}
-                    textAnchor="middle"
-                    fontSize={15}
-                    fontWeight={700}
-                    fill={theme === "dark" ? "#26d371" : "#22b7af"}
-                  >
-                    {props.value}
-                  </text>
-                );
+        {/* ======================================================
+            FOOTER SUMMARY
+        ======================================================= */}
+        <div className="mt-1 flex items-center justify-between px-1">
+          <div
+            className="text-[11px] font-medium"
+            style={{ color: mutedColor }}
+          >
+            {t.itsmAnalysis.peak}:{" "}
+            <strong style={{ color: textColor }}>
+              {peak?.current ?? 0}
+            </strong>
+          </div>
+
+          <div
+            className="text-[11px] font-medium"
+            style={{ color: mutedColor }}
+          >
+            {t.itsmAnalysis.change}:{" "}
+            <strong
+              style={{
+                color:
+                  changeCount > 0
+                    ? "#10B981"
+                    : changeCount < 0
+                      ? "#EF4444"
+                      : textColor,
+                fontFamily:
+                  "'JetBrains Mono', monospace",
               }}
-            />
-          </Line>
-        </LineChart>
-      </ResponsiveContainer>
+            >
+              {changeCount > 0 ? "+" : ""}
+              {changeCount}
+            </strong>
+          </div>
+        </div>
+      </div>
     </ChartCard>
   );
 }

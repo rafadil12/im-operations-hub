@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+
 import { Modal } from "@/components/ui/Modal";
 import { useLang } from "@/lib/i18n";
 import { captureChartImage, useChartColors } from "./itsmChartUtils";
@@ -11,21 +12,29 @@ export function ChartCard({
   expandedContent,
   className,
   modalSize = "2xl",
+  onClose,
 }: {
   title: string;
   children: React.ReactNode;
   expandedContent?: React.ReactNode;
   className?: string;
   modalSize?: "md" | "lg" | "xl" | "2xl";
+  onClose?: () => void;
 }) {
   const { t } = useLang();
   const colors = useChartColors();
   const [open, setOpen] = useState(false);
-  const [exportStatus, setExportStatus] = useState<"idle" | "copying" | "copied" | "failed">(
-    "idle"
-  );
+  const [exportStatus, setExportStatus] = useState<
+    "idle" | "copying" | "copied" | "failed"
+  >("idle");
   const exportRef = useRef<HTMLDivElement>(null);
   const captureBg = colors.captureBg;
+
+  const closeModal = useCallback(() => {
+    setOpen(false);
+    setExportStatus("idle");
+    onClose?.();
+  }, [onClose]);
 
   const runExport = useCallback(
     async (mode: "download" | "copy") => {
@@ -34,12 +43,18 @@ export function ChartCard({
 
       try {
         if (mode === "download") {
-          const dataUrl = (await captureChartImage(node, "png", captureBg)) as string;
+          const dataUrl = (await captureChartImage(
+            node,
+            "png",
+            captureBg,
+          )) as string;
+
           const link = document.createElement("a");
           const safeName = title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/^-|-$/g, "");
+
           link.download = `${safeName || "chart"}.png`;
           link.href = dataUrl;
           link.click();
@@ -47,8 +62,16 @@ export function ChartCard({
         }
 
         setExportStatus("copying");
-        const blob = (await captureChartImage(node, "blob", captureBg)) as Blob;
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        const blob = (await captureChartImage(
+          node,
+          "blob",
+          captureBg,
+        )) as Blob;
+
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+
         setExportStatus("copied");
         window.setTimeout(() => setExportStatus("idle"), 1800);
       } catch {
@@ -56,7 +79,7 @@ export function ChartCard({
         window.setTimeout(() => setExportStatus("idle"), 2200);
       }
     },
-    [title, captureBg]
+    [title, captureBg],
   );
 
   const copyLabel =
@@ -96,10 +119,7 @@ export function ChartCard({
         <Modal
           title={title}
           size={modalSize}
-          onClose={() => {
-            setOpen(false);
-            setExportStatus("idle");
-          }}
+          onClose={closeModal}
           headerActions={
             <>
               <button

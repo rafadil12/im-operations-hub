@@ -21,8 +21,27 @@ export function ITSMAnalysisCharts({
   const { lang, t } = useLang();
   const colors = useChartColors();
   const { theme } = useTheme();
+  
+  type TechnicianComparison = {
+  name: string;
+  count?: number;
+  currentCount?: number;
+  previousCount?: number;
+  incidentCount?: number;
+  requestCount?: number;
+};
 
-  const technicians = result.technicianRanking ?? [];
+  const technicians = (
+  (result.technicianRanking ?? []) as TechnicianComparison[]
+).map((item) => ({
+  name: item.name,
+  count: Number(item.currentCount ?? item.count ?? 0),
+  currentCount: Number(item.currentCount ?? item.count ?? 0),
+  previousCount: Number(item.previousCount ?? 0),
+  incidentCount: Number(item.incidentCount ?? 0),
+  requestCount: Number(item.requestCount ?? 0),
+}));
+
   const requesters = result.requesterRanking ?? [];
   const trend = result.trend ?? {
     current: [],
@@ -67,7 +86,7 @@ export function ITSMAnalysisCharts({
         lang={lang}
         activeFilter={activeFilter}
       />
-      <TopTechnicianCard title={`👨‍💻 ${t.itsmAnalysis.topTechnician}`} technicians={technicians} />
+      <TopTechnicianCard title={`👨‍💻 ${t.itsmAnalysis.topTechnician}`} technicians={technicians}activeFilter={activeFilter} />
       <TopRequesterCard
         title={`👤 ${t.itsmAnalysis.topRequester}`}
         requesterBar={requesterBar}
@@ -75,8 +94,12 @@ export function ITSMAnalysisCharts({
         theme={theme}
       />
       <ChartCard title={`📑 ${t.itsmAnalysis.requestType}`}>
-        <PieWithLegend slices={requestTypeSlices} chartHeight={260} />
-      </ChartCard>
+  <PieWithLegend
+    slices={requestTypeSlices}
+    technicians={technicians}
+    chartHeight={260}
+  />
+</ChartCard>
     </div>
   );
 }

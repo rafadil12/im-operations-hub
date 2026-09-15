@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Medal, User } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Medal } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import type { TechnicianRanking } from "./types";
 
@@ -11,68 +11,279 @@ type Props = {
 
 export default function TopTechnician({ rows }: Props) {
   const { t } = useLang();
-
   const [startIndex, setStartIndex] = useState(0);
+  const [animate, setAnimate] = useState(false);
+
+  const sortedRows = useMemo(
+    () =>
+      [...rows].sort(
+        (a, b) => (Number(b.totalTickets) || 0) - (Number(a.totalTickets) || 0),
+      ),
+    [rows],
+  );
 
   useEffect(() => {
-    if (rows.length <= 5) return;
+    if (sortedRows.length <= 5) return;
 
-    const interval = setInterval(() => {
-      setStartIndex((prev) => (prev + 1 >= rows.length ? 0 : prev + 1));
-    }, 4000);
+    const timer = setInterval(() => {
+      setStartIndex((prev) => (prev + 1) % sortedRows.length);
+    }, 5000);
 
-    return () => clearInterval(interval);
-  }, [rows]);
+    return () => clearInterval(timer);
+  }, [sortedRows.length]);
 
-  const visibleRows =
-    rows.length <= 5
-      ? rows
-      : Array.from({ length: 5 }, (_, i) => rows[(startIndex + i) % rows.length]);
+  const visibleRows = useMemo(() => {
+    if (sortedRows.length <= 5) return sortedRows;
+
+    return Array.from(
+      { length: 5 },
+      (_, index) => sortedRows[(startIndex + index) % sortedRows.length],
+    );
+  }, [sortedRows, startIndex]);
+
+  const maxTickets = Math.max(
+    1,
+    ...visibleRows.map((item) => Number(item.totalTickets) || 0),
+  );
+
+  const totalVisibleTickets = visibleRows.reduce(
+    (sum, item) => sum + (Number(item.totalTickets) || 0),
+    0,
+  );
+
+  const topTickets = Number(visibleRows[0]?.totalTickets) || 0;
+  const secondTickets = Number(visibleRows[1]?.totalTickets) || 0;
+  const averageTickets =
+    visibleRows.length > 0
+      ? totalVisibleTickets / visibleRows.length
+      : 0;
+  const sortedVisibleTickets = visibleRows
+    .map((item) => Number(item.totalTickets) || 0)
+    .sort((a, b) => a - b);
+  const medianTickets =
+    sortedVisibleTickets.length > 0
+      ? sortedVisibleTickets.length % 2 === 0
+        ? (sortedVisibleTickets[sortedVisibleTickets.length / 2 - 1] +
+            sortedVisibleTickets[sortedVisibleTickets.length / 2]) /
+          2
+        : sortedVisibleTickets[Math.floor(sortedVisibleTickets.length / 2)]
+      : 0;
+  const topShare =
+    totalVisibleTickets > 0
+      ? (topTickets / totalVisibleTickets) * 100
+      : 0;
+  const leadTickets = Math.max(0, topTickets - secondTickets);
+  const topVsAverage =
+    averageTickets > 0
+      ? ((topTickets - averageTickets) / averageTickets) * 100
+      : 0;
+
+  useEffect(() => {
+    setAnimate(false);
+    const frame = requestAnimationFrame(() => setAnimate(true));
+    return () => cancelAnimationFrame(frame);
+  }, [startIndex, rows]);
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface shadow-sm">
-      <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-        <div>
-          <h2 className="text-lg font-semibold text-text">{t.itsm.topTechnician}</h2>
+    <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <div className="absolute inset-x-0 top-0 h-px bg-accent/30" />
 
-          <p className="text-sm text-text-muted">{t.itsm.highestAssignedTickets}</p>
+      {/* Header */}
+      <div className="border-b border-border-subtle px-5 py-4">
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Medal size={15} className="text-accent" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-text-muted">
+                {t.itsm.topTechnician}
+              </span>
+            </div>
+
+            <p className="mt-1 text-[11px] text-text-muted">
+              {t.itsm.highestAssignedTickets}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-end gap-4 text-right">
+            <div>
+              <p className="font-mono text-lg font-extrabold text-text">
+                {totalVisibleTickets.toLocaleString()}
+              </p>
+              <p className="text-[9px] text-text-dim">{t.itsm.tickets}</p>
+            </div>
+
+            <div className="border-l border-border-subtle pl-4">
+              <p className="font-mono text-sm font-bold text-text">
+                {averageTickets.toFixed(1)}
+              </p>
+              <p className="text-[9px] text-text-dim">{t.itsmAnalysis.average}</p>
+            </div>
+          </div>
         </div>
 
-        <Medal className="h-5 w-5 text-yellow-500" />
+        {/* Quick analysis */}
+        {visibleRows.length > 0 ? (
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-border-subtle bg-bg/35 px-3 py-2.5">
+              <p className="text-[8px] font-bold uppercase tracking-[0.1em] text-text-dim">
+                {t.itsmAnalysis.topShareLabel}
+              </p>
+              <div className="mt-1 flex items-end justify-between gap-2">
+                <p className="font-mono text-sm font-extrabold text-text">
+                  {topShare.toFixed(1)}%
+                </p>
+                <span className="text-[8px] text-text-dim">{t.itsmAnalysis.ofShown}</span>
+              </div>
+              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-bg">
+                <div
+                  className="h-full rounded-full bg-accent transition-[width] duration-700 ease-out"
+                  style={{ width: animate ? `${Math.min(topShare, 100)}%` : "0%" }}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border-subtle bg-bg/35 px-3 py-2.5">
+              <p className="text-[8px] font-bold uppercase tracking-[0.1em] text-text-dim">
+                {t.itsmAnalysis.lead}
+              </p>
+              <div className="mt-1 flex items-end justify-between gap-2">
+                <p className="font-mono text-sm font-extrabold text-text">
+                  +{leadTickets.toLocaleString()}
+                </p>
+                <span className="text-[8px] text-text-dim">{t.itsmAnalysis.vsSecond}</span>
+              </div>
+              <p className="mt-1.5 text-[9px] text-text-muted">
+                {topVsAverage >= 0 ? "+" : ""}
+                {t.itsmAnalysis.vsAverage.replace("{n}", topVsAverage.toFixed(0))}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border-subtle bg-bg/35 px-3 py-2.5">
+              <p className="text-[8px] font-bold uppercase tracking-[0.1em] text-text-dim">
+                {t.itsmAnalysis.median}
+              </p>
+              <div className="mt-1 flex items-end justify-between gap-2">
+                <p className="font-mono text-sm font-extrabold text-text">
+                  {medianTickets.toFixed(0)}
+                </p>
+                <span className="text-[8px] text-text-dim">{t.itsmAnalysis.tickets}</span>
+              </div>
+              <p className="mt-1.5 text-[9px] text-text-muted">
+                {topTickets > medianTickets ? t.itsmAnalysis.topAboveMedian : t.itsmAnalysis.balancedWorkload}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <div className="divide-y divide-border-subtle overflow-hidden">
+      {/* Ranking */}
+      <div className="divide-y divide-border-subtle">
         {visibleRows.length === 0 ? (
-          <div className="p-6 text-center text-sm text-text-muted">{t.itsm.noTechnicianData}</div>
+          <div className="px-5 py-10 text-center text-sm text-text-muted">
+            {t.itsm.noTechnicianData}
+          </div>
         ) : (
-          visibleRows.map((item, index) => (
-            <div
-              key={`${item.technician}-${startIndex}-${index}`}
-              className="flex items-center justify-between px-5 py-3 transition-all duration-700 hover:bg-surface-hover"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10">
-                  <User className="h-4 w-4 text-accent" />
-                </div>
+          visibleRows.map((item, index) => {
+            const tickets = Number(item.totalTickets) || 0;
+            const percentage = Math.min(
+              100,
+              (tickets / maxTickets) * 100,
+            );
 
-                <div>
-                  <div className="font-medium text-text">{item.technician}</div>
+            const isTop = index === 0;
 
-                  <div className="text-xs text-text-muted">
-                    {t.itsm.rank} #{((startIndex + index) % rows.length) + 1}
+            return (
+              <div
+                key={`${item.technician}-${startIndex}-${index}`}
+                className={[
+                  "px-5 py-3.5 transition-colors hover:bg-surface-hover",
+                  isTop ? "bg-accent/[0.025]" : "",
+                ].join(" ")}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={[
+                      "w-8 shrink-0 font-mono text-center text-[10px] font-bold",
+                      isTop ? "text-accent" : "text-text-dim",
+                    ].join(" ")}
+                  >
+                    #{index + 1}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-4">
+                      <p
+                        className={[
+                          "truncate text-xs",
+                          isTop
+                            ? "font-bold text-text"
+                            : "font-medium text-text",
+                        ].join(" ")}
+                        title={item.technician}
+                      >
+                        {item.technician}
+                      </p>
+
+                      <div className="shrink-0 text-right">
+                        <span
+                          className={[
+                            "block font-mono",
+                            isTop
+                              ? "text-sm font-extrabold text-text"
+                              : "text-xs font-bold text-text",
+                          ].join(" ")}
+                        >
+                          {tickets.toLocaleString()}
+                        </span>
+                        {isTop ? (
+                          <span className="text-[8px] font-medium text-accent">
+                            {t.itsmAnalysis.highest}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg">
+                      <div
+                        className={[
+                          "h-full rounded-full transition-[width] duration-700 ease-out",
+                          isTop ? "bg-accent" : "bg-accent/45",
+                        ].join(" ")}
+                        style={{
+                          width: animate ? `${percentage}%` : "0%",
+                        }}
+                      />
+                    </div>
+
+                    <div className="mt-1 flex items-center justify-between text-[9px]">
+                      <span className="text-text-dim">
+                        {totalVisibleTickets > 0
+                          ? t.itsmAnalysis.percentOfShown
+                          .replace("{n}", ((tickets / totalVisibleTickets) * 100).toFixed(1))
+                          : "0%"}
+                      </span>
+                      <span className="font-mono font-semibold text-text-muted">
+                        {tickets === topTickets && index > 0
+                          ? `-${(topTickets - tickets).toLocaleString()}`
+                          : isTop
+                            ? t.itsmAnalysis.highest
+                            : ""}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="text-right">
-                <div className="text-lg font-bold text-text">{item.totalTickets}</div>
-
-                <div className="text-xs text-text-muted">{t.itsm.tickets}</div>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
+
+      {sortedRows.length > 5 ? (
+        <div className="border-t border-border-subtle px-5 py-2.5 text-[9px] text-text-dim">
+          {startIndex + 1}–{Math.min(startIndex + 5, sortedRows.length)} /{" "}
+          {sortedRows.length}
+        </div>
+      ) : null}
     </div>
   );
 }
