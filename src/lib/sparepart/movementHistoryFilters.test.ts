@@ -86,6 +86,24 @@ describe("parseHistoryColumnVisibility", () => {
       user: false,
       note: false,
     };
-    expect(parseHistoryColumnVisibility(allOff).date).toBe(true);
+    const parsed = parseHistoryColumnVisibility(allOff);
+    expect(parsed.date).toBe(true);
+    expect(parsed.material).toBe(true);
+    expect(parsed.doc).toBe(false);
+  });
+
+  it("uses compact default visibility", () => {
+    const defaults = parseHistoryColumnVisibility(null);
+    expect(defaults.date).toBe(true);
+    expect(defaults.material).toBe(true);
+    expect(defaults.movementType).toBe(true);
+    expect(defaults.qty).toBe(true);
+    expect(defaults.uom).toBe(true);
+    expect(defaults.user).toBe(true);
+    expect(defaults.doc).toBe(false);
+    expect(defaults.line).toBe(false);
+    expect(defaults.fromLocation).toBe(false);
+    expect(defaults.toLocation).toBe(false);
+    expect(defaults.note).toBe(false);
   });
 });

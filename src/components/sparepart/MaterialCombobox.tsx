@@ -9,6 +9,7 @@ import {
   sparepartDropdownMenuClass,
   sparepartDropdownOptionClass,
 } from "@/components/sparepart/SparepartDropdown";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 
 const DEBOUNCE_MS = 300;
 const MIN_CHARS = 1;
@@ -213,11 +214,14 @@ export function MaterialCombobox({ value, onChange, className, compact = false }
   const showList = open && (suggestions.length > 0 || searching);
 
   const selectedMeta = selected
-    ? `${localizedField(selected.brand_en, selected.brand_cn, lang)} / ${selected.model ?? "-"} · stock: ${
-        selected.uom_code
-          ? `${selected.stock_current} ${selected.uom_code}`
-          : selected.stock_current
-      }`
+    ? (() => {
+        const uom = formatUomDisplay(
+          { code: selected.uom_code, name_cn: selected.uom_name_cn },
+          lang
+        );
+        const stock = uom ? `${selected.stock_current} ${uom}` : String(selected.stock_current);
+        return `${localizedField(selected.brand_en, selected.brand_cn, lang)} / ${selected.model ?? "-"} · stock: ${stock}`;
+      })()
     : undefined;
 
   return (
@@ -285,7 +289,13 @@ export function MaterialCombobox({ value, onChange, className, compact = false }
                 >
                   {localizedField(item.brand_en, item.brand_cn, lang) + " / " + (item.model || "-")}{" "}
                   · stock:{" "}
-                  {item.uom_code ? `${item.stock_current} ${item.uom_code}` : item.stock_current}
+                  {(() => {
+                    const uom = formatUomDisplay(
+                      { code: item.uom_code, name_cn: item.uom_name_cn },
+                      lang
+                    );
+                    return uom ? `${item.stock_current} ${uom}` : item.stock_current;
+                  })()}
                 </span>
               </button>
             </li>

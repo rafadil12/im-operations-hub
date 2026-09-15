@@ -22,6 +22,7 @@ export const MOVEMENT_HISTORY_SELECT = `SELECT d.id AS doc_id, d.doc_number, d.m
               i.name_en AS item_name_en,
               i.name_cn AS item_name_cn,
               u.code AS uom_code,
+              u.name_cn AS uom_name_cn,
               loc_from.code AS from_location_code,
               loc_from.name_en AS from_location_name_en,
               loc_from.name_cn AS from_location_name_cn,

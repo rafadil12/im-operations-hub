@@ -1,5 +1,6 @@
 import { isItemActive } from "@/lib/sparepart/categories";
 import { localizedName } from "@/lib/i18n";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type { SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
 import type { SortDir, SortKey } from "@/lib/sparepart/sort";
 
@@ -34,15 +35,10 @@ export function rowIsActive(row: StockTableRow): boolean {
 }
 
 export function rowUom(row: StockTableRow, lang: "en" | "cn"): string {
-  const name = localizedName(
-    {
-      name_en: row.uom_name_en ?? null,
-      name_cn: row.uom_name_cn ?? null,
-    },
+  return formatUomDisplay(
+    { code: row.uom_code, name_cn: row.uom_name_cn },
     lang
   );
-  if (name && name !== "-") return name;
-  return row.uom_code?.trim() || "";
 }
 
 export function formatQty(qty: number, uom: string): string {

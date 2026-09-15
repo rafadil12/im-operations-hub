@@ -201,52 +201,52 @@ export default function MaterialMasterPage() {
   return (
     <SparepartGate allow={(a) => a.canViewSparepartMaterials}>
       <div>
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold text-text">{t.sparepart.materialsTitle}</h1>
+        <div className="mb-4">
+          <h1 className="text-lg font-semibold text-text">{t.sparepart.materialsTitle}</h1>
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-text-muted">{t.sparepart.materialsDesc}</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {canDownloadSparepartTemplate ? (
-              <button
-                type="button"
-                onClick={async () => {
-                  setTemplateDownloading(true);
-                  try {
-                    await downloadBlob(
-                      "/api/sparepart/materials/template",
-                      "sparepart-template.xlsx"
-                    );
-                  } catch (e) {
-                    toastError(e instanceof Error ? e.message : t.toast.templateDownloadFailed);
-                  } finally {
-                    setTemplateDownloading(false);
-                  }
-                }}
-                disabled={templateDownloading}
-                className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
-              >
-                {t.common.downloadTemplate}
-              </button>
-            ) : null}
-            {canImportSparepartMaterials ? (
-              <button type="button" onClick={() => setImportOpen(true)} className={toolbarBtn}>
-                <ImportIcon className="size-3.5" />
-                {t.common.import}
-              </button>
-            ) : null}
-            {canCreateSparepartMaterial ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditRow(null);
-                  setFormOpen(true);
-                }}
-                className={toolbarBtn}
-              >
-                + {t.common.add}
-              </button>
-            ) : null}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {canDownloadSparepartTemplate ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTemplateDownloading(true);
+                    try {
+                      await downloadBlob(
+                        "/api/sparepart/materials/template",
+                        "sparepart-template.xlsx"
+                      );
+                    } catch (e) {
+                      toastError(e instanceof Error ? e.message : t.toast.templateDownloadFailed);
+                    } finally {
+                      setTemplateDownloading(false);
+                    }
+                  }}
+                  disabled={templateDownloading}
+                  className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+                >
+                  {t.common.downloadTemplate}
+                </button>
+              ) : null}
+              {canImportSparepartMaterials ? (
+                <button type="button" onClick={() => setImportOpen(true)} className={toolbarBtn}>
+                  <ImportIcon className="size-3.5" />
+                  {t.common.import}
+                </button>
+              ) : null}
+              {canCreateSparepartMaterial ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditRow(null);
+                    setFormOpen(true);
+                  }}
+                  className={toolbarBtn}
+                >
+                  + {t.common.add}
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 

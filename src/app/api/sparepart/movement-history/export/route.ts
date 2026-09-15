@@ -11,6 +11,7 @@ import {
   MOVEMENT_HISTORY_SELECT,
   buildMovementHistoryFilters,
 } from "@/lib/sparepart/movementHistoryFilters";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type { Lang, MovementType, SparepartMovementHistoryRow } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
         item_name: localizedField(row.item_name_en, row.item_name_cn, lang),
         movement_type: movementLabel(row.movement_type as MovementType, dict),
         qty: row.qty,
-        uom: row.uom_code ?? "",
+        uom: formatUomDisplay({ code: row.uom_code, name_cn: row.uom_name_cn }, lang),
         from_location: locationCell(row, "from", lang),
         to_location: locationCell(row, "to", lang),
         created_by: row.created_by ?? "",

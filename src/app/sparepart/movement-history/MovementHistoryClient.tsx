@@ -21,6 +21,7 @@ import {
   type MovementHistoryColumnVisibility,
 } from "@/lib/sparepart/movementHistoryColumns";
 import { pad2, todayLocalDateInputValue } from "@/lib/sparepart/postDraft";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/StockTable";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
@@ -416,7 +417,14 @@ export default function MovementHistoryPage() {
                         {show("qty") ? (
                           <td className={`${td} tabular-nums`}>{row.qty}</td>
                         ) : null}
-                        {show("uom") ? <td className={td}>{row.uom_code || "—"}</td> : null}
+                        {show("uom") ? (
+                          <td className={td}>
+                            {formatUomDisplay(
+                              { code: row.uom_code, name_cn: row.uom_name_cn },
+                              lang
+                            ) || "—"}
+                          </td>
+                        ) : null}
                         {show("fromLocation") ? (
                           <td className={td}>{locationLabel(row, "from", lang)}</td>
                         ) : null}

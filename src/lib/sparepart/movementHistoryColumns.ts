@@ -16,10 +16,22 @@ export type MovementHistoryColumnId = (typeof MOVEMENT_HISTORY_COLUMNS)[number];
 
 export type MovementHistoryColumnVisibility = Record<MovementHistoryColumnId, boolean>;
 
-export const DEFAULT_HISTORY_COLUMN_VISIBILITY: MovementHistoryColumnVisibility =
-  Object.fromEntries(MOVEMENT_HISTORY_COLUMNS.map((id) => [id, true])) as MovementHistoryColumnVisibility;
+/** Default visible set: Posting Date, Material, Type, Qty, UoM, Created By. */
+export const DEFAULT_HISTORY_COLUMN_VISIBILITY: MovementHistoryColumnVisibility = {
+  date: true,
+  doc: false,
+  line: false,
+  material: true,
+  movementType: true,
+  qty: true,
+  uom: true,
+  fromLocation: false,
+  toLocation: false,
+  user: true,
+  note: false,
+};
 
-export const HISTORY_COLUMNS_STORAGE_KEY = "sparepart.movementHistory.columns";
+export const HISTORY_COLUMNS_STORAGE_KEY = "sparepart.movementHistory.columns.v2";
 
 export function parseHistoryColumnVisibility(raw: unknown): MovementHistoryColumnVisibility {
   const next = { ...DEFAULT_HISTORY_COLUMN_VISIBILITY };

@@ -12,6 +12,7 @@ import {
   type SparepartCategoryCode,
 } from "@/lib/sparepart/categories";
 import { overviewMatchesFilters, type SparepartOverviewData } from "@/lib/sparepart/overview";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import { SkeletonChart, SkeletonKpiGrid } from "@/components/ui/skeletons";
 import {
   CategoryDonut,
@@ -343,10 +344,10 @@ export function SparepartOverview({
               items={data.lowStockItems.filter((item) => item.status === "low")}
               categories={data.categories}
               renderMeta={(item) => {
-                const uom =
-                  item.uom_code && item.uom_code.toUpperCase() === "PCS"
-                    ? t.sparepart.pcs
-                    : item.uom_code;
+                const uom = formatUomDisplay(
+                  { code: item.uom_code, name_cn: item.uom_name_cn },
+                  lang
+                );
                 return `${localizedName(item, lang)} · ${item.stock_current}/${item.min_stock}${
                   uom ? ` ${uom}` : ""
                 }`;
@@ -385,7 +386,13 @@ export function SparepartOverview({
                     <p className="text-text-muted">{localizedName(item, lang)}</p>
                     <p className="mt-1 tabular-nums text-text">
                       {item.stock_current} / {item.min_stock}
-                      {item.uom_code ? ` ${item.uom_code}` : ""}
+                      {(() => {
+                        const uom = formatUomDisplay(
+                          { code: item.uom_code, name_cn: item.uom_name_cn },
+                          lang
+                        );
+                        return uom ? ` ${uom}` : "";
+                      })()}
                     </p>
                   </li>
                 ))}
@@ -409,6 +416,7 @@ type AlertItem = {
   category_name_en?: string | null;
   category_name_cn?: string | null;
   uom_code?: string | null;
+  uom_name_cn?: string | null;
   stock_current: number;
   min_stock?: number;
 };
@@ -604,8 +612,7 @@ function AlertItemCompactRow({
   badgeLabel: string;
 }) {
   const { t, lang } = useLang();
-  const uom =
-    item.uom_code && item.uom_code.toUpperCase() === "PCS" ? t.sparepart.pcs : item.uom_code;
+  const uom = formatUomDisplay({ code: item.uom_code, name_cn: item.uom_name_cn }, lang);
 
   return (
     <div className="grid grid-cols-[minmax(100px,120px)_minmax(0,1fr)_minmax(90px,1fr)_minmax(84px,110px)] gap-3 border-t border-border-subtle/70 px-4 py-3 text-sm first:border-t-0">

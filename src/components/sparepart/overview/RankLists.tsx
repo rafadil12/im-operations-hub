@@ -2,6 +2,7 @@
 
 import { localizedName, useLang } from "@/lib/i18n";
 import { localizedCategoryLabel } from "@/lib/sparepart/categories";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type {
   SparepartOverviewCategoryTab,
   SparepartOverviewLocationStock,
@@ -66,9 +67,13 @@ export function TopUsedList({
                 </div>
                 <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-accent">
                   {item.qty.toLocaleString()}
-                  {item.uom_code
-                    ? ` ${item.uom_code.toUpperCase() === "PCS" ? t.sparepart.pcs : item.uom_code}`
-                    : ` ${t.sparepart.qty}`}
+                  {(() => {
+                    const uom = formatUomDisplay(
+                      { code: item.uom_code, name_cn: item.uom_name_cn },
+                      lang
+                    );
+                    return uom ? ` ${uom}` : ` ${t.sparepart.qty}`;
+                  })()}
                 </span>
               </div>
 

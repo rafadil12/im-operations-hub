@@ -257,5 +257,6 @@ export type SparepartMovementHistoryRow = {
   to_level_name_en: string | null;
   to_level_name_cn: string | null;
   uom_code: string | null;
+  uom_name_cn: string | null;
   created_by: string | null;
 };

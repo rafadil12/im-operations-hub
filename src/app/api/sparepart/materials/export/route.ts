@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import { getDict, localizedField, localizedName } from "@/lib/i18n";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type { Lang, SparepartItem } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -45,11 +46,11 @@ export async function GET(request: NextRequest) {
         | "stock_current"
         | "min_stock"
         | "notes"
-      > & { category_code: string; uom_code: string })[]
+      > & { category_code: string; uom_code: string; uom_name_cn: string | null })[]
     >(
       `SELECT i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
               i.stock_current, i.min_stock, i.notes, c.code AS category_code,
-              u.code AS uom_code
+              u.code AS uom_code, u.name_cn AS uom_name_cn
        FROM sparepart_items i
        JOIN sparepart_categories c ON c.id = i.category_id
        JOIN uoms u ON u.id = i.uom_id
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
         model: row.model ?? "",
         category: row.category_code,
         min_stock: row.min_stock,
-        uom: row.uom_code,
+        uom: formatUomDisplay({ code: row.uom_code, name_cn: row.uom_name_cn }, lang),
         stock_current: row.stock_current,
         notes: row.notes ?? "",
       });

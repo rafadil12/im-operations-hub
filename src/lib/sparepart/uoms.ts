@@ -17,3 +17,16 @@ export function normalizeUomCode(value: string): string | null {
   }
   return code;
 }
+
+/** EN → UoM code; CN → name_cn (fallback to code). */
+export function formatUomDisplay(
+  uom: { code?: string | null; name_cn?: string | null },
+  lang: "en" | "cn"
+): string {
+  const code = String(uom.code ?? "").trim();
+  if (lang === "cn") {
+    const nameCn = String(uom.name_cn ?? "").trim();
+    if (nameCn) return nameCn;
+  }
+  return code;
+}
