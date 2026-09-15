@@ -35,7 +35,7 @@ export function TopUsedList({
   ] as const;
 
   return (
-    <div className="flex h-[280px] flex-col overflow-y-auto">
+    <div className="flex min-h-[455px] flex-col overflow-y-auto">
       {items.length === 0 ? (
         <p className="flex flex-1 items-center justify-center text-sm text-text-muted">
           {t.common.noData}
