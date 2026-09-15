@@ -5,7 +5,7 @@ import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import { getDict, localizedField, localizedName } from "@/lib/i18n";
 import { buildMatDocListFilters } from "@/lib/sparepart/documentFilters";
-import { movementLabel } from "@/lib/sparepart/documentDisplay";
+import { appendLevelLabel, movementLabel } from "@/lib/sparepart/documentDisplay";
 import type { Lang, MovementType } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -29,9 +29,15 @@ type ExportRow = {
   from_location_name_en: string | null;
   from_location_name_cn: string | null;
   from_location_fallback: string | null;
+  from_level_code: string | null;
+  from_level_name_en: string | null;
+  from_level_name_cn: string | null;
   to_location_code: string | null;
   to_location_name_en: string | null;
   to_location_name_cn: string | null;
+  to_level_code: string | null;
+  to_level_name_en: string | null;
+  to_level_name_cn: string | null;
   line_note: string | null;
 };
 
@@ -85,9 +91,15 @@ export async function GET(request: NextRequest) {
               loc_from.name_en AS from_location_name_en,
               loc_from.name_cn AS from_location_name_cn,
               li.storage_location AS from_location_fallback,
+              lvl_from.code AS from_level_code,
+              lvl_from.name_en AS from_level_name_en,
+              lvl_from.name_cn AS from_level_name_cn,
               loc_to.code AS to_location_code,
               loc_to.name_en AS to_location_name_en,
-              loc_to.name_cn AS to_location_name_cn
+              loc_to.name_cn AS to_location_name_cn,
+              lvl_to.code AS to_level_code,
+              lvl_to.name_en AS to_level_name_en,
+              lvl_to.name_cn AS to_level_name_cn
        FROM sparepart_mat_docs d
        LEFT JOIN sparepart_mat_doc_items li ON li.doc_id = d.id
        LEFT JOIN sparepart_items i ON i.id = li.item_id
@@ -95,6 +107,10 @@ export async function GET(request: NextRequest) {
          ON loc_from.id = li.storage_location_id
        LEFT JOIN sparepart_storage_locations loc_to
          ON loc_to.id = li.to_storage_location_id
+       LEFT JOIN sparepart_stock_levels lvl_from
+         ON lvl_from.id = li.storage_level_id
+       LEFT JOIN sparepart_stock_levels lvl_to
+         ON lvl_to.id = li.to_storage_level_id
        ${where}
        ORDER BY d.posting_date DESC, d.id DESC, li.line_no ASC`,
       params
@@ -134,18 +150,30 @@ export async function GET(request: NextRequest) {
         item_brand: localizedField(row.item_brand_en, row.item_brand_cn, lang),
         item_model: row.item_model ?? "",
         qty: row.qty ?? "",
-        from_location: formatLocation(
-          row.from_location_code,
-          row.from_location_name_en,
-          row.from_location_name_cn,
-          row.from_location_fallback,
+        from_location: appendLevelLabel(
+          formatLocation(
+            row.from_location_code,
+            row.from_location_name_en,
+            row.from_location_name_cn,
+            row.from_location_fallback,
+            lang
+          ),
+          row.from_level_code,
+          row.from_level_name_en,
+          row.from_level_name_cn,
           lang
         ),
-        to_location: formatLocation(
-          row.to_location_code,
-          row.to_location_name_en,
-          row.to_location_name_cn,
-          null,
+        to_location: appendLevelLabel(
+          formatLocation(
+            row.to_location_code,
+            row.to_location_name_en,
+            row.to_location_name_cn,
+            null,
+            lang
+          ),
+          row.to_level_code,
+          row.to_level_name_en,
+          row.to_level_name_cn,
           lang
         ),
         line_note: row.line_note ?? "",

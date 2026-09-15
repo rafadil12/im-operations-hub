@@ -191,6 +191,7 @@ export function buildOverviewData(args: {
       category_name_en: row.category_name_en,
       category_name_cn: row.category_name_cn,
       uom_code: row.uom_code,
+      uom_name_cn: row.uom_name_cn,
       qty: n(row.qty),
     })),
     trendDaily: categoryFilter
@@ -240,6 +241,7 @@ export function buildOverviewData(args: {
       category_name_en: row.category_name_en,
       category_name_cn: row.category_name_cn,
       uom_code: row.uom_code,
+      uom_name_cn: row.uom_name_cn,
       stock_current: n(row.stock_current),
     })),
     lowStockItems: lowRows.map((row) => ({
@@ -250,6 +252,7 @@ export function buildOverviewData(args: {
       category_name_en: row.category_name_en,
       category_name_cn: row.category_name_cn,
       uom_code: row.uom_code,
+      uom_name_cn: row.uom_name_cn,
       stock_current: n(row.stock_current),
       min_stock: n(row.min_stock),
       status: n(row.stock_current) <= 0 ? "critical" : "low",
@@ -266,6 +269,7 @@ export function buildOverviewData(args: {
       category_name_en: row.category_name_en,
       category_name_cn: row.category_name_cn,
       uom_code: row.uom_code,
+      uom_name_cn: row.uom_name_cn,
       stock_current: n(row.stock_current),
       min_stock: n(row.min_stock),
     })),

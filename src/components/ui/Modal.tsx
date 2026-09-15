@@ -32,14 +32,6 @@ const SHELL_CLASS: Record<NonNullable<ModalProps["size"]>, string> = {
   full: "fixed inset-0 z-[999] flex p-1.5 sm:p-2",
 };
 
-const PANEL_CLASS: Record<NonNullable<ModalProps["size"]>, string> = {
-  md: "max-h-[92vh] rounded-xl",
-  lg: "max-h-[92vh] rounded-xl",
-  xl: "max-h-[92vh] rounded-xl",
-  "2xl": "max-h-[92vh] rounded-xl",
-  full: "min-h-0 flex-1 rounded-lg",
-};
-
 function subscribe() {
   return () => {};
 }
@@ -92,9 +84,12 @@ export function Modal({
         aria-modal="true"
         className={[
           "relative z-10 flex w-full flex-col overflow-hidden border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]",
-          PANEL_CLASS[size],
+          size === "full" ? "min-h-0 flex-1" : "h-auto max-h-[92vh]",
+          size === "full" ? "" : "rounded-xl",
           SIZE_CLASS[size],
-        ].join(" ")}
+        ]
+          .filter(Boolean)
+          .join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-4 py-3">
@@ -117,14 +112,15 @@ export function Modal({
         </div>
         <div
           className={[
-            "min-h-0 flex-1",
-            size === "full" ? "flex flex-col overflow-hidden p-2" : "overflow-y-auto p-4",
+            size === "full"
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden p-2"
+              : "min-h-0 grow-0 overflow-y-auto overscroll-contain p-4",
           ].join(" ")}
         >
           {children}
         </div>
         {footer ? (
-          <div className="flex justify-end gap-2 border-t border-border-subtle px-4 py-3">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border-subtle px-4 py-3">
             {footer}
           </div>
         ) : null}

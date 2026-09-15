@@ -181,9 +181,18 @@ export function Sidebar() {
                   return canViewSparepartOverview ? child : null;
                 }
                 if (child.id === "management" && child.children) {
-                  const nested = child.children.filter((leaf) =>
-                    isSparepartLeafVisible(leaf.id, sparepartAccess)
-                  );
+                  const nested = child.children
+                    .map((leaf) => {
+                      if (leaf.children?.length) {
+                        const inner = leaf.children.filter((innerLeaf) =>
+                          isSparepartLeafVisible(innerLeaf.id, sparepartAccess)
+                        );
+                        if (!inner.length) return null;
+                        return { ...leaf, children: inner };
+                      }
+                      return isSparepartLeafVisible(leaf.id, sparepartAccess) ? leaf : null;
+                    })
+                    .filter((leaf): leaf is NavChild => leaf !== null);
                   if (!nested.length) return null;
                   return { ...child, children: nested };
                 }

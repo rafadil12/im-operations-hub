@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { SkeletonText } from "@/components/ui/Skeleton";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang, localizedField, localizedName } from "@/lib/i18n";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type { SparepartItem, SparepartStockBalance } from "@/lib/types";
 
 type Props = {
@@ -28,6 +29,7 @@ type Props = {
     | "uom_name_en"
     | "uom_name_cn"
     | "image_url"
+    | "erp_item_code"
   > & { balances?: SparepartStockBalance[] };
   onClose: () => void;
 };
@@ -68,14 +70,10 @@ export function MaterialDetailModal({ item, onClose }: Props) {
 
   const description = localizedName(item, lang) || "-";
   const brand = localizedField(item.brand_en, item.brand_cn, lang) || "-";
-  const localizedUom = localizedName(
-    {
-      name_en: item.uom_name_en ?? null,
-      name_cn: item.uom_name_cn ?? null,
-    },
+  const uomLabel = formatUomDisplay(
+    { code: item.uom_code, name_cn: item.uom_name_cn },
     lang
   );
-  const uomLabel = localizedUom !== "-" ? localizedUom : item.uom_code || "";
 
   const detailGroups: { label: string; value: string | number }[][] = [
     [
@@ -87,6 +85,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
       { label: t.sparepart.model, value: item.model || "-" },
     ],
     [
+      { label: t.sparepart.erpItemCode, value: item.erp_item_code || "-" },
       {
         label: t.sparepart.category,
         value:
@@ -168,6 +167,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                   <tr>
                     <th className={th}>{t.sparepart.locationCode}</th>
                     <th className={th}>{t.sparepart.locationName}</th>
+                    <th className={th}>{t.sparepart.level}</th>
                     <th className={`${th} text-right`}>{t.sparepart.stockCurrent}</th>
                   </tr>
                 </thead>
@@ -183,6 +183,17 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                           },
                           lang
                         )}
+                      </td>
+                      <td className={td}>
+                        {b.level_code
+                          ? `${b.level_code} — ${localizedName(
+                              {
+                                name_en: b.level_name_en ?? null,
+                                name_cn: b.level_name_cn ?? null,
+                              },
+                              lang
+                            )}`
+                          : "-"}
                       </td>
                       <td className={`${td} text-right tabular-nums`}>
                         {uomLabel ? `${b.qty} ${uomLabel}` : b.qty}

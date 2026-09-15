@@ -18,6 +18,8 @@ type Props = {
   disabled?: boolean;
   /** Open the menu above the trigger (useful in pagination footers clipped by overflow). */
   menuPlacement?: "bottom" | "top";
+  onAdd?: () => void;
+  addLabel?: string;
 };
 
 export const sparepartDropdownFieldClass =
@@ -51,6 +53,8 @@ export function SparepartDropdown({
   compact = false,
   disabled = false,
   menuPlacement = "bottom",
+  onAdd,
+  addLabel,
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -132,6 +136,20 @@ export function SparepartDropdown({
               </li>
             );
           })}
+          {onAdd ? (
+            <li className="border-t border-border-subtle">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onAdd();
+                }}
+                className={sparepartDropdownOptionClass(false, compact)}
+              >
+                <span className="min-w-0 flex-1 truncate">{addLabel ?? "+"}</span>
+              </button>
+            </li>
+          ) : null}
         </ul>
       ) : null}
     </div>

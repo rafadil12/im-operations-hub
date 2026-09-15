@@ -284,7 +284,7 @@ export async function fetchOverviewQueryBundle(args: {
     query<ItemRow[]>(
       `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
                 c.name_en AS category_name_en, c.name_cn AS category_name_cn,
-                u.code AS uom_code, i.stock_current, i.min_stock
+                u.code AS uom_code, u.name_cn AS uom_name_cn, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere} AND ${LOW_STOCK_SQL} AND i.stock_current <= 0
          ORDER BY i.code ASC
@@ -294,7 +294,7 @@ export async function fetchOverviewQueryBundle(args: {
     query<ItemRow[]>(
       `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
                 c.name_en AS category_name_en, c.name_cn AS category_name_cn,
-                u.code AS uom_code, i.stock_current, i.min_stock
+                u.code AS uom_code, u.name_cn AS uom_name_cn, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere} AND ${LOW_STOCK_SQL} AND i.stock_current > 0
          ORDER BY i.stock_current ASC, i.code ASC
@@ -305,12 +305,12 @@ export async function fetchOverviewQueryBundle(args: {
       `SELECT
            i.code, i.name_en, i.name_cn, c.code AS category_code,
            c.name_en AS category_name_en, c.name_cn AS category_name_cn,
-           u.code AS uom_code,
+           u.code AS uom_code, u.name_cn AS uom_name_cn,
            COALESCE(SUM(${OUT_QTY_SQL}), 0) AS qty
          ${moveJoin}
          JOIN uoms u ON u.id = i.uom_id
          WHERE ${moveWhere}
-         GROUP BY i.id, i.code, i.name_en, i.name_cn, c.code, c.name_en, c.name_cn, u.code
+         GROUP BY i.id, i.code, i.name_en, i.name_cn, c.code, c.name_en, c.name_cn, u.code, u.name_cn
          HAVING qty > 0
          ORDER BY qty DESC, i.code ASC
          LIMIT 5`,
@@ -342,7 +342,7 @@ export async function fetchOverviewQueryBundle(args: {
     query<ItemRow[]>(
       `SELECT i.code, i.name_en, i.name_cn, c.code AS category_code,
                 c.name_en AS category_name_en, c.name_cn AS category_name_cn,
-                u.code AS uom_code, i.stock_current, i.min_stock
+                u.code AS uom_code, u.name_cn AS uom_name_cn, i.stock_current, i.min_stock
          ${itemCatJoin}
          WHERE ${itemWhere}
          ORDER BY i.code ASC

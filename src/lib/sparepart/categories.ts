@@ -21,7 +21,7 @@ export const DEFAULT_SPAREPART_CATEGORY_CODE: SparepartCategoryCode = "IT";
 export const LOW_STOCK_SQL = `i.is_active = 1 AND i.min_stock > 0 AND i.stock_current <= i.min_stock`;
 
 export const ITEM_CATEGORY_SELECT = `
-  i.id, i.code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
+  i.id, i.code, i.erp_item_code, i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model,
   i.stock_current, i.min_stock, i.is_active, i.category_id, i.uom_id,
   c.code AS category_code, c.name_en AS category_name_en, c.name_cn AS category_name_cn,
   u.code AS uom_code, u.name_en AS uom_name_en, u.name_cn AS uom_name_cn,

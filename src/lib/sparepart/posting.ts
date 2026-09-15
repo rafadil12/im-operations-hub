@@ -103,8 +103,11 @@ export function parseGoodsMovementBody(
     const qty = Number(line.qty);
     const note = String(line.note ?? "").trim();
     const storageLocationId = Number(line.storage_location_id);
+    const storageLevelId = Number(line.storage_level_id);
     const toStorageLocationId =
       line.to_storage_location_id != null ? Number(line.to_storage_location_id) : undefined;
+    const toStorageLevelId =
+      line.to_storage_level_id != null ? Number(line.to_storage_level_id) : undefined;
 
     if (!Number.isInteger(itemId) || itemId <= 0) {
       throw new SparepartPostingError(`Line ${index + 1}: material is required.`);
@@ -114,6 +117,9 @@ export function parseGoodsMovementBody(
     }
     if (!Number.isInteger(storageLocationId) || storageLocationId <= 0) {
       throw new SparepartPostingError(`Line ${index + 1}: storage location is required.`);
+    }
+    if (!Number.isInteger(storageLevelId) || storageLevelId <= 0) {
+      throw new SparepartPostingError(`Line ${index + 1}: storage level is required.`);
     }
     if (movementType === "311" || movementType === "312") {
       if (
@@ -125,9 +131,18 @@ export function parseGoodsMovementBody(
           `Line ${index + 1}: destination storage location is required for transfer.`
         );
       }
-      if (toStorageLocationId === storageLocationId) {
+      if (
+        toStorageLevelId == null ||
+        !Number.isInteger(toStorageLevelId) ||
+        toStorageLevelId <= 0
+      ) {
         throw new SparepartPostingError(
-          `Line ${index + 1}: from and to storage locations must differ.`
+          `Line ${index + 1}: destination storage level is required for transfer.`
+        );
+      }
+      if (toStorageLocationId === storageLocationId && toStorageLevelId === storageLevelId) {
+        throw new SparepartPostingError(
+          `Line ${index + 1}: from and to location/level must differ.`
         );
       }
     }
@@ -137,7 +152,9 @@ export function parseGoodsMovementBody(
       qty,
       note,
       storage_location_id: storageLocationId,
+      storage_level_id: storageLevelId,
       to_storage_location_id: toStorageLocationId,
+      to_storage_level_id: toStorageLevelId,
     };
   });
 
@@ -211,23 +228,66 @@ function locationLabel(loc: { code: string; name_en: string; name_cn?: string })
   return `${loc.code} — ${loc.name_en}`;
 }
 
+function stockPointLabel(
+  loc: { code: string; name_en: string },
+  level: { code: string; name_en: string }
+): string {
+  return `${locationLabel(loc)} / ${level.code} — ${level.name_en}`;
+}
+
+async function loadActiveLevel(
+  conn: PoolConnection,
+  levelId: number,
+  lineNo: number
+): Promise<{ id: number; code: string; name_en: string; name_cn: string }> {
+  const [rows] = await conn.query<RowDataPacket[]>(
+    `SELECT id, code, name_en, name_cn, is_active FROM sparepart_stock_levels
+     WHERE id = ?
+     LIMIT 1
+     FOR UPDATE`,
+    [levelId]
+  );
+  const level = rows[0] as
+    | {
+        id: number;
+        code: string;
+        name_en: string;
+        name_cn: string;
+        is_active: number;
+      }
+    | undefined;
+  if (!level) {
+    throw new SparepartPostingError(`Line ${lineNo}: storage level not found.`, 404);
+  }
+  if (!level.is_active) {
+    throw new SparepartPostingError(`Line ${lineNo}: storage level ${level.code} is inactive.`);
+  }
+  return {
+    id: level.id,
+    code: level.code,
+    name_en: level.name_en,
+    name_cn: level.name_cn,
+  };
+}
+
 async function ensureBalanceRow(
   conn: PoolConnection,
   itemId: number,
-  locationId: number
+  locationId: number,
+  levelId: number
 ): Promise<number> {
   await conn.query(
-    `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
-     VALUES (?, ?, 0)
+    `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, level_id, qty)
+     VALUES (?, ?, ?, 0)
      ON DUPLICATE KEY UPDATE item_id = item_id`,
-    [itemId, locationId]
+    [itemId, locationId, levelId]
   );
   const [rows] = await conn.query<RowDataPacket[]>(
     `SELECT id, qty FROM sparepart_stock_balances
-     WHERE item_id = ? AND storage_location_id = ?
+     WHERE item_id = ? AND storage_location_id = ? AND level_id = ?
      LIMIT 1
      FOR UPDATE`,
-    [itemId, locationId]
+    [itemId, locationId, levelId]
   );
   const bal = rows[0] as { id: number; qty: number } | undefined;
   if (!bal) {
@@ -240,29 +300,30 @@ async function adjustBalance(
   conn: PoolConnection,
   itemId: number,
   locationId: number,
+  levelId: number,
   delta: number,
   lineNo: number
 ): Promise<void> {
-  const current = await ensureBalanceRow(conn, itemId, locationId);
+  const current = await ensureBalanceRow(conn, itemId, locationId, levelId);
   if (delta < 0 && current + delta < 0) {
     throw new SparepartPostingError(
-      `Line ${lineNo}: insufficient stock at location. Available: ${current}, requested: ${Math.abs(delta)}.`
+      `Line ${lineNo}: insufficient stock at location/level. Available: ${current}, requested: ${Math.abs(delta)}.`
     );
   }
   const nextQty = current + delta;
   if (nextQty === 0) {
     await conn.query(
       `DELETE FROM sparepart_stock_balances
-       WHERE item_id = ? AND storage_location_id = ?`,
-      [itemId, locationId]
+       WHERE item_id = ? AND storage_location_id = ? AND level_id = ?`,
+      [itemId, locationId, levelId]
     );
     return;
   }
   await conn.query(
     `UPDATE sparepart_stock_balances
      SET qty = ?
-     WHERE item_id = ? AND storage_location_id = ?`,
-    [nextQty, itemId, locationId]
+     WHERE item_id = ? AND storage_location_id = ? AND level_id = ?`,
+    [nextQty, itemId, locationId, levelId]
   );
 }
 
@@ -300,21 +361,24 @@ async function postForwardLines(
     }
 
     const fromLoc = await loadActiveLocation(conn, line.storage_location_id, lineNo);
+    const fromLevel = await loadActiveLevel(conn, line.storage_level_id, lineNo);
     let toLoc: Awaited<ReturnType<typeof loadActiveLocation>> | null = null;
-    if (movementType === "311" && line.to_storage_location_id) {
+    let toLevel: Awaited<ReturnType<typeof loadActiveLevel>> | null = null;
+    if (movementType === "311" && line.to_storage_location_id && line.to_storage_level_id) {
       toLoc = await loadActiveLocation(conn, line.to_storage_location_id, lineNo);
+      toLevel = await loadActiveLevel(conn, line.to_storage_level_id, lineNo);
     }
 
     const snapshot =
-      movementType === "311" && toLoc
-        ? `${locationLabel(fromLoc)} → ${locationLabel(toLoc)}`
-        : locationLabel(fromLoc);
+      movementType === "311" && toLoc && toLevel
+        ? `${stockPointLabel(fromLoc, fromLevel)} → ${stockPointLabel(toLoc, toLevel)}`
+        : stockPointLabel(fromLoc, fromLevel);
 
     await conn.query(
       `INSERT INTO sparepart_mat_doc_items
         (doc_id, item_id, line_no, qty, storage_location, storage_location_id,
-         to_storage_location_id, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         storage_level_id, to_storage_location_id, to_storage_level_id, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         docId,
         line.item_id,
@@ -322,18 +386,20 @@ async function postForwardLines(
         line.qty,
         snapshot,
         fromLoc.id,
+        fromLevel.id,
         toLoc?.id ?? null,
+        toLevel?.id ?? null,
         line.note || null,
       ]
     );
 
     if (movementType === "101") {
-      await adjustBalance(conn, line.item_id, fromLoc.id, line.qty, lineNo);
+      await adjustBalance(conn, line.item_id, fromLoc.id, fromLevel.id, line.qty, lineNo);
     } else if (movementType === "201") {
-      await adjustBalance(conn, line.item_id, fromLoc.id, -line.qty, lineNo);
-    } else if (movementType === "311" && toLoc) {
-      await adjustBalance(conn, line.item_id, fromLoc.id, -line.qty, lineNo);
-      await adjustBalance(conn, line.item_id, toLoc.id, line.qty, lineNo);
+      await adjustBalance(conn, line.item_id, fromLoc.id, fromLevel.id, -line.qty, lineNo);
+    } else if (movementType === "311" && toLoc && toLevel) {
+      await adjustBalance(conn, line.item_id, fromLoc.id, fromLevel.id, -line.qty, lineNo);
+      await adjustBalance(conn, line.item_id, toLoc.id, toLevel.id, line.qty, lineNo);
     }
 
     await syncItemStockCurrent(conn, line.item_id);
@@ -378,7 +444,8 @@ async function buildReversalFromDoc(
   }
 
   const [lines] = await conn.query<RowDataPacket[]>(
-    `SELECT item_id, qty, storage_location_id, to_storage_location_id, note
+    `SELECT item_id, qty, storage_location_id, storage_level_id,
+            to_storage_location_id, to_storage_level_id, note
      FROM sparepart_mat_doc_items
      WHERE doc_id = ?
      ORDER BY line_no ASC`,
@@ -391,17 +458,23 @@ async function buildReversalFromDoc(
   const mapped: SparepartGoodsMovementLineInput[] = [];
   for (const row of lines) {
     const storageLocationId = Number(row.storage_location_id);
+    const storageLevelId = Number(row.storage_level_id);
     if (!storageLocationId) {
       throw new SparepartPostingError("Cannot reverse: original line missing storage_location_id.");
+    }
+    if (!storageLevelId) {
+      throw new SparepartPostingError("Cannot reverse: original line missing storage_level_id.");
     }
     mapped.push({
       item_id: Number(row.item_id),
       qty: Number(row.qty),
       note: String(row.note ?? "Reversal"),
       storage_location_id: storageLocationId,
+      storage_level_id: storageLevelId,
       to_storage_location_id: row.to_storage_location_id
         ? Number(row.to_storage_location_id)
         : undefined,
+      to_storage_level_id: row.to_storage_level_id ? Number(row.to_storage_level_id) : undefined,
     });
   }
 
@@ -434,45 +507,45 @@ async function postReversalLines(
     }
 
     const fromLoc = await loadActiveLocation(conn, line.storage_location_id, lineNo);
+    const fromLevel = await loadActiveLevel(conn, line.storage_level_id, lineNo);
     let toLoc: Awaited<ReturnType<typeof loadActiveLocation>> | null = null;
-    if (forward === "311" && line.to_storage_location_id) {
+    let toLevel: Awaited<ReturnType<typeof loadActiveLevel>> | null = null;
+    if (forward === "311" && line.to_storage_location_id && line.to_storage_level_id) {
       toLoc = await loadActiveLocation(conn, line.to_storage_location_id, lineNo);
+      toLevel = await loadActiveLevel(conn, line.to_storage_level_id, lineNo);
     }
 
     const snapshot =
-      forward === "311" && toLoc
-        ? `${locationLabel(toLoc)} → ${locationLabel(fromLoc)} (reversal)`
-        : `${locationLabel(fromLoc)} (reversal)`;
+      forward === "311" && toLoc && toLevel
+        ? `${stockPointLabel(toLoc, toLevel)} → ${stockPointLabel(fromLoc, fromLevel)} (reversal)`
+        : `${stockPointLabel(fromLoc, fromLevel)} (reversal)`;
 
     await conn.query(
       `INSERT INTO sparepart_mat_doc_items
         (doc_id, item_id, line_no, qty, storage_location, storage_location_id,
-         to_storage_location_id, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         storage_level_id, to_storage_location_id, to_storage_level_id, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         docId,
         line.item_id,
         lineNo,
         line.qty,
         snapshot,
-        // For 312 reverse transfer: stock moves back to_location → from_location
-        // Store original from as storage_location_id and original to as to_...
         fromLoc.id,
+        fromLevel.id,
         toLoc?.id ?? null,
+        toLevel?.id ?? null,
         line.note || null,
       ]
     );
 
     if (forward === "101") {
-      // reverse GR = issue from same location
-      await adjustBalance(conn, line.item_id, fromLoc.id, -line.qty, lineNo);
+      await adjustBalance(conn, line.item_id, fromLoc.id, fromLevel.id, -line.qty, lineNo);
     } else if (forward === "201") {
-      // reverse GI = receipt to same location
-      await adjustBalance(conn, line.item_id, fromLoc.id, line.qty, lineNo);
-    } else if (forward === "311" && toLoc) {
-      // reverse transfer: move qty from to → from
-      await adjustBalance(conn, line.item_id, toLoc.id, -line.qty, lineNo);
-      await adjustBalance(conn, line.item_id, fromLoc.id, line.qty, lineNo);
+      await adjustBalance(conn, line.item_id, fromLoc.id, fromLevel.id, line.qty, lineNo);
+    } else if (forward === "311" && toLoc && toLevel) {
+      await adjustBalance(conn, line.item_id, toLoc.id, toLevel.id, -line.qty, lineNo);
+      await adjustBalance(conn, line.item_id, fromLoc.id, fromLevel.id, line.qty, lineNo);
     }
 
     await syncItemStockCurrent(conn, line.item_id);

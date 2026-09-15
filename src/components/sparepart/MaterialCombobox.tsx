@@ -9,6 +9,7 @@ import {
   sparepartDropdownMenuClass,
   sparepartDropdownOptionClass,
 } from "@/components/sparepart/SparepartDropdown";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 
 const DEBOUNCE_MS = 300;
 const MIN_CHARS = 1;
@@ -21,6 +22,8 @@ type Props = {
   value: string;
   onChange: (itemId: string, item?: SparepartItem | null) => void;
   className?: string;
+  /** Hide brand/model/stock under the input (keeps posting lines single-height). */
+  compact?: boolean;
 };
 
 function labelFor(item: SparepartItem, lang: "en" | "cn"): string {
@@ -34,7 +37,7 @@ function isAbortError(err: unknown): boolean {
   );
 }
 
-export function MaterialCombobox({ value, onChange, className }: Props) {
+export function MaterialCombobox({ value, onChange, className, compact = false }: Props) {
   const { t, lang } = useLang();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -210,6 +213,17 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
 
   const showList = open && (suggestions.length > 0 || searching);
 
+  const selectedMeta = selected
+    ? (() => {
+        const uom = formatUomDisplay(
+          { code: selected.uom_code, name_cn: selected.uom_name_cn },
+          lang
+        );
+        const stock = uom ? `${selected.stock_current} ${uom}` : String(selected.stock_current);
+        return `${localizedField(selected.brand_en, selected.brand_cn, lang)} / ${selected.model ?? "-"} · stock: ${stock}`;
+      })()
+    : undefined;
+
   return (
     <div ref={rootRef} className="relative">
       <input
@@ -220,6 +234,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
         aria-autocomplete="list"
         className={className}
         value={query}
+        title={compact ? selectedMeta : undefined}
         placeholder={`${t.sparepart.code} / ${t.sparepart.name} / ${t.sparepart.brand} / ${t.sparepart.model}`}
         onChange={(e) => {
           const next = e.target.value;
@@ -274,7 +289,13 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
                 >
                   {localizedField(item.brand_en, item.brand_cn, lang) + " / " + (item.model || "-")}{" "}
                   · stock:{" "}
-                  {item.uom_code ? `${item.stock_current} ${item.uom_code}` : item.stock_current}
+                  {(() => {
+                    const uom = formatUomDisplay(
+                      { code: item.uom_code, name_cn: item.uom_name_cn },
+                      lang
+                    );
+                    return uom ? `${item.stock_current} ${uom}` : item.stock_current;
+                  })()}
                 </span>
               </button>
             </li>
@@ -284,14 +305,8 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       {searchError ? (
         <p className="mt-1 text-[11px] text-rose-400">{searchError}</p>
       ) : null}
-      {selected ? (
-        <p className="mt-1 text-[11px] text-text-dim">
-          {localizedField(selected.brand_en, selected.brand_cn, lang)} / {selected.model ?? "-"} ·
-          stock:{" "}
-          {selected.uom_code
-            ? `${selected.stock_current} ${selected.uom_code}`
-            : selected.stock_current}
-        </p>
+      {!compact && selected ? (
+        <p className="mt-1 text-[11px] text-text-dim">{selectedMeta}</p>
       ) : null}
     </div>
   );
