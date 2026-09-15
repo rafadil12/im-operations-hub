@@ -3,7 +3,7 @@ import MovementHistoryPage from "./MovementHistoryClient";
 
 export const metadata = pageMetadata({
   title: "Movement History · Sparepart",
-  description: "Ledger of goods movements for one material.",
+  description: "Line-level goods movements by material, type, location, or date.",
   path: "/sparepart/movement-history",
 });
 
