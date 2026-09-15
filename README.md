@@ -14,7 +14,7 @@ IM One is an internal tool: every route sends `noindex, nofollow` and `/robots.t
 | ITSM | Live | `/itsm`, `/itsm/management`, `/itsm/analysis` |
 | Daily Operation | Live | `/daily-operation/activities`, `/daily-operation/insights`, `/daily-operation/configuration/*` |
 | Safety | Live | `/safety`, `/safety/management` |
-| Sparepart | Live | `/sparepart`, `/sparepart/stock`, `/sparepart/post`, `/sparepart/documents`, `/sparepart/materials`, `/sparepart/locations` |
+| Sparepart | Live | `/sparepart`, `/sparepart/stock`, `/sparepart/documents`, `/sparepart/movement-history`, `/sparepart/post`, `/sparepart/materials`, `/sparepart/locations` |
 | Organization | Live | `/organization/overview`, `/organization/employees`, `/organization/shift`, `/organization/attendance/*` |
 | Training | Live | `/training`, `/training/session` |
 | Report | Live | `/report`, `/report/summary`, `/report/reports` |
@@ -151,20 +151,29 @@ Add `--force` to truncate and re-import.
 
 ## Sparepart inventory
 
-Stock is tracked per material × storage location. Changes go through SAP-style goods movements — not by editing the material master.
+Stock is tracked per material × storage location × level (floors L01–L04). Changes go through SAP-style goods movements — not by editing the material master.
+
+Under **Sparepart Management → Material Movement**:
+
+| Menu | Route | Role |
+| --- | --- | --- |
+| Movement Documents | `/sparepart/documents` | Document headers |
+| Movement History | `/sparepart/movement-history` | Line-level ledger (filters, columns, export) |
+| Stock Transactions | `/sparepart/post` | Post 101 / 201 / 311 |
 
 | Movement | Meaning | Reversal |
 | --- | --- | --- |
 | 101 | Receive stock | 102 |
 | 201 | Issue stock | 202 |
-| 311 | Transfer between locations | 312 |
+| 311 | Transfer between locations (and/or levels) | 312 |
 
-- Truth of stock: `sparepart_stock_balances` (material × storage location).
+- Truth of stock: `sparepart_stock_balances` (material × storage location × `level_id`). Levels are master data `sparepart_levels` (L01–L04). Existing balances backfill to L01.
 - `sparepart_items.stock_current` is a denormalized total (`SUM(balances)`). Lifetime in/out is derived from mat docs (101/201), not stored on the item.
-- Posting (101/201/311) requires `storage_location_id`; transfer 311 also needs `to_storage_location_id`. There is no default location on the material master — pick a location on each post.
+- Posting (101/201/311) requires `storage_location_id` and `storage_level_id`; transfer 311 also needs `to_storage_location_id` and `to_storage_level_id` (same location on a different floor is allowed). There is no default location or level on the material master — pick both on each post.
 - Reversals: POST `/api/sparepart/documents/[id]/reverse`. Do not edit or delete mat docs.
 - Optional `client_request_id` on goods movements for idempotency.
-- Materials import/template is master data only (Code, Name EN/CN, Brand EN/CN, Model, Category, Min Stock, UoM, Notes) — no opening stock or location. Category must be IT, AGV, ASSEMBLY, or MES (DB code for Assembly is `ASM`).
+- Material code is auto-generated (read-only) after Category is selected. Brand EN/CN are required. Category and UoM can be created from the item form dropdowns. Optional **ERP Item Code** on the master. Inactive/delete are blocked when on-hand stock is not zero.
+- Materials import/template is master data only (Code, Name EN/CN, Brand EN/CN, Model, Category, Min Stock, UoM, Notes) — no opening stock or location. Category must be IT, AGV, ASSEMBLY, or MES (DB code for Assembly is `ASM`; Chinese label for ASSEMBLY is `流水线`).
 
 ### Opening stock (AGV / ASSEMBLY)
 
