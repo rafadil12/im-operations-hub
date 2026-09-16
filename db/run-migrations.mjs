@@ -1775,5 +1775,14 @@ if (await tableExists("attendance_daily")) {
   console.log("attendance_daily missing; skipped 042 enum normalize.");
 }
 
+// ---------------------------------------------------------------------------
+// 043: protected guest role for configurable public browse
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "043_guest_role.sql",
+  readMigrationSql,
+  "Ensured guest role and default read/view permissions.",
+);
+
 await conn.end();
 console.log("Migrations complete.");
