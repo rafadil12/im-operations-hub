@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { accountHasPermission } from "./access";
-import { guestHasPermissionAsync, invalidateGuestPermissionsCache, loadGuestPermissions } from "./guest";
+import {
+  guestHasPermissionAsync,
+  invalidateGuestPermissionsCache,
+  loadGuestPermissions,
+} from "./guestPermissions";
 import { jsonGuestForbidden } from "./guestForbidden";
 import { getAccountPublic } from "./accounts";
 import { clearSessionCookie, readSession } from "./session";
@@ -24,13 +28,15 @@ export {
   DEFAULT_GUEST_PERMISSION_CODES,
   GUEST_ROLE_NAME,
   filterGuestAllowedPermissionCodes,
-  guestHasPermissionAsync,
-  invalidateGuestPermissionsCache,
   isGuestPermissionAllowed,
   isGuestRoleName,
+} from "./guestPolicy";
+export {
+  guestHasPermissionAsync,
+  invalidateGuestPermissionsCache,
   loadGuestPermissions,
   validateGuestPermissionIds,
-} from "./guest";
+} from "./guestPermissions";
 export { guestHasPermission } from "./access";
 export { generateTemporaryPassword, hashPassword, verifyPassword } from "./password";
 export {

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
-import { isGuestRoleName, isProtectedAccountEmployeeNo, isProtectedRoleName } from "@/lib/auth";
+import { isProtectedAccountEmployeeNo, isProtectedRoleName } from "@/lib/auth/access";
+import { isGuestRoleName } from "@/lib/auth/guestPolicy";
 import { useLang } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonTable } from "@/components/ui/skeletons";

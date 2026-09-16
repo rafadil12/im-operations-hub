@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
-import { GUEST_ROLE_NAME, isGuestRoleName, isProtectedRoleName } from "@/lib/auth";
+import { isProtectedRoleName } from "@/lib/auth/access";
+import { GUEST_ROLE_NAME, isGuestRoleName } from "@/lib/auth/guestPolicy";
 import { useLang } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { isGuestPermissionAllowed } from "@/lib/auth/guest";
+import { isGuestPermissionAllowed } from "@/lib/auth/guestPolicy";
 import {
   collectPermissionIds,
   groupPermissions,

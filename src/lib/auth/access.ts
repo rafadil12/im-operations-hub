@@ -1,5 +1,5 @@
 import type { AuthAccountPublic } from "./types";
-import { DEFAULT_GUEST_PERMISSION_CODES } from "./guest";
+import { DEFAULT_GUEST_PERMISSION_CODES } from "./guestPolicy";
 
 /** Permission codes — descriptions live in DB `permissions.description`. */
 export const PERMISSIONS = {

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { PERMISSIONS } from "./access";
 import {
   DEFAULT_GUEST_PERMISSION_CODES,
   filterGuestAllowedPermissionCodes,
   isGuestPermissionAllowed,
   isGuestRoleName,
-} from "./guest";
-import { PERMISSIONS } from "./access";
+} from "./guestPolicy";
 
 describe("isGuestRoleName", () => {
   it("matches guest role only", () => {

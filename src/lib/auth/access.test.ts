@@ -8,7 +8,7 @@ import {
   permissionsIncludeAdminManage,
   PERMISSIONS,
 } from "@/lib/auth/access";
-import { DEFAULT_GUEST_PERMISSION_CODES } from "@/lib/auth/guest";
+import { DEFAULT_GUEST_PERMISSION_CODES } from "@/lib/auth/guestPolicy";
 import type { AuthAccountPublic } from "@/lib/auth/types";
 
 function account(
