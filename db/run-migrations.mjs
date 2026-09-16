@@ -1784,5 +1784,14 @@ await applySqlFile(
   "Ensured guest role and default read/view permissions.",
 );
 
+// ---------------------------------------------------------------------------
+// 044: remove seeded viewer role (public browse = guest)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "044_remove_viewer_role.sql",
+  readMigrationSql,
+  "Removed viewer role (if present).",
+);
+
 await conn.end();
 console.log("Migrations complete.");

@@ -19,8 +19,8 @@ function account(
     systemUserId: 10,
     employeeId: "E001",
     displayName: "Test User",
-    roleName: "viewer",
-    roleLabel: "Viewer",
+    roleName: "operator",
+    roleLabel: "Operator",
     sessionVersion: 1,
     ...overrides,
   };

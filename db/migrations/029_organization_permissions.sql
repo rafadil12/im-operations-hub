@@ -71,22 +71,6 @@ WHERE NOT EXISTS (
   WHERE x.role_id = rp.role_id AND x.permission_id = p_new.id
 );
 
--- Viewer: read-only organization
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'organization.overview.view',
-  'organization.employee.read',
-  'organization.shift.read',
-  'organization.attendance.read'
-)
-WHERE r.name = 'viewer'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
 -- Admin / superadmin get every permission
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id

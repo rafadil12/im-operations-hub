@@ -65,21 +65,6 @@ WHERE NOT EXISTS (
   WHERE x.role_id = rp.role_id AND x.permission_id = p_new.id
 );
 
--- Viewer: read-only stock/docs/materials
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'sparepart.stock.view',
-  'sparepart.document.read',
-  'sparepart.materials.read'
-)
-WHERE r.name = 'viewer'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
 -- Admin gets every permission
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
