@@ -12,6 +12,8 @@ import {
   type SparepartCategoryCode,
 } from "@/lib/sparepart/categories";
 import { overviewMatchesFilters, type SparepartOverviewData } from "@/lib/sparepart/overview";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
+import { SkeletonChart, SkeletonKpiGrid } from "@/components/ui/skeletons";
 import {
   CategoryDonut,
   CategoryLocationHeatmap,
@@ -128,8 +130,16 @@ export function SparepartOverview({
       </div>
 
       {!ready ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
+        <div className="space-y-4">
+          <SkeletonKpiGrid count={5} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <SkeletonChart variant="donut" />
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <SkeletonChart variant="bar" />
+            </div>
+          </div>
         </div>
       ) : (
         <>
@@ -334,10 +344,10 @@ export function SparepartOverview({
               items={data.lowStockItems.filter((item) => item.status === "low")}
               categories={data.categories}
               renderMeta={(item) => {
-                const uom =
-                  item.uom_code && item.uom_code.toUpperCase() === "PCS"
-                    ? t.sparepart.pcs
-                    : item.uom_code;
+                const uom = formatUomDisplay(
+                  { code: item.uom_code, name_cn: item.uom_name_cn },
+                  lang
+                );
                 return `${localizedName(item, lang)} · ${item.stock_current}/${item.min_stock}${
                   uom ? ` ${uom}` : ""
                 }`;
@@ -376,7 +386,13 @@ export function SparepartOverview({
                     <p className="text-text-muted">{localizedName(item, lang)}</p>
                     <p className="mt-1 tabular-nums text-text">
                       {item.stock_current} / {item.min_stock}
-                      {item.uom_code ? ` ${item.uom_code}` : ""}
+                      {(() => {
+                        const uom = formatUomDisplay(
+                          { code: item.uom_code, name_cn: item.uom_name_cn },
+                          lang
+                        );
+                        return uom ? ` ${uom}` : "";
+                      })()}
                     </p>
                   </li>
                 ))}
@@ -400,6 +416,7 @@ type AlertItem = {
   category_name_en?: string | null;
   category_name_cn?: string | null;
   uom_code?: string | null;
+  uom_name_cn?: string | null;
   stock_current: number;
   min_stock?: number;
 };
@@ -533,7 +550,7 @@ function AlertItemsCard({
               </div>
             ) : (
               <div className="overflow-hidden rounded-lg border border-border-subtle">
-                <div className="grid grid-cols-[120px_minmax(0,1fr)_90px_84px] gap-3 border-b border-border-subtle bg-bg/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-dim">
+                <div className="grid grid-cols-[minmax(100px,120px)_minmax(0,1fr)_minmax(90px,1fr)_minmax(84px,110px)] gap-3 border-b border-border-subtle bg-bg/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-dim">
                   <span>{t.sparepart.alertColCode}</span>
                   <span>{t.sparepart.alertColName}</span>
                   <span className="text-right">{t.sparepart.alertColStock}</span>
@@ -595,11 +612,10 @@ function AlertItemCompactRow({
   badgeLabel: string;
 }) {
   const { t, lang } = useLang();
-  const uom =
-    item.uom_code && item.uom_code.toUpperCase() === "PCS" ? t.sparepart.pcs : item.uom_code;
+  const uom = formatUomDisplay({ code: item.uom_code, name_cn: item.uom_name_cn }, lang);
 
   return (
-    <div className="grid grid-cols-[120px_minmax(0,1fr)_90px_84px] gap-3 border-t border-border-subtle/70 px-4 py-3 text-sm first:border-t-0">
+    <div className="grid grid-cols-[minmax(100px,120px)_minmax(0,1fr)_minmax(90px,1fr)_minmax(84px,110px)] gap-3 border-t border-border-subtle/70 px-4 py-3 text-sm first:border-t-0">
       <div className="min-w-0">
         <p className="font-semibold text-text">{item.code}</p>
         <p className="mt-0.5 text-[11px] text-text-dim">

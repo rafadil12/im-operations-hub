@@ -6,9 +6,7 @@ import type { ItsmRequest, Lang } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const CREATED_DATE_SQL = `
-  STR_TO_DATE(created_date, '%d/%m/%Y %h:%i %p')
-`;
+const CREATED_DATE_SQL = `created_at`;
 
 function parseLang(raw: string | null): Lang {
   return raw === "cn" ? "cn" : "en";

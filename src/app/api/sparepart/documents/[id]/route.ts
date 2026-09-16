@@ -33,12 +33,17 @@ export async function GET(_request: NextRequest, context: Ctx) {
               li.storage_location, li.storage_location_id, li.to_storage_location_id,
               li.note,
               i.code AS item_code,
+              i.name_en AS item_name_en,
+              i.name_cn AS item_name_cn,
               COALESCE(i.name_en, i.name_cn) AS item_name,
               COALESCE(i.brand_en, i.brand_cn) AS item_brand,
               i.model AS item_model,
               loc_from.code AS from_location_code,
               loc_from.name_en AS from_location_name_en,
               loc_from.name_cn AS from_location_name_cn,
+              lvl_from.code AS from_level_code,
+              lvl_from.name_en AS from_level_name_en,
+              lvl_from.name_cn AS from_level_name_cn,
               CASE
                 WHEN loc_from.id IS NOT NULL
                   THEN CONCAT(loc_from.code, ' — ', loc_from.name_en)
@@ -47,6 +52,9 @@ export async function GET(_request: NextRequest, context: Ctx) {
               loc_to.code AS to_location_code,
               loc_to.name_en AS to_location_name_en,
               loc_to.name_cn AS to_location_name_cn,
+              lvl_to.code AS to_level_code,
+              lvl_to.name_en AS to_level_name_en,
+              lvl_to.name_cn AS to_level_name_cn,
               CASE
                 WHEN loc_to.id IS NOT NULL
                   THEN CONCAT(loc_to.code, ' — ', loc_to.name_en)
@@ -58,6 +66,10 @@ export async function GET(_request: NextRequest, context: Ctx) {
          ON loc_from.id = li.storage_location_id
        LEFT JOIN sparepart_storage_locations loc_to
          ON loc_to.id = li.to_storage_location_id
+       LEFT JOIN sparepart_stock_levels lvl_from
+         ON lvl_from.id = li.storage_level_id
+       LEFT JOIN sparepart_stock_levels lvl_to
+         ON lvl_to.id = li.to_storage_level_id
        WHERE li.doc_id = ?
        ORDER BY li.line_no ASC`,
       [docId]

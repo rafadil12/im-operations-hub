@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiGet, getApiErrorMessage } from "@/lib/apiClient";
 import ItsmOverview from "@/components/itsm/overview/ItsmOverview";
+import { SkeletonPage } from "@/components/ui/skeletons";
 import type { ItsmOverviewData } from "@/components/itsm/overview";
 
 export default function ItsmPage() {
@@ -36,11 +37,7 @@ export default function ItsmPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="rounded-xl border border-border-subtle bg-surface p-10 text-center">
-        Loading ITSM Overview...
-      </div>
-    );
+    return <SkeletonPage preset="dashboard" />;
   }
 
   if (!data) {

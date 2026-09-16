@@ -242,20 +242,31 @@ async function ensureItem(row) {
   return Number(ins.insertId);
 }
 
+async function defaultLevelId() {
+  const [rows] = await conn.query(
+    `SELECT id FROM sparepart_stock_levels WHERE code = 'L01' LIMIT 1`,
+  );
+  if (!rows[0]) {
+    throw new Error("Missing sparepart_stock_levels L01. Run migrations first.");
+  }
+  return Number(rows[0].id);
+}
+
 async function adjustBalance(itemId, locationId, delta) {
+  const levelId = await defaultLevelId();
   const [rows] = await conn.query(
     `SELECT id, qty FROM sparepart_stock_balances
-     WHERE item_id = ? AND storage_location_id = ?
+     WHERE item_id = ? AND storage_location_id = ? AND level_id = ?
      LIMIT 1
      FOR UPDATE`,
-    [itemId, locationId],
+    [itemId, locationId, levelId],
   );
   if (!rows[0]) {
     if (delta === 0) return 0;
     await conn.query(
-      `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, qty)
-       VALUES (?, ?, ?)`,
-      [itemId, locationId, delta],
+      `INSERT INTO sparepart_stock_balances (item_id, storage_location_id, level_id, qty)
+       VALUES (?, ?, ?, ?)`,
+      [itemId, locationId, levelId, delta],
     );
     return delta;
   }

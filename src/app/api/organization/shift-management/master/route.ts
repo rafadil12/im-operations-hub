@@ -1,12 +1,16 @@
-    import { NextResponse } from "next/server";
-    import { query } from "@/lib/db";
+import { NextResponse } from "next/server";
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
+import { query } from "@/lib/db";
 
-    export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
-    export async function GET() {
-    try {
-        const rows = await query(
-        `
+export async function GET() {
+  const gate = await requirePermission(PERMISSIONS.organizationShiftRead);
+  if (gate instanceof NextResponse) return gate;
+
+  try {
+    const rows = await query(
+      `
             SELECT
             id,
             shift_code,
@@ -24,32 +28,29 @@
                 ELSE 1
             END,
             id ASC
-        `,
-        );
+        `
+    );
 
-        return NextResponse.json(
-        {
-            success: true,
-            data: rows,
+    return NextResponse.json(
+      {
+        success: true,
+        data: rows,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
         },
-        {
-            headers: {
-            "Cache-Control": "no-store",
-            },
-        },
-        );
-    } catch (error) {
-        console.error("Failed to load shift masters:", error);
+      }
+    );
+  } catch (error) {
+    console.error("Failed to load shift masters:", error);
 
-        return NextResponse.json(
-        {
-            success: false,
-            error:
-            error instanceof Error
-                ? error.message
-                : "Failed to load shift masters.",
-        },
-        { status: 500 },
-        );
-    }
-    }
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to load shift masters.",
+      },
+      { status: 500 }
+    );
+  }
+}

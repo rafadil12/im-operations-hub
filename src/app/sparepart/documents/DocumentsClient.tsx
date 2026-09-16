@@ -10,6 +10,7 @@ import type { SparepartMatDoc } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { ExportIcon } from "@/components/ui/ActionIcons";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/StockTable";
 import {
@@ -251,9 +252,7 @@ export default function MaterialDocumentsPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-            {t.common.loading}
-          </div>
+          <SkeletonTable />
         ) : rows.length === 0 ? (
           <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
             {t.common.noData}

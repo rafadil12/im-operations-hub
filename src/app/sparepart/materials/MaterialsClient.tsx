@@ -12,6 +12,7 @@ import { ImportItemsModal } from "@/components/sparepart/ImportItemsModal";
 import { ItemForm } from "@/components/sparepart/ItemForm";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import {
   StockTable,
   type PageSize,
@@ -36,6 +37,7 @@ export default function MaterialMasterPage() {
   } = useRoleAccess();
   const [rows, setRows] = useState<SparepartItem[]>([]);
   const [categories, setCategories] = useState<SparepartCategory[]>([]);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(true);
@@ -74,9 +76,15 @@ export default function MaterialMasterPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
     load({ q: "", category: "" });
     apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
-      .then((data) => setCategories(data.rows))
-      .catch(() => setCategories([]));
-  }, [load]);
+      .then((data) => {
+        setCategories(data.rows);
+        setCategoriesError(null);
+      })
+      .catch((err) => {
+        setCategories([]);
+        setCategoriesError(err instanceof Error ? err.message : t.common.error);
+      });
+  }, [load, t.common.error]);
 
   const sortedRows = useMemo(
     () => sortSparepartItems(rows, sortKey, sortDir),
@@ -145,6 +153,11 @@ export default function MaterialMasterPage() {
 
   const confirmDelete = async () => {
     if (!deleteRow) return;
+    if (Number(deleteRow.stock_current) !== 0) {
+      toastError(t.sparepart.cannotDeleteWithStock);
+      setDeleteRow(null);
+      return;
+    }
     setDeleting(true);
     try {
       await apiSendAbs(`/api/sparepart/materials/${deleteRow.id}`, "DELETE");
@@ -188,54 +201,60 @@ export default function MaterialMasterPage() {
   return (
     <SparepartGate allow={(a) => a.canViewSparepartMaterials}>
       <div>
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold text-text">{t.sparepart.materialsTitle}</h1>
+        <div className="mb-4">
+          <h1 className="text-lg font-semibold text-text">{t.sparepart.materialsTitle}</h1>
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-text-muted">{t.sparepart.materialsDesc}</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {canDownloadSparepartTemplate ? (
-              <button
-                type="button"
-                onClick={async () => {
-                  setTemplateDownloading(true);
-                  try {
-                    await downloadBlob(
-                      "/api/sparepart/materials/template",
-                      "sparepart-template.xlsx"
-                    );
-                  } catch (e) {
-                    toastError(e instanceof Error ? e.message : t.toast.templateDownloadFailed);
-                  } finally {
-                    setTemplateDownloading(false);
-                  }
-                }}
-                disabled={templateDownloading}
-                className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
-              >
-                {t.common.downloadTemplate}
-              </button>
-            ) : null}
-            {canImportSparepartMaterials ? (
-              <button type="button" onClick={() => setImportOpen(true)} className={toolbarBtn}>
-                <ImportIcon className="size-3.5" />
-                {t.common.import}
-              </button>
-            ) : null}
-            {canCreateSparepartMaterial ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditRow(null);
-                  setFormOpen(true);
-                }}
-                className={toolbarBtn}
-              >
-                + {t.common.add}
-              </button>
-            ) : null}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {canDownloadSparepartTemplate ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTemplateDownloading(true);
+                    try {
+                      await downloadBlob(
+                        "/api/sparepart/materials/template",
+                        "sparepart-template.xlsx"
+                      );
+                    } catch (e) {
+                      toastError(e instanceof Error ? e.message : t.toast.templateDownloadFailed);
+                    } finally {
+                      setTemplateDownloading(false);
+                    }
+                  }}
+                  disabled={templateDownloading}
+                  className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:opacity-60"
+                >
+                  {t.common.downloadTemplate}
+                </button>
+              ) : null}
+              {canImportSparepartMaterials ? (
+                <button type="button" onClick={() => setImportOpen(true)} className={toolbarBtn}>
+                  <ImportIcon className="size-3.5" />
+                  {t.common.import}
+                </button>
+              ) : null}
+              {canCreateSparepartMaterial ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditRow(null);
+                    setFormOpen(true);
+                  }}
+                  className={toolbarBtn}
+                >
+                  + {t.common.add}
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
+
+        {categoriesError ? (
+          <div className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+            {categoriesError}
+          </div>
+        ) : null}
 
         <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
           <div className="min-w-[160px] flex-1">
@@ -287,9 +306,7 @@ export default function MaterialMasterPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-            {t.common.loading}
-          </div>
+          <SkeletonTable />
         ) : (
           <StockTable
             rows={pagedRows}
@@ -309,7 +326,17 @@ export default function MaterialMasterPage() {
                   }
                 : undefined
             }
-            onDelete={canDeleteSparepartMaterial ? setDeleteRow : undefined}
+            onDelete={
+              canDeleteSparepartMaterial
+                ? (row) => {
+                    if (Number(row.stock_current) !== 0) {
+                      toastError(t.sparepart.cannotDeleteWithStock);
+                      return;
+                    }
+                    setDeleteRow(row);
+                  }
+                : undefined
+            }
             variant="master"
             sortKey={sortKey}
             sortDir={sortDir}

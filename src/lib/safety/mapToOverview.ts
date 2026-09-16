@@ -1,4 +1,5 @@
 import type { ModuleCardData } from "@/data/overview";
+import { safetyText } from "./copy";
 import { activityMatches, isCompleted } from "./mappers";
 import type { SafetyLanguage, SafetyRow, SafetyStatus } from "./types";
 
@@ -179,22 +180,13 @@ function calculateMonthlyItems(
   monthlyRows: SafetyRow[],
   lang: SafetyLanguage,
 ): MonthlyItem[] {
-  const labels =
-    lang === "cn"
-      ? [
-          "ćśé˛ćźçť",
-          "ćĺşŚäźčŽŽ",
-          "ĺŽĺ¨ćĄäž",
-          "ĺŽĺ¨PPT",
-          "ĺĽĺąĺç°",
-        ]
-      : [
-          "Fire Drill",
-          "Monthly Meeting",
-          "Safety Case",
-          "Safety PPT",
-          "Reward Finding",
-        ];
+  const labels = [
+    safetyText("fireDrill", lang),
+    safetyText("monthlyMeeting", lang),
+    safetyText("safetyCase", lang),
+    safetyText("safetyPpt", lang),
+    safetyText("rewardFinding", lang),
+  ];
 
   return MONTHLY_ACTIVITIES.map(
     (activity, index) => {
@@ -492,78 +484,19 @@ function calculateSafetyMetrics(
  * ============================================================
  */
 
-function getLabels(
-  lang: SafetyLanguage,
-) {
-  if (lang === "cn") {
-    return {
-      title: "ĺŽĺ¨çŽĄç",
-
-      overall:
-        "ćťä˝ĺŽćç",
-
-      closure:
-        "ĺç°éĄšĺłé­ç",
-
-      training:
-        "ĺščŽ­ĺŽćç",
-
-      score:
-        "ĺŽĺ¨čŻĺ",
-
-      weekly:
-        "ćŻĺ¨ĺŽĺ¨čŚćą",
-
-      monthly:
-        "ćĺşŚć´ťĺ¨",
-
-      performance:
-        "ĺŽĺ¨çťŠćčŻĺ",
-
-      overallWeight:
-        "ćťä˝ĺŽćç Ă 50%",
-
-      closureWeight:
-        "ĺç°éĄšĺłé­ç Ă 30%",
-
-      trainingWeight:
-        "ĺščŽ­ĺŽćç Ă 20%",
-    };
-  }
-
+function getLabels(lang: SafetyLanguage) {
   return {
-    title:
-      "Safety Dashboard",
-
-    overall:
-      "Overall Completion",
-
-    closure:
-      "Finding Closure",
-
-    training:
-      "Training Completion",
-
-    score:
-      "Safety Score",
-
-    weekly:
-      "Weekly Safety Requirements",
-
-    monthly:
-      "Monthly Activities",
-
-    performance:
-      "Safety Performance Score",
-
-    overallWeight:
-      "Overall Completion x 50%",
-
-    closureWeight:
-      "Finding Closure x 30%",
-
-    trainingWeight:
-      "Training Completion x 20%",
+    title: lang === "cn" ? "安全仪表盘" : "Safety Dashboard",
+    overall: safetyText("overviewOverallCompletion", lang),
+    closure: safetyText("findingClosure", lang),
+    training: safetyText("trainingCompletion", lang),
+    score: safetyText("safetyScore", lang),
+    weekly: safetyText("weeklySafetyRequirement", lang),
+    monthly: safetyText("monthlySafetyActivity", lang),
+    performance: safetyText("safetyPerformanceScore", lang),
+    overallWeight: `${safetyText("overviewOverallCompletion", lang)} × 50%`,
+    closureWeight: `${safetyText("findingClosure", lang)} × 30%`,
+    trainingWeight: `${safetyText("trainingCompletion", lang)} × 20%`,
   };
 }
 

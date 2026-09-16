@@ -9,6 +9,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { useLang } from "@/lib/i18n";
 
 type Props = {
   value: string;
@@ -145,6 +146,7 @@ export function DateTimePicker({
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: Props) {
+  const { t } = useLang();
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -357,7 +359,7 @@ export function DateTimePicker({
         <div
           id={panelId}
           role="dialog"
-          aria-label="Choose date and time"
+          aria-label={t.common.chooseDateTime}
           className="absolute left-0 z-40 mt-1 flex w-max max-w-[min(100vw-2rem,420px)] overflow-hidden rounded-xl border border-border bg-surface shadow-[0_16px_40px_var(--shadow-color)]"
         >
           <div className="border-r border-border-subtle p-3">
@@ -368,7 +370,7 @@ export function DateTimePicker({
               <div className="flex gap-1">
                 <button
                   type="button"
-                  aria-label="Previous month"
+                  aria-label={t.common.previousMonth}
                   onClick={() => shiftMonth(-1)}
                   className="rounded px-1.5 py-0.5 text-xs text-text-muted hover:bg-surface-hover hover:text-text"
                 >
@@ -376,7 +378,7 @@ export function DateTimePicker({
                 </button>
                 <button
                   type="button"
-                  aria-label="Next month"
+                  aria-label={t.common.nextMonth}
                   onClick={() => shiftMonth(1)}
                   className="rounded px-1.5 py-0.5 text-xs text-text-muted hover:bg-surface-hover hover:text-text"
                 >

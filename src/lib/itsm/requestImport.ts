@@ -12,8 +12,10 @@ export type ItsmImportRow = {
   requester: string;
   technician: string;
   due_by_date: string | null;
+  due_at: string | null;
   status: string;
   created_date: string;
+  created_at: string;
   site: string | null;
   priority: string | null;
   group_name: string | null;
@@ -106,6 +108,37 @@ function formatAppDateTime(date: Date): string {
   hours = hours % 12;
   if (hours === 0) hours = 12;
   return `${day}/${month}/${year} ${pad2(hours)}:${minutes} ${ampm}`;
+}
+
+function formatSqlDateTime(date: Date): string {
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())}`;
+}
+
+function cellToDate(value: unknown): Date | null {
+  if (value instanceof Date) return value;
+  if (typeof value === "number" && Number.isFinite(value) && value > 20_000 && value < 100_000) {
+    return excelSerialToDate(value);
+  }
+  const text = cellToString(value);
+  if (isBlankish(text)) return null;
+  const match = text.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+  );
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  let hours = Number(match[4]);
+  const minutes = Number(match[5]);
+  const ampm = match[6].toUpperCase();
+  if (ampm === "PM" && hours < 12) hours += 12;
+  if (ampm === "AM" && hours === 12) hours = 0;
+  return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+}
+
+function cellToSqlDateTime(value: unknown): string | null {
+  const date = cellToDate(value);
+  return date ? formatSqlDateTime(date) : null;
 }
 
 function isBlankish(value: string): boolean {
@@ -283,7 +316,12 @@ export async function parseItsmRequestWorkbook(
     const requester = cellToString(getCell(raw, found.colMap.requester));
     const technician = cellToString(getCell(raw, found.colMap.technician));
     const status = cellToString(getCell(raw, found.colMap.status));
-    const createdDate = cellToString(getCell(raw, found.colMap.created_date));
+    const createdRaw = getCell(raw, found.colMap.created_date);
+    const createdDate = cellToString(createdRaw);
+    const createdAt = cellToSqlDateTime(createdRaw);
+    const dueRaw = getCell(raw, found.colMap.due_by_date);
+    const dueByDate = nullableText(dueRaw);
+    const dueAt = cellToSqlDateTime(dueRaw);
 
     if (!subject) {
       errors.push({
@@ -301,7 +339,7 @@ export async function parseItsmRequestWorkbook(
       });
       continue;
     }
-    if (!createdDate || isBlankish(createdDate)) {
+    if (!createdDate || isBlankish(createdDate) || !createdAt) {
       errors.push({
         row: excelRow,
         field: "Created Date",
@@ -315,9 +353,11 @@ export async function parseItsmRequestWorkbook(
       subject,
       requester,
       technician,
-      due_by_date: nullableText(getCell(raw, found.colMap.due_by_date)),
+      due_by_date: dueByDate,
+      due_at: dueAt,
       status,
       created_date: createdDate,
+      created_at: createdAt,
       site: nullableText(getCell(raw, found.colMap.site)),
       priority: nullableText(getCell(raw, found.colMap.priority)),
       group_name: nullableText(getCell(raw, found.colMap.group_name)),

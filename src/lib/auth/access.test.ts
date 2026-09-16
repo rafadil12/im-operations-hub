@@ -8,6 +8,7 @@ import {
   permissionsIncludeAdminManage,
   PERMISSIONS,
 } from "@/lib/auth/access";
+import { DEFAULT_GUEST_PERMISSION_CODES } from "@/lib/auth/guestPolicy";
 import type { AuthAccountPublic } from "@/lib/auth/types";
 
 function account(
@@ -18,19 +19,20 @@ function account(
     systemUserId: 10,
     employeeId: "E001",
     displayName: "Test User",
-    roleName: "viewer",
-    roleLabel: "Viewer",
+    roleName: "operator",
+    roleLabel: "Operator",
     sessionVersion: 1,
     ...overrides,
   };
 }
 
 describe("accountHasPermission", () => {
-  it("applies guest defaults when account is missing", () => {
-    expect(accountHasPermission(null, PERMISSIONS.itsmRequestRead)).toBe(true);
-    expect(accountHasPermission(undefined, PERMISSIONS.overviewView)).toBe(true);
-    expect(accountHasPermission(null, PERMISSIONS.settingsAccess)).toBe(false);
-    expect(accountHasPermission(null, PERMISSIONS.dailyRecordCreate)).toBe(false);
+  it("uses guestPermissions when account is missing", () => {
+    const guestPerms = [PERMISSIONS.itsmRequestRead];
+    expect(accountHasPermission(null, PERMISSIONS.itsmRequestRead, guestPerms)).toBe(true);
+    expect(accountHasPermission(undefined, PERMISSIONS.overviewView, guestPerms)).toBe(false);
+    expect(accountHasPermission(null, PERMISSIONS.settingsAccess, guestPerms)).toBe(false);
+    expect(accountHasPermission(null, PERMISSIONS.dailyRecordCreate, guestPerms)).toBe(false);
   });
 
   it("returns true only when code is present for logged-in accounts", () => {
@@ -41,35 +43,34 @@ describe("accountHasPermission", () => {
 });
 
 describe("guestHasPermission", () => {
-  it("matches GUEST_PERMISSIONS catalog", () => {
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.overviewView);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.itsmRequestExport);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyRecordExport);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.dailyAnalysisView);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetyOverviewView);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.safetySubmissionRead);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.trainingOverviewView);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.trainingSessionRead);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.reportOverviewView);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.reportLineRead);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartOverviewView);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartStockView);
-    expect(GUEST_PERMISSIONS).toContain(PERMISSIONS.sparepartDocumentRead);
-    expect(guestHasPermission(PERMISSIONS.itsmAnalysisView)).toBe(true);
-    expect(guestHasPermission(PERMISSIONS.adminRolesManage)).toBe(false);
+  it("checks against the provided guest permission list", () => {
+    const guestPerms = [...DEFAULT_GUEST_PERMISSION_CODES];
+    expect(guestHasPermission(PERMISSIONS.overviewView, guestPerms)).toBe(true);
+    expect(guestHasPermission(PERMISSIONS.itsmRequestExport, guestPerms)).toBe(false);
+    expect(guestHasPermission(PERMISSIONS.dailyRecordExport, guestPerms)).toBe(false);
+    expect(guestHasPermission(PERMISSIONS.adminRolesManage, guestPerms)).toBe(false);
+  });
+});
+
+describe("GUEST_PERMISSIONS seed", () => {
+  it("matches DEFAULT_GUEST_PERMISSION_CODES and excludes export", () => {
+    expect([...GUEST_PERMISSIONS].sort()).toEqual([...DEFAULT_GUEST_PERMISSION_CODES].sort());
+    expect(GUEST_PERMISSIONS).not.toContain(PERMISSIONS.itsmRequestExport);
+    expect(GUEST_PERMISSIONS).not.toContain(PERMISSIONS.dailyRecordExport);
   });
 });
 
 describe("getRoleAccess", () => {
   it("grants guest the configured public browse capabilities", () => {
-    const access = getRoleAccess(null);
+    const guestPerms = [...DEFAULT_GUEST_PERMISSION_CODES];
+    const access = getRoleAccess(null, guestPerms);
     expect(access.isGuest).toBe(true);
     expect(access.canViewOverview).toBe(true);
     expect(access.canViewItsmOverview).toBe(true);
     expect(access.canViewItsmRequests).toBe(true);
-    expect(access.canExportItsmRequest).toBe(true);
+    expect(access.canExportItsmRequest).toBe(false);
     expect(access.canViewItsmAnalysis).toBe(true);
-    expect(access.canExportDailyRecord).toBe(true);
+    expect(access.canExportDailyRecord).toBe(false);
     expect(access.canViewDailyAnalysis).toBe(true);
     expect(access.canViewDailyRecords).toBe(true);
     expect(access.canViewSafetyOverview).toBe(true);
@@ -89,6 +90,13 @@ describe("getRoleAccess", () => {
     expect(access.canViewSparepartDocuments).toBe(true);
     expect(access.canPostSparepartDocument).toBe(false);
     expect(access.canReverseSparepartDocument).toBe(false);
+    expect(access.canViewOrganizationOverview).toBe(true);
+    expect(access.canViewOrganizationEmployees).toBe(true);
+    expect(access.canViewOrganizationShift).toBe(true);
+    expect(access.canViewOrganizationAttendance).toBe(true);
+    expect(access.canManageOrganizationShift).toBe(false);
+    expect(access.canManageOrganizationAttendance).toBe(false);
+    expect(access.canCreateOrganizationEmployee).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {
@@ -248,7 +256,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 42 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(49);
+  it("has exactly 58 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(58);
   });
 });

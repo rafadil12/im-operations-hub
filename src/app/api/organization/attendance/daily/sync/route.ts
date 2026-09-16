@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 type ScheduleType = "D" | "N" | "1" | "4" | "OFF";
 
-type LeaveType = "AL" | "MC" | "UPL" | "A" | "ALPA" | "OT";
-
-type AttendanceValue =
-  | "10.5"
-  | "8"
-  | "4"
-  | "OFF"
+type LeaveType =
   | "AL"
   | "MC"
   | "UPL"
-  | "A";
+  | "A"
+  | "ALPA"
+  | "OT"
+  | "NO_ATTENDANCE";
+
+type AttendanceValue = "10.5" | "8" | "4" | "OFF";
 
 type EmployeeRow = {
   employee_no: string;
@@ -97,6 +97,9 @@ function nonFutureCutoff(today = new Date()) {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requirePermission(PERMISSIONS.organizationAttendanceManage);
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await request.json().catch(() => ({}))) as {
       year?: unknown;
@@ -146,7 +149,6 @@ export async function POST(request: NextRequest) {
      * 1. LOAD EVERYTHING ONCE
      * -------------------------------------------------------
      */
-
     const [
       employees,
       schedules,
@@ -179,21 +181,30 @@ export async function POST(request: NextRequest) {
       ),
 
       query<LeaveRow[]>(
-        `
-          SELECT
-            id,
-            employee_no,
-            request_date,
-            request_type,
-            status
-          FROM attendance_leave_requests
-          WHERE request_date >= ?
-            AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
-            AND request_type IN ('AL', 'MC', 'UPL', 'A', 'ALPA', 'OT')
-          ORDER BY employee_no, request_date, id ASC
-        `,
-        [monthStart, monthStart],
-      ),
+  `
+    SELECT
+      id,
+      employee_no,
+      request_date,
+      request_type,
+      status
+    FROM attendance_leave_requests
+    WHERE request_date >= ?
+      AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
+      AND status = 'Approved'
+      AND request_type IN (
+        'AL',
+        'MC',
+        'UPL',
+        'A',
+        'ALPA',
+        'OT',
+        'NO_ATTENDANCE'
+      )
+    ORDER BY employee_no, request_date, id ASC
+  `,
+  [monthStart, monthStart],
+),
 
       query<ExistingAttendanceRow[]>(
         `
@@ -214,7 +225,6 @@ export async function POST(request: NextRequest) {
      * 2. BUILD MAPS IN MEMORY
      * -------------------------------------------------------
      */
-
     const scheduleMap = new Map<string, ScheduleType>();
 
     for (const row of schedules) {
@@ -228,12 +238,22 @@ export async function POST(request: NextRequest) {
       string,
       {
         id: number;
-        requestType: Exclude<LeaveType,"OT" | "ALPA">;
+        requestType: Exclude<LeaveType, "OT" | "ALPA" | "NO_ATTENDANCE">;
       }
     >();
 
     for (const row of leaveRows) {
-      if (row.request_type === "OT") {
+      /*
+       * NO_ATTENDANCE dan OT hanya diabaikan.
+       *
+       * NO_ATTENDANCE TIDAK dimasukkan ke leaveMap,
+       * sehingga tanggal tersebut tetap diproses oleh
+       * shiftResult() dan attendance tetap masuk dari SHIFT.
+       */
+      if (
+        row.request_type === "OT" ||
+        row.request_type === "NO_ATTENDANCE"
+      ) {
         continue;
       }
 
@@ -246,9 +266,10 @@ export async function POST(request: NextRequest) {
        */
       leaveMap.set(key, {
         id: row.id,
-        requestType: row.request_type === "ALPA"
-      ? "A"
-      : row.request_type,
+        requestType:
+          row.request_type === "ALPA"
+            ? "A"
+            : row.request_type,
       });
     }
 
@@ -266,7 +287,6 @@ export async function POST(request: NextRequest) {
      * 3. PREPARE BATCH VALUES
      * -------------------------------------------------------
      */
-
     const values: Array<
       [
         string,
@@ -312,10 +332,14 @@ export async function POST(request: NextRequest) {
         let leaveRequestId: number | null = null;
 
         /*
-         * Leave tetap memiliki prioritas.
+         * Leave remains priority, but attendance_daily.attendance_value only
+         * stores shift hours (4/8/10.5/OFF). Leave type lives on
+         * attendance_leave_requests and is resolved via leave_request_id.
+         *
+         * NO_ATTENDANCE never enters leaveMap, so it falls through to SHIFT.
          */
         if (leave) {
-          value = leave.requestType;
+          value = "OFF";
           plannedHours = 0;
           source = "LEAVE";
           leaveRequestId = leave.id;
@@ -351,7 +375,6 @@ export async function POST(request: NextRequest) {
      * 4. BATCH INSERT / UPDATE
      * -------------------------------------------------------
      */
-
     const CHUNK_SIZE = 500;
 
     for (

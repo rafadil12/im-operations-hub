@@ -178,19 +178,11 @@ async function resolveAutomaticManagerId(
           u.employee_no
         FROM users u
         WHERE
-          LOWER(
-            TRIM(
-              COALESCE(
-                u.name_en,
-                ''
-              )
-            )
-          ) = 'wang chunlai'
-
+          u.employee_no = ?
           AND u.employee_no <> 'SUPERADMIN'
-
         LIMIT 1
         `,
+        ['62000125'],
       );
 
     if (!wangRows.length) {
@@ -314,7 +306,7 @@ export async function GET(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeRead,
   );
 
   if (gate instanceof NextResponse) {
@@ -400,7 +392,7 @@ export async function PUT(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeUpdate,
   );
 
   if (gate instanceof NextResponse) {
@@ -772,7 +764,7 @@ export async function PATCH(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeUpdate,
   );
 
   if (gate instanceof NextResponse) {
@@ -927,7 +919,7 @@ export async function DELETE(
   context: RouteContext,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeDelete,
   );
 
   if (gate instanceof NextResponse) {

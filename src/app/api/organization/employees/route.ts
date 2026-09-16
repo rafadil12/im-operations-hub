@@ -27,6 +27,8 @@ type EmployeeRow = {
   manager_id: number | null;
   manager_name_en: string | null;
   manager_name_cn: string | null;
+  
+  is_manager: boolean;
 
   employment_type:
     | "Permanent"
@@ -108,7 +110,7 @@ export async function GET(
   request: NextRequest,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeRead,
   );
 
   if (gate instanceof NextResponse) {
@@ -314,6 +316,11 @@ export async function GET(
 
           manager.name_cn
             AS manager_name_cn,
+          EXISTS (
+            SELECT 1
+            FROM employee_organization child_eo
+            WHERE child_eo.manager_id = u.id
+          ) AS is_manager,
 
           eo.employment_type,
 
@@ -406,7 +413,7 @@ export async function POST(
   request: NextRequest,
 ) {
   const gate = await requirePermission(
-    PERMISSIONS.dailyMasterManage,
+    PERMISSIONS.organizationEmployeeCreate,
   );
 
   if (gate instanceof NextResponse) {

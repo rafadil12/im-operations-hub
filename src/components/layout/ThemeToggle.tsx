@@ -1,5 +1,6 @@
 "use client";
 
+import { useLang } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 import type { Theme } from "@/lib/types";
 
@@ -39,6 +40,7 @@ function MoonIcon() {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const { t } = useLang();
 
   const buttonClass = (target: Theme) =>
     `flex cursor-pointer items-center gap-1 px-2.5 py-1.5 font-medium transition-colors ${
@@ -51,27 +53,27 @@ export function ThemeToggle() {
     <div
       className="inline-flex overflow-hidden rounded-md border border-border text-xs"
       role="group"
-      aria-label="Color theme"
+      aria-label={t.common.colorTheme}
     >
       <button
         type="button"
         onClick={() => setTheme("light")}
         className={buttonClass("light")}
         aria-pressed={theme === "light"}
-        title="Light theme"
+        title={t.common.lightTheme}
       >
         <SunIcon />
-        <span className="sr-only">Light theme</span>
+        <span className="sr-only">{t.common.lightTheme}</span>
       </button>
       <button
         type="button"
         onClick={() => setTheme("dark")}
         className={buttonClass("dark")}
         aria-pressed={theme === "dark"}
-        title="Dark theme"
+        title={t.common.darkTheme}
       >
         <MoonIcon />
-        <span className="sr-only">Dark theme</span>
+        <span className="sr-only">{t.common.darkTheme}</span>
       </button>
     </div>
   );

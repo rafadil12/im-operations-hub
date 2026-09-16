@@ -214,7 +214,7 @@ export function InsightsCharts({ result }: { result: AnalysisResult }) {
 
                 {/* SUB CATEGORY DI BAWAH */}
                 <div className="mt-5 border-t border-border-subtle pt-4">
-                  <p className="mb-3 text-xs font-semibold text-text">Sub Category</p>
+                  <p className="mb-3 text-xs font-semibold text-text">{t.analysis.subCategory}</p>
 
                   <div className="grid grid-cols-8 gap-x-6 gap-y-2">
                     {subcategoryBar.map((item, index) => (

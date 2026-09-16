@@ -20,8 +20,10 @@ function createPool(): mysql.Pool {
     password: DB_PASSWORD,
     database: DB_NAME,
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: process.env.DB_POOL_SIZE ? Number(process.env.DB_POOL_SIZE) : 10,
     queueLimit: 0,
+    connectTimeout: 10_000,
+    enableKeepAlive: true,
     dateStrings: true,
     charset: "utf8mb4",
   });

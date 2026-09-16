@@ -26,7 +26,6 @@ export function LineChart({
 
   const points = data.map((item, index) => {
     const x = left + (index / Math.max(data.length - 1, 1)) * chartWidth;
-
     const y = top + chartHeight - (item.value / max) * chartHeight;
 
     return {
@@ -69,7 +68,7 @@ export function LineChart({
           );
         })}
 
-        {path && (
+        {path ? (
           <path
             d={path}
             fill="none"
@@ -82,7 +81,7 @@ export function LineChart({
             strokeDasharray="1"
             strokeDashoffset="1"
           />
-        )}
+        ) : null}
 
         {points.map((point, index) => {
           const delay = `${index * pointIntervalSeconds}s`;

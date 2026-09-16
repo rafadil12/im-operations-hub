@@ -22,7 +22,7 @@ export function SafetyOverviewTrainingTableSection({
   trainingRate,
 }: SafetyOverviewTrainingTableSectionProps) {
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+    <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
       <SectionHeader
         title={safetyText("safetyTraining", safetyLanguage)}
         description={safetyText("trainingCompletionByWeek", safetyLanguage)}

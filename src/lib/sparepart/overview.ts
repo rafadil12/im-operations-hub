@@ -70,6 +70,7 @@ export type SparepartOverviewTopUsedItem = {
   category_name_en?: string | null;
   category_name_cn?: string | null;
   uom_code?: string | null;
+  uom_name_cn?: string | null;
   qty: number;
 };
 
@@ -107,6 +108,7 @@ export type SparepartOverviewTopItem = {
   category_name_en?: string | null;
   category_name_cn?: string | null;
   uom_code?: string | null;
+  uom_name_cn?: string | null;
   stock_current: number;
 };
 
@@ -118,6 +120,7 @@ export type SparepartOverviewLowItem = {
   category_name_en?: string | null;
   category_name_cn?: string | null;
   uom_code?: string | null;
+  uom_name_cn?: string | null;
   stock_current: number;
   min_stock: number;
   status: "critical" | "low";
@@ -136,6 +139,7 @@ export type SparepartOverviewSparseItem = {
   category_name_en?: string | null;
   category_name_cn?: string | null;
   uom_code?: string | null;
+  uom_name_cn?: string | null;
   stock_current: number;
   min_stock: number;
 };

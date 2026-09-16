@@ -8,8 +8,12 @@ import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedField, localizedName, useLang } from "@/lib/i18n";
 import {
   areaColor,
+  buildAreaWeekReportRows,
+  getWeekNumberForDate,
   groupLinesByWeek,
+  mergeSelectableWeekNumbers,
   reportText,
+  type AreaWeekReportRow,
   type ReportArea,
   type ReportSubItem,
   type ReportLanguage,
@@ -17,57 +21,18 @@ import {
   type ReportWeek,
   type ReportWeekAttachment,
 } from "@/lib/report";
-import { buildAttachmentMap, getAttachmentsForWeekArea } from "@/lib/report/attachmentLookup";
-import { completionBarColor } from "@/lib/report/completionColor";
-import { getWeekNumberForDate } from "@/lib/report/weekCalendar";
-import { ReportAttachmentsCell } from "./ReportAttachmentsCell";
+import { SkeletonTable } from "@/components/ui/skeletons";
+import { buildAttachmentMap } from "@/lib/report/attachmentLookup";
 import { ReportAttachmentsModal } from "./ReportAttachmentsModal";
-import { ExpandableTextCell } from "./ExpandableTextCell";
 import { ReportWeekFormModal } from "./ReportWeekFormModal";
 import { SummaryFilterPanel } from "./SummaryFilterPanel";
 import { SummaryFullViewWorkspace } from "./SummaryFullViewWorkspace";
 import { SummaryTable } from "./SummaryTable";
 import { useSummaryTableControls } from "./useSummaryTableControls";
-import { WeekBadge } from "./WeekBadge";
+import { WeekReportList } from "./WeekReportList";
 
 const filterCtrl =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
-
-const reportTh =
-  "sticky top-0 z-20 border border-border-subtle bg-surface px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
-const reportTd = "border border-border-subtle px-3 py-2.5 align-top";
-const reportTdGroup = "border border-border-subtle bg-bg/10 px-3 py-2.5 align-middle text-center";
-
-type ReportWeekGroup = {
-  year: number;
-  weekNumber: number;
-  lines: ReportLine[];
-};
-
-function groupReportLinesByWeek(lines: ReportLine[]): ReportWeekGroup[] {
-  const map = new Map<string, ReportLine[]>();
-
-  for (const line of lines) {
-    if (line.weekNumber == null || line.year == null) continue;
-    const key = `${line.year}-${line.weekNumber}`;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(line);
-  }
-
-  return Array.from(map.entries())
-    .map(([key, groupLines]) => {
-      const [yearStr, weekStr] = key.split("-");
-      return {
-        year: Number(yearStr),
-        weekNumber: Number(weekStr),
-        lines: [...groupLines].sort((a, b) => a.sortOrder - b.sortOrder),
-      };
-    })
-    .sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.weekNumber - a.weekNumber;
-    });
-}
 
 type ActiveTab = number | "summary";
 
@@ -75,17 +40,12 @@ export type ReportManagementMode = "summary" | "reports";
 
 type ReportFilterBarProps = {
   language: ReportLanguage;
-  lang: "en" | "cn";
   year: number;
   onYearChange: (year: number) => void;
   filterWeek: number | "all";
   onFilterWeekChange: (value: number | "all") => void;
-  filterSubItem: number | "all";
-  onFilterSubItemChange: (value: number | "all") => void;
   weekOptions: number[];
-  subItems: ReportSubItem[];
-  areaId: number | null;
-  actions?: ReactNode;
+  onToday: () => void;
 };
 
 function FilterField({
@@ -109,20 +69,13 @@ function FilterField({
 
 function ReportFilterBar({
   language,
-  lang,
   year,
   onYearChange,
   filterWeek,
   onFilterWeekChange,
-  filterSubItem,
-  onFilterSubItemChange,
   weekOptions,
-  subItems,
-  areaId,
-  actions,
+  onToday,
 }: ReportFilterBarProps) {
-  const visibleSubItems = subItems.filter((item) => areaId == null || item.areaId === areaId);
-
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-3">
       <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
@@ -148,7 +101,7 @@ function ReportFilterBar({
               onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
             }
           >
-            <option value="all">{reportText("all", language)}</option>
+            <option value="all">{reportText("allWeeks", language)}</option>
             {weekOptions.map((w) => (
               <option key={w} value={w}>
                 Week {w}
@@ -156,59 +109,20 @@ function ReportFilterBar({
             ))}
           </select>
         </FilterField>
-        <FilterField label={reportText("subItem", language)} className="min-w-[160px]">
-          <select
-            className={filterCtrl + " w-full min-w-[160px]"}
-            value={filterSubItem === "all" ? "all" : String(filterSubItem)}
-            onChange={(e) =>
-              onFilterSubItemChange(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
-          >
-            <option value="all">{reportText("all", language)}</option>
-            {visibleSubItems.map((item) => (
-              <option key={item.id} value={item.id}>
-                {localizedName({ name_en: item.nameEn, name_cn: item.nameCn }, lang)}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-      </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
-      ) : null}
-    </div>
-  );
-}
-
-function CompletionCell({ rate }: { rate: number | null }) {
-  if (rate == null) {
-    return <span className="text-text-dim">—</span>;
-  }
-
-  const pct = Math.round(rate * 100);
-  const clamped = Math.min(100, Math.max(0, pct));
-  const fillColor = completionBarColor(clamped);
-
-  return (
-    <div className="flex min-w-[64px] items-center gap-1.5">
-      <span
-        className="w-8 shrink-0 text-right text-[11px] font-semibold leading-none"
-        style={{ color: fillColor }}
-      >
-        {pct}%
-      </span>
-      <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-border-subtle">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${clamped}%`, backgroundColor: fillColor }}
-        />
+        <button
+          type="button"
+          onClick={onToday}
+          className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
+        >
+          {reportText("today", language)}
+        </button>
       </div>
     </div>
   );
 }
 
 export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
-  const { lang, t } = useLang();
+  const { lang } = useLang();
   const language = lang as ReportLanguage;
   const access = useRoleAccess();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -228,15 +142,14 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const [attachmentsModalOpen, setAttachmentsModalOpen] = useState(false);
   const [attachmentsModalItems, setAttachmentsModalItems] = useState<ReportWeekAttachment[]>([]);
   const [attachmentsModalTitle, setAttachmentsModalTitle] = useState("");
-  const [submissionStatus, setSubmissionStatus] = useState<"draft" | "submitted" | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weekFormOpen, setWeekFormOpen] = useState(false);
-  const [weekFormMode, setWeekFormMode] = useState<"create" | "edit">("create");
+  const [weekFormMode, setWeekFormMode] = useState<"create" | "edit" | "view">("create");
   const [weekFormWeek, setWeekFormWeek] = useState(getWeekNumberForDate());
   const [submitting, setSubmitting] = useState(false);
-  const [reopenConfirm, setReopenConfirm] = useState(false);
-  const [deleteWeekGroup, setDeleteWeekGroup] = useState<ReportWeekGroup | null>(null);
+  const [reopenWeekNumber, setReopenWeekNumber] = useState<number | null>(null);
+  const [deleteWeekRow, setDeleteWeekRow] = useState<AreaWeekReportRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [summaryFullscreenOpen, setSummaryFullscreenOpen] = useState(false);
 
@@ -247,18 +160,6 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const canDelete = access.canDeleteReportLine;
   const canSubmit = access.canSubmitReport;
   const canReopen = access.canReopenReport;
-  const showActionsColumn =
-    (canUpdate || canCreate || canDelete) && filterWeek !== "all";
-  const isSubmitted = submissionStatus === "submitted";
-  const selectedWeekFilter = filterWeek === "all" ? null : filterWeek;
-
-  const selectedWeek = useMemo(
-    () =>
-      selectedWeekFilter != null
-        ? (weeks.find((w) => w.year === year && w.weekNumber === selectedWeekFilter) ?? null)
-        : null,
-    [weeks, year, selectedWeekFilter]
-  );
 
   const loadWeeks = useCallback(async () => {
     const res = await apiGetAbs<{ success: boolean; data: ReportWeek[] }>(
@@ -270,7 +171,6 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const loadLines = useCallback(async () => {
     if (!areas.length && !isSummary) {
       setLines([]);
-      setSubmissionStatus(null);
       setLoading(false);
       return;
     }
@@ -295,16 +195,6 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
       setAttachments(res.attachments ?? []);
       if (res.areas) setAreas(res.areas);
       if (res.subItems) setSubItems(res.subItems);
-
-      if (!isSummary && selectedWeek && areaId != null) {
-        const subRes = await apiGetAbs<{
-          success: boolean;
-          data: { status: "draft" | "submitted" } | null;
-        }>(`/api/report/submissions?weekId=${selectedWeek.id}&areaId=${areaId}`);
-        setSubmissionStatus(subRes.data?.status ?? null);
-      } else {
-        setSubmissionStatus(null);
-      }
     } catch (err) {
       setError(getApiErrorMessage(err) || reportText("errorLoad", language));
       setLines([]);
@@ -312,7 +202,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     } finally {
       setLoading(false);
     }
-  }, [year, areaId, isSummary, selectedWeek, language, areas.length]);
+  }, [year, areaId, isSummary, language, areas.length]);
 
   useEffect(() => {
     void loadWeeks();
@@ -346,16 +236,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     setFilterWeek("all");
     setFilterSubItem("all");
     setSearch("");
+    setWeekFormOpen(false);
+    setReopenWeekNumber(null);
+    setDeleteWeekRow(null);
   }, [activeTab, year]);
 
-  const weekOptions = useMemo(() => {
-    const fromLines = new Set<number>();
-    lines.forEach((line) => {
-      if (line.weekNumber != null) fromLines.add(line.weekNumber);
-    });
-    weeks.forEach((w) => fromLines.add(w.weekNumber));
-    return Array.from(fromLines).sort((a, b) => b - a);
-  }, [lines, weeks]);
+  const weekOptions = useMemo(
+    () => mergeSelectableWeekNumbers(year, weeks.map((w) => w.weekNumber)),
+    [year, weeks]
+  );
 
   const areaById = useMemo(() => new Map(areas.map((area) => [area.id, area])), [areas]);
 
@@ -392,10 +281,16 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     });
   }, [lines, filterWeek, filterSubItem, search, lang, areaById, isSummary]);
 
-  const reportWeekGroups = useMemo(
-    () => (isSummary ? [] : groupReportLinesByWeek(filteredLines)),
-    [isSummary, filteredLines]
-  );
+  const areaWeekRows = useMemo(() => {
+    if (isSummary) return [];
+    const weekNumbers =
+      filterWeek === "all" ? weekOptions : weekOptions.includes(filterWeek) ? [filterWeek] : [filterWeek];
+    return buildAreaWeekReportRows({
+      year,
+      weekNumbers,
+      lines: lines.filter((line) => (filterWeek === "all" ? true : line.weekNumber === filterWeek)),
+    });
+  }, [isSummary, weekOptions, filterWeek, year, lines]);
 
   const weekGroups = useMemo(
     () => (isSummary ? groupLinesByWeek(filteredLines, areas) : []),
@@ -410,9 +305,16 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     language,
   });
 
-  const openCreateWeek = () => {
+  const selectedArea = areaId != null ? areaById.get(areaId) ?? null : null;
+
+  const openCreateWeek = (weekNumber: number) => {
+    const existing = areaWeekRows.find((row) => row.weekNumber === weekNumber);
+    if (existing && existing.status !== "none") {
+      toastError(reportText("reportAlreadyExists", language));
+      return;
+    }
     setWeekFormMode("create");
-    setWeekFormWeek(selectedWeekFilter ?? getWeekNumberForDate(new Date()));
+    setWeekFormWeek(weekNumber);
     setWeekFormOpen(true);
   };
 
@@ -422,32 +324,31 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     setWeekFormOpen(true);
   };
 
-  const rowCanEditWeek = (row: ReportLine) => {
-    if (!canUpdate && !canCreate) return false;
-    if (row.submissionStatus === "submitted") return false;
-    return row.weekNumber != null;
+  const openViewWeek = (weekNumber: number) => {
+    setWeekFormMode("view");
+    setWeekFormWeek(weekNumber);
+    setWeekFormOpen(true);
   };
 
-  const rowCanDelete = (row: ReportLine) => {
-    if (!canDelete) return false;
-    if (row.submissionStatus === "submitted") return false;
-    return true;
+  const jumpToToday = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentWeek = getWeekNumberForDate(now);
+    if (year !== currentYear) setYear(currentYear);
+    setFilterWeek(currentWeek);
   };
-
-  const weekCanEdit = (group: ReportWeekGroup) => rowCanEditWeek(group.lines[0]);
-  const weekCanDelete = (group: ReportWeekGroup) => rowCanDelete(group.lines[0]);
 
   const deleteWeekReport = async () => {
-    if (!deleteWeekGroup) return;
+    if (!deleteWeekRow) return;
     setDeleting(true);
     try {
-      for (const line of deleteWeekGroup.lines) {
+      for (const line of deleteWeekRow.lines) {
         const res = await fetch(`/api/report/lines/${line.id}`, { method: "DELETE" });
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json.error ?? "Delete failed");
       }
       toastSuccess(reportText("deleteSuccess", language));
-      setDeleteWeekGroup(null);
+      setDeleteWeekRow(null);
       await loadLines();
     } catch (err) {
       toastError(getApiErrorMessage(err));
@@ -456,8 +357,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     }
   };
 
-  const submitArea = async () => {
-    if (!selectedWeekFilter || !areaId) return;
+  const submitWeek = async (weekNumber: number) => {
+    if (!areaId) return;
     setSubmitting(true);
     try {
       const res = await fetch("/api/report/submissions", {
@@ -465,15 +366,13 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           year,
-          weekNumber: selectedWeekFilter,
+          weekNumber,
           areaId,
-          weekId: selectedWeek?.id,
         }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Submit failed");
       toastSuccess(reportText("submitSuccess", language));
-      setSubmissionStatus("submitted");
       await loadLines();
     } catch (err) {
       toastError(getApiErrorMessage(err));
@@ -482,8 +381,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     }
   };
 
-  const reopenArea = async () => {
-    if (!selectedWeekFilter || !areaId) return;
+  const reopenWeek = async () => {
+    if (!areaId || reopenWeekNumber == null) return;
     setSubmitting(true);
     try {
       const res = await fetch("/api/report/submissions/reopen", {
@@ -491,16 +390,14 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           year,
-          weekNumber: selectedWeekFilter,
+          weekNumber: reopenWeekNumber,
           areaId,
-          weekId: selectedWeek?.id,
         }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Reopen failed");
       toastSuccess(reportText("reopenSuccess", language));
-      setSubmissionStatus("draft");
-      setReopenConfirm(false);
+      setReopenWeekNumber(null);
       await loadLines();
     } catch (err) {
       toastError(getApiErrorMessage(err));
@@ -513,20 +410,6 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     toastSuccess(reportText("saveWeekSuccess", language));
     await loadLines();
     await loadWeeks();
-  };
-
-  const reportsFilterBarProps = {
-    language,
-    lang,
-    year,
-    onYearChange: setYear,
-    filterWeek,
-    onFilterWeekChange: setFilterWeek,
-    filterSubItem,
-    onFilterSubItemChange: setFilterSubItem,
-    weekOptions,
-    subItems,
-    areaId,
   };
 
   const summaryFilterPanelProps = {
@@ -547,50 +430,6 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
       !loading && !error ? () => setSummaryFullscreenOpen(true) : undefined,
   };
 
-  const reportActions = (
-    <>
-      {submissionStatus && selectedWeekFilter != null ? (
-        <span
-          className={`rounded-md px-2 py-1 text-xs font-medium ${
-            isSubmitted ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
-          }`}
-        >
-          {isSubmitted ? reportText("submitted", language) : reportText("draft", language)}
-        </span>
-      ) : null}
-      {canCreate && !(selectedWeekFilter != null && isSubmitted) ? (
-        <button
-          type="button"
-          onClick={openCreateWeek}
-          disabled={areaId == null}
-          className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
-        >
-          {reportText("addReport", language)}
-        </button>
-      ) : null}
-      {canSubmit && !isSubmitted && selectedWeekFilter != null ? (
-        <button
-          type="button"
-          onClick={() => void submitArea()}
-          disabled={submitting || !lines.some((l) => l.weekNumber === selectedWeekFilter)}
-          className="cursor-pointer rounded-md border border-accent px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-        >
-          {reportText("submit", language)}
-        </button>
-      ) : null}
-      {canReopen && isSubmitted && selectedWeekFilter != null ? (
-        <button
-          type="button"
-          onClick={() => setReopenConfirm(true)}
-          disabled={submitting}
-          className="cursor-pointer rounded-md border border-warning px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning/10 disabled:opacity-50"
-        >
-          {reportText("reopen", language)}
-        </button>
-      ) : null}
-    </>
-  );
-
   const summaryContextSubtitle = [
     filterWeek !== "all" ? `Week ${filterWeek}` : reportText("all", language),
     filterSubItem !== "all"
@@ -605,6 +444,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   ]
     .filter(Boolean)
     .join(" · ");
+
+  const listTitle = reportText("weeklyReportsFor", language)
+    .replace(
+      "{area}",
+      selectedArea
+        ? localizedName({ name_en: selectedArea.nameEn, name_cn: selectedArea.nameCn }, lang)
+        : ""
+    )
+    .replace("{year}", String(year));
 
   return (
     <div className="space-y-0">
@@ -647,14 +495,26 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         {isSummary ? (
           <SummaryFilterPanel {...summaryFilterPanelProps} />
         ) : (
-          <ReportFilterBar {...reportsFilterBarProps} actions={reportActions} />
+          <ReportFilterBar
+            language={language}
+            year={year}
+            onYearChange={setYear}
+            filterWeek={filterWeek}
+            onFilterWeekChange={setFilterWeek}
+            weekOptions={weekOptions}
+            onToday={jumpToToday}
+          />
         )}
       </div>
 
+      {!isSummary ? (
+        <p className="mb-4 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-text-muted">
+          {reportText("oneReportRule", language)}
+        </p>
+      ) : null}
+
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {reportText("loading", language)}
-        </div>
+        <SkeletonTable />
       ) : null}
 
       {error ? (
@@ -673,135 +533,24 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
             wrapperClassName="overflow-auto rounded-xl border border-border-subtle bg-surface min-h-[32rem] max-h-[calc(100dvh-14rem)]"
           />
         ) : (
-        <div className="overflow-auto rounded-xl border border-border-subtle bg-surface min-h-[32rem] max-h-[calc(100dvh-14rem)]">
-          <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
-            <thead>
-              <tr>
-                <th className={reportTh}>{reportText("week", language)}</th>
-                <th className={reportTh}>{reportText("subItem", language)}</th>
-                <th className={reportTh}>{reportText("target", language)}</th>
-                <th className={reportTh}>{reportText("rate", language)}</th>
-                <th className={reportTh}>{reportText("summary", language)}</th>
-                <th className={reportTh}>{reportText("plan", language)}</th>
-                <th className={reportTh}>{reportText("attachments", language)}</th>
-                {showActionsColumn ? (
-                  <th className={reportTh}>{reportText("actions", language)}</th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLines.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={showActionsColumn ? 8 : 7}
-                    className={`${reportTd} py-12 text-center text-text-muted`}
-                  >
-                    {reportText("noLines", language)}
-                  </td>
-                </tr>
-              ) : (
-                reportWeekGroups.flatMap((group) => {
-                  const firstLine = group.lines[0];
-                  const weekAttachments = firstLine
-                    ? getAttachmentsForWeekArea(
-                        attachmentMap,
-                        firstLine.weekId,
-                        firstLine.areaId
-                      )
-                    : [];
-                  const attachmentTitle = `Week ${group.weekNumber} (${group.year})`;
-
-                  return group.lines.map((row, lineIndex) => {
-                    const isFirstInWeek = lineIndex === 0;
-                    const target = localizedField(row.workTargetEn, row.workTargetCn, lang);
-                    const summary = localizedField(row.summaryEn, row.summaryCn, lang);
-                    const plan = localizedField(row.planEn, row.planCn, lang);
-                    const subItem =
-                      localizedField(row.subItemNameEn, row.subItemNameCn, lang) || "—";
-                    const editableWeek = weekCanEdit(group);
-                    const deletable = weekCanDelete(group);
-
-                    return (
-                      <tr key={row.id} className="align-top">
-                        {isFirstInWeek ? (
-                          <td rowSpan={group.lines.length} className={reportTdGroup}>
-                            <WeekBadge
-                              weekNumber={group.weekNumber}
-                              year={group.year}
-                              onClick={
-                                editableWeek ? () => openEditWeek(group.weekNumber) : undefined
-                              }
-                            />
-                          </td>
-                        ) : null}
-                        <td className={reportTd}>
-                          {editableWeek ? (
-                            <button
-                              type="button"
-                              onClick={() => openEditWeek(group.weekNumber)}
-                              className="cursor-pointer text-left text-sm font-medium text-accent hover:underline"
-                            >
-                              {subItem}
-                            </button>
-                          ) : (
-                            <span className="text-sm font-medium text-accent">{subItem}</span>
-                          )}
-                        </td>
-                        <td className={`${reportTd} max-w-xs`}>
-                          <ExpandableTextCell text={target} language={language} />
-                        </td>
-                        <td className={reportTd}>
-                          <CompletionCell rate={row.weeklyCompletionRate} />
-                        </td>
-                        <td className={`${reportTd} max-w-md`}>
-                          <ExpandableTextCell text={summary} language={language} muted />
-                        </td>
-                        <td className={`${reportTd} max-w-md`}>
-                          <ExpandableTextCell text={plan || "—"} language={language} muted />
-                        </td>
-                        {isFirstInWeek ? (
-                          <td rowSpan={group.lines.length} className={reportTdGroup}>
-                            <ReportAttachmentsCell
-                              attachments={weekAttachments}
-                              language={language}
-                              onView={() => openAttachmentsModal(weekAttachments, attachmentTitle)}
-                            />
-                          </td>
-                        ) : null}
-                        {showActionsColumn && isFirstInWeek ? (
-                          <td rowSpan={group.lines.length} className={reportTdGroup}>
-                            {editableWeek || deletable ? (
-                              <div className="flex items-center justify-center gap-2">
-                                {editableWeek ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditWeek(group.weekNumber)}
-                                    className="cursor-pointer text-xs text-accent hover:underline"
-                                  >
-                                    {t.common.edit}
-                                  </button>
-                                ) : null}
-                                {deletable ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setDeleteWeekGroup(group)}
-                                    className="cursor-pointer text-xs text-danger hover:underline"
-                                  >
-                                    {reportText("delete", language)}
-                                  </button>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </td>
-                        ) : null}
-                      </tr>
-                    );
-                  });
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+          <WeekReportList
+            language={language}
+            lang={lang}
+            title={listTitle}
+            rows={areaWeekRows}
+            canCreate={canCreate}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
+            canSubmit={canSubmit}
+            canReopen={canReopen}
+            submitting={submitting}
+            onAdd={openCreateWeek}
+            onEdit={openEditWeek}
+            onView={openViewWeek}
+            onDelete={setDeleteWeekRow}
+            onSubmit={(weekNumber) => void submitWeek(weekNumber)}
+            onReopen={setReopenWeekNumber}
+          />
         )
       ) : null}
 
@@ -840,30 +589,41 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
           areas={areas}
           subItems={subItems}
           weeks={weeks}
-          canSave={weekFormMode === "create" ? canCreate : canUpdate}
+          canSave={
+            weekFormMode === "view"
+              ? false
+              : weekFormMode === "create"
+                ? canCreate
+                : canUpdate
+          }
           onClose={() => setWeekFormOpen(false)}
           onSaved={() => void handleWeekSaved()}
+          onSubItemCreated={(item) => {
+            setSubItems((prev) =>
+              prev.some((s) => s.id === item.id) ? prev : [...prev, item]
+            );
+          }}
         />
       ) : null}
 
-      {reopenConfirm ? (
+      {reopenWeekNumber != null ? (
         <ConfirmDialog
           title={reportText("reopen", language)}
           message={reportText("reopenConfirm", language)}
           confirmLabel={reportText("reopen", language)}
           busy={submitting}
-          onConfirm={() => void reopenArea()}
-          onCancel={() => setReopenConfirm(false)}
+          onConfirm={() => void reopenWeek()}
+          onCancel={() => setReopenWeekNumber(null)}
         />
       ) : null}
 
-      {deleteWeekGroup ? (
+      {deleteWeekRow ? (
         <ConfirmDialog
           title={reportText("delete", language)}
           message={reportText("deleteConfirm", language)}
           busy={deleting}
           onConfirm={() => void deleteWeekReport()}
-          onCancel={() => setDeleteWeekGroup(null)}
+          onCancel={() => setDeleteWeekRow(null)}
         />
       ) : null}
 

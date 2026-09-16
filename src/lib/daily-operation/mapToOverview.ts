@@ -1,4 +1,5 @@
 import type { ModuleCardData } from "@/data/overview";
+import { getDict } from "@/lib/i18n";
 import { namedStatusCount, type AnalysisResult } from "@/lib/types";
 import type { Lang } from "@/lib/types";
 
@@ -34,6 +35,7 @@ export function mapAnalysisToOverview(
   result: AnalysisResult,
   lang: Lang,
 ): ModuleCardData {
+  const t = getDict(lang);
   const total = result.total;
   const completed = namedStatusCount(result.byStatus, "Completed");
 
@@ -63,26 +65,26 @@ export function mapAnalysisToOverview(
   return {
     ...base,
     stats: [
-      { label: "Total Task", value: String(total), tone: "accent" },
+      { label: t.dashboard.thisMonthTasks, value: String(total), tone: "accent" },
       {
-        label: "Completed",
+        label: t.dashboard.completed,
         value: String(completed),
         trend: pctLabel(completed, total),
         tone: "success",
       },
       {
-        label: "Total Users",
+        label: t.dashboard.totalUsers,
         value: String(result.totalUsers),
         tone: "accent",
       },
       {
-        label: "Avg. Tasks",
+        label: t.dashboard.avgTasks,
         value: String(Math.round(result.avgTasks)),
         tone: "warning",
       },
     ],
     bars: {
-      title: "Task by Department (This Month)",
+      title: t.dashboard.taskByDepartment,
       items: divisions.map((d, i) => ({
         label: 
           lang === "cn"
@@ -94,20 +96,20 @@ export function mapAnalysisToOverview(
       })),
     },
     pics: {
-      title: "Top PIC (by Most Task)",
+      title: t.dashboard.topPicTask,
       items: pics,
     },
     chart: {
-      title: "Task Status (This Month)",
+      title: t.dashboard.taskStatus,
       type: "donut",
       legend: [
-        { label: "Completed", color: STATUS_COLORS.completed },
-        { label: "In Progress", color: STATUS_COLORS.inProgress },
-        { label: "Pending", color: STATUS_COLORS.pending },
+        { label: t.dashboard.completed, color: STATUS_COLORS.completed },
+        { label: t.dashboard.inProgress, color: STATUS_COLORS.inProgress },
+        { label: t.dashboard.pending, color: STATUS_COLORS.pending },
       ],
       segments: [completedPct, inProgressPct, pendingPct],
       centerValue: `${Math.round(completedPct)}%`,
-      centerLabel: "Done",
+      centerLabel: t.dashboard.done,
     },
   };
 }

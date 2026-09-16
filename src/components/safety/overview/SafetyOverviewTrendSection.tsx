@@ -16,7 +16,7 @@ export function SafetyOverviewTrendSection({
 }: SafetyOverviewTrendSectionProps) {
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+      <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
         <SectionHeader
           title={safetyText("weeklyFindingTrend", safetyLanguage)}
           description={safetyText("hazardAndCleaningFindings", safetyLanguage)}
@@ -35,7 +35,7 @@ export function SafetyOverviewTrendSection({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+      <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
         <SectionHeader
           title={safetyText("weeklyRequirementCompletion", safetyLanguage)}
           description={safetyText("completedRequirementsByWeek", safetyLanguage)}

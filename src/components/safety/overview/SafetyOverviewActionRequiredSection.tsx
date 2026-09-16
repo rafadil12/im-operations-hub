@@ -19,7 +19,7 @@ export function SafetyOverviewActionRequiredSection({
   pic,
 }: SafetyOverviewActionRequiredSectionProps) {
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+    <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
       <SectionHeader
         title={safetyText("actionRequired", safetyLanguage)}
         description={safetyText("activitiesNeedAttention", safetyLanguage)}

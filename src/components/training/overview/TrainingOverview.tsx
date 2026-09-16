@@ -10,6 +10,7 @@ import {
   type TrainingLanguage,
   type TrainingOverviewMetrics,
 } from "@/lib/training";
+import { SkeletonChart, SkeletonKpiGrid } from "@/components/ui/skeletons";
 import {
   TrainingCategoryDonut,
   TrainingTopicsByDivisionChart,
@@ -59,13 +60,13 @@ export function TrainingOverview() {
   const [range, setRange] = useState(defaultRange);
   const [draftRange, setDraftRange] = useState(defaultRange);
   const [metrics, setMetrics] = useState<TrainingOverviewMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const rangeKey = `${range.start}:${range.end}:${language}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const loading = loadedKey !== rangeKey;
 
   useEffect(() => {
     const ac = new AbortController();
-    setLoading(true);
-    setError(null);
 
     const qs = new URLSearchParams({
       start: range.start,
@@ -79,18 +80,18 @@ export function TrainingOverview() {
       .then((res) => {
         if (!res.success || !res.data) throw new Error(res.error ?? "Failed");
         setMetrics(res.data);
+        setError(null);
+        setLoadedKey(rangeKey);
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(getApiErrorMessage(err) || trainingText("errorLoad", language));
         setMetrics(null);
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setLoading(false);
+        setLoadedKey(rangeKey);
       });
 
     return () => ac.abort();
-  }, [range, language]);
+  }, [range, language, rangeKey]);
 
   return (
     <div className="space-y-5">
@@ -125,8 +126,11 @@ export function TrainingOverview() {
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {trainingText("loading", language)}
+        <div className="space-y-4">
+          <SkeletonKpiGrid count={4} />
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <SkeletonChart variant="donut" />
+          </div>
         </div>
       ) : null}
 

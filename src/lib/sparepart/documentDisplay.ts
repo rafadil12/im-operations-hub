@@ -73,6 +73,23 @@ export function formatLocationLabel(
   return fallback?.trim() || "-";
 }
 
+export function appendLevelLabel(
+  locationLabel: string,
+  levelCode: string | null | undefined,
+  levelNameEn: string | null | undefined,
+  levelNameCn: string | null | undefined,
+  lang: "en" | "cn"
+): string {
+  if (!levelCode) return locationLabel;
+  const levelName = localizedName(
+    { name_en: levelNameEn ?? null, name_cn: levelNameCn ?? null },
+    lang
+  );
+  const level = levelName && levelName !== "-" ? `${levelCode} — ${levelName}` : levelCode;
+  if (!locationLabel || locationLabel === "-") return level;
+  return `${locationLabel} / ${level}`;
+}
+
 export function isReversalMovement(type: MovementType): boolean {
   return type === "102" || type === "202" || type === "312";
 }

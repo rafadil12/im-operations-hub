@@ -9,6 +9,7 @@ import type { SparepartCategory, SparepartItem, SparepartStockBalanceRow } from 
 import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { ExportIcon, NotesIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
@@ -45,6 +46,7 @@ export default function StockOverviewPage() {
     { code: string; name_en: string; name_cn: string }[]
   >([]);
   const [categories, setCategories] = useState<SparepartCategory[]>([]);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
@@ -85,8 +87,14 @@ export default function StockOverviewPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
     load({ q: "", location: "", category: "", status: "" });
     apiGetAbs<{ rows: SparepartCategory[] }>("/api/sparepart/categories")
-      .then((data) => setCategories(data.rows))
-      .catch(() => setCategories([]));
+      .then((data) => {
+        setCategories(data.rows);
+        setCategoriesError(null);
+      })
+      .catch((err) => {
+        setCategories([]);
+        setCategoriesError(err instanceof Error ? err.message : t.common.error);
+      });
   }, [load]);
 
   const sortedRows = useMemo(
@@ -201,6 +209,12 @@ export default function StockOverviewPage() {
           </div>
         </div>
 
+        {categoriesError ? (
+          <div className="mb-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+            {categoriesError}
+          </div>
+        ) : null}
+
         <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3">
           <div className="min-w-[160px] flex-1">
             <label className="mb-1 block text-[10px] uppercase text-text-dim">
@@ -271,9 +285,7 @@ export default function StockOverviewPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-            {t.common.loading}
-          </div>
+          <SkeletonTable />
         ) : (
           <StockTable
             rows={pagedRows}

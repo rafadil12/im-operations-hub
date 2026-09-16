@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { Modal } from "@/components/ui/Modal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { SparepartMasterCreateDialog } from "@/components/sparepart/SparepartMasterCreateDialog";
+import {
+  FormBoxIcon,
+  FormDocumentIcon,
+  FormNotesIcon,
+  FormTagIcon,
+  FormTranslateIcon,
+} from "@/components/sparepart/formSectionIcons";
 import { apiGetAbs } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
 import type {
@@ -24,11 +32,70 @@ type Props = {
   onSubmit: (input: SparepartItemInput, extras: SparepartItemFormExtras) => Promise<void>;
 };
 
+function toUpperInput(value: string): string {
+  return value.toUpperCase();
+}
+
+function FormSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 border-t border-border-subtle pt-4 first:border-t-0 first:pt-0">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
+          {icon}
+        </span>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h4>
+        <div className="h-px flex-1 bg-border-subtle" />
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function LangLabel({
+  text,
+  tag,
+  required,
+}: {
+  text: string;
+  tag: "EN" | "CN";
+  required?: boolean;
+}) {
+  return (
+    <div className="mb-1 flex items-center gap-2">
+      <span className="text-xs font-medium text-text-muted">
+        {text}
+        {required ? <span className="text-danger"> *</span> : null}
+      </span>
+      <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-accent">
+        {tag}
+      </span>
+    </div>
+  );
+}
+
+function FieldLabel({ children, required }: { children: ReactNode; required?: boolean }) {
+  return (
+    <label className="mb-1 block text-xs font-medium text-text-muted">
+      {children}
+      {required ? <span className="text-danger"> *</span> : null}
+    </label>
+  );
+}
+
 export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const { t, lang } = useLang();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState(initial?.code ?? "");
+  const [erpItemCode, setErpItemCode] = useState(initial?.erp_item_code ?? "");
   const [nameEn, setNameEn] = useState(initial?.name_en ?? "");
   const [nameCn, setNameCn] = useState(initial?.name_cn ?? "");
   const [brandEn, setBrandEn] = useState(initial?.brand_en ?? "");
@@ -49,6 +116,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createKind, setCreateKind] = useState<"category" | "uom" | null>(null);
 
   const hasExistingImage = Boolean(initial?.image_url) && !removeImage;
   const previewSrc = objectUrl ?? (hasExistingImage ? initial?.image_url : null);
@@ -63,10 +131,6 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
         if (cancelled) return;
         setCategories(catData.rows);
         setUoms(uomData.rows);
-        if (!initial?.category_id) {
-          const it = catData.rows.find((row) => row.code === "IT") ?? catData.rows[0];
-          if (it) setCategoryId(String(it.id));
-        }
         if (!initial?.uom_id) {
           const pcs = uomData.rows.find((row) => row.code === "PCS") ?? uomData.rows[0];
           if (pcs) setUomId(String(pcs.id));
@@ -91,10 +155,30 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  useEffect(() => {
+    if (initial) return;
+    if (!categoryId) return;
+    let cancelled = false;
+    apiGetAbs<{ code: string }>(`/api/sparepart/materials/next-code?category_id=${categoryId}`)
+      .then((data) => {
+        if (!cancelled) setCode(data.code);
+      })
+      .catch(() => {
+        if (!cancelled) setCode("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId, initial]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nameEn.trim() && !nameCn.trim()) {
       setError(t.sparepart.nameRequired);
+      return;
+    }
+    if (initial && !isActive && Number(initial.stock_current) !== 0) {
+      setError(t.sparepart.cannotInactiveWithStock);
       return;
     }
     const parsedCategoryId = Number(categoryId);
@@ -118,6 +202,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
       await onSubmit(
         {
           code: code.trim(),
+          erp_item_code: erpItemCode.trim(),
           name_en: nameEn.trim(),
           name_cn: nameCn.trim(),
           brand_en: brandEn.trim(),
@@ -147,7 +232,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
 
   const field =
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
-  const label = "mb-1 block text-xs font-medium text-text-muted";
+  const bilingualArea = `${field} min-h-0 resize-y`;
   const card =
     "flex size-24 shrink-0 flex-col items-center justify-center overflow-hidden rounded-md border bg-bg";
 
@@ -155,6 +240,12 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
     <>
       <Modal
         title={initial ? t.common.edit : t.common.add}
+        subtitle={
+          initial ? undefined : (
+            <p className="text-xs text-text-muted">{t.sparepart.formCreateMaterial}</p>
+          )
+        }
+        size="lg"
         onClose={onClose}
         closeDisabled={busy}
         footer={
@@ -178,167 +269,239 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           </>
         }
       >
-        <form id="sparepart-item-form" onSubmit={handleSubmit} className="space-y-3">
+        <form id="sparepart-item-form" onSubmit={handleSubmit} className="space-y-4">
           {error ? (
             <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
               {error}
             </p>
           ) : null}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className={label}>{t.sparepart.code} *</label>
-              <input
-                className={field}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                required
-              />
+
+          <FormSection title={t.sparepart.formBasicInfo} icon={<FormDocumentIcon />}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <FieldLabel required>{t.sparepart.category}</FieldLabel>
+                <SparepartDropdown
+                  className="w-full"
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  options={categories.map((row) => ({
+                    value: String(row.id),
+                    label: localizedName(row, lang),
+                  }))}
+                  placeholder={t.sparepart.category}
+                  disabled={busy}
+                  onAdd={() => setCreateKind("category")}
+                  addLabel={`+ ${t.sparepart.addCategory}`}
+                />
+              </div>
+              <div>
+                <FieldLabel>{t.sparepart.code}</FieldLabel>
+                <input
+                  className={`${field} pointer-events-none cursor-default bg-bg/60 text-text-muted`}
+                  value={code}
+                  readOnly
+                  tabIndex={-1}
+                  aria-readonly="true"
+                  placeholder={t.sparepart.codeAutoHint}
+                  onFocus={(e) => e.currentTarget.blur()}
+                />
+              </div>
+              <div>
+                <FieldLabel>{t.sparepart.erpItemCode}</FieldLabel>
+                <input
+                  className={field}
+                  value={erpItemCode}
+                  onChange={(e) => setErpItemCode(e.target.value)}
+                />
+              </div>
+              <div>
+                <FieldLabel>{t.sparepart.model}</FieldLabel>
+                <input
+                  className={field}
+                  value={model}
+                  onChange={(e) => setModel(toUpperInput(e.target.value))}
+                  placeholder={t.sparepart.model}
+                />
+              </div>
             </div>
-            <div className="hidden sm:block" aria-hidden />
-            <div>
-              <label className={label}>{t.sparepart.nameEn}</label>
-              <input className={field} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+          </FormSection>
+
+          <FormSection title={t.sparepart.name} icon={<FormTranslateIcon />}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <LangLabel text={t.sparepart.labelEnglish} tag="EN" required />
+                <textarea
+                  className={bilingualArea}
+                  rows={2}
+                  value={nameEn}
+                  onChange={(e) => setNameEn(toUpperInput(e.target.value))}
+                  placeholder={t.sparepart.nameEn}
+                />
+              </div>
+              <div>
+                <LangLabel text={t.sparepart.labelChinese} tag="CN" required />
+                <textarea
+                  className={bilingualArea}
+                  rows={2}
+                  value={nameCn}
+                  onChange={(e) => setNameCn(e.target.value)}
+                  placeholder={t.sparepart.nameCn}
+                />
+              </div>
             </div>
-            <div>
-              <label className={label}>{t.sparepart.nameCn}</label>
-              <input className={field} value={nameCn} onChange={(e) => setNameCn(e.target.value)} />
+          </FormSection>
+
+          <FormSection title={t.sparepart.brand} icon={<FormTagIcon />}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <LangLabel text={t.sparepart.labelEnglish} tag="EN" />
+                <textarea
+                  className={bilingualArea}
+                  rows={2}
+                  value={brandEn}
+                  onChange={(e) => setBrandEn(toUpperInput(e.target.value))}
+                  placeholder={t.sparepart.brandEn}
+                />
+              </div>
+              <div>
+                <LangLabel text={t.sparepart.labelChinese} tag="CN" />
+                <textarea
+                  className={bilingualArea}
+                  rows={2}
+                  value={brandCn}
+                  onChange={(e) => setBrandCn(e.target.value)}
+                  placeholder={t.sparepart.brandCn}
+                />
+              </div>
             </div>
-            <div>
-              <label className={label}>{t.sparepart.brandEn}</label>
-              <input
-                className={field}
-                value={brandEn}
-                onChange={(e) => setBrandEn(e.target.value)}
-              />
+          </FormSection>
+
+          <FormSection title={t.sparepart.formInventory} icon={<FormBoxIcon />}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <FieldLabel required>{t.sparepart.uom}</FieldLabel>
+                <SparepartDropdown
+                  className="w-full"
+                  value={uomId}
+                  onChange={setUomId}
+                  options={uoms.map((row) => ({
+                    value: String(row.id),
+                    label: `${row.code} — ${localizedName(row, lang)}`,
+                  }))}
+                  placeholder={t.sparepart.uom}
+                  disabled={busy}
+                  onAdd={() => setCreateKind("uom")}
+                  addLabel={`+ ${t.sparepart.addUom}`}
+                />
+              </div>
+              <div>
+                <FieldLabel>{t.sparepart.minStock}</FieldLabel>
+                <input
+                  className={field}
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={minStock}
+                  onChange={(e) => setMinStock(e.target.value)}
+                />
+              </div>
+              <div>
+                <FieldLabel required>{t.sparepart.stockStatus}</FieldLabel>
+                <SparepartDropdown
+                  className="w-full"
+                  value={isActive ? "1" : "0"}
+                  onChange={(value) => {
+                    if (value === "0" && initial && Number(initial.stock_current) !== 0) {
+                      setError(t.sparepart.cannotInactiveWithStock);
+                      return;
+                    }
+                    setIsActive(value !== "0");
+                  }}
+                  options={[
+                    { value: "1", label: t.sparepart.active },
+                    ...(initial && Number(initial.stock_current) !== 0
+                      ? []
+                      : [{ value: "0", label: t.sparepart.nonActive }]),
+                  ]}
+                  placeholder={t.sparepart.stockStatus}
+                  disabled={busy}
+                />
+              </div>
             </div>
-            <div>
-              <label className={label}>{t.sparepart.brandCn}</label>
-              <input
-                className={field}
-                value={brandCn}
-                onChange={(e) => setBrandCn(e.target.value)}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={label}>{t.sparepart.model}</label>
-              <input className={field} value={model} onChange={(e) => setModel(e.target.value)} />
-            </div>
-            <div>
-              <label className={label}>{t.sparepart.category} *</label>
-              <SparepartDropdown
-                className="w-full"
-                value={categoryId}
-                onChange={setCategoryId}
-                options={categories.map((row) => ({
-                  value: String(row.id),
-                  label: localizedName(row, lang),
-                }))}
-                placeholder={t.sparepart.category}
-                disabled={busy}
-              />
-            </div>
-            <div>
-              <label className={label}>{t.sparepart.uom} *</label>
-              <SparepartDropdown
-                className="w-full"
-                value={uomId}
-                onChange={setUomId}
-                options={uoms.map((row) => ({
-                  value: String(row.id),
-                  label: `${row.code} — ${localizedName(row, lang)}`,
-                }))}
-                placeholder={t.sparepart.uom}
-                disabled={busy}
-              />
-            </div>
-            <div>
-              <label className={label}>{t.sparepart.minStock}</label>
-              <input
-                className={field}
-                type="number"
-                min={0}
-                step={1}
-                value={minStock}
-                onChange={(e) => setMinStock(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className={label}>{t.sparepart.stockStatus} *</label>
-              <SparepartDropdown
-                className="w-full"
-                value={isActive ? "1" : "0"}
-                onChange={(value) => setIsActive(value !== "0")}
-                options={[
-                  { value: "1", label: t.sparepart.active },
-                  { value: "0", label: t.sparepart.nonActive },
-                ]}
-                placeholder={t.sparepart.stockStatus}
-                disabled={busy}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={label}>{t.sparepart.notes}</label>
-              <textarea
-                className={`${field} min-h-[72px]`}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <span className={label}>{t.sparepart.image}</span>
-              <div className="mt-1 flex flex-wrap items-start gap-2">
+          </FormSection>
+
+          <FormSection title={t.sparepart.formAdditional} icon={<FormNotesIcon />}>
+            <div className="space-y-3">
+              <div>
+                <FieldLabel>{t.sparepart.notes}</FieldLabel>
+                <textarea
+                  className={`${field} min-h-[72px]`}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <FieldLabel>{t.sparepart.image}</FieldLabel>
+                <div className="relative w-fit">
+                  {previewSrc ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setLightboxOpen(true)}
+                      className={`${card} overflow-hidden border-border-subtle p-0 hover:ring-2 hover:ring-accent/40 disabled:opacity-60`}
+                      title={t.sparepart.image}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- local object URL or API image */}
+                      <img
+                        src={previewSrc}
+                        alt={t.common.materialPreview}
+                        className="size-full object-contain"
+                      />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`${card} cursor-pointer border-dashed border-border text-text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-60`}
+                    >
+                      <span className="text-2xl leading-none">+</span>
+                      <span className="mt-1 text-[11px] font-medium">{t.sparepart.imageUpload}</span>
+                    </button>
+                  )}
+                  <input
+                    id={fileInputId}
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    tabIndex={-1}
+                    className="pointer-events-none absolute size-px overflow-hidden opacity-0"
+                    disabled={busy || Boolean(previewSrc)}
+                    onChange={(e) => {
+                      const next = e.target.files?.[0] ?? null;
+                      setFile(next);
+                      if (next) setRemoveImage(false);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-text-dim">{t.sparepart.imageHint}</p>
                 {previewSrc ? (
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => setLightboxOpen(true)}
-                    className={`${card} border-border-subtle p-0 hover:ring-2 hover:ring-accent/40 disabled:opacity-60`}
-                    title={t.sparepart.image}
+                    onClick={clearImageSelection}
+                    className="rounded border border-border px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-60"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- local object URL or API image */}
-                    <img src={previewSrc} alt="" className="size-full object-contain" />
+                    {t.sparepart.imageRemove}
                   </button>
-                ) : (
-                  <label
-                    htmlFor={fileInputId}
-                    className={`${card} cursor-pointer border-dashed border-border text-text-muted hover:border-accent hover:text-accent ${
-                      busy ? "pointer-events-none opacity-60" : ""
-                    }`}
-                  >
-                    <span className="text-2xl leading-none">+</span>
-                    <span className="mt-1 text-[11px] font-medium">{t.sparepart.imageUpload}</span>
-                  </label>
-                )}
-                <input
-                  id={fileInputId}
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                  className="sr-only"
-                  disabled={busy || Boolean(previewSrc)}
-                  onChange={(e) => {
-                    const next = e.target.files?.[0] ?? null;
-                    setFile(next);
-                    if (next) setRemoveImage(false);
-                  }}
-                />
+                ) : null}
+                {removeImage && initial?.image_url && !file ? (
+                  <p className="text-xs text-text-muted">{t.sparepart.imageWillRemove}</p>
+                ) : null}
               </div>
-              <p className="mt-1 text-[11px] text-text-dim">{t.sparepart.imageHint}</p>
-              {previewSrc ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={clearImageSelection}
-                  className="mt-2 rounded border border-border px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-60"
-                >
-                  {t.sparepart.imageRemove}
-                </button>
-              ) : null}
-              {removeImage && initial?.image_url && !file ? (
-                <p className="mt-1 text-xs text-text-muted">{t.sparepart.imageWillRemove}</p>
-              ) : null}
             </div>
-          </div>
+          </FormSection>
         </form>
       </Modal>
 
@@ -347,6 +510,54 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
           src={previewSrc}
           alt={`${code} ${nameEn || nameCn}`.trim()}
           onClose={() => setLightboxOpen(false)}
+        />
+      ) : null}
+
+      {createKind ? (
+        <SparepartMasterCreateDialog
+          title={createKind === "category" ? t.sparepart.addCategory : t.sparepart.addUom}
+          endpoint={
+            createKind === "category" ? "/api/sparepart/categories" : "/api/sparepart/uoms"
+          }
+          onClose={() => setCreateKind(null)}
+          onCreated={(row) => {
+            if (createKind === "category") {
+              setCategories((current) =>
+                current.some((item) => item.id === row.id)
+                  ? current
+                  : [
+                      ...current,
+                      {
+                        id: row.id,
+                        code: row.code,
+                        name_en: row.name_en,
+                        name_cn: row.name_cn,
+                        sort_order: current.length + 1,
+                        is_active: 1,
+                      },
+                    ]
+              );
+              setCategoryId(String(row.id));
+            } else {
+              setUoms((current) =>
+                current.some((item) => item.id === row.id)
+                  ? current
+                  : [
+                      ...current,
+                      {
+                        id: row.id,
+                        code: row.code,
+                        name_en: row.name_en,
+                        name_cn: row.name_cn,
+                        sort_order: current.length + 1,
+                        is_active: 1,
+                      },
+                    ]
+              );
+              setUomId(String(row.id));
+            }
+            setCreateKind(null);
+          }}
         />
       ) : null}
     </>

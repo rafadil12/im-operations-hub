@@ -101,7 +101,7 @@ export function Header({ title }: HeaderProps) {
   }, [menuOpen]);
 
   const currentDateTime = useMemo(() => {
-    const parts = new Intl.DateTimeFormat("en-US", {
+    const parts = new Intl.DateTimeFormat(lang === "cn" ? "zh-CN" : "en-US", {
       weekday: "long",
       month: "short",
       day: "2-digit",
@@ -114,7 +114,7 @@ export function Header({ title }: HeaderProps) {
       parts.find((part) => part.type === type)?.value ?? "";
 
     return `${valueOf("weekday")}, ${valueOf("month")} ${valueOf("day")}, ${valueOf("year")} · ${valueOf("hour")}:${valueOf("minute")}`;
-  }, [now]);
+  }, [lang, now]);
 
   const triggerClass =
     "inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:bg-surface-hover hover:text-text";

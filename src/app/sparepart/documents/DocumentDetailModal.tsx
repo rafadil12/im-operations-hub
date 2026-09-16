@@ -6,12 +6,13 @@ import {
   DOCUMENTS_TH as th,
   formatLocationLabel,
   formatPostingDateTime,
+  appendLevelLabel,
   isReversalMovement,
   movementLabel,
 } from "@/lib/sparepart/documentDisplay";
 import type { SparepartMatDoc } from "@/lib/types";
 import { Modal } from "@/components/ui/Modal";
-import type { Dict } from "@/lib/i18n";
+import { localizedField, type Dict } from "@/lib/i18n";
 
 type Props = {
   detail: SparepartMatDoc;
@@ -141,7 +142,7 @@ export function DocumentDetailModal({
 
         <div>
           <h4 className="mb-2 text-sm font-semibold text-text">{t.sparepart.documentItems}</h4>
-          <div className="overflow-hidden rounded-md border border-border-subtle">
+          <div className="overflow-x-auto rounded-md border border-border-subtle">
             <table className="w-full border-collapse text-xs">
               <thead className="bg-bg/50">
                 <tr>
@@ -162,27 +163,46 @@ export function DocumentDetailModal({
               </thead>
               <tbody>
                 {(detail.lines ?? []).map((line) => {
-                  const fromLabel = formatLocationLabel(
+                  const fromLabel = appendLevelLabel(
+                    formatLocationLabel(
                     line.from_location_code,
                     line.from_location_name_en,
                     line.from_location_name_cn,
                     lang,
                     line.from_storage_location || line.storage_location
+                    ),
+                    line.from_level_code,
+                    line.from_level_name_en,
+                    line.from_level_name_cn,
+                    lang
                   );
-                  const toLabel = formatLocationLabel(
+                  const toLabel = appendLevelLabel(
+                    formatLocationLabel(
                     line.to_location_code,
                     line.to_location_name_en,
                     line.to_location_name_cn,
                     lang,
                     line.to_storage_location
+                    ),
+                    line.to_level_code,
+                    line.to_level_name_en,
+                    line.to_level_name_cn,
+                    lang
                   );
                   const isTransfer =
                     detail.movement_type === "311" || detail.movement_type === "312";
+                  const localizedItemName = localizedField(
+                    line.item_name_en,
+                    line.item_name_cn,
+                    lang
+                  );
+                  const itemName =
+                    localizedItemName !== "-" ? localizedItemName : line.item_name || "-";
                   return (
                     <tr key={line.id} className="border-t border-border-subtle/60">
                       <td className={td}>{line.line_no}</td>
                       <td className={`${td} font-medium text-text`}>{line.item_code}</td>
-                      <td className={td}>{line.item_name}</td>
+                      <td className={td}>{itemName}</td>
                       <td className={`${td} tabular-nums text-text`}>{line.qty}</td>
                       {isTransfer ? (
                         <>

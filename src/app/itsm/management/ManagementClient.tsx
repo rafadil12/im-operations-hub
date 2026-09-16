@@ -11,6 +11,7 @@ import {
   type ItsmImportResult,
 } from "@/components/itsm/ImportItsmRequestModal";
 import { ManagementTable, type PageSize } from "@/components/itsm/ManagementTable";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
@@ -154,9 +155,7 @@ export default function ManagementPage() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
+        <SkeletonTable />
       ) : (
         <ManagementTable
           rows={pagedRows}

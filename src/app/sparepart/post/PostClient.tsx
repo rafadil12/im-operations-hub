@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
-import type { SparepartItem, SparepartStorageLocation } from "@/lib/types";
+import type { SparepartItem, SparepartStockLevel } from "@/lib/types";
 import { useToast } from "@/components/ui/ToastProvider";
 import { LocationCombobox } from "@/components/sparepart/LocationCombobox";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
@@ -30,35 +30,75 @@ export default function PostGoodsMovementPage() {
   const [lines, setLines] = useState<LineDraft[]>([newLine()]);
   const [busy, setBusy] = useState(false);
   const [lastDoc, setLastDoc] = useState<{ id: number; doc_number: string } | null>(null);
+  const [levels, setLevels] = useState<SparepartStockLevel[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiGetAbs<{ rows: SparepartStockLevel[] }>("/api/sparepart/levels")
+      .then((data) => {
+        if (!cancelled) setLevels(data.rows);
+      })
+      .catch(() => {
+        if (!cancelled) setLevels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const field =
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
   const label = "mb-1 block text-xs font-medium text-text-muted";
 
-  const locationLabel = (loc: SparepartStorageLocation) =>
-    `${loc.code} — ${localizedName(loc, lang)}`;
+  // Relative widths for one posting line (flex grow). Decimals OK, e.g. 0.85 — no need to sum to 12.
+  const lineW = {
+    material: 2.4,
+    location: 2.1,
+    level: 2,
+    toLocation: 2.1,
+    toLevel: 2,
+    qty: 0.8,
+    note101: 3,
+    note201: 2.5,
+    note311: 1,
+    remove: 0.6,
+  } as const;
+  const lineCell = (w: number) =>
+    ({ className: "min-w-0", style: { flex: `${w} 1 0%` } }) as const;
 
-  const locationOptionsForItem = (item?: SparepartItem | null) => {
-    if (!item) return [] as SparepartStorageLocation[];
+  const levelLabel = (level: Pick<SparepartStockLevel, "code" | "name_en" | "name_cn">) =>
+    `${level.code} — ${localizedName(level, lang)}`;
 
-    const byId = new Map<number, SparepartStorageLocation>();
-    for (const balance of item.balances ?? []) {
-      if (Number(balance.qty) <= 0) continue;
-      byId.set(balance.storage_location_id, {
-        id: balance.storage_location_id,
-        code: balance.location_code ?? "",
-        name_en: balance.location_name_en ?? balance.location_name ?? "",
-        name_cn:
-          balance.location_name_cn ?? balance.location_name_en ?? balance.location_name ?? "",
-        is_active: 1,
-        created_at: null,
-        updated_at: null,
-      });
-    }
+  const levelOptions = levels.map((level) => ({
+    value: String(level.id),
+    label: levelLabel(level),
+  }));
 
-    return [...byId.values()].sort((a, b) =>
-      localizedName(a, lang).localeCompare(localizedName(b, lang))
-    );
+  const stockPointOptionsForItem = (item?: SparepartItem | null) => {
+    if (!item) return [] as { value: string; label: string }[];
+    return (item.balances ?? [])
+      .filter((balance) => Number(balance.qty) > 0)
+      .map((balance) => ({
+        value: `${balance.storage_location_id}:${balance.level_id}`,
+        label: `${balance.location_code ?? ""} — ${localizedName(
+          {
+            name_en: balance.location_name_en ?? balance.location_name ?? null,
+            name_cn: balance.location_name_cn ?? null,
+          },
+          lang
+        )} / ${balance.level_code ?? ""} — ${localizedName(
+          {
+            name_en: balance.level_name_en ?? null,
+            name_cn: balance.level_name_cn ?? null,
+          },
+          lang
+        )} (${balance.qty})`,
+      }));
+  };
+
+  const applyStockPoint = (value: string) => {
+    const [locId, levelId] = value.split(":");
+    return { storage_location_id: locId ?? "", storage_level_id: levelId ?? "" };
   };
 
   const handlePost = async () => {
@@ -70,8 +110,10 @@ export default function PostGoodsMovementPage() {
         qty: Number(l.qty),
         note: l.note,
         storage_location_id: Number(l.storage_location_id),
+        storage_level_id: Number(l.storage_level_id),
         to_storage_location_id:
           movementType === "311" ? Number(l.to_storage_location_id) : undefined,
+        to_storage_level_id: movementType === "311" ? Number(l.to_storage_level_id) : undefined,
       }));
 
       const result = await apiSendAbs<{ id: number; doc_number: string }>(
@@ -183,13 +225,14 @@ export default function PostGoodsMovementPage() {
               {lines.map((line, index) => (
                 <div
                   key={line.key}
-                  className="grid grid-cols-1 gap-2 rounded-md border border-border-subtle bg-bg/40 p-3 md:grid-cols-12"
+                  className="flex flex-col gap-2 rounded-md border border-border-subtle bg-bg/40 p-3 md:flex-row md:items-end"
                 >
-                  <div className="md:col-span-4">
+                  <div {...lineCell(lineW.material)}>
                     <label className={label}>
                       {t.sparepart.item} #{index + 1}
                     </label>
                     <MaterialCombobox
+                      compact
                       value={line.item_id}
                       onChange={(itemId, item) => {
                         if (!itemId) {
@@ -201,7 +244,9 @@ export default function PostGoodsMovementPage() {
                                     item_id: "",
                                     item: null,
                                     storage_location_id: "",
+                                    storage_level_id: "",
                                     to_storage_location_id: "",
+                                    to_storage_level_id: "",
                                   }
                                 : l
                             )
@@ -223,9 +268,10 @@ export default function PostGoodsMovementPage() {
                                     ...l,
                                     item_id: itemId,
                                     item: fullItem,
-                                    // Clear location so user must choose explicitly
                                     storage_location_id: "",
+                                    storage_level_id: "",
                                     to_storage_location_id: "",
+                                    to_storage_level_id: "",
                                   }
                                 : l
                             )
@@ -235,7 +281,7 @@ export default function PostGoodsMovementPage() {
                       className={field}
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div {...lineCell(lineW.location)}>
                     <label className={label}>
                       {movementType === "311" ? t.sparepart.fromLocation : t.sparepart.location} *
                     </label>
@@ -253,24 +299,16 @@ export default function PostGoodsMovementPage() {
                       />
                     ) : (
                       <SparepartDropdown
-                        value={line.storage_location_id}
-                        options={locationOptionsForItem(line.item).map((loc) => ({
-                          value: String(loc.id),
-                          label: locationLabel(loc),
-                        }))}
-                        onChange={(locId) =>
+                        value={
+                          line.storage_location_id && line.storage_level_id
+                            ? `${line.storage_location_id}:${line.storage_level_id}`
+                            : ""
+                        }
+                        options={stockPointOptionsForItem(line.item)}
+                        onChange={(value) =>
                           setLines((prev) =>
                             prev.map((l) =>
-                              l.key === line.key
-                                ? {
-                                    ...l,
-                                    storage_location_id: locId,
-                                    to_storage_location_id:
-                                      l.to_storage_location_id === locId
-                                        ? ""
-                                        : l.to_storage_location_id,
-                                  }
-                                : l
+                              l.key === line.key ? { ...l, ...applyStockPoint(value) } : l
                             )
                           )
                         }
@@ -279,24 +317,57 @@ export default function PostGoodsMovementPage() {
                       />
                     )}
                   </div>
-                  {movementType === "311" ? (
-                    <div className="md:col-span-2">
-                      <label className={label}>{t.sparepart.toLocation} *</label>
-                      <LocationCombobox
-                        value={line.to_storage_location_id}
-                        excludeId={line.storage_location_id}
-                        onChange={(locId) =>
+                  {movementType === "101" ? (
+                    <div {...lineCell(lineW.level)}>
+                      <label className={label}>{t.sparepart.level} *</label>
+                      <SparepartDropdown
+                        value={line.storage_level_id}
+                        options={levelOptions}
+                        onChange={(levelId) =>
                           setLines((prev) =>
                             prev.map((l) =>
-                              l.key === line.key ? { ...l, to_storage_location_id: locId } : l
+                              l.key === line.key ? { ...l, storage_level_id: levelId } : l
                             )
                           )
                         }
-                        className={field}
+                        placeholder={t.sparepart.level}
                       />
                     </div>
                   ) : null}
-                  <div className="md:col-span-1">
+                  {movementType === "311" ? (
+                    <>
+                      <div {...lineCell(lineW.toLocation)}>
+                        <label className={label}>{t.sparepart.toLocation} *</label>
+                        <LocationCombobox
+                          value={line.to_storage_location_id}
+                          onChange={(locId) =>
+                            setLines((prev) =>
+                              prev.map((l) =>
+                                l.key === line.key ? { ...l, to_storage_location_id: locId } : l
+                              )
+                            )
+                          }
+                          className={field}
+                        />
+                      </div>
+                      <div {...lineCell(lineW.toLevel)}>
+                        <label className={label}>{t.sparepart.toLevel} *</label>
+                        <SparepartDropdown
+                          value={line.to_storage_level_id}
+                          options={levelOptions}
+                          onChange={(levelId) =>
+                            setLines((prev) =>
+                              prev.map((l) =>
+                                l.key === line.key ? { ...l, to_storage_level_id: levelId } : l
+                              )
+                            )
+                          }
+                          placeholder={t.sparepart.toLevel}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                  <div {...lineCell(lineW.qty)}>
                     <label className={label}>{t.sparepart.qty}</label>
                     <input
                       type="number"
@@ -310,7 +381,15 @@ export default function PostGoodsMovementPage() {
                       }
                     />
                   </div>
-                  <div className={movementType === "311" ? "md:col-span-2" : "md:col-span-4"}>
+                  <div
+                    {...lineCell(
+                      movementType === "311"
+                        ? lineW.note311
+                        : movementType === "101"
+                          ? lineW.note101
+                          : lineW.note201
+                    )}
+                  >
                     <label className={label}>{t.sparepart.note}</label>
                     <input
                       className={field}
@@ -322,7 +401,7 @@ export default function PostGoodsMovementPage() {
                       }
                     />
                   </div>
-                  <div className="flex items-end md:col-span-1">
+                  <div {...lineCell(lineW.remove)}>
                     <button
                       type="button"
                       disabled={lines.length <= 1}

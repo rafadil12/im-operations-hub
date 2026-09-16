@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
+import { SkeletonText } from "@/components/ui/Skeleton";
 import type { SparepartStorageLocation } from "@/lib/types";
 import {
   sparepartDropdownMenuClass,
@@ -88,8 +89,7 @@ export function LocationCombobox({
       });
 
     return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, lang]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -259,7 +259,9 @@ export function LocationCombobox({
           className={`${sparepartDropdownMenuClass} z-20 max-h-56 overflow-auto`}
         >
           {searching && suggestions.length === 0 ? (
-            <li className="px-3 py-2 text-xs text-text-dim">{t.common.loading}</li>
+            <li className="px-3 py-2">
+              <SkeletonText lines={2} />
+            </li>
           ) : null}
           {suggestions.map((loc, index) => (
             <li key={loc.id} role="option" aria-selected={index === highlight}>

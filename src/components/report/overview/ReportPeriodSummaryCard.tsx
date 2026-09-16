@@ -43,6 +43,7 @@ type ByAreaRing = {
   label: string;
   value: number;
   color: string;
+  code?: string;
 };
 
 type Props = {
@@ -118,7 +119,7 @@ export function ReportPeriodSummaryCard({
           <div className="flex flex-wrap items-center justify-around gap-3">
             {byArea.map((area) => (
               <ProgressRingItem
-                key={area.label}
+                key={area.code ?? area.label}
                 ring={{
                   label: area.label,
                   value: area.value,

@@ -67,10 +67,25 @@ type VerticalBarChartPlaceholderProps = {
 };
 
 export function VerticalBarChartPlaceholder({ items }: VerticalBarChartPlaceholderProps) {
+  const { t } = useLang();
+  /** Match BarChartPlaceholder / Daily Operation list panel min height. */
+  const minHeight = barChartMinHeight(3);
+
+  if (items.length === 0) {
+    return (
+      <div
+        className="flex h-full items-center justify-center text-sm text-text-muted"
+        style={{ minHeight }}
+      >
+        {t.common.noData}
+      </div>
+    );
+  }
+
   const max = Math.max(...items.map((item) => item.max), 1);
 
   return (
-    <div className="flex h-full min-h-28 items-end gap-1.5 pt-4">
+    <div className="flex h-full items-end gap-1.5 pt-4" style={{ minHeight }}>
       {items.map((item, index) => {
         const height = Math.max(8, Math.round((item.value / max) * 100));
         return (
@@ -134,7 +149,15 @@ function easeOutCubic(t: number): number {
 }
 
 function resolveSegments(legend: { color: string }[], segments?: number[]): number[] {
+  // Explicit empty array = no data (do not fall back to mock split).
+  if (segments && segments.length === 0) {
+    return legend.map(() => 0);
+  }
   if (segments && segments.length === legend.length) return segments;
+  if (segments) {
+    return legend.map((_, i) => segments[i] ?? 0);
+  }
+  // Legacy shells that omit segments keep a decorative mock split.
   return legend.map((_, i) => (i === 0 ? 78.4 : i === 1 ? 16.8 : 4.8));
 }
 
@@ -185,10 +208,10 @@ export function DonutChartPlaceholder({
     const start = performance.now();
 
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / DONUT_ANIM_MS);
-      const eased = easeOutCubic(t);
+      const progress = Math.min(1, (now - start) / DONUT_ANIM_MS);
+      const eased = easeOutCubic(progress);
       setAnimatedSegments(targets.map((v) => v * eased));
-      if (t < 1) {
+      if (progress < 1) {
         frame = requestAnimationFrame(tick);
       }
     };

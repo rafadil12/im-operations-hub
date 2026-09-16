@@ -1,4 +1,5 @@
 import type { ModuleCardData } from "@/data/overview";
+import { getDict } from "@/lib/i18n";
 import type { Lang, SparepartAnalysisResult } from "@/lib/types";
 
 const BAR_COLORS = ["#a855f7", "#c084fc", "#d8b4fe", "#e9d5ff"];
@@ -8,34 +9,35 @@ export function mapSparepartToOverview(
   result: SparepartAnalysisResult,
   lang: Lang
 ): ModuleCardData {
+  const t = getDict(lang);
   const maxBar = Math.max(1, ...result.mostUsed.map((item) => item.qty));
 
   return {
     ...base,
     stats: [
       {
-        label: "Total Items",
+        label: t.dashboard.totalItems,
         value: String(result.totalItems),
         tone: "accent",
       },
       {
-        label: "Zero Stock",
+        label: t.dashboard.zeroStock,
         value: String(result.zeroStock),
         tone: "warning",
       },
       {
-        label: "Usage This Month",
+        label: t.dashboard.usageThisMonth,
         value: String(result.usageThisMonth),
         tone: "accent",
       },
       {
-        label: "Qty Usage This Year",
+        label: t.dashboard.usageThisYear,
         value: String(result.usageThisYear),
         tone: "accent",
       },
     ],
     bars: {
-      title: "Most Used Items (This Month)",
+      title: t.dashboard.mostUsedItems,
       items: result.mostUsed.map((item, index) => ({
         label: item.code,
         sublabel:
@@ -48,11 +50,11 @@ export function mapSparepartToOverview(
       })),
     },
     chart: {
-      title: "Used Trend",
+      title: t.dashboard.usedTrend,
       type: "trend",
       legend: [
-        { label: "This Year", color: "#25ebb3" },
-        { label: "Last Year", color: "#C9D1DB" },
+        { label: t.dashboard.thisYear, color: "#25ebb3" },
+        { label: t.dashboard.lastYear, color: "#C9D1DB" },
       ],
       series: result.usedTrend.map((point) => ({
         date: point.date,

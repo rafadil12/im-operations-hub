@@ -13,6 +13,7 @@ import type { AuthAccountPublic } from "@/lib/auth/types";
 
 type AuthContextValue = {
   account: AuthAccountPublic | null;
+  guestPermissions: string[];
   loading: boolean;
   refresh: () => Promise<void>;
   login: (input: { login: string; password: string; remember?: boolean }) => Promise<void>;
@@ -21,23 +22,34 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function fetchMe(): Promise<AuthAccountPublic | null> {
+type MeResponse = {
+  account?: AuthAccountPublic | null;
+  guestPermissions?: string[];
+};
+
+async function fetchMe(): Promise<{ account: AuthAccountPublic | null; guestPermissions: string[] }> {
   const res = await fetch("/api/auth/me", { cache: "no-store" });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { account?: AuthAccountPublic | null };
-  return data.account ?? null;
+  if (!res.ok) return { account: null, guestPermissions: [] };
+  const data = (await res.json()) as MeResponse;
+  return {
+    account: data.account ?? null,
+    guestPermissions: Array.isArray(data.guestPermissions) ? data.guestPermissions : [],
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<AuthAccountPublic | null>(null);
+  const [guestPermissions, setGuestPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
       const next = await fetchMe();
-      setAccount(next);
+      setAccount(next.account);
+      setGuestPermissions(next.guestPermissions);
     } catch {
       setAccount(null);
+      setGuestPermissions([]);
     } finally {
       setLoading(false);
     }
@@ -73,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || "Login failed.", { cause: data.code });
       }
       setAccount(data.account);
+      setGuestPermissions([]);
     },
     []
   );
@@ -82,12 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       setAccount(null);
+      await refresh();
     }
-  }, []);
+  }, [refresh]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ account, loading, refresh, login, logout }),
-    [account, loading, refresh, login, logout]
+    () => ({ account, guestPermissions, loading, refresh, login, logout }),
+    [account, guestPermissions, loading, refresh, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -98,6 +112,7 @@ export function useAuth(): AuthContextValue {
   if (!ctx) {
     return {
       account: null,
+      guestPermissions: [],
       loading: false,
       refresh: async () => {},
       login: async () => {

@@ -73,6 +73,7 @@ export function ChartCard({
       <section
         role="button"
         tabIndex={0}
+        aria-label={`${t.analysis.clickToExpand}: ${title}`}
         onClick={() => setOpen(true)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

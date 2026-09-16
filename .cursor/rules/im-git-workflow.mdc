@@ -1,0 +1,97 @@
+---
+description: Enforce the im-operations-hub Git workflow — work commit and push for review first; bump version, release commit, and PR only after the user says ok release.
+alwaysApply: true
+---
+
+# im-operations-hub Git Workflow (Rules)
+
+Commit message wording, staging, validation, and identity live in `AGENTS.md`
+(GIT & COMMIT RULES). This rule is the surrounding flow only.
+For the full procedure, run the `im-git-workflow` skill.
+
+## 1) Scope
+
+Applies when the user asks for implementation, bugfix, hotfix, release prep,
+changelog/version updates, or pull request work in this repository.
+
+Single repo — `origin` is GitHub: `rafadil12/im-operations-hub`.
+Module scopes: `report`, `safety`, `training`, `sparepart`, `itsm`,
+`organization`, `daily-operation`, `auth`, `employee`, `dashboard`,
+`settings`, `db`, `api`, `ui`, `deps`.
+
+## 2) Two gates (mandatory)
+
+**Work gate (default):** implement → validate → normal commit → push → **STOP
+for user review**. No version bump. No dated changelog. No `*(release):`
+commit. No PR.
+
+**Release gate:** only after the user has reviewed and says `ok release`,
+`release`, or `buatkan PR`. Then bump version, write dated changelog, one
+`*(release):` commit, push, and create the PR.
+
+Treat `next`, `lanjut`, `commit`, `push`, and follow-up fixes as the work
+gate. Do not skip ahead to release.
+
+## 3) Branch mapping (the "base" and the "PR target")
+
+- Normal work: base + PR target `dev`
+- Urgent production hotfix, or the user asks for prod-first: base + PR target `main`
+
+After a hotfix is merged to `main`, sync it back into `dev`.
+
+Branch naming (lowercase, hyphen-separated slug):
+- major: `release/<x.y.z>`
+- feature: `feat/<slug>`
+- urgent fix: `hotfix/<slug>`
+- non-urgent fix: `fix/<slug>`
+- chore: `chore/<slug>`
+- refactor: `refactor/<slug>`
+
+Never commit directly to `main` or `dev` unless explicitly told.
+
+## 4) Investigation before changes (for bug reports)
+
+If the user describes a symptom and does NOT explicitly ask to change code:
+1. Locate the likely root cause.
+2. Summarize with file/area references.
+3. Ask: fix on `dev`, or hotfix that targets `main`.
+
+## 5) Versioning and changelog
+
+Sources of truth: `VERSION`, `package.json` `"version"`, `CHANGELOG.md`
+(Keep a Changelog 1.1.0, English).
+
+**Work gate:** leave `VERSION` and `package.json` unchanged. Do not create
+`## [x.y.z] - YYYY-MM-DD`. Optional Unreleased bullets only if the user asked.
+
+**Release gate** — bump `a.b.c` from current `dev` (or `main` for hotfix):
+- user specified `x.y.z` → use it
+- major (`a`): breaking/large — bump major, reset minor and patch to `0`
+- feature (`b`): new feature — bump minor, reset patch to `0`
+- hotfix / fix / chore / refactor (`c`): bump patch
+
+Then move Unreleased notes into `## [x.y.z] - YYYY-MM-DD`. Sections only when
+relevant: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+Bullets from the actual diff, not commit logs.
+
+## 6) Push and PR safety
+
+- After a work commit, push unless the user says not to. Never force push.
+- Do not open a PR in the work gate. Report branch name, suggested later PR
+  title, target branch, and compare URL:
+  `https://github.com/rafadil12/im-operations-hub/compare/<target>...<branch>?expand=1`
+- Create a PR only in the release gate. Merge only when the user asks to merge.
+- Prefer `gh` (`C:\Program Files\GitHub CLI\gh.exe`, user `rafadil12`).
+
+## 7) Commit convention
+
+Follow `AGENTS.md` for staging, validation, and identity.
+
+- Work commits: `<type>(<scope>): <short description>`
+- Release commit (release gate only), carrying version + changelog:
+  - feature (`b`): `feat(release): v<x.y.z> - <short summary>`
+  - hotfix/fix (`c`): `fix(release): v<x.y.z> - <short summary>`
+  - chore (`c`): `chore(release): v<x.y.z> - <short summary>`
+
+Keep every subject on one line and under 72 characters.
+Never add a `Co-authored-by` trailer or any AI identity.

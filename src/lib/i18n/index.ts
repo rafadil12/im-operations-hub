@@ -4,6 +4,7 @@ import cn from "./cn";
 
 export type { Dict };
 export { LangProvider, useLang } from "./LangProvider";
+export { fillTemplate } from "./fillTemplate";
 
 export const DEFAULT_LANG: Lang = "en";
 

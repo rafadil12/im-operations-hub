@@ -6,6 +6,7 @@ import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
 import { type AnalysisResult, namedStatusCount } from "@/lib/types";
 import { InsightsCharts } from "@/components/daily-operation/insights/InsightsCharts";
+import { SkeletonChart, SkeletonKpiGrid } from "@/components/ui/skeletons";
 
 const week = getOperationalWeek();
 const defaultRange = { start: week.start.slice(0, 10), end: week.end.slice(0, 10) };
@@ -195,8 +196,11 @@ export default function AnalysisPage() {
       ) : null}
 
       {loading || !result ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
+        <div className="space-y-4">
+          <SkeletonKpiGrid count={5} />
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <SkeletonChart variant="bar" className="h-40" />
+          </div>
         </div>
       ) : (
         <>

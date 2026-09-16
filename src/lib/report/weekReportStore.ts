@@ -1,6 +1,5 @@
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { withTransaction } from "@/lib/db";
-import { mapReportLineRow } from "./apiHelpers";
 import type { ReportLine, ReportLineInput, ReportLineRow } from "./types";
 import { validateWeekLinePayload } from "./weekFormValidation";
 import {
@@ -8,7 +7,10 @@ import {
   ensureReportWeek,
   getSubmissionStatus,
   loadReportLines,
+  lockSubmissionRow,
+  stampSubmissionActors,
 } from "./lineStore";
+import { createModeConflictMessage } from "./weekReportIdentity";
 
 export type ReportWeekLinePayload = {
   id?: number;
@@ -84,12 +86,9 @@ async function insertRevision(
 
 function validateWeekLines(lines: ReportWeekLinePayload[]): string | null {
   if (!lines.length) return "At least one line is required.";
-  const seen = new Set<number>();
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     if (!line.subItemId) return "Sub-item is required on every line.";
-    if (seen.has(line.subItemId)) return "Duplicate sub-item in the same week report.";
-    seen.add(line.subItemId);
     const bilingualError = validateWeekLinePayload(line, i);
     if (bilingualError) return bilingualError;
   }
@@ -117,31 +116,60 @@ export async function saveReportWeekLines(
   weekNumber: number,
   areaId: number,
   lines: ReportWeekLinePayload[],
-  audit: SaveWeekReportAudit = {}
+  audit: SaveWeekReportAudit = {},
+  options: { create?: boolean } = {}
 ): Promise<ReportLine[]> {
   const validationError = validateWeekLines(lines);
   if (validationError) throw new Error(validationError);
 
   const weekId = await ensureReportWeek(year, weekNumber);
-  const submission = await getSubmissionStatus(weekId, areaId);
-  if (submission?.status === "submitted") {
-    throw new Error("This week report is submitted and cannot be edited.");
-  }
 
-  await ensureDraftSubmission(weekId, areaId);
-
-  const existing = await loadReportLines({ weekId, areaId });
-  const existingById = new Map(existing.map((l) => [l.id, l]));
-  const payloadIds = new Set(lines.filter((l) => l.id != null).map((l) => Number(l.id)));
-
-  for (const id of payloadIds) {
-    const row = existingById.get(id);
-    if (!row || row.weekId !== weekId || row.areaId !== areaId) {
-      throw new Error(`Line ${id} does not belong to this week report.`);
-    }
+  let workingLines = lines;
+  if (options.create) {
+    workingLines = lines.map((line) => ({
+      subItemId: line.subItemId,
+      workTargetEn: line.workTargetEn,
+      workTargetCn: line.workTargetCn,
+      weeklyCompletionRate: line.weeklyCompletionRate,
+      summaryEn: line.summaryEn,
+      summaryCn: line.summaryCn,
+      planEn: line.planEn,
+      planCn: line.planCn,
+    }));
   }
 
   await withTransaction(async (conn) => {
+    await ensureDraftSubmission(weekId, areaId, conn, {
+      createdBySystemUserId: audit.changedBySystemUserId,
+      createdByLabel: audit.changedByLabel,
+    });
+
+    const locked = await lockSubmissionRow(conn, weekId, areaId);
+    if (!locked) {
+      throw new Error("Failed to lock week report submission.");
+    }
+    if (locked.status === "submitted") {
+      throw new Error("This week report is submitted and cannot be edited.");
+    }
+
+    const existing = await loadReportLines({ weekId, areaId }, conn);
+    if (options.create) {
+      const conflict = createModeConflictMessage(existing.length);
+      if (conflict) throw new Error(conflict);
+    }
+
+    const existingById = new Map(existing.map((l) => [l.id, l]));
+    const payloadIds = new Set(
+      workingLines.filter((l) => l.id != null).map((l) => Number(l.id))
+    );
+
+    for (const id of payloadIds) {
+      const row = existingById.get(id);
+      if (!row || row.weekId !== weekId || row.areaId !== areaId) {
+        throw new Error(`Line ${id} does not belong to this week report.`);
+      }
+    }
+
     for (const old of existing) {
       if (payloadIds.has(old.id)) continue;
       const row = await fetchLineRow(conn, old.id);
@@ -152,7 +180,7 @@ export async function saveReportWeekLines(
     }
 
     let sortOrder = 0;
-    for (const line of lines) {
+    for (const line of workingLines) {
       const input: ReportLineInput = {
         weekId,
         areaId,
@@ -221,6 +249,8 @@ export async function saveReportWeekLines(
         );
       }
     }
+
+    await stampSubmissionActors(conn, weekId, areaId, audit);
   });
 
   return loadReportLines({ weekId, areaId });

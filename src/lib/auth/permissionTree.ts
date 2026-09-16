@@ -32,7 +32,10 @@ export type PermissionTreeLabel =
         | "sparepartPost"
         | "sparepartDocuments"
         | "sparepartMaterials"
-        | "sparepartLocations";
+        | "sparepartLocations"
+        | "organization"
+        | "shift"
+        | "attendance";
     }
   | { source: "settings"; key: "permissionsAccess" | "permissionsOther" };
 
@@ -44,7 +47,7 @@ export type PermissionTreeDef = {
   children?: PermissionTreeDef[];
 };
 
-/** Sidebar-aligned permission tree (module → submenu → codes). */
+/** Sidebar-aligned permission tree — top-level order matches `sidebarConfig.ts` navItems. */
 export const PERMISSION_TREE: PermissionTreeDef[] = [
   {
     id: "dashboard",
@@ -128,50 +131,6 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     ],
   },
   {
-    id: "training",
-    label: { source: "nav", key: "training" },
-    children: [
-      {
-        id: "training-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.trainingOverviewView],
-      },
-      {
-        id: "training-activities",
-        label: { source: "nav", key: "management" },
-        codes: [
-          PERMISSIONS.trainingSessionRead,
-          PERMISSIONS.trainingSessionCreate,
-          PERMISSIONS.trainingSessionUpdate,
-          PERMISSIONS.trainingSessionDelete,
-        ],
-      },
-    ],
-  },
-  {
-    id: "report",
-    label: { source: "nav", key: "report" },
-    children: [
-      {
-        id: "report-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.reportOverviewView],
-      },
-      {
-        id: "report-management",
-        label: { source: "nav", key: "management" },
-        codes: [
-          PERMISSIONS.reportLineRead,
-          PERMISSIONS.reportLineCreate,
-          PERMISSIONS.reportLineUpdate,
-          PERMISSIONS.reportLineDelete,
-          PERMISSIONS.reportSubmissionSubmit,
-          PERMISSIONS.reportSubmissionReopen,
-        ],
-      },
-    ],
-  },
-  {
     id: "sparepart",
     label: { source: "nav", key: "sparepart" },
     children: [
@@ -217,6 +176,81 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
             label: { source: "nav", key: "sparepartLocations" },
             codes: [PERMISSIONS.sparepartLocationsManage],
           },
+        ],
+      },
+    ],
+  },
+  {
+    id: "organization",
+    label: { source: "nav", key: "organization" },
+    children: [
+      {
+        id: "organization-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.organizationOverviewView],
+      },
+      {
+        id: "organization-employees",
+        label: { source: "nav", key: "moduleManagement" },
+        codes: [
+          PERMISSIONS.organizationEmployeeRead,
+          PERMISSIONS.organizationEmployeeCreate,
+          PERMISSIONS.organizationEmployeeUpdate,
+          PERMISSIONS.organizationEmployeeDelete,
+        ],
+      },
+      {
+        id: "organization-shift",
+        label: { source: "nav", key: "shift" },
+        codes: [PERMISSIONS.organizationShiftRead, PERMISSIONS.organizationShiftManage],
+      },
+      {
+        id: "organization-attendance",
+        label: { source: "nav", key: "attendance" },
+        codes: [PERMISSIONS.organizationAttendanceRead, PERMISSIONS.organizationAttendanceManage],
+      },
+    ],
+  },
+  {
+    id: "training",
+    label: { source: "nav", key: "training" },
+    children: [
+      {
+        id: "training-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.trainingOverviewView],
+      },
+      {
+        id: "training-activities",
+        label: { source: "nav", key: "management" },
+        codes: [
+          PERMISSIONS.trainingSessionRead,
+          PERMISSIONS.trainingSessionCreate,
+          PERMISSIONS.trainingSessionUpdate,
+          PERMISSIONS.trainingSessionDelete,
+        ],
+      },
+    ],
+  },
+  {
+    id: "report",
+    label: { source: "nav", key: "report" },
+    children: [
+      {
+        id: "report-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.reportOverviewView],
+      },
+      {
+        id: "report-management",
+        label: { source: "nav", key: "management" },
+        codes: [
+          PERMISSIONS.reportLineRead,
+          PERMISSIONS.reportLineCreate,
+          PERMISSIONS.reportLineUpdate,
+          PERMISSIONS.reportLineDelete,
+          PERMISSIONS.reportSubmissionSubmit,
+          PERMISSIONS.reportSubmissionReopen,
         ],
       },
     ],

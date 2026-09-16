@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { SkeletonPage } from "@/components/ui/skeletons";
 import { getRoleAccess } from "@/lib/auth/access";
 import { useLang } from "@/lib/i18n";
 
@@ -54,11 +55,7 @@ export function AdminGate({ children, require = "settings" }: Props) {
   ]);
 
   if (loading) {
-    return (
-      <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-        {t.common.loading}
-      </div>
-    );
+    return <SkeletonPage />;
   }
 
   if (!account || !canEnter) {

@@ -32,12 +32,20 @@ export function Sidebar() {
     canViewTrainingSessions,
     canCreateTrainingSession,
     canUpdateTrainingSession,
+    canViewReportOverview,
+    canViewReportLines,
     canViewSparepartOverview,
     canViewSparepartStock,
     canViewSparepartDocuments,
     canPostSparepartDocument,
     canViewSparepartMaterials,
     canManageSparepartLocations,
+    canViewOrganizationOverview,
+    canViewOrganizationEmployees,
+    canViewOrganizationShift,
+    canManageOrganizationShift,
+    canViewOrganizationAttendance,
+    canManageOrganizationAttendance,
     canAccessSettings,
     canManageRoles,
     canManageAccounts,
@@ -82,6 +90,19 @@ export function Sidebar() {
             canViewSparepartMaterials ||
             canManageSparepartLocations
           );
+        }
+        if (item.id === "organization") {
+          return (
+            canViewOrganizationOverview ||
+            canViewOrganizationEmployees ||
+            canViewOrganizationShift ||
+            canManageOrganizationShift ||
+            canViewOrganizationAttendance ||
+            canManageOrganizationAttendance
+          );
+        }
+        if (item.id === "report") {
+          return canViewReportOverview || canViewReportLines;
         }
         return true;
       })
@@ -165,11 +186,71 @@ export function Sidebar() {
                   return canViewSparepartOverview ? child : null;
                 }
                 if (child.id === "management" && child.children) {
-                  const nested = child.children.filter((leaf) =>
-                    isSparepartLeafVisible(leaf.id, sparepartAccess)
-                  );
+                  const nested = child.children
+                    .map((leaf) => {
+                      if (leaf.children?.length) {
+                        const inner = leaf.children.filter((innerLeaf) =>
+                          isSparepartLeafVisible(innerLeaf.id, sparepartAccess)
+                        );
+                        if (!inner.length) return null;
+                        return { ...leaf, children: inner };
+                      }
+                      return isSparepartLeafVisible(leaf.id, sparepartAccess) ? leaf : null;
+                    })
+                    .filter((leaf): leaf is NavChild => leaf !== null);
                   if (!nested.length) return null;
                   return { ...child, children: nested };
+                }
+                return child;
+              })
+              .filter((child): child is NavChild => child !== null),
+          };
+        }
+        if (item.id === "report" && item.children) {
+          return {
+            ...item,
+            children: item.children
+              .map((child) => {
+                if (child.id === "overview") {
+                  return canViewReportOverview ? child : null;
+                }
+                if (child.id === "weekly-report" && child.children) {
+                  const nested = child.children
+                    .map((leaf) => {
+                      if (leaf.id === "summary" || leaf.id === "reports") {
+                        return canViewReportLines ? leaf : null;
+                      }
+                      return leaf;
+                    })
+                    .filter((leaf): leaf is NavChild => leaf !== null);
+                  if (!nested.length) return null;
+                  return { ...child, children: nested };
+                }
+                return child;
+              })
+              .filter((child): child is NavChild => child !== null),
+          };
+        }
+        if (item.id === "organization" && item.children) {
+          const canAttendance =
+            canViewOrganizationAttendance || canManageOrganizationAttendance;
+          return {
+            ...item,
+            children: item.children
+              .map((child) => {
+                if (child.id === "overview") {
+                  return canViewOrganizationOverview ? child : null;
+                }
+                if (child.id === "employees") {
+                  return canViewOrganizationEmployees ? child : null;
+                }
+                if (child.id === "shift") {
+                  return canViewOrganizationShift || canManageOrganizationShift
+                    ? child
+                    : null;
+                }
+                if (child.id === "attendance") {
+                  return canAttendance ? child : null;
                 }
                 return child;
               })
@@ -205,10 +286,18 @@ export function Sidebar() {
     canViewTrainingSessions,
     canCreateTrainingSession,
     canUpdateTrainingSession,
+    canViewReportOverview,
+    canViewReportLines,
     canViewSparepartDocuments,
     canViewSparepartMaterials,
     canViewSparepartOverview,
     canViewSparepartStock,
+    canViewOrganizationOverview,
+    canViewOrganizationEmployees,
+    canViewOrganizationShift,
+    canManageOrganizationShift,
+    canViewOrganizationAttendance,
+    canManageOrganizationAttendance,
   ]);
 
   const toggleCollapsed = () => {
@@ -275,7 +364,7 @@ export function Sidebar() {
   return (
     <aside
       className={[
-        "relative flex h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar-bg text-sidebar-text transition-[width] duration-300 ease-in-out",
+        "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar-bg text-sidebar-text transition-[width] duration-300 ease-in-out",
         collapsed ? "w-[var(--sidebar-collapsed-width)]" : "w-[var(--sidebar-width)]",
       ].join(" ")}
     >

@@ -4,6 +4,7 @@ import { LangProvider } from "@/lib/i18n";
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/seo";
 import { THEME_BOOTSTRAP_SCRIPT, ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { GuestForbiddenProvider } from "@/components/auth/GuestForbiddenProvider";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import "./globals.css";
 
@@ -80,7 +81,9 @@ export default function RootLayout({
         <ThemeProvider>
           <LangProvider>
             <AuthProvider>
-              <ToastProvider>{children}</ToastProvider>
+              <GuestForbiddenProvider>
+                <ToastProvider>{children}</ToastProvider>
+              </GuestForbiddenProvider>
             </AuthProvider>
           </LangProvider>
         </ThemeProvider>

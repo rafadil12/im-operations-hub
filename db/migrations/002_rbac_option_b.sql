@@ -7,10 +7,6 @@ INSERT INTO `roles` (`name`, `description`)
 SELECT 'admin', 'Full system access including Settings'
 WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'admin');
 
-INSERT INTO `roles` (`name`, `description`)
-SELECT 'viewer', 'Read-only access'
-WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'viewer');
-
 -- Permissions seed (19-code catalog)
 INSERT INTO `permissions` (`code`, `description`)
 SELECT 'overview.view', 'View Overview dashboard'
@@ -102,24 +98,6 @@ SELECT r.id, p.id
 FROM `roles` r
 CROSS JOIN `permissions` p
 WHERE r.name = 'admin'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
--- viewer
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'overview.view',
-  'daily_operation.record.read',
-  'daily_operation.analysis.view',
-  'itsm.overview.view',
-  'itsm.request.read',
-  'itsm.analysis.view'
-)
-WHERE r.name = 'viewer'
   AND NOT EXISTS (
     SELECT 1 FROM `role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id

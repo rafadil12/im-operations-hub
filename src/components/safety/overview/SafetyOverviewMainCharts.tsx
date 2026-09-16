@@ -25,7 +25,7 @@ export function SafetyOverviewMainCharts({
 }: SafetyOverviewMainChartsProps) {
   return (
     <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-      <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+      <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
         <SectionHeader
           title={safetyText("safetyCompletionTrend", safetyLanguage)}
           description={safetyText("weeklyCompletionPerformance", safetyLanguage)}
@@ -43,7 +43,7 @@ export function SafetyOverviewMainCharts({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface p-4 md:p-5 safety-scroll-animate">
+      <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
         <SectionHeader
           title={safetyText("findingStatus", safetyLanguage)}
           description={safetyText("currentSafetyCaseStatus", safetyLanguage)}

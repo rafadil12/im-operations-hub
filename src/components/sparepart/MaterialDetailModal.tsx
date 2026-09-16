@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { Modal } from "@/components/ui/Modal";
+import { SkeletonText } from "@/components/ui/Skeleton";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang, localizedField, localizedName } from "@/lib/i18n";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type { SparepartItem, SparepartStockBalance } from "@/lib/types";
 
 type Props = {
@@ -24,7 +26,10 @@ type Props = {
     | "category_name_en"
     | "category_name_cn"
     | "uom_code"
+    | "uom_name_en"
+    | "uom_name_cn"
     | "image_url"
+    | "erp_item_code"
   > & { balances?: SparepartStockBalance[] };
   onClose: () => void;
 };
@@ -65,6 +70,10 @@ export function MaterialDetailModal({ item, onClose }: Props) {
 
   const description = localizedName(item, lang) || "-";
   const brand = localizedField(item.brand_en, item.brand_cn, lang) || "-";
+  const uomLabel = formatUomDisplay(
+    { code: item.uom_code, name_cn: item.uom_name_cn },
+    lang
+  );
 
   const detailGroups: { label: string; value: string | number }[][] = [
     [
@@ -76,6 +85,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
       { label: t.sparepart.model, value: item.model || "-" },
     ],
     [
+      { label: t.sparepart.erpItemCode, value: item.erp_item_code || "-" },
       {
         label: t.sparepart.category,
         value:
@@ -89,13 +99,13 @@ export function MaterialDetailModal({ item, onClose }: Props) {
           item.category_code ||
           "-",
       },
-      { label: t.sparepart.uom, value: item.uom_code || "-" },
+      { label: t.sparepart.uom, value: uomLabel || "-" },
     ],
     [
       { label: t.sparepart.minStock, value: item.min_stock ?? 0 },
       {
         label: t.sparepart.stockCurrent,
-        value: item.uom_code ? `${item.stock_current} ${item.uom_code}` : item.stock_current,
+        value: uomLabel ? `${item.stock_current} ${uomLabel}` : item.stock_current,
       },
     ],
     [{ label: t.sparepart.notes, value: item.notes || "-" }],
@@ -147,7 +157,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
         <div className="mt-4">
           <h3 className="mb-3 text-sm font-semibold text-text">{t.sparepart.stockByLocation}</h3>
           {showLoading ? (
-            <p className="text-xs text-text-muted">{t.common.loading}</p>
+            <SkeletonText lines={3} />
           ) : balances.length === 0 ? (
             <p className="text-xs text-text-muted">{t.sparepart.noBalances}</p>
           ) : (
@@ -157,6 +167,7 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                   <tr>
                     <th className={th}>{t.sparepart.locationCode}</th>
                     <th className={th}>{t.sparepart.locationName}</th>
+                    <th className={th}>{t.sparepart.level}</th>
                     <th className={`${th} text-right`}>{t.sparepart.stockCurrent}</th>
                   </tr>
                 </thead>
@@ -173,8 +184,19 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                           lang
                         )}
                       </td>
+                      <td className={td}>
+                        {b.level_code
+                          ? `${b.level_code} — ${localizedName(
+                              {
+                                name_en: b.level_name_en ?? null,
+                                name_cn: b.level_name_cn ?? null,
+                              },
+                              lang
+                            )}`
+                          : "-"}
+                      </td>
                       <td className={`${td} text-right tabular-nums`}>
-                        {item.uom_code ? `${b.qty} ${item.uom_code}` : b.qty}
+                        {uomLabel ? `${b.qty} ${uomLabel}` : b.qty}
                       </td>
                     </tr>
                   ))}

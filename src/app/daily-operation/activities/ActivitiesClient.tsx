@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
 import { FilterBar, type Filters } from "@/components/daily-operation/FilterBar";
 import { ActivitiesTable, type PageSize } from "@/components/daily-operation/ActivitiesTable";
+import { SkeletonTable } from "@/components/ui/skeletons";
 import { ImportMesDataModal } from "@/components/daily-operation/ImportMesDataModal";
 import { MesDataForm } from "@/components/daily-operation/MesDataForm";
 import { ExportIcon, ImportIcon } from "@/components/ui/ActionIcons";
@@ -296,9 +297,7 @@ export default function ManagementPage() {
       ) : null}
 
       {loading ? (
-        <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-          {t.common.loading}
-        </div>
+        <SkeletonTable />
       ) : (
         <ActivitiesTable
           rows={pagedRows}

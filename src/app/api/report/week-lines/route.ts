@@ -18,6 +18,7 @@ import {
   saveReportWeekLines,
   type ReportWeekLinePayload,
 } from "@/lib/report/weekReportStore";
+import { WEEK_REPORT_ALREADY_EXISTS } from "@/lib/report/weekReportIdentity";
 import { loadReportWeekAttachments } from "@/lib/report/attachmentStore";
 import { parseCompletionRate } from "@/lib/report/weekCalendar";
 import { validateWeekLinePayload } from "@/lib/report/weekFormValidation";
@@ -144,14 +145,23 @@ export async function PUT(request: Request) {
       lines.push(parsed);
     }
 
+    const create = body.mode === "create";
     const account = "account" in gate ? (gate.account ?? undefined) : undefined;
-    const saved = await saveReportWeekLines(year, weekNumber, areaId, lines, auditFromAccount(account));
+    const saved = await saveReportWeekLines(
+      year,
+      weekNumber,
+      areaId,
+      lines,
+      auditFromAccount(account),
+      { create }
+    );
 
     return NextResponse.json({ success: true, data: saved });
   } catch (error) {
     console.error("PUT /api/report/week-lines ERROR:", error);
     const message = error instanceof Error ? error.message : "Failed to save week report.";
-    return jsonError(message, 400);
+    const status = message === WEEK_REPORT_ALREADY_EXISTS ? 409 : 400;
+    return jsonError(message, status);
   }
 }
 

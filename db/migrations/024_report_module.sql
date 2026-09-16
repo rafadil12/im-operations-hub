@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS `report_lines` (
 
 INSERT INTO `report_areas` (`code`, `name_en`, `name_cn`, `sort_order`)
 SELECT 'MES', 'MOM', 'MOM项', 1
-WHERE NOT EXISTS (SELECT 1 FROM `report_areas` WHERE `code` = 'MES');
+WHERE NOT EXISTS (SELECT 1 FROM `report_areas` WHERE `code` IN ('MES', 'MOM'));
 
 INSERT INTO `report_areas` (`code`, `name_en`, `name_cn`, `sort_order`)
 SELECT 'LOGISTICS', 'Smart Logistics', '智能物流', 2
@@ -159,16 +159,6 @@ WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.line.delete
 INSERT INTO `permissions` (`code`, `description`)
 SELECT 'report.submission.submit', 'Submit weekly report for an area'
 WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.submission.submit');
-
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN ('report.overview.view', 'report.line.read')
-WHERE r.name = 'viewer'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
 
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id

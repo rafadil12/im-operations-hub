@@ -3,11 +3,13 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang, localizedName, localizedField } from "@/lib/i18n";
+import { SkeletonText } from "@/components/ui/Skeleton";
 import type { SparepartItem } from "@/lib/types";
 import {
   sparepartDropdownMenuClass,
   sparepartDropdownOptionClass,
 } from "@/components/sparepart/SparepartDropdown";
+import { formatUomDisplay } from "@/lib/sparepart/uoms";
 
 const DEBOUNCE_MS = 300;
 const MIN_CHARS = 1;
@@ -20,6 +22,8 @@ type Props = {
   value: string;
   onChange: (itemId: string, item?: SparepartItem | null) => void;
   className?: string;
+  /** Hide brand/model/stock under the input (keeps posting lines single-height). */
+  compact?: boolean;
 };
 
 function labelFor(item: SparepartItem, lang: "en" | "cn"): string {
@@ -33,7 +37,7 @@ function isAbortError(err: unknown): boolean {
   );
 }
 
-export function MaterialCombobox({ value, onChange, className }: Props) {
+export function MaterialCombobox({ value, onChange, className, compact = false }: Props) {
   const { t, lang } = useLang();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -47,6 +51,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Clear local state when parent clears a selected value (e.g. form reset).
   // Do not clear query while searching (value is already empty).
@@ -77,9 +82,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       });
 
     return () => ac.abort();
-    // intentionally omit `selected` — only react to value changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, lang]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -107,6 +110,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       setSuggestions([]);
       setHighlight(0);
       setSearching(false);
+      setSearchError(null);
       return;
     }
 
@@ -125,11 +129,13 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
       .then((data) => {
         setSuggestions(data.rows);
         setHighlight(0);
+        setSearchError(null);
       })
       .catch((err) => {
         if (isAbortError(err)) return;
         setSuggestions([]);
         setHighlight(0);
+        setSearchError(err instanceof Error ? err.message : t.common.error);
       })
       .finally(() => {
         if (!ac.signal.aborted) setSearching(false);
@@ -207,6 +213,17 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
 
   const showList = open && (suggestions.length > 0 || searching);
 
+  const selectedMeta = selected
+    ? (() => {
+        const uom = formatUomDisplay(
+          { code: selected.uom_code, name_cn: selected.uom_name_cn },
+          lang
+        );
+        const stock = uom ? `${selected.stock_current} ${uom}` : String(selected.stock_current);
+        return `${localizedField(selected.brand_en, selected.brand_cn, lang)} / ${selected.model ?? "-"} · stock: ${stock}`;
+      })()
+    : undefined;
+
   return (
     <div ref={rootRef} className="relative">
       <input
@@ -217,6 +234,7 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
         aria-autocomplete="list"
         className={className}
         value={query}
+        title={compact ? selectedMeta : undefined}
         placeholder={`${t.sparepart.code} / ${t.sparepart.name} / ${t.sparepart.brand} / ${t.sparepart.model}`}
         onChange={(e) => {
           const next = e.target.value;
@@ -245,7 +263,9 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
           className={`${sparepartDropdownMenuClass} z-20 max-h-56 overflow-auto`}
         >
           {searching && suggestions.length === 0 ? (
-            <li className="px-3 py-2 text-xs text-text-dim">{t.common.loading}</li>
+            <li className="px-3 py-2">
+              <SkeletonText lines={2} />
+            </li>
           ) : null}
           {suggestions.map((item, index) => (
             <li key={item.id} role="option" aria-selected={index === highlight}>
@@ -269,21 +289,24 @@ export function MaterialCombobox({ value, onChange, className }: Props) {
                 >
                   {localizedField(item.brand_en, item.brand_cn, lang) + " / " + (item.model || "-")}{" "}
                   · stock:{" "}
-                  {item.uom_code ? `${item.stock_current} ${item.uom_code}` : item.stock_current}
+                  {(() => {
+                    const uom = formatUomDisplay(
+                      { code: item.uom_code, name_cn: item.uom_name_cn },
+                      lang
+                    );
+                    return uom ? `${item.stock_current} ${uom}` : item.stock_current;
+                  })()}
                 </span>
               </button>
             </li>
           ))}
         </ul>
       ) : null}
-      {selected ? (
-        <p className="mt-1 text-[11px] text-text-dim">
-          {localizedField(selected.brand_en, selected.brand_cn, lang)} / {selected.model ?? "-"} ·
-          stock:{" "}
-          {selected.uom_code
-            ? `${selected.stock_current} ${selected.uom_code}`
-            : selected.stock_current}
-        </p>
+      {searchError ? (
+        <p className="mt-1 text-[11px] text-rose-400">{searchError}</p>
+      ) : null}
+      {!compact && selected ? (
+        <p className="mt-1 text-[11px] text-text-dim">{selectedMeta}</p>
       ) : null}
     </div>
   );

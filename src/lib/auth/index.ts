@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { accountHasPermission, guestHasPermission } from "./access";
+import { accountHasPermission } from "./access";
+import {
+  guestHasPermissionAsync,
+  invalidateGuestPermissionsCache,
+  loadGuestPermissions,
+} from "./guestPermissions";
+import { jsonGuestForbidden } from "./guestForbidden";
 import { getAccountPublic } from "./accounts";
 import { clearSessionCookie, readSession } from "./session";
 import type { AuthAccountPublic, SessionPayload } from "./types";
@@ -9,7 +15,6 @@ export {
   accountHasPermission,
   canAssignPrivilegedRoles,
   getRoleAccess,
-  guestHasPermission,
   isProtectedAccountEmployeeNo,
   isProtectedRoleName,
   permissionsIncludeAdminManage,
@@ -19,6 +24,20 @@ export {
   PROTECTED_ROLE_NAME,
   type RoleAccess,
 } from "./access";
+export {
+  DEFAULT_GUEST_PERMISSION_CODES,
+  GUEST_ROLE_NAME,
+  filterGuestAllowedPermissionCodes,
+  isGuestPermissionAllowed,
+  isGuestRoleName,
+} from "./guestPolicy";
+export {
+  guestHasPermissionAsync,
+  invalidateGuestPermissionsCache,
+  loadGuestPermissions,
+  validateGuestPermissionIds,
+} from "./guestPermissions";
+export { guestHasPermission } from "./access";
 export { generateTemporaryPassword, hashPassword, verifyPassword } from "./password";
 export {
   SESSION_COOKIE,
@@ -71,10 +90,10 @@ export type AuthGate = {
 export async function requirePermission(code: string): Promise<AuthGate | NextResponse> {
   const session = await readSession();
   if (!session) {
-    if (guestHasPermission(code)) {
+    if (await guestHasPermissionAsync(code)) {
       return { session: null, account: null };
     }
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return jsonGuestForbidden();
   }
   const account = await getAccountPublic(session.systemUserId);
   if (!account) {
@@ -92,10 +111,11 @@ export async function requirePermission(code: string): Promise<AuthGate | NextRe
 export async function requireAnyPermission(codes: string[]): Promise<AuthGate | NextResponse> {
   const session = await readSession();
   if (!session) {
-    if (codes.some((code) => guestHasPermission(code))) {
+    const guestPermissions = await loadGuestPermissions();
+    if (codes.some((code) => guestPermissions.includes(code))) {
       return { session: null, account: null };
     }
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return jsonGuestForbidden();
   }
   const account = await getAccountPublic(session.systemUserId);
   if (!account) {
