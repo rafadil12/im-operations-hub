@@ -304,6 +304,10 @@ const en = {
     confirmPassword: "Confirm password",
     passwordOptionalHint: "Leave blank to keep the current password, or set a new one manually.",
     passwordResetSuccess: "Password reset successfully.",
+    guestRoleBadge: "Public",
+    systemRoleBadge: "System",
+    guestRoleHint:
+      "Guest controls what visitors can browse without signing in. Only read/view permissions apply — this role is not assigned to login accounts.",
   },
   auth: {
     guest: "Guest",

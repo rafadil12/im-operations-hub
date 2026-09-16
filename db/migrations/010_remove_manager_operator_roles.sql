@@ -1,4 +1,4 @@
--- Remove seeded manager/operator roles. Keep admin + viewer as defaults.
+-- Remove seeded manager/operator roles. Keep admin (and later superadmin/guest).
 
 -- Clear assignments for any users still on these roles
 UPDATE `system_users` su

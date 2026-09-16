@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { isProtectedRoleName, PERMISSIONS, requirePermission } from "@/lib/auth";
+import {
+  invalidateGuestPermissionsCache,
+  isGuestRoleName,
+  isProtectedRoleName,
+  PERMISSIONS,
+  requirePermission,
+  validateGuestPermissionIds,
+} from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -46,6 +53,19 @@ export async function PUT(request: NextRequest, context: Ctx) {
         { status: 400 }
       );
     }
+    if (isGuestRoleName(existing[0].name) && name !== existing[0].name) {
+      return NextResponse.json(
+        { error: "The guest role name cannot be changed." },
+        { status: 400 }
+      );
+    }
+
+    if (isGuestRoleName(existing[0].name)) {
+      const guestValidation = await validateGuestPermissionIds(permissionIds);
+      if (!guestValidation.ok) {
+        return NextResponse.json({ error: guestValidation.error }, { status: 400 });
+      }
+    }
 
     if (isProtectedRoleName(existing[0].name)) {
       const critical = await query<RowDataPacket[]>(
@@ -80,6 +100,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
       }
     });
 
+    if (isGuestRoleName(existing[0].name)) {
+      invalidateGuestPermissionsCache();
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     const errno = (error as { errno?: number }).errno;
@@ -112,6 +136,12 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     if (isProtectedRoleName(existing[0].name)) {
       return NextResponse.json(
         { error: "The superadmin role cannot be deleted." },
+        { status: 400 }
+      );
+    }
+    if (isGuestRoleName(existing[0].name)) {
+      return NextResponse.json(
+        { error: "The guest role cannot be deleted." },
         { status: 400 }
       );
     }

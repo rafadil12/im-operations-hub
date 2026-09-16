@@ -142,24 +142,6 @@ AND NOT EXISTS (
   WHERE x.role_id = rp.role_id AND x.permission_id = p_ov.id
 );
 
--- Default seeded roles (in case they had no mappings yet)
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'overview.view',
-  'daily_operation.record.read',
-  'daily_operation.analysis.view',
-  'itsm.overview.view',
-  'itsm.request.read',
-  'itsm.analysis.view'
-)
-WHERE r.name = 'viewer'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
 -- Admin gets every permission in catalog
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id

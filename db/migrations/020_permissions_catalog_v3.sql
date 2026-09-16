@@ -37,21 +37,6 @@ WHERE NOT EXISTS (
   WHERE x.role_id = rp.role_id AND x.permission_id = p_new.id
 );
 
--- Viewer: sparepart overview + safety read
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.id, p.id
-FROM `roles` r
-JOIN `permissions` p ON p.code IN (
-  'sparepart.overview.view',
-  'safety.overview.view',
-  'safety.submission.read'
-)
-WHERE r.name = 'viewer'
-  AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
-    WHERE rp.role_id = r.id AND rp.permission_id = p.id
-  );
-
 -- Admin / superadmin get every permission
 INSERT INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id

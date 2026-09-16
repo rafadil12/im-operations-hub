@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
+import { isProtectedRoleName } from "@/lib/auth/access";
+import { GUEST_ROLE_NAME, isGuestRoleName } from "@/lib/auth/guestPolicy";
 import { useLang } from "@/lib/i18n";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -194,7 +196,18 @@ export function RolesManager() {
                     key={row.id}
                     className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
                   >
-                    <td className={`${td} font-medium text-text`}>{row.name}</td>
+                    <td className={`${td} font-medium text-text`}>
+                      <span>{row.name}</span>
+                      {isGuestRoleName(row.name) ? (
+                        <span className="ml-2 rounded border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                          {t.settings.guestRoleBadge}
+                        </span>
+                      ) : isProtectedRoleName(row.name) ? (
+                        <span className="ml-2 rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-dim">
+                          {t.settings.systemRoleBadge}
+                        </span>
+                      ) : null}
+                    </td>
                     <td className={td}>{row.description ?? "-"}</td>
                     <td className={td}>
                       <span className="text-text">{row.permissionIds.length}</span>
@@ -215,7 +228,7 @@ export function RolesManager() {
                         <button
                           type="button"
                           onClick={() => setDeleteRow(row)}
-                          disabled={row.name === "superadmin"}
+                          disabled={isProtectedRoleName(row.name) || isGuestRoleName(row.name)}
                           className="rounded border border-danger/40 px-2 py-1 text-[11px] text-danger hover:bg-danger/10 disabled:opacity-40"
                         >
                           {t.common.delete}
@@ -261,14 +274,22 @@ export function RolesManager() {
                 {formError}
               </p>
             ) : null}
+            {editRow && isGuestRoleName(editRow.name) ? (
+              <p className="rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-text-muted">
+                {t.settings.guestRoleHint}
+              </p>
+            ) : null}
             <div>
               <label className={labelCls}>{t.settings.roleName}</label>
               <input
                 className={inputCls}
                 value={form.name}
-                disabled={editRow?.name === "superadmin"}
+                disabled={
+                  Boolean(editRow) &&
+                  (isProtectedRoleName(editRow?.name) || isGuestRoleName(editRow?.name))
+                }
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. operator"
+                placeholder={editRow && isGuestRoleName(editRow.name) ? GUEST_ROLE_NAME : "e.g. operator"}
               />
             </div>
             <div>
@@ -284,6 +305,7 @@ export function RolesManager() {
               <PermissionTreePicker
                 permissions={permissions}
                 selectedIds={form.permissionIds}
+                guestMode={Boolean(editRow && isGuestRoleName(editRow.name))}
                 onChange={(permissionIds) => setForm((f) => ({ ...f, permissionIds }))}
               />
             </div>

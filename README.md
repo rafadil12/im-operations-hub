@@ -30,7 +30,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Unauthenticated visitors can browse in **Guest Mode** (read-oriented access across modules; writes stay behind login). Sign in at `/login` with employee ID + password.
+Open [http://localhost:3000](http://localhost:3000). Unauthenticated visitors browse in **Guest Mode** (configurable read/view access; writes stay behind login). Sign in at `/login` with employee ID + password.
 
 ```bash
 npm run lint
@@ -83,9 +83,11 @@ node --env-file=.env.local db/run-migrations.mjs
 This is idempotent. Among other things it:
 
 - Adds `system_users.role_id`, `session_version`, and `role_permissions`
-- Seeds roles: `superadmin` (protected, `roles.id = 1`), `admin`, `viewer`
+- Seeds system roles: `superadmin` (protected, `roles.id = 1`), `admin`, and `guest` (public browse — not assignable to login accounts)
+- Removes legacy seeded roles (`viewer`, `manager`, `operator`) when present
 - Seeds the permission catalog (overview, daily I/O, ITSM, safety, sparepart, organization, training, report, admin)
 - Bootstraps the **Super Admin** login (`employee_no=SUPERADMIN`)
+- Seeds default **guest** permissions (read/view only; no export/write/admin)
 - Creates sparepart tables (materials, storage locations, stock balances, material documents)
 - Creates safety, training, report, and organization tables used by those modules
 - Does **not** reset passwords unless you opt in (see below)
@@ -102,9 +104,23 @@ Never set `ALLOW_DEV_PASSWORD_RESET=1` against shared, staging, or production da
 
 Login uses **employee ID** + password against `users` / `system_users`, with an httpOnly session cookie (`im_ops_session`). Changing a password increments `session_version` and invalidates other sessions.
 
-**Guest Mode** is not a database role: visitors who are not logged in get a fixed read-oriented set — overview plus view/export (or equivalent read) on Daily Operation, ITSM, Safety, Training, Report, Sparepart stock/documents, and Organization. Write, import, posting, reversals, material master writes, and Settings stay behind login.
+### Guest Mode (public browse)
 
-Assign capabilities from **Settings → Roles**. Settings (`/settings/roles`, `/settings/accounts`) requires `admin.roles.manage` / `admin.accounts.manage` (or `settings.access` for entry). The `superadmin` role and `SUPERADMIN` account cannot be deleted, renamed, or demoted.
+Unauthenticated visitors use the protected **`guest`** system role. Permissions are loaded from the database (not hardcoded) and can be edited in **Settings → Roles** — only `.view` / `.read` codes are allowed; export, write, posting, import, and admin codes are rejected.
+
+| Item | Behavior |
+| --- | --- |
+| Who uses it | Anyone without a session |
+| Where to configure | Settings → Roles → `guest` (badge **Public**) |
+| Assign to accounts | **No** — guest is not a login role |
+| Rename / delete role | **No** — system protected |
+| Default access | Overview, Daily/ITSM/Safety/Training/Report read, Sparepart overview/stock/documents, Organization read (no export) |
+
+After changing guest permissions, visitors pick them up on the next page load (server cache TTL ~30s). Writes still show the login prompt.
+
+### Logged-in roles
+
+Create custom roles in **Settings → Roles** and assign them in **Settings → Accounts**. Settings requires `admin.roles.manage` / `admin.accounts.manage` (or `settings.access` for entry). The `superadmin` role and `SUPERADMIN` account cannot be deleted, renamed, or demoted. There is no seeded `viewer` role — use `guest` for public browse or define your own read-only login role.
 
 **Test Super Admin (after migration; password also applied by `ALLOW_DEV_PASSWORD_RESET=1`):**
 

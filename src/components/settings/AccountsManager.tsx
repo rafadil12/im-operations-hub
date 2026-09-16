@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGetAbs, apiSendAbs } from "@/lib/apiClient";
 import { isProtectedAccountEmployeeNo, isProtectedRoleName } from "@/lib/auth/access";
+import { isGuestRoleName } from "@/lib/auth/guestPolicy";
 import { useLang } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonTable } from "@/components/ui/skeletons";
@@ -35,6 +36,7 @@ export function AccountsManager() {
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
 
   const assignableRoles = roles.filter((role) => {
+    if (isGuestRoleName(role.name)) return false;
     if (!isProtectedRoleName(role.name)) return true;
     return Boolean(editRow && isProtectedAccountEmployeeNo(editRow.employeeNo));
   });

@@ -4,6 +4,7 @@ import { query } from "@/lib/db";
 import {
   clearSessionCookie,
   getAccountPublic,
+  loadGuestPermissions,
   readSession,
 } from "@/lib/auth";
 
@@ -21,7 +22,8 @@ export async function GET() {
     const session = await readSession();
 
     if (!session) {
-      return NextResponse.json({ account: null });
+      const guestPermissions = await loadGuestPermissions();
+      return NextResponse.json({ account: null, guestPermissions });
     }
 
     const account = await getAccountPublic(session.systemUserId);

@@ -3,6 +3,7 @@ import type { RowDataPacket } from "mysql2";
 import {
   canAssignPrivilegedRoles,
   generateTemporaryPassword,
+  isGuestRoleName,
   isProtectedAccountEmployeeNo,
   isProtectedRoleName,
   loadPermissionsForRole,
@@ -140,6 +141,12 @@ export async function PUT(request: NextRequest, context: Ctx) {
         if (isProtectedRoleName(assignedRole[0]?.name as string | undefined)) {
           return NextResponse.json(
             { error: "The Super Admin role cannot be assigned." },
+            { status: 400 }
+          );
+        }
+        if (isGuestRoleName(assignedRole[0]?.name as string | undefined)) {
+          return NextResponse.json(
+            { error: "The guest role cannot be assigned to login accounts." },
             { status: 400 }
           );
         }
