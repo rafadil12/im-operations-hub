@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { PERMISSIONS, requireAnyPermission, requirePermission } from "@/lib/auth";
+import {
+  isGuestRoleName,
+  isProtectedRoleName,
+  PERMISSIONS,
+  requireAnyPermission,
+  requirePermission,
+} from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
 
 type RoleRow = RowDataPacket & {
@@ -63,6 +69,12 @@ export async function POST(request: NextRequest) {
     if (!/^[a-z][a-z0-9_]*$/.test(name)) {
       return NextResponse.json(
         { error: "Role name must be lowercase letters, numbers, or underscores." },
+        { status: 400 }
+      );
+    }
+    if (isProtectedRoleName(name) || isGuestRoleName(name)) {
+      return NextResponse.json(
+        { error: "That role name is reserved for a system role." },
         { status: 400 }
       );
     }

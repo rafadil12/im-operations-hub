@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { isGuestPermissionAllowed } from "@/lib/auth/guest";
 import {
   collectPermissionIds,
   groupPermissions,
@@ -14,6 +15,8 @@ type Props = {
   permissions: PermissionRow[];
   selectedIds: number[];
   onChange: (ids: number[]) => void;
+  /** When true, only .view / .read permissions can be selected (Guest role). */
+  guestMode?: boolean;
 };
 
 function resolveLabel(t: Dict, label: PermissionTreeLabel): string {
@@ -49,9 +52,11 @@ function Chevron({ open }: { open: boolean }) {
 function GroupCheckbox({
   state,
   onToggle,
+  disabled,
 }: {
   state: "all" | "some" | "none";
   onToggle: () => void;
+  disabled?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -64,8 +69,9 @@ function GroupCheckbox({
     <input
       ref={ref}
       type="checkbox"
-      className="mt-0.5"
+      className="mt-0.5 disabled:cursor-not-allowed disabled:opacity-40"
       checked={state === "all"}
+      disabled={disabled}
       onChange={onToggle}
       onClick={(e) => e.stopPropagation()}
     />
@@ -80,6 +86,8 @@ function TreeNodeRow({
   onToggleExpand,
   onToggleIds,
   resolve,
+  guestMode,
+  permissionById,
 }: {
   node: PermissionTreeNode;
   depth: number;
@@ -88,12 +96,23 @@ function TreeNodeRow({
   onToggleExpand: (id: string) => void;
   onToggleIds: (ids: number[], select: boolean) => void;
   resolve: (label: PermissionTreeLabel) => string;
+  guestMode: boolean;
+  permissionById: Map<number, PermissionRow>;
 }) {
-  const ids = useMemo(() => collectPermissionIds(node), [node]);
-  const state = selectionState(ids, selected);
+  const allIds = useMemo(() => collectPermissionIds(node), [node]);
+  const toggleableIds = useMemo(() => {
+    if (!guestMode) return allIds;
+    return allIds.filter((id) => {
+      const code = permissionById.get(id)?.code ?? "";
+      return isGuestPermissionAllowed(code);
+    });
+  }, [allIds, guestMode, permissionById]);
+
+  const state = selectionState(toggleableIds, selected);
   const isOpen = expanded.has(node.id);
   const hasNested = node.children.length > 0 || node.permissions.length > 0;
   const pad = 8 + depth * 12;
+  const groupDisabled = guestMode && toggleableIds.length === 0;
 
   return (
     <div>
@@ -115,35 +134,46 @@ function TreeNodeRow({
         >
           {hasNested ? <Chevron open={isOpen} /> : <span className="inline-block size-4" />}
         </button>
-        <GroupCheckbox state={state} onToggle={() => onToggleIds(ids, state !== "all")} />
+        <GroupCheckbox
+          state={state}
+          disabled={groupDisabled}
+          onToggle={() => onToggleIds(toggleableIds, state !== "all")}
+        />
         <span className="font-semibold text-text">{resolve(node.label)}</span>
         <span className="ml-auto shrink-0 text-[10px] text-text-dim">
-          {ids.filter((id) => selected.has(id)).length}/{ids.length}
+          {toggleableIds.filter((id) => selected.has(id)).length}/{toggleableIds.length}
         </span>
       </div>
 
       {isOpen ? (
         <div>
-          {node.permissions.map((p) => (
-            <label
-              key={p.id}
-              className="flex cursor-pointer items-start gap-2 rounded px-1.5 py-1 text-xs hover:bg-surface-hover"
-              style={{ paddingLeft: pad + 28 }}
-            >
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={selected.has(p.id)}
-                onChange={() => onToggleIds([p.id], !selected.has(p.id))}
-              />
-              <span>
-                <span className="font-medium text-text">{p.description?.trim() || p.code}</span>
-                {p.description ? (
-                  <span className="mt-0.5 block text-text-dim">{p.code}</span>
-                ) : null}
-              </span>
-            </label>
-          ))}
+          {node.permissions.map((p) => {
+            const allowed = !guestMode || isGuestPermissionAllowed(p.code);
+            return (
+              <label
+                key={p.id}
+                className={[
+                  "flex items-start gap-2 rounded px-1.5 py-1 text-xs",
+                  allowed ? "cursor-pointer hover:bg-surface-hover" : "cursor-not-allowed opacity-50",
+                ].join(" ")}
+                style={{ paddingLeft: pad + 28 }}
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5 disabled:cursor-not-allowed"
+                  checked={selected.has(p.id)}
+                  disabled={!allowed}
+                  onChange={() => onToggleIds([p.id], !selected.has(p.id))}
+                />
+                <span>
+                  <span className="font-medium text-text">{p.description?.trim() || p.code}</span>
+                  {p.description ? (
+                    <span className="mt-0.5 block text-text-dim">{p.code}</span>
+                  ) : null}
+                </span>
+              </label>
+            );
+          })}
           {node.children.map((child) => (
             <TreeNodeRow
               key={child.id}
@@ -154,6 +184,8 @@ function TreeNodeRow({
               onToggleExpand={onToggleExpand}
               onToggleIds={onToggleIds}
               resolve={resolve}
+              guestMode={guestMode}
+              permissionById={permissionById}
             />
           ))}
         </div>
@@ -162,9 +194,18 @@ function TreeNodeRow({
   );
 }
 
-export function PermissionTreePicker({ permissions, selectedIds, onChange }: Props) {
+export function PermissionTreePicker({
+  permissions,
+  selectedIds,
+  onChange,
+  guestMode = false,
+}: Props) {
   const { t } = useLang();
   const tree = useMemo(() => groupPermissions(permissions), [permissions]);
+  const permissionById = useMemo(
+    () => new Map(permissions.map((p) => [p.id, p])),
+    [permissions]
+  );
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
@@ -182,6 +223,9 @@ export function PermissionTreePicker({ permissions, selectedIds, onChange }: Pro
   const toggleIds = (ids: number[], select: boolean) => {
     const set = new Set(selectedIds);
     for (const id of ids) {
+      const row = permissionById.get(id);
+      if (!row) continue;
+      if (guestMode && !isGuestPermissionAllowed(row.code)) continue;
       if (select) set.add(id);
       else set.delete(id);
     }
@@ -204,6 +248,8 @@ export function PermissionTreePicker({ permissions, selectedIds, onChange }: Pro
           onToggleExpand={toggleExpand}
           onToggleIds={toggleIds}
           resolve={resolve}
+          guestMode={guestMode}
+          permissionById={permissionById}
         />
       ))}
     </div>

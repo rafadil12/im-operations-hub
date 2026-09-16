@@ -304,6 +304,10 @@ const cn: Dict = {
     confirmPassword: "确认密码",
     passwordOptionalHint: "留空则保持当前密码不变，也可手动设置新密码。",
     passwordResetSuccess: "密码已重置。",
+    guestRoleBadge: "公开",
+    systemRoleBadge: "系统",
+    guestRoleHint:
+      "访客角色控制未登录用户可浏览的内容，仅可勾选查看/读取权限；此角色不会分配给登录账号。",
   },
   auth: {
     guest: "访客",
