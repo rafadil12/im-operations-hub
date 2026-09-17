@@ -24,14 +24,10 @@
 .DS_Store
 *.pem
 
-# cursor — ignore local cache/plans; keep shared rules and skills in git
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
+# editor / local AI tooling (do not publish)
+.cursor/
+.vscode/
 debug-*.log
-
 
 # Docs
 docs/
