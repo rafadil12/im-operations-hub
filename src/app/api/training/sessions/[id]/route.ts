@@ -7,6 +7,7 @@ import {
   jsonError,
   parseDivisionId,
   parseParticipantNames,
+  resolveSessionTopics,
 } from "@/lib/training/apiHelpers";
 import { saveTrainingUploadedFile } from "@/lib/training/upload";
 import {
@@ -98,8 +99,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       attachmentSize = uploaded.size;
     }
 
-    const resolvedTopicEn = topicEn || topicCn;
-    const resolvedTopicCn = topicCn || topicEn;
+    const { topicEn: resolvedTopicEn, topicCn: resolvedTopicCn } = resolveSessionTopics(
+      topicEn,
+      topicCn
+    );
 
     await execute(
       `

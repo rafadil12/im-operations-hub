@@ -7,6 +7,7 @@ import {
   jsonError,
   parseDivisionId,
   parseParticipantNames,
+  resolveSessionTopics,
 } from "@/lib/training/apiHelpers";
 import { saveTrainingUploadedFile } from "@/lib/training/upload";
 import {
@@ -87,8 +88,10 @@ export async function POST(request: Request) {
       attachment = await saveTrainingUploadedFile(file, sessionDate);
     }
 
-    const resolvedTopicEn = topicEn || topicCn;
-    const resolvedTopicCn = topicCn || topicEn;
+    const { topicEn: resolvedTopicEn, topicCn: resolvedTopicCn } = resolveSessionTopics(
+      topicEn,
+      topicCn
+    );
 
     const sessionId = await withTransaction(async (conn) => {
       const [insertResult] = await conn.query(
