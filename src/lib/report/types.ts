@@ -181,6 +181,8 @@ export type ReportCurrentMonthMetrics = {
   achievement: number;
   submittedCount: number;
   draftCount: number;
+  /** Unique Year+Week+Area slots in this month (areas × weeks with data). */
+  expectedCount: number;
   totalLines: number;
   byArea: ReportAreaMetrics[];
 };
@@ -205,6 +207,8 @@ export type ReportOverviewMetrics = {
   avgCompletionRate: number;
   submittedCount: number;
   draftCount: number;
+  /** Area slots for the selected week (denominator for submitted count). */
+  expectedCount: number;
   byArea: ReportAreaMetrics[];
   weeklyTrend: ReportTrendRow[];
   divisions: ReportDivisionMetrics[];

@@ -4,6 +4,7 @@ export * from "./apiHelpers";
 export * from "./weekCalendar";
 export * from "./lineClassification";
 export * from "./overviewMetrics";
+export * from "./submissionCount";
 export * from "./mapToOverview";
 export * from "./summaryGrouping";
 export * from "./targetLines";

@@ -20,6 +20,11 @@ import type {
   ReportTrendRow,
 } from "./types";
 import {
+  countUniqueWeekAreaStatuses,
+  countWeekAreaSubmissions,
+  submissionStatusForArea,
+} from "./submissionCount";
+import {
   monthLabel,
   parseCompletionRate,
   weeksInCalendarMonth,
@@ -162,10 +167,12 @@ function computeOnTimeRate(
   let submitted = 0;
 
   for (const areaId of areaIds) {
-    const sub = submissions.find((s) => s.weekId === weekId && s.areaId === areaId);
-    if (!sub || sub.status !== "submitted") continue;
+    if (submissionStatusForArea(submissions, weekId, areaId) !== "submitted") continue;
+    const sub = submissions.find(
+      (s) => s.weekId === weekId && s.areaId === areaId && s.status === "submitted"
+    );
     submitted += 1;
-    if (sub.submittedAt) {
+    if (sub?.submittedAt) {
       const at = new Date(sub.submittedAt);
       if (at <= due) onTime += 1;
     } else {
@@ -183,11 +190,13 @@ function computeReportCompletionRate(
   areaIds: number[]
 ): number {
   if (!weekId || !areaIds.length) return 0;
-  const submitted = areaIds.filter((areaId) => {
-    const sub = submissions.find((s) => s.weekId === weekId && s.areaId === areaId);
-    return sub?.status === "submitted";
-  }).length;
-  return Math.round((submitted / areaIds.length) * 1000) / 10;
+  const { submittedCount, expectedCount } = countWeekAreaSubmissions(
+    submissions,
+    weekId,
+    areaIds
+  );
+  if (!expectedCount) return 0;
+  return Math.round((submittedCount / expectedCount) * 1000) / 10;
 }
 
 function computeWeekAchievement(lines: ReportLine[]): number {
@@ -301,8 +310,8 @@ function computeCurrentMonthMetrics(
   }
 
   const monthSubmissions = input.submissions.filter((s) => weekIdsInMonth.has(s.weekId));
-  const submittedCount = monthSubmissions.filter((s) => s.status === "submitted").length;
-  const draftCount = monthSubmissions.filter((s) => s.status === "draft").length;
+  const { submittedCount, draftCount } = countUniqueWeekAreaStatuses(monthSubmissions);
+  const expectedCount = weekIdsInMonth.size * input.areas.length;
 
   const byArea = input.areas.map((area) => {
     const areaMonthLines = monthLines.filter((line) => line.areaId === area.id);
@@ -335,6 +344,7 @@ function computeCurrentMonthMetrics(
     achievement,
     submittedCount,
     draftCount,
+    expectedCount,
     totalLines: monthLines.length,
     byArea,
   };
@@ -431,9 +441,9 @@ export function computeReportOverviewMetrics(input: {
       .map((line) => line.weeklyCompletionRate)
       .filter((rate): rate is number => rate != null && Number.isFinite(rate));
 
-    const submission = weekId
-      ? input.submissions.find((s) => s.weekId === weekId && s.areaId === area.id)
-      : undefined;
+    const submissionStatus = weekId
+      ? submissionStatusForArea(input.submissions, weekId, area.id)
+      : null;
 
     return {
       areaId: area.id,
@@ -443,7 +453,7 @@ export function computeReportOverviewMetrics(input: {
       workCompletionRate: avgRateFromFractions(dailyRates),
       projectProgressRate: projectRates.length ? avgRateFromFractions(projectRates) : null,
       lineCount: areaLines.length,
-      submissionStatus: submission?.status ?? null,
+      submissionStatus,
     };
   });
 
@@ -451,14 +461,15 @@ export function computeReportOverviewMetrics(input: {
   const safetyRates = safetyLines
     .map((line) => line.weeklyCompletionRate)
     .filter((rate): rate is number => rate != null && Number.isFinite(rate));
-  const safetySubmission = weekId && safetyArea
-    ? input.submissions.find((s) => s.weekId === weekId && s.areaId === safetyArea.id)
-    : undefined;
+  const safetySubmissionStatus =
+    weekId && safetyArea
+      ? submissionStatusForArea(input.submissions, weekId, safetyArea.id)
+      : null;
 
   const safety: ReportSafetyMetrics = {
     lineCount: safetyLines.length,
     avgCompletionRate: avgRateFromFractions(safetyRates),
-    submissionStatus: safetySubmission?.status ?? null,
+    submissionStatus: safetySubmissionStatus,
     openFindings: safetyLines.filter((line) => lineStatus(line.weeklyCompletionRate) !== "completed").length,
   };
 
@@ -536,11 +547,11 @@ export function computeReportOverviewMetrics(input: {
       };
     });
 
-  const weekSubmissions = weekId
-    ? input.submissions.filter((s) => s.weekId === weekId)
-    : [];
-  const submittedCount = weekSubmissions.filter((s) => s.status === "submitted").length;
-  const draftCount = weekSubmissions.filter((s) => s.status === "draft").length;
+  const { submittedCount, draftCount, expectedCount } = countWeekAreaSubmissions(
+    input.submissions,
+    weekId,
+    allAreaIds
+  );
 
   const prevLineCount = prevLines.length;
   const lineDelta =
@@ -598,6 +609,7 @@ export function computeReportOverviewMetrics(input: {
     avgCompletionRate: achievement,
     submittedCount,
     draftCount,
+    expectedCount,
     byArea,
     weeklyTrend,
     divisions,

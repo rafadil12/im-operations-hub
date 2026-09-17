@@ -67,7 +67,6 @@ export function ReportPeriodSummaryCard({
   status,
   achievement,
   submittedCount,
-  draftCount,
   areaCount,
   totalLines,
   byArea,
@@ -75,8 +74,6 @@ export function ReportPeriodSummaryCard({
   compact = false,
   className,
 }: Props) {
-  const submittedDenominator = submittedCount + draftCount || areaCount;
-
   return (
     <section
       className={[
@@ -106,7 +103,7 @@ export function ReportPeriodSummaryCard({
         <StatRow label={reportText("achievement", language)} value={`${achievement}%`} />
         <StatRow
           label={reportText("submittedAreas", language)}
-          value={`${submittedCount} / ${submittedDenominator}`}
+          value={`${submittedCount} / ${areaCount}`}
         />
         <StatRow label={reportText("reportLinesKpi", language)} value={totalLines} />
       </div>
