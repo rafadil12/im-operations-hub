@@ -111,10 +111,13 @@ function ReportFilterBar({
       <button
         type="button"
         onClick={onToday}
-        className="w-full cursor-pointer rounded-md border border-border bg-bg/40 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover sm:w-auto"
+        className="cursor-pointer rounded-md border border-border bg-bg/40 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
       >
         {reportText("today", language)}
       </button>
+      <p className="min-w-0 flex-1 basis-full rounded-md border border-accent/20 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-text-muted sm:basis-0 sm:self-center">
+        {reportText("oneReportRule", language)}
+      </p>
     </div>
   );
 }
