@@ -5,6 +5,9 @@ import type {
   TrainingSessionParticipantRow,
   TrainingSessionRow,
 } from "./types";
+import { renderTopicText } from "./topicText";
+
+export { normalizeTopicText, renderTopicText, resolveSessionTopics } from "./topicText";
 
 export function jsonError(message: string, status = 400) {
   return NextResponse.json({ success: false, error: message }, { status });
@@ -71,8 +74,8 @@ export function mapSessionRow(
     divisionId: Number(row.division_id),
     divisionNameEn: String(row.division_name_en ?? ""),
     divisionNameCn: String(row.division_name_cn ?? ""),
-    topicEn: normalizeTopicText(row.topic_en ?? ""),
-    topicCn: row.topic_cn ?? "",
+    topicEn: renderTopicText(row.topic_en ?? ""),
+    topicCn: renderTopicText(row.topic_cn ?? ""),
     participantCount: Number(row.participant_count) || participants.length,
     participants,
     attachment:
@@ -119,20 +122,4 @@ export function parseDivisionId(value: unknown): number | null {
 
 export function hasTopicText(topicEn: string, topicCn: string): boolean {
   return Boolean(topicEn.trim() || topicCn.trim());
-}
-
-/** Session topic EN is stored/shown in ALL CAPS. Chinese text is unchanged by toUpperCase. */
-export function normalizeTopicText(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toUpperCase();
-}
-
-export function resolveSessionTopics(
-  topicEn: string,
-  topicCn: string
-): { topicEn: string; topicCn: string } {
-  const en = topicEn.trim();
-  const cn = topicCn.trim();
-  const normalizedEn = en ? normalizeTopicText(en) : cn;
-  const normalizedCn = cn || (en ? normalizeTopicText(en) : "");
-  return { topicEn: normalizedEn, topicCn: normalizedCn };
 }

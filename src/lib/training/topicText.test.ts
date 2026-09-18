@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTopicText, resolveSessionTopics } from "./apiHelpers";
+import { normalizeTopicText, renderTopicText, resolveSessionTopics } from "./topicText";
+
+describe("renderTopicText", () => {
+  it("renders typed text as ALL CAPS without trimming while typing", () => {
+    expect(renderTopicText("machine training")).toBe("MACHINE TRAINING");
+    expect(renderTopicText("mAcHiNe ")).toBe("MACHINE ");
+  });
+});
 
 describe("normalizeTopicText", () => {
   it("normalizes mixed casing to ALL CAPS", () => {
@@ -14,7 +21,7 @@ describe("normalizeTopicText", () => {
 });
 
 describe("resolveSessionTopics", () => {
-  it("uppercases English topic on save and leaves CN as typed", () => {
+  it("uppercases English topic on save and leaves Chinese glyphs unchanged", () => {
     expect(resolveSessionTopics("machine training", "机器培训")).toEqual({
       topicEn: "MACHINE TRAINING",
       topicCn: "机器培训",
