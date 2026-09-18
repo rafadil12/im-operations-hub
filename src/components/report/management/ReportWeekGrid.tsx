@@ -44,7 +44,7 @@ const tdClass = "border border-border-subtle p-0 align-top";
 const cellInput =
   "block w-full min-w-0 border-0 bg-transparent px-2 py-1.5 text-xs text-text outline-none focus:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-70";
 const cellTextarea =
-  "block w-full min-w-[9rem] resize-y border-0 bg-transparent px-2 py-1.5 text-xs leading-5 text-text outline-none focus:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-70";
+  "block w-full min-w-[6rem] resize-y border-0 bg-transparent px-2 py-1.5 text-xs leading-5 text-text outline-none focus:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-70 sm:min-w-[9rem]";
 const dialogField =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-1.5 text-sm text-text outline-none focus:border-accent";
 
@@ -231,7 +231,7 @@ export function ReportWeekGrid({
       </div>
 
       <div className="overflow-auto rounded-lg border border-border-subtle">
-        <table className="w-full min-w-[1100px] border-collapse text-left">
+        <table className="w-full min-w-[640px] border-collapse text-left sm:min-w-[900px] lg:min-w-[1100px]">
           <thead>
             <tr>
               <th className={`${thClass} w-10 text-center`}>#</th>

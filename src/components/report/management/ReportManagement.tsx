@@ -77,11 +77,11 @@ function ReportFilterBar({
   onToday,
 }: ReportFilterBarProps) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-3">
-      <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
-        <FilterField label={reportText("year", language)} className="min-w-[88px]">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <FilterField label={reportText("year", language)} className="min-w-0 sm:min-w-[88px]">
           <select
-            className={filterCtrl + " w-full min-w-[88px]"}
+            className={filterCtrl + " w-full sm:min-w-[88px]"}
             value={year}
             onChange={(e) => onYearChange(Number(e.target.value))}
             aria-label={reportText("year", language)}
@@ -93,9 +93,9 @@ function ReportFilterBar({
             ))}
           </select>
         </FilterField>
-        <FilterField label={reportText("week", language)} className="min-w-[120px]">
+        <FilterField label={reportText("week", language)} className="min-w-0 sm:min-w-[120px]">
           <select
-            className={filterCtrl + " w-full min-w-[120px]"}
+            className={filterCtrl + " w-full sm:min-w-[120px]"}
             value={filterWeek === "all" ? "all" : String(filterWeek)}
             onChange={(e) =>
               onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
@@ -109,14 +109,14 @@ function ReportFilterBar({
             ))}
           </select>
         </FilterField>
-        <button
-          type="button"
-          onClick={onToday}
-          className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
-        >
-          {reportText("today", language)}
-        </button>
       </div>
+      <button
+        type="button"
+        onClick={onToday}
+        className="w-full cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover sm:w-auto"
+      >
+        {reportText("today", language)}
+      </button>
     </div>
   );
 }
@@ -457,8 +457,8 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   return (
     <div className="space-y-0">
       {mode === "reports" ? (
-        <div className="overflow-x-auto border-b border-border-subtle">
-          <div className="flex min-w-max gap-6">
+        <div className="overflow-x-auto border-b border-border-subtle [-ms-overflow-style:none] [scrollbar-width:thin]">
+          <div className="flex min-w-max gap-3 px-0.5 sm:gap-6">
             {areas.map((area) => {
               const active = activeTab === area.id;
               const color = areaColor(area.code);
@@ -468,7 +468,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                   type="button"
                   onClick={() => setActiveTab(area.id)}
                   className={[
-                    "relative flex cursor-pointer items-center gap-2 pb-3 pt-1 text-sm font-medium transition-colors",
+                    "relative flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap pb-3 pt-1 text-sm font-medium transition-colors",
                     active ? "text-text" : "text-text-muted hover:text-text",
                   ].join(" ")}
                 >
@@ -508,7 +508,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
       </div>
 
       {!isSummary ? (
-        <p className="mb-4 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-text-muted">
+        <p className="mb-4 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-text-muted">
           {reportText("oneReportRule", language)}
         </p>
       ) : null}

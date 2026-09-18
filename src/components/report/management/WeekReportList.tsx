@@ -4,12 +4,12 @@ import { reportText, type ReportLanguage, type WeekReportUiStatus } from "@/lib/
 import type { AreaWeekReportRow } from "@/lib/report/weekReportIdentity";
 
 const reportTh =
-  "sticky top-0 z-20 border border-border-subtle bg-surface px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
-const reportTd = "border border-border-subtle px-3 py-3 align-middle text-center text-sm";
+  "sticky top-0 z-20 border border-border-subtle bg-surface px-2 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)] sm:px-3 sm:py-3";
+const reportTd = "border border-border-subtle px-2 py-2.5 align-middle text-center text-sm sm:px-3 sm:py-3";
 const stickyTh =
-  "sticky top-0 right-0 z-30 border border-border-subtle bg-surface px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border-subtle)]";
+  "sticky top-0 right-0 z-30 min-w-[7.5rem] border border-border-subtle bg-surface px-2 py-3 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[-6px_0_8px_-6px_var(--shadow-color-soft),0_1px_0_0_var(--color-border-subtle)] sm:px-3";
 const stickyTd =
-  "sticky right-0 border border-border-subtle bg-surface px-3 py-3 align-middle text-center text-sm";
+  "sticky right-0 z-10 min-w-[7.5rem] border border-border-subtle bg-surface px-2 py-3 align-middle text-center text-sm shadow-[-6px_0_8px_-6px_var(--shadow-color-soft)] sm:px-3";
 
 type WeekReportListProps = {
   language: ReportLanguage;
@@ -98,9 +98,9 @@ export function WeekReportList({
   onReopen,
 }: WeekReportListProps) {
   return (
-    <div className="overflow-auto rounded-xl border border-border-subtle bg-surface min-h-[32rem] max-h-[calc(100dvh-14rem)]">
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-        <h2 className="text-sm font-semibold text-text">{title}</h2>
+    <div className="min-h-[20rem] max-h-[calc(100dvh-16rem)] overflow-auto rounded-xl border border-border-subtle bg-surface sm:min-h-[32rem] sm:max-h-[calc(100dvh-14rem)]">
+      <div className="flex flex-col items-start gap-2 border-b border-border-subtle px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4">
+        <h2 className="min-w-0 text-sm font-semibold text-text">{title}</h2>
         <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
           {(["submitted", "draft", "none"] as WeekReportUiStatus[]).map((status) => (
             <span
@@ -112,25 +112,28 @@ export function WeekReportList({
           ))}
         </div>
       </div>
-      <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[720px] border-collapse text-left text-sm md:min-w-[980px]">
         <thead>
           <tr>
             <th className={reportTh}>{reportText("week", language)}</th>
             <th className={reportTh}>{reportText("dateRange", language)}</th>
             <th className={reportTh}>{reportText("status", language)}</th>
-            <th className={reportTh}>{reportText("subItemCount", language)}</th>
-            <th className={reportTh}>{reportText("createdBy", language)}</th>
-            <th className={reportTh}>{reportText("updatedBy", language)}</th>
+            <th className={`${reportTh} hidden md:table-cell`}>
+              {reportText("subItemCount", language)}
+            </th>
+            <th className={`${reportTh} hidden lg:table-cell`}>
+              {reportText("createdBy", language)}
+            </th>
+            <th className={`${reportTh} hidden lg:table-cell`}>
+              {reportText("updatedBy", language)}
+            </th>
             <th className={stickyTh}>{reportText("actions", language)}</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td
-                colSpan={7}
-                className={`${reportTd} py-12 text-text-muted`}
-              >
+              <td colSpan={7} className={`${reportTd} py-12 text-text-muted`}>
                 {reportText("noLines", language)}
               </td>
             </tr>
@@ -142,7 +145,11 @@ export function WeekReportList({
                   <td className={reportTd}>
                     <div className="font-medium text-text">Week {row.weekNumber}</div>
                   </td>
-                  <td className={`${reportTd} whitespace-nowrap text-text-muted`}>{range}</td>
+                  <td className={`${reportTd} text-text-muted`}>
+                    <span className="inline-block max-w-[10rem] whitespace-normal sm:max-w-none sm:whitespace-nowrap">
+                      {range}
+                    </span>
+                  </td>
                   <td className={reportTd}>
                     <span
                       className={`inline-flex rounded-md px-2 py-1 text-[11px] font-medium ${statusClass(row.status)}`}
@@ -150,11 +157,13 @@ export function WeekReportList({
                       {statusLabel(row.status, language)}
                     </span>
                   </td>
-                  <td className={reportTd}>{lineCountLabel(row.lineCount, language)}</td>
-                  <td className={`${reportTd} whitespace-nowrap text-text-muted`}>
+                  <td className={`${reportTd} hidden md:table-cell`}>
+                    {lineCountLabel(row.lineCount, language)}
+                  </td>
+                  <td className={`${reportTd} hidden break-words text-text-muted lg:table-cell`}>
                     {formatActorCell(row.createdAt, row.createdByLabel, row.status)}
                   </td>
-                  <td className={`${reportTd} whitespace-nowrap text-text-muted`}>
+                  <td className={`${reportTd} hidden break-words text-text-muted lg:table-cell`}>
                     {formatActorCell(row.updatedAt, row.updatedByLabel, row.status)}
                   </td>
                   <td className={stickyTd}>
