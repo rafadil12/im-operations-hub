@@ -5,6 +5,7 @@ import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/l
 import { THEME_BOOTSTRAP_SCRIPT, ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { GuestForbiddenProvider } from "@/components/auth/GuestForbiddenProvider";
+import { SessionExpiredProvider } from "@/components/auth/SessionExpiredProvider";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import "./globals.css";
 
@@ -81,9 +82,11 @@ export default function RootLayout({
         <ThemeProvider>
           <LangProvider>
             <AuthProvider>
-              <GuestForbiddenProvider>
-                <ToastProvider>{children}</ToastProvider>
-              </GuestForbiddenProvider>
+              <SessionExpiredProvider>
+                <GuestForbiddenProvider>
+                  <ToastProvider>{children}</ToastProvider>
+                </GuestForbiddenProvider>
+              </SessionExpiredProvider>
             </AuthProvider>
           </LangProvider>
         </ThemeProvider>

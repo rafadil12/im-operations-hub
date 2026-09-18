@@ -314,6 +314,8 @@ const en = {
     guest: "Guest",
     guestForbiddenTitle: "Not allowed",
     guestForbiddenMessage: "Not allowed, please login.",
+    sessionExpiredTitle: "Session expired",
+    sessionExpiredMessage: "Your session has expired. Please sign in again.",
     signIn: "Sign in",
     logout: "Logout",
     changePassword: "Change Password",

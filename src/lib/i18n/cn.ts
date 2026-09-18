@@ -314,6 +314,8 @@ const cn: Dict = {
     guest: "访客",
     guestForbiddenTitle: "不允许",
     guestForbiddenMessage: "不允许，请登录。",
+    sessionExpiredTitle: "会话已过期",
+    sessionExpiredMessage: "您的会话已过期，请重新登录。",
     signIn: "登录",
     logout: "退出登录",
     changePassword: "修改密码",

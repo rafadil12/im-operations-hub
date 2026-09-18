@@ -6,6 +6,8 @@ import {
   getAccountPublic,
   loadGuestPermissions,
   readSession,
+  SESSION_EXPIRED_AUTH,
+  SESSION_EXPIRED_MESSAGE,
 } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +32,13 @@ export async function GET() {
 
     if (!account || session.sessionVersion !== account.sessionVersion) {
       await clearSessionCookie();
-      return NextResponse.json({ account: null });
+      const guestPermissions = await loadGuestPermissions();
+      return NextResponse.json({
+        account: null,
+        guestPermissions,
+        error: SESSION_EXPIRED_MESSAGE,
+        auth: SESSION_EXPIRED_AUTH,
+      });
     }
 
     /**
