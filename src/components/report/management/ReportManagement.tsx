@@ -77,43 +77,41 @@ function ReportFilterBar({
   onToday,
 }: ReportFilterBarProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-      <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
-        <FilterField label={reportText("year", language)} className="min-w-0 sm:min-w-[88px]">
-          <select
-            className={filterCtrl + " w-full sm:min-w-[88px]"}
-            value={year}
-            onChange={(e) => onYearChange(Number(e.target.value))}
-            aria-label={reportText("year", language)}
-          >
-            {[2025, 2026, 2027].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-        <FilterField label={reportText("week", language)} className="min-w-0 sm:min-w-[120px]">
-          <select
-            className={filterCtrl + " w-full sm:min-w-[120px]"}
-            value={filterWeek === "all" ? "all" : String(filterWeek)}
-            onChange={(e) =>
-              onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
-          >
-            <option value="all">{reportText("allWeeks", language)}</option>
-            {weekOptions.map((w) => (
-              <option key={w} value={w}>
-                Week {w}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-      </div>
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
+      <FilterField label={reportText("year", language)} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-auto sm:min-w-[88px]">
+        <select
+          className={filterCtrl + " w-full sm:min-w-[88px]"}
+          value={year}
+          onChange={(e) => onYearChange(Number(e.target.value))}
+          aria-label={reportText("year", language)}
+        >
+          {[2025, 2026, 2027].map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </FilterField>
+      <FilterField label={reportText("week", language)} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-auto sm:min-w-[140px]">
+        <select
+          className={filterCtrl + " w-full sm:min-w-[140px]"}
+          value={filterWeek === "all" ? "all" : String(filterWeek)}
+          onChange={(e) =>
+            onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
+          }
+        >
+          <option value="all">{reportText("allWeeks", language)}</option>
+          {weekOptions.map((w) => (
+            <option key={w} value={w}>
+              Week {w}
+            </option>
+          ))}
+        </select>
+      </FilterField>
       <button
         type="button"
         onClick={onToday}
-        className="w-full cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover sm:w-auto"
+        className="w-full cursor-pointer rounded-md border border-border bg-bg/40 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover sm:ml-auto sm:w-auto"
       >
         {reportText("today", language)}
       </button>
@@ -455,10 +453,10 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     .replace("{year}", String(year));
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-4">
       {mode === "reports" ? (
         <div className="overflow-x-auto border-b border-border-subtle [-ms-overflow-style:none] [scrollbar-width:thin]">
-          <div className="flex min-w-max gap-3 px-0.5 sm:gap-6">
+          <div className="flex min-w-max gap-3 px-0.5 sm:gap-5">
             {areas.map((area) => {
               const active = activeTab === area.id;
               const color = areaColor(area.code);
@@ -491,7 +489,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         </div>
       ) : null}
 
-      <div className="py-4">
+      <div>
         {isSummary ? (
           <SummaryFilterPanel {...summaryFilterPanelProps} />
         ) : (
@@ -508,7 +506,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
       </div>
 
       {!isSummary ? (
-        <p className="mb-4 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-text-muted">
+        <p className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5 text-xs leading-relaxed text-text-muted">
           {reportText("oneReportRule", language)}
         </p>
       ) : null}
