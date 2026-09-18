@@ -34,6 +34,47 @@ export function submissionStatusForArea(
   return uniqueSubmissionStatusByWeekArea(submissions).get(keyFor(weekId, areaId)) ?? null;
 }
 
+export function isWeekFullySubmitted(
+  submissions: SubmissionCountInput[],
+  weekId: number,
+  areaIds: number[]
+): boolean {
+  if (!areaIds.length) return false;
+  return areaIds.every(
+    (areaId) => submissionStatusForArea(submissions, weekId, areaId) === "submitted"
+  );
+}
+
+export function countFullySubmittedWeeks(
+  weekIds: Array<number | null | undefined>,
+  submissions: SubmissionCountInput[],
+  areaIds: number[]
+): number {
+  let count = 0;
+  for (const weekId of weekIds) {
+    if (weekId == null) continue;
+    if (isWeekFullySubmitted(submissions, weekId, areaIds)) count += 1;
+  }
+  return count;
+}
+
+export function buildWeekIdByNumber(
+  weeks: { id: number; weekNumber: number }[] | undefined,
+  rows: { week_id?: number | null; week_number?: number | null }[]
+): Map<number, number> {
+  const map = new Map<number, number>();
+  for (const row of rows) {
+    const weekNumber = Number(row.week_number);
+    const weekId = Number(row.week_id);
+    if (weekNumber && weekId) map.set(weekNumber, weekId);
+  }
+  for (const week of weeks ?? []) {
+    if (week.weekNumber && week.id) map.set(week.weekNumber, week.id);
+  }
+  return map;
+}
+
+/** Area-level count for a single week (report-completion % / on-time). */
 export function countWeekAreaSubmissions(
   submissions: SubmissionCountInput[],
   weekId: number | null,
@@ -53,17 +94,4 @@ export function countWeekAreaSubmissions(
   }
 
   return { submittedCount, draftCount, expectedCount };
-}
-
-export function countUniqueWeekAreaStatuses(submissions: SubmissionCountInput[]): {
-  submittedCount: number;
-  draftCount: number;
-} {
-  let submittedCount = 0;
-  let draftCount = 0;
-  for (const status of uniqueSubmissionStatusByWeekArea(submissions).values()) {
-    if (status === "submitted") submittedCount += 1;
-    else draftCount += 1;
-  }
-  return { submittedCount, draftCount };
 }

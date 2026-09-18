@@ -20,7 +20,8 @@ import type {
   ReportTrendRow,
 } from "./types";
 import {
-  countUniqueWeekAreaStatuses,
+  buildWeekIdByNumber,
+  countFullySubmittedWeeks,
   countWeekAreaSubmissions,
   submissionStatusForArea,
 } from "./submissionCount";
@@ -284,6 +285,7 @@ function computeCurrentMonthMetrics(
     areas: ReportArea[];
     rows: ReportLineRow[];
     submissions: { weekId: number; areaId: number; status: "draft" | "submitted" }[];
+    weeks?: { id: number; weekNumber: number }[];
     asOf?: Date;
     lang?: "en" | "cn";
   }
@@ -293,6 +295,9 @@ function computeCurrentMonthMetrics(
   const month = asOf.getMonth() + 1;
   const lang = input.lang ?? "en";
   const monthWeekNumbers = weeksInCalendarMonth(calYear, month);
+  const areaIds = input.areas.map((area) => area.id);
+  const weekIdByNumber = buildWeekIdByNumber(input.weeks, input.rows);
+  const monthWeekIds = monthWeekNumbers.map((weekNumber) => weekIdByNumber.get(weekNumber) ?? null);
 
   const monthRows = input.rows.filter((row) => {
     const rowYear = Number(row.year ?? calYear);
@@ -303,15 +308,9 @@ function computeCurrentMonthMetrics(
   const monthLines = monthRows.map(mapReportLineRow);
   const achievement = computeWeekAchievement(monthLines);
 
-  const weekIdsInMonth = new Set<number>();
-  for (const row of monthRows) {
-    const weekId = Number(row.week_id);
-    if (weekId) weekIdsInMonth.add(weekId);
-  }
-
-  const monthSubmissions = input.submissions.filter((s) => weekIdsInMonth.has(s.weekId));
-  const { submittedCount, draftCount } = countUniqueWeekAreaStatuses(monthSubmissions);
-  const expectedCount = weekIdsInMonth.size * input.areas.length;
+  const submittedCount = countFullySubmittedWeeks(monthWeekIds, input.submissions, areaIds);
+  const expectedCount = monthWeekNumbers.length;
+  const draftCount = Math.max(0, expectedCount - submittedCount);
 
   const byArea = input.areas.map((area) => {
     const areaMonthLines = monthLines.filter((line) => line.areaId === area.id);
@@ -319,11 +318,10 @@ function computeCurrentMonthMetrics(
       .map((line) => line.weeklyCompletionRate)
       .filter((rate): rate is number => rate != null && Number.isFinite(rate));
 
-    const submittedWeeks = new Set(
-      monthSubmissions
-        .filter((s) => s.areaId === area.id && s.status === "submitted")
-        .map((s) => s.weekId)
-    ).size;
+    const submittedWeeks = monthWeekIds.filter((weekId) => {
+      if (weekId == null) return false;
+      return submissionStatusForArea(input.submissions, weekId, area.id) === "submitted";
+    }).length;
 
     return {
       areaId: area.id,
@@ -362,6 +360,8 @@ export function computeReportOverviewMetrics(input: {
     submittedAt?: string | null;
   }[];
   weekId?: number | null;
+  weeks?: { id: number; weekNumber: number }[];
+  asOf?: Date;
 }): ReportOverviewMetrics {
   const { year, weekNumber } = input;
   const range = weekDateRange(year, weekNumber);
@@ -547,11 +547,17 @@ export function computeReportOverviewMetrics(input: {
       };
     });
 
-  const { submittedCount, draftCount, expectedCount } = countWeekAreaSubmissions(
-    input.submissions,
-    weekId,
-    allAreaIds
-  );
+  const currentMonth = computeCurrentMonthMetrics({
+    areas: input.areas,
+    rows: input.rows,
+    submissions: input.submissions,
+    weeks: input.weeks,
+    asOf: input.asOf ?? new Date(`${range.startsOn}T00:00:00`),
+  });
+
+  const submittedCount = currentMonth.submittedCount;
+  const draftCount = currentMonth.draftCount;
+  const expectedCount = currentMonth.expectedCount;
 
   const prevLineCount = prevLines.length;
   const lineDelta =
@@ -579,12 +585,6 @@ export function computeReportOverviewMetrics(input: {
           prevProjects?.overallProgress ?? null
         )
       : null;
-
-  const currentMonth = computeCurrentMonthMetrics({
-    areas: input.areas,
-    rows: input.rows,
-    submissions: input.submissions,
-  });
 
   return {
     year,

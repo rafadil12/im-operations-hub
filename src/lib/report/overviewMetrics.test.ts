@@ -80,31 +80,67 @@ describe("computeReportOverviewMetrics", () => {
     expect(metrics.divisions).toHaveLength(3);
     expect(metrics.safety.lineCount).toBe(0);
     expect(metrics.attention.length).toBeGreaterThan(0);
-    expect(metrics.submittedCount).toBe(3);
-    expect(metrics.draftCount).toBe(1);
-    expect(metrics.expectedCount).toBe(4);
     expect(metrics.reportCompletion.value).toBe(75);
   });
 
-  it("counts one SUBMITTED report per area per week", () => {
-    const metrics = computeReportOverviewMetrics({
+  it("counts a month week only when every area has SUBMITTED", () => {
+    const areaIds = areas.map((area) => area.id);
+    const weeks = [37, 38, 39, 40].map((weekNumber) => ({ id: weekNumber, weekNumber }));
+    const allSubmitted = (weekId: number) =>
+      areaIds.map((areaId) => ({
+        weekId,
+        areaId,
+        status: "submitted" as const,
+        submittedAt: "2026-09-10T10:00:00Z",
+      }));
+
+    const completeCurrent = computeReportOverviewMetrics({
       year: 2026,
-      weekNumber: 35,
+      weekNumber: 38,
+      areas,
+      rows: [],
+      submissions: [...allSubmitted(37), ...allSubmitted(38)],
+      weekId: 38,
+      weeks,
+      asOf: new Date("2026-09-12T00:00:00"),
+    });
+
+    expect(completeCurrent.submittedCount).toBe(2);
+    expect(completeCurrent.expectedCount).toBe(4);
+    expect(completeCurrent.currentMonth.submittedCount).toBe(2);
+    expect(completeCurrent.currentMonth.expectedCount).toBe(4);
+
+    const incompleteCurrent = computeReportOverviewMetrics({
+      year: 2026,
+      weekNumber: 38,
       areas,
       rows: [],
       submissions: [
-        { weekId: 10, areaId: 1, status: "submitted", submittedAt: "2026-08-28T10:00:00Z" },
-        { weekId: 10, areaId: 1, status: "submitted", submittedAt: "2026-08-28T11:00:00Z" },
-        { weekId: 10, areaId: 2, status: "submitted", submittedAt: "2026-08-29T10:00:00Z" },
-        { weekId: 10, areaId: 3, status: "draft" },
+        ...allSubmitted(37),
+        { weekId: 38, areaId: 1, status: "submitted", submittedAt: "2026-09-17T10:00:00Z" },
+        { weekId: 38, areaId: 2, status: "draft" },
       ],
-      weekId: 10,
+      weekId: 38,
+      weeks,
+      asOf: new Date("2026-09-12T00:00:00"),
     });
 
-    expect(metrics.submittedCount).toBe(2);
-    expect(metrics.draftCount).toBe(1);
-    expect(metrics.expectedCount).toBe(4);
-    expect(metrics.reportCompletion.value).toBe(50);
+    expect(incompleteCurrent.submittedCount).toBe(1);
+    expect(incompleteCurrent.expectedCount).toBe(4);
+
+    const noneCurrent = computeReportOverviewMetrics({
+      year: 2026,
+      weekNumber: 38,
+      areas,
+      rows: [],
+      submissions: allSubmitted(37),
+      weekId: 38,
+      weeks,
+      asOf: new Date("2026-09-12T00:00:00"),
+    });
+
+    expect(noneCurrent.submittedCount).toBe(1);
+    expect(noneCurrent.expectedCount).toBe(4);
   });
 
   it("returns empty week metrics without throwing", () => {
