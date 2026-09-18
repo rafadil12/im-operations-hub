@@ -547,7 +547,7 @@ export function computeReportOverviewMetrics(input: {
       };
     });
 
-  const currentMonth = computeCurrentMonthMetrics({
+  const currentMonthMetrics = computeCurrentMonthMetrics({
     areas: input.areas,
     rows: input.rows,
     submissions: input.submissions,
@@ -555,9 +555,9 @@ export function computeReportOverviewMetrics(input: {
     asOf: input.asOf ?? new Date(`${range.startsOn}T00:00:00`),
   });
 
-  const submittedCount = currentMonth.submittedCount;
-  const draftCount = currentMonth.draftCount;
-  const expectedCount = currentMonth.expectedCount;
+  const submittedCount = currentMonthMetrics.submittedCount;
+  const draftCount = currentMonthMetrics.draftCount;
+  const expectedCount = currentMonthMetrics.expectedCount;
 
   const prevLineCount = prevLines.length;
   const lineDelta =
@@ -603,7 +603,7 @@ export function computeReportOverviewMetrics(input: {
       delta: lineDelta,
     },
     currentWeekStatus: weekStatus(achievement),
-    currentMonth,
+    currentMonth: currentMonthMetrics,
     totalLines: lines.length,
     totalWeeks: new Set(input.rows.map((row) => `${row.year}-${row.week_number}`)).size,
     avgCompletionRate: achievement,
