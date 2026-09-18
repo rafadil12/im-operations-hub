@@ -1,6 +1,16 @@
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { query } from "@/lib/db";
+import {
+  allocateNextLocationCode,
+  LOCATION_CODE_PREFIX,
+} from "@/lib/sparepart/locationCode";
 import type { SparepartStorageLocation } from "@/lib/types";
+
+export {
+  allocateNextLocationCode,
+  LOCATION_CODE_PREFIX,
+  parseLocationCodeSuffix,
+} from "@/lib/sparepart/locationCode";
 
 export function slugLocationCode(name: string): string {
   const slug = String(name)
@@ -10,6 +20,15 @@ export function slugLocationCode(name: string): string {
     .replace(/^_+|_+$/g, "")
     .slice(0, 64);
   return slug || "LOC";
+}
+
+/** Next storage location code from DB (`SL` + zero-padded 3-digit sequence). */
+export async function nextLocationCode(): Promise<string> {
+  const rows = await query<{ code: string }[]>(
+    `SELECT code FROM sparepart_storage_locations WHERE code LIKE ?`,
+    [`${LOCATION_CODE_PREFIX}%`]
+  );
+  return allocateNextLocationCode(rows.map((row) => row.code));
 }
 
 const LOCATION_SELECT = `id, code, name_en, name_cn, is_active, created_at, updated_at`;

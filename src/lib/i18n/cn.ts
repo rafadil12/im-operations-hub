@@ -133,6 +133,7 @@ const cn: Dict = {
     allCategories: "全部类别",
     location: "库存地点",
     locationCode: "地点代码",
+    locationCodeAutoHint: "自动生成。",
     locationName: "地点名称",
     locationNameEn: "地点名称（英文）",
     locationNameCn: "地点名称（中文）",

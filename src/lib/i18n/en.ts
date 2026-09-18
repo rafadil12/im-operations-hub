@@ -132,6 +132,7 @@ const en = {
     allCategories: "All categories",
     location: "Storage Location",
     locationCode: "Location Code",
+    locationCodeAutoHint: "Generated automatically.",
     locationName: "Location Name",
     locationNameEn: "Location Name (EN)",
     locationNameCn: "Location Name (CN)",
