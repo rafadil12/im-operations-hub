@@ -59,7 +59,7 @@ function locationCell(row: SparepartMovementHistoryRow, side: "from" | "to", lan
 }
 
 export async function GET(request: NextRequest) {
-  const gate = await requirePermission(PERMISSIONS.sparepartDocumentRead);
+  const gate = await requirePermission(PERMISSIONS.sparepartHistoryExport);
   if (gate instanceof NextResponse) return gate;
 
   try {

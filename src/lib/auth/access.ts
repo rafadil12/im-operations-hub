@@ -42,6 +42,8 @@ export const PERMISSIONS = {
   sparepartDocumentRead: "sparepart.document.read",
   sparepartDocumentPost: "sparepart.document.post",
   sparepartDocumentReverse: "sparepart.document.reverse",
+  sparepartHistoryRead: "sparepart.history.read",
+  sparepartHistoryExport: "sparepart.history.export",
   sparepartMaterialsRead: "sparepart.materials.read",
   sparepartMaterialsCreate: "sparepart.materials.create",
   sparepartMaterialsUpdate: "sparepart.materials.update",
@@ -127,6 +129,8 @@ export type RoleAccess = {
   canViewSparepartDocuments: boolean;
   canPostSparepartDocument: boolean;
   canReverseSparepartDocument: boolean;
+  canViewSparepartHistory: boolean;
+  canExportSparepartHistory: boolean;
   canViewSparepartMaterials: boolean;
   canCreateSparepartMaterial: boolean;
   canUpdateSparepartMaterial: boolean;
@@ -239,6 +243,8 @@ export function getRoleAccess(
     canViewSparepartDocuments: hasPermission(PERMISSIONS.sparepartDocumentRead),
     canPostSparepartDocument: hasPermission(PERMISSIONS.sparepartDocumentPost),
     canReverseSparepartDocument: hasPermission(PERMISSIONS.sparepartDocumentReverse),
+    canViewSparepartHistory: hasPermission(PERMISSIONS.sparepartHistoryRead),
+    canExportSparepartHistory: hasPermission(PERMISSIONS.sparepartHistoryExport),
     canViewSparepartMaterials: hasPermission(PERMISSIONS.sparepartMaterialsRead),
     canCreateSparepartMaterial: hasPermission(PERMISSIONS.sparepartMaterialsCreate),
     canUpdateSparepartMaterial: hasPermission(PERMISSIONS.sparepartMaterialsUpdate),

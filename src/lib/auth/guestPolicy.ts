@@ -21,6 +21,7 @@ export const DEFAULT_GUEST_PERMISSION_CODES = [
   "sparepart.overview.view",
   "sparepart.stock.view",
   "sparepart.document.read",
+  "sparepart.history.read",
   "organization.overview.view",
   "organization.employee.read",
   "organization.shift.read",

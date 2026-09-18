@@ -1793,5 +1793,14 @@ await applySqlFile(
   "Removed viewer role (if present).",
 );
 
+// ---------------------------------------------------------------------------
+// 045: sparepart movement history permissions (read + export)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "045_sparepart_history_permissions.sql",
+  readMigrationSql,
+  "Ensured sparepart.history.read/export and backfilled from document.read.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

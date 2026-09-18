@@ -37,6 +37,7 @@ export function Sidebar() {
     canViewSparepartOverview,
     canViewSparepartStock,
     canViewSparepartDocuments,
+    canViewSparepartHistory,
     canPostSparepartDocument,
     canViewSparepartMaterials,
     canManageSparepartLocations,
@@ -87,6 +88,7 @@ export function Sidebar() {
             canViewSparepartStock ||
             canPostSparepartDocument ||
             canViewSparepartDocuments ||
+            canViewSparepartHistory ||
             canViewSparepartMaterials ||
             canManageSparepartLocations
           );
@@ -174,6 +176,7 @@ export function Sidebar() {
             canViewSparepartStock,
             canPostSparepartDocument,
             canViewSparepartDocuments,
+            canViewSparepartHistory,
             canViewSparepartMaterials,
             canManageSparepartLocations,
           };
@@ -289,6 +292,7 @@ export function Sidebar() {
     canViewReportOverview,
     canViewReportLines,
     canViewSparepartDocuments,
+    canViewSparepartHistory,
     canViewSparepartMaterials,
     canViewSparepartOverview,
     canViewSparepartStock,

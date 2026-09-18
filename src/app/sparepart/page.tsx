@@ -44,6 +44,7 @@ export default function SparepartIndexPage() {
     access.canViewSparepartStock ||
     access.canPostSparepartDocument ||
     access.canViewSparepartDocuments ||
+    access.canViewSparepartHistory ||
     access.canViewSparepartMaterials ||
     access.canManageSparepartLocations;
 
@@ -121,6 +122,12 @@ export default function SparepartIndexPage() {
         label: t.nav.sparepartDocuments,
         desc: t.sparepart.documentsDesc,
         visible: access.canViewSparepartDocuments,
+      },
+      {
+        href: "/sparepart/movement-history",
+        label: t.nav.sparepartMovementHistory,
+        desc: t.sparepart.movementHistoryDesc,
+        visible: access.canViewSparepartHistory,
       },
       {
         href: "/sparepart/materials",

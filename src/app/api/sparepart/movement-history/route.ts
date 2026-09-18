@@ -11,7 +11,7 @@ import {
 import type { SparepartMovementHistoryRow } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
-  const gate = await requirePermission(PERMISSIONS.sparepartDocumentRead);
+  const gate = await requirePermission(PERMISSIONS.sparepartHistoryRead);
   if (gate instanceof NextResponse) return gate;
 
   try {
