@@ -112,7 +112,7 @@ export function WeekReportList({
 }: WeekReportListProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
-      <div className="relative z-10 flex flex-col gap-2 border-b border-border bg-surface px-4 py-3 shadow-[0_2px_8px_-2px_var(--shadow-color-soft)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 border-b border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="min-w-0 text-sm font-semibold text-text">{title}</h2>
         <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
           {(["submitted", "draft", "none"] as WeekReportUiStatus[]).map((status) => (
