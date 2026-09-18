@@ -127,8 +127,8 @@ export function WeekReportList({
       </div>
 
       <div className="max-h-[calc(100dvh-18rem)] overflow-auto sm:max-h-[calc(100dvh-15rem)]">
-        <table className="w-full min-w-[640px] border-collapse text-sm lg:min-w-0">
-          <thead>
+        <table className="w-full min-w-[640px] border-separate border-spacing-0 text-sm lg:min-w-0">
+          <thead className="relative z-20">
             <tr>
               <th className={`${reportTh} w-[5.5rem]`}>{reportText("week", language)}</th>
               <th className={reportTh}>{reportText("dateRange", language)}</th>
