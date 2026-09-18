@@ -179,9 +179,10 @@ export type ReportCurrentMonthMetrics = {
   monthLabel: string;
   status: ReportPeriodStatus;
   achievement: number;
+  /** Fully submitted report weeks (Friday ends in this month). */
   submittedCount: number;
   draftCount: number;
-  /** Weeks in the calendar month (denominator for submitted week count). */
+  /** Fridays in the calendar month (4 or 5) — denominator for month Submitted. */
   expectedCount: number;
   totalLines: number;
   byArea: ReportAreaMetrics[];
@@ -205,9 +206,10 @@ export type ReportOverviewMetrics = {
   totalLines: number;
   totalWeeks: number;
   avgCompletionRate: number;
+  /** Areas SUBMITTED for the selected week (Overview Current Week). */
   submittedCount: number;
   draftCount: number;
-  /** Fully submitted weeks in the selected week's month / weeks in that month. */
+  /** Area slots for the selected week (usually 4). */
   expectedCount: number;
   byArea: ReportAreaMetrics[];
   weeklyTrend: ReportTrendRow[];

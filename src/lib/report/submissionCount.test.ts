@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countFullySubmittedWeeks,
+  countWeekAreaSubmissions,
   isWeekFullySubmitted,
   submissionStatusForArea,
 } from "./submissionCount";
@@ -35,9 +36,9 @@ describe("isWeekFullySubmitted", () => {
 });
 
 describe("countFullySubmittedWeeks", () => {
-  it("counts 2/4 when the second week of the month is fully submitted", () => {
-    const submissions = [...allAreasSubmitted(37), ...allAreasSubmitted(38)];
-    expect(countFullySubmittedWeeks([37, 38, 39, 40], submissions, areaIds)).toBe(2);
+  it("counts 2/4 when weeks 36 and 37 are fully submitted (Sep Fridays)", () => {
+    const submissions = [...allAreasSubmitted(36), ...allAreasSubmitted(37)];
+    expect(countFullySubmittedWeeks([36, 37, 38, 39], submissions, areaIds)).toBe(2);
   });
 
   it("stays 1/4 when the current week is missing any area", () => {
@@ -47,11 +48,35 @@ describe("countFullySubmittedWeeks", () => {
       { weekId: 38, areaId: 2, status: "submitted" },
       { weekId: 38, areaId: 3, status: "draft" },
     ];
-    expect(countFullySubmittedWeeks([37, 38, 39, 40], submissions, areaIds)).toBe(1);
+    expect(countFullySubmittedWeeks([36, 37, 38, 39], submissions, areaIds)).toBe(1);
   });
 
   it("stays 1/4 when the current week has no submissions", () => {
-    expect(countFullySubmittedWeeks([37, 38, 39, 40], allAreasSubmitted(37), areaIds)).toBe(1);
+    expect(countFullySubmittedWeeks([36, 37, 38, 39], allAreasSubmitted(37), areaIds)).toBe(1);
+  });
+});
+
+describe("countWeekAreaSubmissions", () => {
+  it("counts 0/4 when the selected week has no area submissions", () => {
+    expect(countWeekAreaSubmissions(allAreasSubmitted(37), 38, areaIds)).toEqual({
+      submittedCount: 0,
+      draftCount: 0,
+      expectedCount: 4,
+    });
+  });
+
+  it("counts submitted areas for the selected week only", () => {
+    expect(
+      countWeekAreaSubmissions(
+        [
+          ...allAreasSubmitted(37),
+          { weekId: 38, areaId: 1, status: "submitted" },
+          { weekId: 38, areaId: 2, status: "draft" },
+        ],
+        38,
+        areaIds
+      )
+    ).toEqual({ submittedCount: 1, draftCount: 1, expectedCount: 4 });
   });
 });
 

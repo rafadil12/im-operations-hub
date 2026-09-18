@@ -28,7 +28,7 @@ import {
 import {
   monthLabel,
   parseCompletionRate,
-  weeksInCalendarMonth,
+  weeksEndingInCalendarMonth,
   weekDateRange,
   weekLabel,
 } from "./weekCalendar";
@@ -294,7 +294,7 @@ function computeCurrentMonthMetrics(
   const calYear = asOf.getFullYear();
   const month = asOf.getMonth() + 1;
   const lang = input.lang ?? "en";
-  const monthWeekNumbers = weeksInCalendarMonth(calYear, month);
+  const monthWeekNumbers = weeksEndingInCalendarMonth(calYear, month);
   const areaIds = input.areas.map((area) => area.id);
   const weekIdByNumber = buildWeekIdByNumber(input.weeks, input.rows);
   const monthWeekIds = monthWeekNumbers.map((weekNumber) => weekIdByNumber.get(weekNumber) ?? null);
@@ -552,12 +552,14 @@ export function computeReportOverviewMetrics(input: {
     rows: input.rows,
     submissions: input.submissions,
     weeks: input.weeks,
-    asOf: input.asOf ?? new Date(`${range.startsOn}T00:00:00`),
+    // Month card follows the Friday of the selected week (report due day).
+    asOf: input.asOf ?? new Date(`${range.endsOn}T00:00:00`),
   });
 
-  const submittedCount = currentMonthMetrics.submittedCount;
-  const draftCount = currentMonthMetrics.draftCount;
-  const expectedCount = currentMonthMetrics.expectedCount;
+  const weekAreaCounts = countWeekAreaSubmissions(input.submissions, weekId, allAreaIds);
+  const submittedCount = weekAreaCounts.submittedCount;
+  const draftCount = weekAreaCounts.draftCount;
+  const expectedCount = weekAreaCounts.expectedCount;
 
   const prevLineCount = prevLines.length;
   const lineDelta =
