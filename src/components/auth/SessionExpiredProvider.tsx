@@ -1,5 +1,6 @@
 "use client";
 
+import { ClockFading } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
@@ -19,23 +20,6 @@ type SessionExpiredContextValue = {
 };
 
 const SessionExpiredContext = createContext<SessionExpiredContextValue | null>(null);
-
-/** Same stroke lock glyph as the login form. */
-function LockIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className="size-4"
-      aria-hidden
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
-}
 
 export function SessionExpiredProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -70,7 +54,7 @@ export function SessionExpiredProvider({ children }: { children: ReactNode }) {
           title={
             <span className="inline-flex items-center gap-2">
               <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
-                <LockIcon />
+                <ClockFading className="size-4" aria-hidden />
               </span>
               <span>{t.auth.sessionExpiredTitle}</span>
             </span>
