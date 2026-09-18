@@ -41,6 +41,7 @@ export async function GET(request: Request) {
       rows,
       submissions,
       weekId: selectedWeek?.id ?? null,
+      weeks: weeks.map((w) => ({ id: w.id, weekNumber: w.weekNumber })),
     });
 
     return NextResponse.json({ success: true, data: metrics });

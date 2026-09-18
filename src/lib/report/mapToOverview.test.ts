@@ -24,6 +24,7 @@ function sampleMetrics(): ReportOverviewMetrics {
     avgCompletionRate: 92.5,
     submittedCount: 4,
     draftCount: 0,
+    expectedCount: 4,
     byArea: [
       {
         areaId: 1,
@@ -97,6 +98,7 @@ function sampleMetrics(): ReportOverviewMetrics {
       achievement: 85,
       submittedCount: 4,
       draftCount: 0,
+      expectedCount: 4,
       totalLines: 4,
       byArea: [
         {

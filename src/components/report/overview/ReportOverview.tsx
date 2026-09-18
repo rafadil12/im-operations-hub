@@ -437,7 +437,7 @@ export function ReportOverview() {
                 />
                 <StatRow
                   label={reportText("submittedAreas", language)}
-                  value={`${metrics.submittedCount} / ${metrics.submittedCount + metrics.draftCount || metrics.byArea.length}`}
+                  value={`${metrics.submittedCount} / ${metrics.expectedCount || metrics.byArea.length}`}
                 />
                 <StatRow label={reportText("reportLinesKpi", language)} value={metrics.totalLines} />
               </div>
