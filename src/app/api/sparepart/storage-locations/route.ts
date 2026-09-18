@@ -3,7 +3,7 @@ import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { query, withTransaction } from "@/lib/db";
-import { slugLocationCode } from "@/lib/sparepart/locations";
+import { nextLocationCode } from "@/lib/sparepart/locations";
 import type { SparepartStorageLocation } from "@/lib/types";
 
 const LOCATION_SELECT = "id, code, name_en, name_cn, is_active, created_at, updated_at";
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const code = String(body.code ?? "").trim() || slugLocationCode(names.name_en);
+    const code = String(body.code ?? "").trim() || (await nextLocationCode());
     const isActive = body.is_active === false ? 0 : 1;
 
     const result = await query<ResultSetHeader>(
