@@ -456,9 +456,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     .replace("{year}", String(year));
 
   return (
-    <div className="space-y-4">
+    <div
+      className={
+        isSummary
+          ? "space-y-4"
+          : "flex h-[calc(100dvh-var(--topbar-height)-2.5rem)] flex-col gap-4 overflow-hidden"
+      }
+    >
       {mode === "reports" ? (
-        <div className="overflow-x-auto border-b border-border-subtle [-ms-overflow-style:none] [scrollbar-width:thin]">
+        <div className="shrink-0 overflow-x-auto border-b border-border-subtle [-ms-overflow-style:none] [scrollbar-width:thin]">
           <div className="flex min-w-max gap-3 px-0.5 sm:gap-5">
             {areas.map((area) => {
               const active = activeTab === area.id;
@@ -492,7 +498,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         </div>
       ) : null}
 
-      <div>
+      <div className="shrink-0">
         {isSummary ? (
           <SummaryFilterPanel {...summaryFilterPanelProps} />
         ) : (
@@ -528,24 +534,26 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
             wrapperClassName="overflow-auto rounded-xl border border-border-subtle bg-surface min-h-[32rem] max-h-[calc(100dvh-14rem)]"
           />
         ) : (
-          <WeekReportList
-            language={language}
-            lang={lang}
-            title={listTitle}
-            rows={areaWeekRows}
-            canCreate={canCreate}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            canSubmit={canSubmit}
-            canReopen={canReopen}
-            submitting={submitting}
-            onAdd={openCreateWeek}
-            onEdit={openEditWeek}
-            onView={openViewWeek}
-            onDelete={setDeleteWeekRow}
-            onSubmit={(weekNumber) => void submitWeek(weekNumber)}
-            onReopen={setReopenWeekNumber}
-          />
+          <div className="min-h-0 flex-1">
+            <WeekReportList
+              language={language}
+              lang={lang}
+              title={listTitle}
+              rows={areaWeekRows}
+              canCreate={canCreate}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              canSubmit={canSubmit}
+              canReopen={canReopen}
+              submitting={submitting}
+              onAdd={openCreateWeek}
+              onEdit={openEditWeek}
+              onView={openViewWeek}
+              onDelete={setDeleteWeekRow}
+              onSubmit={(weekNumber) => void submitWeek(weekNumber)}
+              onReopen={setReopenWeekNumber}
+            />
+          </div>
         )
       ) : null}
 
