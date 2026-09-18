@@ -5,6 +5,9 @@ import type {
   TrainingSessionParticipantRow,
   TrainingSessionRow,
 } from "./types";
+import { renderTopicText } from "./topicText";
+
+export { normalizeTopicText, renderTopicText, resolveSessionTopics } from "./topicText";
 
 export function jsonError(message: string, status = 400) {
   return NextResponse.json({ success: false, error: message }, { status });
@@ -71,8 +74,8 @@ export function mapSessionRow(
     divisionId: Number(row.division_id),
     divisionNameEn: String(row.division_name_en ?? ""),
     divisionNameCn: String(row.division_name_cn ?? ""),
-    topicEn: row.topic_en ?? "",
-    topicCn: row.topic_cn ?? "",
+    topicEn: renderTopicText(row.topic_en ?? ""),
+    topicCn: renderTopicText(row.topic_cn ?? ""),
     participantCount: Number(row.participant_count) || participants.length,
     participants,
     attachment:

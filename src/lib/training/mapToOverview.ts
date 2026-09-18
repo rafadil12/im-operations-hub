@@ -2,6 +2,7 @@ import type { ModuleCardData } from "@/data/overview";
 import { getDict } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 import { divisionColor } from "@/lib/training/copy";
+import { renderTopicText } from "@/lib/training/topicText";
 import type { TrainingOverviewMetrics } from "@/lib/training/types";
 
 export function mapTrainingToOverview(
@@ -55,7 +56,7 @@ export function mapTrainingToOverview(
       centerLabel: t.dashboard.sessions,
     },
     recentRows: metrics.recentSessions.slice(0, 4).map((row) => ({
-      name: lang === "cn" ? row.topicCn || row.topicEn : row.topicEn || row.topicCn,
+      name: renderTopicText(lang === "cn" ? row.topicCn || row.topicEn : row.topicEn || row.topicCn),
       date: row.sessionDate,
       participants: row.participantCount,
       completion: row.attachment ? t.dashboard.attachment : "—",

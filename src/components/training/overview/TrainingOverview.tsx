@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { formatDateOnly } from "@/lib/dateRange";
 import { localizedField, localizedName, useLang } from "@/lib/i18n";
+import { renderTopicText } from "@/lib/training/topicText";
 import {
   divisionColor,
   trainingText,
@@ -232,8 +233,8 @@ export function TrainingOverview() {
                     metrics.recentSessions.map((row) => (
                       <tr key={row.id} className="border-b border-border-subtle/60">
                         <td className="py-2.5 pr-3 text-text-muted">{row.sessionDate}</td>
-                        <td className="py-2.5 pr-3 font-medium text-text">
-                          {localizedField(row.topicEn, row.topicCn, lang)}
+                        <td className="py-2.5 pr-3 font-medium uppercase text-text">
+                          {renderTopicText(localizedField(row.topicEn, row.topicCn, lang))}
                         </td>
                         <td className="py-2.5 pr-3 text-center">
                           <span
