@@ -20,6 +20,23 @@ type SessionExpiredContextValue = {
 
 const SessionExpiredContext = createContext<SessionExpiredContextValue | null>(null);
 
+/** Same stroke lock glyph as the login form. */
+function LockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="size-4"
+      aria-hidden
+    >
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 export function SessionExpiredProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -50,13 +67,20 @@ export function SessionExpiredProvider({ children }: { children: ReactNode }) {
       {children}
       {open ? (
         <Modal
-          title={t.auth.sessionExpiredTitle}
+          title={
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
+                <LockIcon />
+              </span>
+              <span>{t.auth.sessionExpiredTitle}</span>
+            </span>
+          }
           onClose={goToLogin}
           size="md"
           footer={
             <button
               type="button"
-              className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
+              className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
               onClick={goToLogin}
             >
               {t.auth.signIn}
