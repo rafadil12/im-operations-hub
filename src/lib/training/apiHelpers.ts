@@ -71,7 +71,7 @@ export function mapSessionRow(
     divisionId: Number(row.division_id),
     divisionNameEn: String(row.division_name_en ?? ""),
     divisionNameCn: String(row.division_name_cn ?? ""),
-    topicEn: toTitleCase(row.topic_en ?? ""),
+    topicEn: normalizeTopicText(row.topic_en ?? ""),
     topicCn: row.topic_cn ?? "",
     participantCount: Number(row.participant_count) || participants.length,
     participants,
@@ -121,18 +121,9 @@ export function hasTopicText(topicEn: string, topicCn: string): boolean {
   return Boolean(topicEn.trim() || topicCn.trim());
 }
 
-/** Title Case Latin words. Non-Latin text (e.g. Chinese) is left unchanged. */
-export function toTitleCase(value: string): string {
-  const trimmed = value.trim().replace(/\s+/g, " ");
-  if (!trimmed) return "";
-  if (!/[A-Za-z]/.test(trimmed)) return trimmed;
-  return trimmed
-    .split(" ")
-    .map((word) => {
-      const lower = word.toLocaleLowerCase("en-US");
-      return lower.charAt(0).toLocaleUpperCase("en-US") + lower.slice(1);
-    })
-    .join(" ");
+/** Session topic EN is stored/shown in ALL CAPS. Chinese text is unchanged by toUpperCase. */
+export function normalizeTopicText(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toUpperCase();
 }
 
 export function resolveSessionTopics(
@@ -141,7 +132,7 @@ export function resolveSessionTopics(
 ): { topicEn: string; topicCn: string } {
   const en = topicEn.trim();
   const cn = topicCn.trim();
-  const normalizedEn = en ? toTitleCase(en) : cn;
-  const normalizedCn = cn || (en ? toTitleCase(en) : "");
+  const normalizedEn = en ? normalizeTopicText(en) : cn;
+  const normalizedCn = cn || (en ? normalizeTopicText(en) : "");
   return { topicEn: normalizedEn, topicCn: normalizedCn };
 }
