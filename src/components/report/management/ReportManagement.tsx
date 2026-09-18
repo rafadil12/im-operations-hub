@@ -111,10 +111,13 @@ function ReportFilterBar({
       <button
         type="button"
         onClick={onToday}
-        className="w-full cursor-pointer rounded-md border border-border bg-bg/40 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover sm:w-auto"
+        className="cursor-pointer rounded-md border border-border bg-bg/40 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
       >
         {reportText("today", language)}
       </button>
+      <p className="min-w-0 flex-1 basis-full rounded-md border border-accent/20 bg-accent/5 px-3 py-1 text-xs leading-relaxed text-text-muted sm:basis-0">
+        {reportText("oneReportRule", language)}
+      </p>
     </div>
   );
 }
@@ -453,9 +456,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     .replace("{year}", String(year));
 
   return (
-    <div className="space-y-4">
+    <div
+      className={
+        isSummary
+          ? "space-y-4"
+          : "flex h-[calc(100dvh-var(--topbar-height)-2.5rem)] flex-col gap-4 overflow-hidden"
+      }
+    >
       {mode === "reports" ? (
-        <div className="overflow-x-auto border-b border-border-subtle [-ms-overflow-style:none] [scrollbar-width:thin]">
+        <div className="shrink-0 overflow-x-auto border-b border-border-subtle [-ms-overflow-style:none] [scrollbar-width:thin]">
           <div className="flex min-w-max gap-3 px-0.5 sm:gap-5">
             {areas.map((area) => {
               const active = activeTab === area.id;
@@ -489,7 +498,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         </div>
       ) : null}
 
-      <div>
+      <div className="shrink-0">
         {isSummary ? (
           <SummaryFilterPanel {...summaryFilterPanelProps} />
         ) : (
@@ -504,12 +513,6 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
           />
         )}
       </div>
-
-      {!isSummary ? (
-        <p className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5 text-xs leading-relaxed text-text-muted">
-          {reportText("oneReportRule", language)}
-        </p>
-      ) : null}
 
       {loading ? (
         <SkeletonTable />
@@ -531,24 +534,26 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
             wrapperClassName="overflow-auto rounded-xl border border-border-subtle bg-surface min-h-[32rem] max-h-[calc(100dvh-14rem)]"
           />
         ) : (
-          <WeekReportList
-            language={language}
-            lang={lang}
-            title={listTitle}
-            rows={areaWeekRows}
-            canCreate={canCreate}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            canSubmit={canSubmit}
-            canReopen={canReopen}
-            submitting={submitting}
-            onAdd={openCreateWeek}
-            onEdit={openEditWeek}
-            onView={openViewWeek}
-            onDelete={setDeleteWeekRow}
-            onSubmit={(weekNumber) => void submitWeek(weekNumber)}
-            onReopen={setReopenWeekNumber}
-          />
+          <div className="min-h-0 flex-1">
+            <WeekReportList
+              language={language}
+              lang={lang}
+              title={listTitle}
+              rows={areaWeekRows}
+              canCreate={canCreate}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              canSubmit={canSubmit}
+              canReopen={canReopen}
+              submitting={submitting}
+              onAdd={openCreateWeek}
+              onEdit={openEditWeek}
+              onView={openViewWeek}
+              onDelete={setDeleteWeekRow}
+              onSubmit={(weekNumber) => void submitWeek(weekNumber)}
+              onReopen={setReopenWeekNumber}
+            />
+          </div>
         )
       ) : null}
 

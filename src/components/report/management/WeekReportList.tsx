@@ -4,10 +4,10 @@ import { reportText, type ReportLanguage, type WeekReportUiStatus } from "@/lib/
 import type { AreaWeekReportRow } from "@/lib/report/weekReportIdentity";
 
 const reportTh =
-  "sticky top-0 z-20 border-b border-border-subtle bg-surface px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-text-dim";
+  "sticky top-0 z-20 bg-bg px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[0_1px_0_0_var(--color-border),0_3px_8px_-2px_var(--shadow-color-soft)]";
 const reportTd = "border-b border-border-subtle px-3 py-3 align-middle text-sm";
 const stickyTh =
-  "sticky top-0 right-0 z-30 min-w-[8.5rem] border-b border-border-subtle bg-surface px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[-8px_0_12px_-8px_var(--shadow-color-soft)]";
+  "sticky top-0 right-0 z-30 min-w-[8.5rem] bg-bg px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text-dim shadow-[-8px_0_12px_-8px_var(--shadow-color-soft),0_1px_0_0_var(--color-border),0_3px_8px_-2px_var(--shadow-color-soft)]";
 const stickyTd =
   "sticky right-0 z-10 min-w-[8.5rem] border-b border-border-subtle bg-surface px-3 py-3 align-middle text-center text-sm shadow-[-8px_0_12px_-8px_var(--shadow-color-soft)]";
 
@@ -111,8 +111,8 @@ export function WeekReportList({
   onReopen,
 }: WeekReportListProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
-      <div className="flex flex-col gap-2 border-b border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface">
+      <div className="flex shrink-0 flex-col gap-2 border-b border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="min-w-0 text-sm font-semibold text-text">{title}</h2>
         <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
           {(["submitted", "draft", "none"] as WeekReportUiStatus[]).map((status) => (
@@ -126,9 +126,9 @@ export function WeekReportList({
         </div>
       </div>
 
-      <div className="max-h-[calc(100dvh-18rem)] overflow-auto sm:max-h-[calc(100dvh-15rem)]">
-        <table className="w-full min-w-[640px] border-collapse text-sm lg:min-w-0">
-          <thead>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <table className="w-full min-w-[640px] border-separate border-spacing-0 text-sm lg:min-w-0">
+          <thead className="relative z-20">
             <tr>
               <th className={`${reportTh} w-[5.5rem]`}>{reportText("week", language)}</th>
               <th className={reportTh}>{reportText("dateRange", language)}</th>
