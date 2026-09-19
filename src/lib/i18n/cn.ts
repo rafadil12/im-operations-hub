@@ -871,7 +871,6 @@ const cn: Dict = {
   page: "页",
   previous: "上一页",
   next: "下一页",
-  ticketMonitoringSubtitle: "最新活动与长期未处理工单",
 
   byStatus: "工单状态分布",
   byGroup: "按支持组统计工单",

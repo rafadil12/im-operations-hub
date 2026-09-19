@@ -44,9 +44,9 @@ describe("countFullySubmittedWeeks", () => {
   it("stays 1/4 when the current week is missing any area", () => {
     const submissions = [
       ...allAreasSubmitted(37),
-      { weekId: 38, areaId: 1, status: "submitted" },
-      { weekId: 38, areaId: 2, status: "submitted" },
-      { weekId: 38, areaId: 3, status: "draft" },
+      { weekId: 38, areaId: 1, status: "submitted" as const },
+      { weekId: 38, areaId: 2, status: "submitted" as const },
+      { weekId: 38, areaId: 3, status: "draft" as const },
     ];
     expect(countFullySubmittedWeeks([36, 37, 38, 39], submissions, areaIds)).toBe(1);
   });
