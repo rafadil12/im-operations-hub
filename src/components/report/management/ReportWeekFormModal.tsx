@@ -398,7 +398,7 @@ export function ReportWeekFormModal({
         {loading ? (
           <SkeletonForm fields={4} />
         ) : (
-          <div className="mx-auto w-full max-w-6xl space-y-6">
+          <div className="mx-auto w-full max-w-[86rem] space-y-6">
             <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
               <SectionHeading
                 index="01"
