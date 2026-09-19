@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Drawer } from "@/components/ui/Drawer";
+import { Modal } from "@/components/ui/Modal";
 import { getApiErrorMessage } from "@/lib/apiClient";
 import {
   emptyProjectLine,
@@ -26,6 +26,8 @@ import {
 
 const field =
   "rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent disabled:opacity-60";
+const sectionTitle = "text-sm font-semibold text-text";
+const labelCls = "mb-1 block text-[10px] uppercase tracking-wide text-text-dim";
 const YEAR_OPTIONS = [2025, 2026, 2027];
 
 function todayIso(): string {
@@ -82,7 +84,7 @@ export function reportToForm(report: ReportProjectReport): ProjectFormState {
   };
 }
 
-type ProjectReportFormDrawerProps = {
+type ProjectReportFormModalProps = {
   mode: "create" | "edit";
   lang: Lang;
   reportId: number | null;
@@ -94,7 +96,7 @@ type ProjectReportFormDrawerProps = {
   onSuccess: (message: string) => void;
 };
 
-export function ProjectReportFormDrawer({
+export function ProjectReportFormModal({
   mode,
   lang,
   reportId,
@@ -104,7 +106,7 @@ export function ProjectReportFormDrawer({
   onSaved,
   onError,
   onSuccess,
-}: ProjectReportFormDrawerProps) {
+}: ProjectReportFormModalProps) {
   const copy = projectText(lang);
   const [form, setForm] = useState<ProjectFormState>(initialForm);
   const [saving, setSaving] = useState(false);
@@ -242,8 +244,8 @@ export function ProjectReportFormDrawer({
   const busy = saving || uploading;
 
   return (
-    <Drawer
-      width="form"
+    <Modal
+      size="2xl"
       title={mode === "create" ? copy.addTitle : copy.editTitle}
       subtitle={`${copy.weekShort(form.weekNumber)} · ${form.reportDate || "—"}`}
       onClose={onClose}
@@ -252,7 +254,7 @@ export function ProjectReportFormDrawer({
         <div className="flex flex-wrap justify-end gap-2">
           <button
             type="button"
-            className="rounded-md border border-border px-3 py-1.5 text-xs"
+            className="rounded-md px-3 py-1.5 text-xs text-text-muted hover:bg-surface-hover hover:text-text"
             onClick={onClose}
             disabled={busy}
           >
@@ -260,7 +262,11 @@ export function ProjectReportFormDrawer({
           </button>
           <button
             type="button"
-            className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-hover disabled:opacity-60"
+            className={
+              mode === "create"
+                ? "rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-hover disabled:opacity-60"
+                : "rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            }
             onClick={() => void save("draft")}
             disabled={busy}
           >
@@ -268,7 +274,11 @@ export function ProjectReportFormDrawer({
           </button>
           <button
             type="button"
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className={
+              mode === "create"
+                ? "rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                : "rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-hover disabled:opacity-60"
+            }
             onClick={() => void save("submitted")}
             disabled={busy}
           >
@@ -277,12 +287,13 @@ export function ProjectReportFormDrawer({
         </div>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-6">
+        {/* Report Information */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-text">{copy.reportInformation}</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <h3 className={sectionTitle}>{copy.reportInformation}</h3>
+          <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block text-[10px] uppercase text-text-dim">
+              <label className={labelCls}>
                 {copy.year} <span className="text-danger">*</span>
               </label>
               <select
@@ -311,7 +322,7 @@ export function ProjectReportFormDrawer({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-[10px] uppercase text-text-dim">
+              <label className={labelCls}>
                 {copy.week} <span className="text-danger">*</span>
               </label>
               <select
@@ -328,7 +339,7 @@ export function ProjectReportFormDrawer({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-[10px] uppercase text-text-dim">
+              <label className={labelCls}>
                 {copy.reportDate} <span className="text-danger">*</span>
               </label>
               <input
@@ -339,19 +350,8 @@ export function ProjectReportFormDrawer({
                 onChange={(e) => setForm((p) => ({ ...p, reportDate: e.target.value }))}
               />
             </div>
-            <div>
-              <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                {copy.reporter} <span className="text-danger">*</span>
-              </label>
-              <input
-                className={`${field} w-full`}
-                value={form.reporterName}
-                disabled={busy}
-                onChange={(e) => setForm((p) => ({ ...p, reporterName: e.target.value }))}
-              />
-            </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-[10px] uppercase text-text-dim">
+              <label className={labelCls}>
                 {copy.projectDepartment} <span className="text-danger">*</span>
               </label>
               <input
@@ -363,36 +363,32 @@ export function ProjectReportFormDrawer({
                 }
               />
             </div>
+            <div>
+              <label className={labelCls}>
+                {copy.reporter} <span className="text-danger">*</span>
+              </label>
+              <input
+                className={`${field} w-full`}
+                value={form.reporterName}
+                disabled={busy}
+                onChange={(e) => setForm((p) => ({ ...p, reporterName: e.target.value }))}
+              />
+            </div>
           </div>
         </section>
 
+        {/* Project Targets + Weekly Update + Status & Health per line */}
         <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-text">{copy.projectTargets}</h3>
-            <div className="flex flex-wrap items-center gap-3 text-[11px] text-text-muted">
-              <span className="inline-flex items-center gap-1">
-                <span className="inline-block size-2 rounded-full bg-emerald-500" />{" "}
-                {copy.legendHealthy}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="inline-block size-2 rounded-full bg-amber-400" />{" "}
-                {copy.legendMild}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="inline-block size-2 rounded-full bg-rose-500" />{" "}
-                {copy.legendSerious}
-              </span>
-            </div>
-          </div>
+          <h3 className={sectionTitle}>{copy.projectTargets}</h3>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {form.lines.map((line, index) => (
               <div
                 key={line.id ?? `new-${index}`}
-                className="rounded-lg border border-border-subtle bg-bg/30 p-3"
+                className="space-y-4 rounded-lg border border-border-subtle bg-bg/20 p-4"
               >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-text-dim">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-semibold text-text">
                     {copy.target} {index + 1}
                   </div>
                   {form.lines.length > 1 ? (
@@ -401,31 +397,30 @@ export function ProjectReportFormDrawer({
                       className="text-[11px] text-danger hover:underline"
                       onClick={() => removeLine(index)}
                       disabled={busy}
+                      aria-label={copy.removeRow}
                     >
                       {copy.removeRow}
                     </button>
                   ) : null}
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.target}
-                    </label>
-                    <textarea
-                      className={`${field} min-h-[56px] w-full`}
-                      value={line.target}
-                      disabled={busy}
-                      maxLength={500}
-                      onChange={(e) => updateLine(index, { target: e.target.value })}
-                    />
-                    <div className="mt-0.5 text-right text-[10px] text-text-dim">
-                      {line.target.length}/500
-                    </div>
+
+                <div>
+                  <label className={labelCls}>{copy.target}</label>
+                  <textarea
+                    className={`${field} min-h-[64px] w-full`}
+                    value={line.target}
+                    disabled={busy}
+                    maxLength={500}
+                    onChange={(e) => updateLine(index, { target: e.target.value })}
+                  />
+                  <div className="mt-0.5 text-right text-[10px] text-text-dim">
+                    {line.target.length}/500
                   </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.mainTask}
-                    </label>
+                    <label className={labelCls}>{copy.mainTask}</label>
                     <input
                       className={`${field} w-full`}
                       value={line.mainTask}
@@ -434,9 +429,7 @@ export function ProjectReportFormDrawer({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.priority}
-                    </label>
+                    <label className={labelCls}>{copy.priority}</label>
                     <input
                       className={`${field} w-full`}
                       value={line.currentPriority}
@@ -447,9 +440,7 @@ export function ProjectReportFormDrawer({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.pic}
-                    </label>
+                    <label className={labelCls}>{copy.pic}</label>
                     <input
                       className={`${field} w-full`}
                       value={line.pic}
@@ -458,9 +449,7 @@ export function ProjectReportFormDrawer({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.planStart}
-                    </label>
+                    <label className={labelCls}>{copy.planStart}</label>
                     <input
                       type="date"
                       className={`${field} w-full`}
@@ -472,9 +461,7 @@ export function ProjectReportFormDrawer({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.planEnd}
-                    </label>
+                    <label className={labelCls}>{copy.planEnd}</label>
                     <input
                       type="date"
                       className={`${field} w-full`}
@@ -485,67 +472,8 @@ export function ProjectReportFormDrawer({
                       }
                     />
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.health}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {(["healthy", "mild", "serious"] as ReportProjectHealth[]).map(
-                        (h) => {
-                          const selected = line.health === h;
-                          const tone =
-                            h === "healthy"
-                              ? selected
-                                ? "border-emerald-500 bg-emerald-500/15 text-emerald-700"
-                                : "border-border text-text-muted hover:border-emerald-500/50"
-                              : h === "mild"
-                                ? selected
-                                  ? "border-amber-400 bg-amber-400/15 text-amber-700"
-                                  : "border-border text-text-muted hover:border-amber-400/50"
-                                : selected
-                                  ? "border-rose-500 bg-rose-500/15 text-rose-700"
-                                  : "border-border text-text-muted hover:border-rose-500/50";
-                          return (
-                            <button
-                              key={h}
-                              type="button"
-                              disabled={busy}
-                              onClick={() => updateLine(index, { health: h })}
-                              className={`rounded-md border px-2.5 py-1.5 text-[11px] font-medium ${tone}`}
-                            >
-                              {healthLabel(h, lang)}
-                            </button>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.status}
-                    </label>
-                    <select
-                      className={`${field} w-full`}
-                      value={line.lineStatus}
-                      disabled={busy}
-                      onChange={(e) =>
-                        updateLine(index, {
-                          lineStatus: e.target.value as ReportProjectLineStatus,
-                        })
-                      }
-                    >
-                      <option value="in_progress">
-                        {lineStatusLabel("in_progress", lang)}
-                      </option>
-                      <option value="completed">
-                        {lineStatusLabel("completed", lang)}
-                      </option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.progressRatio} (%)
-                    </label>
+                    <label className={labelCls}>{copy.progressRatio} (%)</label>
                     <input
                       className={`${field} w-full`}
                       inputMode="numeric"
@@ -566,38 +494,99 @@ export function ProjectReportFormDrawer({
                       }
                     />
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.thisWeekProgress}
-                    </label>
-                    <textarea
-                      className={`${field} min-h-[72px] w-full`}
-                      value={line.thisWeekProgress}
-                      disabled={busy}
-                      maxLength={1000}
-                      onChange={(e) =>
-                        updateLine(index, { thisWeekProgress: e.target.value })
-                      }
-                    />
-                    <div className="mt-0.5 text-right text-[10px] text-text-dim">
-                      {line.thisWeekProgress.length}/1000
+                </div>
+
+                <div>
+                  <h4 className="mb-2 text-xs font-semibold text-text">{copy.weeklyUpdate}</h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={labelCls}>{copy.thisWeekProgress}</label>
+                      <textarea
+                        className={`${field} min-h-[88px] w-full`}
+                        value={line.thisWeekProgress}
+                        disabled={busy}
+                        maxLength={1000}
+                        onChange={(e) =>
+                          updateLine(index, { thisWeekProgress: e.target.value })
+                        }
+                      />
+                      <div className="mt-0.5 text-right text-[10px] text-text-dim">
+                        {line.thisWeekProgress.length}/1000
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{copy.nextWeekPlan}</label>
+                      <textarea
+                        className={`${field} min-h-[88px] w-full`}
+                        value={line.nextWeekPlan}
+                        disabled={busy}
+                        maxLength={1000}
+                        onChange={(e) =>
+                          updateLine(index, { nextWeekPlan: e.target.value })
+                        }
+                      />
+                      <div className="mt-0.5 text-right text-[10px] text-text-dim">
+                        {line.nextWeekPlan.length}/1000
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] uppercase text-text-dim">
-                      {copy.nextWeekPlan}
-                    </label>
-                    <textarea
-                      className={`${field} min-h-[72px] w-full`}
-                      value={line.nextWeekPlan}
-                      disabled={busy}
-                      maxLength={1000}
-                      onChange={(e) =>
-                        updateLine(index, { nextWeekPlan: e.target.value })
-                      }
-                    />
-                    <div className="mt-0.5 text-right text-[10px] text-text-dim">
-                      {line.nextWeekPlan.length}/1000
+                </div>
+
+                <div>
+                  <h4 className="mb-2 text-xs font-semibold text-text">{copy.statusHealth}</h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={labelCls}>{copy.health}</label>
+                      <div className="flex flex-wrap gap-2">
+                        {(["healthy", "mild", "serious"] as ReportProjectHealth[]).map(
+                          (h) => {
+                            const selected = line.health === h;
+                            const tone =
+                              h === "healthy"
+                                ? selected
+                                  ? "border-emerald-500 bg-emerald-500/15 text-emerald-700"
+                                  : "border-border text-text-muted hover:border-emerald-500/50"
+                                : h === "mild"
+                                  ? selected
+                                    ? "border-amber-400 bg-amber-400/15 text-amber-700"
+                                    : "border-border text-text-muted hover:border-amber-400/50"
+                                  : selected
+                                    ? "border-rose-500 bg-rose-500/15 text-rose-700"
+                                    : "border-border text-text-muted hover:border-rose-500/50";
+                            return (
+                              <button
+                                key={h}
+                                type="button"
+                                disabled={busy}
+                                onClick={() => updateLine(index, { health: h })}
+                                className={`rounded-md border px-2.5 py-1.5 text-[11px] font-medium ${tone}`}
+                              >
+                                {healthLabel(h, lang)}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>{copy.status}</label>
+                      <select
+                        className={`${field} w-full`}
+                        value={line.lineStatus}
+                        disabled={busy}
+                        onChange={(e) =>
+                          updateLine(index, {
+                            lineStatus: e.target.value as ReportProjectLineStatus,
+                          })
+                        }
+                      >
+                        <option value="in_progress">
+                          {lineStatusLabel("in_progress", lang)}
+                        </option>
+                        <option value="completed">
+                          {lineStatusLabel("completed", lang)}
+                        </option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -607,7 +596,7 @@ export function ProjectReportFormDrawer({
 
           <button
             type="button"
-            className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-hover disabled:opacity-60"
+            className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-text-muted hover:border-accent hover:bg-accent/5 hover:text-accent disabled:opacity-60"
             onClick={addLine}
             disabled={busy}
           >
@@ -628,6 +617,6 @@ export function ProjectReportFormDrawer({
           onError={onError}
         />
       </div>
-    </Drawer>
+    </Modal>
   );
 }

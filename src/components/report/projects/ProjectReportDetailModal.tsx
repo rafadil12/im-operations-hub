@@ -1,6 +1,6 @@
 "use client";
 
-import { Drawer } from "@/components/ui/Drawer";
+import { Modal } from "@/components/ui/Modal";
 import {
   formatRatePercent,
   HEALTH_BADGE_CLASS,
@@ -43,19 +43,19 @@ function formatDateTime(iso: string | null, lang: Lang): string {
   });
 }
 
-type ProjectReportDetailDrawerProps = {
+type ProjectReportDetailModalProps = {
   lang: Lang;
   report: ReportProjectReport;
   attachments: ReportProjectAttachment[];
   onClose: () => void;
 };
 
-export function ProjectReportDetailDrawer({
+export function ProjectReportDetailModal({
   lang,
   report,
   attachments,
   onClose,
-}: ProjectReportDetailDrawerProps) {
+}: ProjectReportDetailModalProps) {
   const copy = projectText(lang);
   const worst =
     worstHealthFromCounts(report.healthCounts) ??
@@ -63,25 +63,30 @@ export function ProjectReportDetailDrawer({
     null;
 
   return (
-    <Drawer
-      width="detail"
+    <Modal
+      size="xl"
       title={copy.viewTitle}
       subtitle={`${copy.weekShort(report.weekNumber)} · ${formatDisplayDate(report.reportDate, lang)}`}
       onClose={onClose}
       footer={
-        <div className="w-full text-[11px] text-text-dim">
+        <div className="w-full text-left text-[11px] text-text-dim">
           {copy.updatedBy} {report.reporterName}
           {report.updatedAt ? ` · ${formatDateTime(report.updatedAt, lang)}` : ""}
         </div>
       }
     >
-      <div className="space-y-5">
-        <div>
-          <div className="flex flex-wrap items-start gap-2">
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-base font-semibold text-text">{report.projectDepartment}</h2>
+            <p className="mt-1 text-xs text-text-muted">
+              {copy.reporter}: {report.reporterName}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             {worst ? (
               <span
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${HEALTH_BADGE_CLASS[worst]}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${HEALTH_BADGE_CLASS[worst]}`}
               >
                 <span className={`size-1.5 rounded-full ${HEALTH_DOT_CLASS[worst]}`} />
                 {healthLabel(worst, lang)}
@@ -93,24 +98,23 @@ export function ProjectReportDetailDrawer({
               </span>
             ) : null}
           </div>
-          <p className="mt-1 text-xs text-text-muted">
-            {copy.reporter}: {report.reporterName}
-          </p>
         </div>
 
         <section className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-dim">
             {copy.reportInformation}
           </h3>
-          <dl className="space-y-2 rounded-lg border border-border-subtle bg-bg/30 p-3 text-xs">
+          <dl className="grid gap-3 rounded-lg border border-border-subtle bg-bg/30 p-4 text-xs sm:grid-cols-2">
             <InfoRow label={copy.year} value={String(report.year)} />
             <InfoRow label={copy.week} value={copy.weekLabel(report.weekNumber)} />
             <InfoRow
               label={copy.reportDate}
               value={formatDisplayDate(report.reportDate, lang)}
             />
-            <InfoRow label={copy.projectDepartment} value={report.projectDepartment} />
             <InfoRow label={copy.reporter} value={report.reporterName} />
+            <div className="sm:col-span-2">
+              <InfoRow label={copy.projectDepartment} value={report.projectDepartment} />
+            </div>
           </dl>
         </section>
 
@@ -175,28 +179,30 @@ export function ProjectReportDetailDrawer({
             {report.lines.map((line, i) => (
               <div
                 key={`weekly-${line.id ?? i}`}
-                className="rounded-lg border border-border-subtle bg-bg/30 p-3 space-y-2"
+                className="rounded-lg border border-border-subtle bg-bg/30 p-3"
               >
                 {report.lines.length > 1 ? (
-                  <p className="text-[11px] font-medium text-text-muted">
+                  <p className="mb-2 text-[11px] font-medium text-text-muted">
                     {copy.target} {i + 1}
                   </p>
                 ) : null}
-                <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase text-text-dim">
-                    {copy.thisWeekProgress}
-                  </p>
-                  <p className="whitespace-pre-wrap text-xs text-text">
-                    {line.thisWeekProgress.trim() || "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase text-text-dim">
-                    {copy.nextWeekPlan}
-                  </p>
-                  <p className="whitespace-pre-wrap text-xs text-text">
-                    {line.nextWeekPlan.trim() || "—"}
-                  </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[10px] font-semibold uppercase text-text-dim">
+                      {copy.thisWeekProgress}
+                    </p>
+                    <p className="whitespace-pre-wrap text-xs text-text">
+                      {line.thisWeekProgress.trim() || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[10px] font-semibold uppercase text-text-dim">
+                      {copy.nextWeekPlan}
+                    </p>
+                    <p className="whitespace-pre-wrap text-xs text-text">
+                      {line.nextWeekPlan.trim() || "—"}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -237,15 +243,15 @@ export function ProjectReportDetailDrawer({
           )}
         </section>
       </div>
-    </Drawer>
+    </Modal>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3">
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-3">
       <dt className="shrink-0 text-text-dim">{label}</dt>
-      <dd className="min-w-0 text-right text-text">{value}</dd>
+      <dd className="min-w-0 text-text sm:text-right">{value}</dd>
     </div>
   );
 }

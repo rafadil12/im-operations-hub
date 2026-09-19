@@ -17,13 +17,13 @@ import {
   type ReportProjectAttachment,
   type ReportProjectReport,
 } from "@/lib/report";
-import { ProjectReportDetailDrawer } from "./ProjectReportDetailDrawer";
+import { ProjectReportDetailModal } from "./ProjectReportDetailModal";
 import {
   emptyProjectForm,
-  ProjectReportFormDrawer,
+  ProjectReportFormModal,
   reportToForm,
   type ProjectFormState,
-} from "./ProjectReportFormDrawer";
+} from "./ProjectReportFormModal";
 
 type Mode = "closed" | "create" | "edit" | "view";
 
@@ -159,7 +159,7 @@ export function ReportProjectsClient() {
     }
   };
 
-  const closeDrawer = () => {
+  const closeModal = () => {
     setMode("closed");
     setEditingId(null);
     setViewReport(null);
@@ -393,14 +393,14 @@ export function ReportProjectsClient() {
       </div>
 
       {mode === "create" || mode === "edit" ? (
-        <ProjectReportFormDrawer
+        <ProjectReportFormModal
           key={mode === "create" ? "create" : `edit-${editingId}`}
           mode={mode}
           lang={lang}
           reportId={editingId}
           initialForm={form}
           initialAttachments={formAttachments}
-          onClose={closeDrawer}
+          onClose={closeModal}
           onSaved={() => void load()}
           onError={toastError}
           onSuccess={toastSuccess}
@@ -408,11 +408,11 @@ export function ReportProjectsClient() {
       ) : null}
 
       {mode === "view" && viewReport ? (
-        <ProjectReportDetailDrawer
+        <ProjectReportDetailModal
           lang={lang}
           report={viewReport}
           attachments={viewAttachments}
-          onClose={closeDrawer}
+          onClose={closeModal}
         />
       ) : null}
 

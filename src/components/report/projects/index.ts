@@ -1,4 +1,4 @@
 export { ReportProjectsClient } from "./ReportProjectsClient";
-export { ProjectReportFormDrawer } from "./ProjectReportFormDrawer";
-export { ProjectReportDetailDrawer } from "./ProjectReportDetailDrawer";
+export { ProjectReportFormModal } from "./ProjectReportFormModal";
+export { ProjectReportDetailModal } from "./ProjectReportDetailModal";
 export { ProjectReportAttachments } from "./ProjectReportAttachments";
