@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-19
+
+### Added
+
+- Report → Weekly Report → Projects: list, create/edit/view project
+  progress reports with draft/submitted status and file attachments.
+- Sidebar entry, `report.project.*` permissions, and migration for
+  `report_project_reports`, `report_project_lines`, and attachments.
+
+### Changed
+
+- Open Project Report Add / Edit / View in centered full-screen modals
+  instead of side drawers.
+
 ## [0.4.0] - 2026-09-19
 
 ### Added
