@@ -47,10 +47,31 @@ describe("PERMISSION_TREE", () => {
     });
     expect(management?.children?.map((c) => c.id)).toEqual([
       "sparepart-stock",
-      "sparepart-post",
-      "sparepart-documents",
+      "sparepart-material-movement",
       "sparepart-materials",
       "sparepart-locations",
+    ]);
+
+    const movement = findNode(PERMISSION_TREE, "sparepart-material-movement");
+    expect(movement?.label).toEqual({
+      source: "nav",
+      key: "sparepartMaterialMovement",
+    });
+    expect(movement?.children?.map((c) => c.id)).toEqual([
+      "sparepart-documents",
+      "sparepart-history",
+      "sparepart-post",
+    ]);
+    expect(findNode(PERMISSION_TREE, "sparepart-documents")?.codes).toEqual([
+      PERMISSIONS.sparepartDocumentRead,
+      PERMISSIONS.sparepartDocumentReverse,
+    ]);
+    expect(findNode(PERMISSION_TREE, "sparepart-history")?.codes).toEqual([
+      PERMISSIONS.sparepartHistoryRead,
+      PERMISSIONS.sparepartHistoryExport,
+    ]);
+    expect(findNode(PERMISSION_TREE, "sparepart-post")?.codes).toEqual([
+      PERMISSIONS.sparepartDocumentPost,
     ]);
   });
 

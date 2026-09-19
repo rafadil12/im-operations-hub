@@ -102,7 +102,7 @@ function locationLabel(
 export default function MovementHistoryPage() {
   const { t, lang } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
-  const { canReverseSparepartDocument } = useRoleAccess();
+  const { canReverseSparepartDocument, canExportSparepartHistory } = useRoleAccess();
   const [filters, setFilters] = useState<HistoryFilters>(defaultHistoryFilters);
   const [applied, setApplied] = useState<HistoryFilters>(defaultHistoryFilters);
   const [rows, setRows] = useState<SparepartMovementHistoryRow[]>([]);
@@ -245,7 +245,7 @@ export default function MovementHistoryPage() {
   const show = (id: MovementHistoryColumnId) => columnVisibility[id];
 
   return (
-    <SparepartGate allow={(access) => access.canViewSparepartDocuments}>
+    <SparepartGate allow={(access) => access.canViewSparepartHistory}>
       <div>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -257,15 +257,17 @@ export default function MovementHistoryPage() {
               visibility={columnVisibility}
               onVisibilityChange={setColumnVisible}
             />
-            <button
-              type="button"
-              onClick={() => void handleExport()}
-              disabled={exporting || loading}
-              className={toolbarBtn}
-            >
-              <ExportIcon className="size-3.5" />
-              {exporting ? t.common.exporting : t.common.export}
-            </button>
+            {canExportSparepartHistory ? (
+              <button
+                type="button"
+                onClick={() => void handleExport()}
+                disabled={exporting || loading}
+                className={toolbarBtn}
+              >
+                <ExportIcon className="size-3.5" />
+                {exporting ? t.common.exporting : t.common.export}
+              </button>
+            ) : null}
           </div>
         </div>
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-19
+
+### Added
+
+- Nest Sparepart Roles permissions under Material Movement (Documents,
+  History, Posting) to match the sidebar.
+- Separate `sparepart.history.read` and `sparepart.history.export` codes,
+  with migration backfill from `document.read` and guest History read only.
+
+### Fixed
+
+- Point the ITSM overview barrel at `TicketMonitoring` (removed stale
+  RecentTickets / OldestTickets exports that broke the production build).
+- Remove an orphan Chinese `itsmAnalysis.ticketMonitoringSubtitle` key and
+  type submission status literals in report count tests.
+
 ## [0.3.0] - 2026-09-18
 
 ### Added

@@ -29,8 +29,10 @@ export type PermissionTreeLabel =
         | "settingsAccounts"
         | "sparepartManagement"
         | "sparepartStock"
+        | "sparepartMaterialMovement"
         | "sparepartPost"
         | "sparepartDocuments"
+        | "sparepartMovementHistory"
         | "sparepartMaterials"
         | "sparepartLocations"
         | "organization"
@@ -149,14 +151,25 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
             codes: [PERMISSIONS.sparepartStockView],
           },
           {
-            id: "sparepart-post",
-            label: { source: "nav", key: "sparepartPost" },
-            codes: [PERMISSIONS.sparepartDocumentPost],
-          },
-          {
-            id: "sparepart-documents",
-            label: { source: "nav", key: "sparepartDocuments" },
-            codes: [PERMISSIONS.sparepartDocumentRead, PERMISSIONS.sparepartDocumentReverse],
+            id: "sparepart-material-movement",
+            label: { source: "nav", key: "sparepartMaterialMovement" },
+            children: [
+              {
+                id: "sparepart-documents",
+                label: { source: "nav", key: "sparepartDocuments" },
+                codes: [PERMISSIONS.sparepartDocumentRead, PERMISSIONS.sparepartDocumentReverse],
+              },
+              {
+                id: "sparepart-history",
+                label: { source: "nav", key: "sparepartMovementHistory" },
+                codes: [PERMISSIONS.sparepartHistoryRead, PERMISSIONS.sparepartHistoryExport],
+              },
+              {
+                id: "sparepart-post",
+                label: { source: "nav", key: "sparepartPost" },
+                codes: [PERMISSIONS.sparepartDocumentPost],
+              },
+            ],
           },
           {
             id: "sparepart-materials",
