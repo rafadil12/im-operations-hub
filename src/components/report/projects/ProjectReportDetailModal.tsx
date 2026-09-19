@@ -160,7 +160,8 @@ export function ProjectReportDetailModal({
                       ) : null}
                       {line.planStart || line.planEnd ? (
                         <p className="text-[11px] text-text-dim">
-                          {line.planStart ?? "—"} → {line.planEnd ?? "—"}
+                          {copy.plannedSchedule}: {line.planStart ?? "—"} →{" "}
+                          {line.planEnd ?? "—"}
                         </p>
                       ) : null}
                     </div>
@@ -249,9 +250,9 @@ export function ProjectReportDetailModal({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-3">
-      <dt className="shrink-0 text-text-dim">{label}</dt>
-      <dd className="min-w-0 text-text sm:text-right">{value}</dd>
+    <div className="flex flex-col gap-0.5">
+      <dt className="text-text-dim">{label}</dt>
+      <dd className="min-w-0 text-text">{value}</dd>
     </div>
   );
 }

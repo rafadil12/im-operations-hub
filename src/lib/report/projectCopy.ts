@@ -49,6 +49,7 @@ type ProjectCopy = {
   priority: string;
   planStart: string;
   planEnd: string;
+  plannedSchedule: string;
   health: string;
   status: string;
   progressRatio: string;
@@ -130,6 +131,7 @@ const EN: ProjectCopy = {
   priority: "Current priority",
   planStart: "Plan start",
   planEnd: "Plan end",
+  plannedSchedule: "Plan",
   health: "Health",
   status: "Status",
   progressRatio: "Progress",
@@ -212,6 +214,7 @@ const CN: ProjectCopy = {
   priority: "当前优先级",
   planStart: "计划启动",
   planEnd: "计划完成",
+  plannedSchedule: "计划",
   health: "健康指示",
   status: "状态",
   progressRatio: "进度比例",
