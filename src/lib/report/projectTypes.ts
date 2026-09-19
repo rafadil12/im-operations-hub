@@ -1,5 +1,6 @@
 export type ReportProjectHealth = "healthy" | "mild" | "serious";
 export type ReportProjectLineStatus = "in_progress" | "completed";
+export type ReportProjectStatus = "draft" | "submitted";
 
 export type ReportProjectLine = {
   id: number | null;
@@ -25,6 +26,7 @@ export type ReportProjectReport = {
   cycleLabel: string;
   year: number;
   weekNumber: number;
+  status: ReportProjectStatus;
   lineCount: number;
   healthCounts: {
     healthy: number;
@@ -44,6 +46,7 @@ export type ReportProjectReportRow = {
   cycle_label: string;
   year: number;
   week_number: number;
+  status?: ReportProjectStatus | string | null;
   created_at: string | Date | null;
   updated_at: string | Date | null;
   line_count?: number | string | null;
@@ -90,5 +93,6 @@ export type ReportProjectPayload = {
   cycleLabel: string;
   year: number;
   weekNumber: number;
+  status: ReportProjectStatus;
   lines: ReportProjectLineInput[];
 };

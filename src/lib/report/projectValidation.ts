@@ -7,10 +7,12 @@ import type {
   ReportProjectPayload,
   ReportProjectReport,
   ReportProjectReportRow,
+  ReportProjectStatus,
 } from "./projectTypes";
 
 const HEALTH: ReportProjectHealth[] = ["healthy", "mild", "serious"];
 const LINE_STATUS: ReportProjectLineStatus[] = ["in_progress", "completed"];
+const REPORT_STATUS: ReportProjectStatus[] = ["draft", "submitted"];
 
 export function isReportProjectHealth(value: unknown): value is ReportProjectHealth {
   return typeof value === "string" && (HEALTH as string[]).includes(value);
@@ -18,6 +20,10 @@ export function isReportProjectHealth(value: unknown): value is ReportProjectHea
 
 export function isReportProjectLineStatus(value: unknown): value is ReportProjectLineStatus {
   return typeof value === "string" && (LINE_STATUS as string[]).includes(value);
+}
+
+export function isReportProjectStatus(value: unknown): value is ReportProjectStatus {
+  return typeof value === "string" && (REPORT_STATUS as string[]).includes(value);
 }
 
 function dateOnly(raw: string | Date | null | undefined): string | null {
@@ -70,6 +76,7 @@ export function mapProjectReportRow(
     cycleLabel: row.cycle_label ?? "",
     year: Number(row.year),
     weekNumber: Number(row.week_number),
+    status: isReportProjectStatus(row.status) ? row.status : "draft",
     lineCount: Number(row.line_count ?? lines.length),
     healthCounts: {
       healthy: Number(row.healthy_count ?? 0),
@@ -115,6 +122,14 @@ export function parseProjectPayload(body: unknown): ParsedProjectPayload {
   const cycleLabel = String(raw.cycleLabel ?? "").trim();
   const year = Number(raw.year);
   const weekNumber = Number(raw.weekNumber);
+
+  let status: ReportProjectStatus = "draft";
+  if (raw.status != null && raw.status !== "") {
+    if (!isReportProjectStatus(raw.status)) {
+      return { ok: false, error: "Invalid status." };
+    }
+    status = raw.status;
+  }
 
   if (!isValidDateOnly(reportDate) || !projectDepartment || !reporterName) {
     return { ok: false, error: "Report date, project/department, and reporter are required." };
@@ -189,6 +204,7 @@ export function parseProjectPayload(body: unknown): ParsedProjectPayload {
       cycleLabel,
       year,
       weekNumber,
+      status,
       lines,
     },
   };

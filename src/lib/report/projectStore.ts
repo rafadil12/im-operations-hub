@@ -21,6 +21,7 @@ const LIST_SELECT = `
     r.cycle_label,
     r.year,
     r.week_number,
+    r.status,
     r.created_at,
     r.updated_at,
     COALESCE(agg.line_count, 0) AS line_count,
@@ -139,8 +140,8 @@ export async function createProjectReport(payload: ReportProjectPayload): Promis
     const [insertResult] = await conn.query(
       `
         INSERT INTO report_project_reports (
-          report_date, project_department, reporter_name, cycle_label, year, week_number
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          report_date, project_department, reporter_name, cycle_label, year, week_number, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
         payload.reportDate,
@@ -149,6 +150,7 @@ export async function createProjectReport(payload: ReportProjectPayload): Promis
         payload.cycleLabel,
         payload.year,
         payload.weekNumber,
+        payload.status,
       ]
     );
     const reportId = Number((insertResult as ResultSetHeader).insertId);
@@ -166,7 +168,7 @@ export async function updateProjectReport(
       `
         UPDATE report_project_reports
         SET report_date = ?, project_department = ?, reporter_name = ?,
-            cycle_label = ?, year = ?, week_number = ?
+            cycle_label = ?, year = ?, week_number = ?, status = ?
         WHERE id = ?
       `,
       [
@@ -176,6 +178,7 @@ export async function updateProjectReport(
         payload.cycleLabel,
         payload.year,
         payload.weekNumber,
+        payload.status,
         id,
       ]
     );

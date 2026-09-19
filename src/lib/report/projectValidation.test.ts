@@ -29,8 +29,39 @@ describe("parseProjectPayload", () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     expect(parsed.data.weekNumber).toBe(37);
+    expect(parsed.data.status).toBe("draft");
     expect(parsed.data.lines).toHaveLength(1);
     expect(parsed.data.lines[0].progressRatio).toBe(0.75);
+  });
+
+  it("accepts explicit submitted status", () => {
+    const parsed = parseProjectPayload({
+      reportDate: "2026-09-09",
+      projectDepartment: "x",
+      reporterName: "y",
+      cycleLabel: "Week 37",
+      year: 2026,
+      weekNumber: 37,
+      status: "submitted",
+      lines: [{ target: "T1", health: "healthy", lineStatus: "in_progress" }],
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.data.status).toBe("submitted");
+  });
+
+  it("rejects invalid status", () => {
+    const parsed = parseProjectPayload({
+      reportDate: "2026-09-09",
+      projectDepartment: "x",
+      reporterName: "y",
+      cycleLabel: "Week 37",
+      year: 2026,
+      weekNumber: 37,
+      status: "archived",
+      lines: [{ target: "T1", health: "healthy", lineStatus: "in_progress" }],
+    });
+    expect(parsed.ok).toBe(false);
   });
 
   it("rejects missing target rows", () => {

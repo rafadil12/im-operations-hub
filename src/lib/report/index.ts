@@ -1,6 +1,7 @@
 export * from "./projectTypes";
 export * from "./projectCopy";
 export * from "./projectValidation";
+export type { ReportProjectAttachment } from "./projectAttachmentStore";
 export * from "./types";
 export * from "./copy";
 export * from "./apiHelpers";

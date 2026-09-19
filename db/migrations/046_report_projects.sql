@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `report_project_reports` (
   `cycle_label` VARCHAR(64) NOT NULL,
   `year` INT NOT NULL,
   `week_number` INT NOT NULL,
+  `status` ENUM('draft', 'submitted') NOT NULL DEFAULT 'draft',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
