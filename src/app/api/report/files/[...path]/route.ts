@@ -17,6 +17,7 @@ export async function GET(
   const gate = await requireAnyPermission([
     PERMISSIONS.reportOverviewView,
     PERMISSIONS.reportLineRead,
+    PERMISSIONS.reportProjectRead,
   ]);
   if (gate instanceof NextResponse) return gate;
 

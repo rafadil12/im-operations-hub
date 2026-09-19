@@ -106,6 +106,21 @@ describe("PERMISSION_TREE", () => {
     ]);
   });
 
+  it("places report overview, management, and projects under Report", () => {
+    const report = findNode(PERMISSION_TREE, "report");
+    expect(report?.children?.map((c) => c.id)).toEqual([
+      "report-overview",
+      "report-management",
+      "report-projects",
+    ]);
+    expect(findNode(PERMISSION_TREE, "report-projects")?.codes).toEqual([
+      PERMISSIONS.reportProjectRead,
+      PERMISSIONS.reportProjectCreate,
+      PERMISSIONS.reportProjectUpdate,
+      PERMISSIONS.reportProjectDelete,
+    ]);
+  });
+
   it("uses Daily Operation sidebar labels", () => {
     expect(findNode(PERMISSION_TREE, "daily-management")?.label).toEqual({
       source: "nav",

@@ -165,6 +165,21 @@ body {
   animation: sidebar-flyout-in 160ms ease-out;
 }
 
+@keyframes drawer-in {
+  from {
+    opacity: 0.85;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-drawer-in {
+  animation: drawer-in 180ms ease-out;
+}
+
 @keyframes bubbleIn {
   0% {
     opacity: 0;

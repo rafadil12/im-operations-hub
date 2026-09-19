@@ -48,7 +48,12 @@ export function resolveReportStoredFilePath(fileUrl: string): string | null {
   return absolute;
 }
 
-export async function saveReportUploadedFile(file: File, year: number, weekNumber: number) {
+export async function saveReportUploadedFile(
+  file: File,
+  year: number,
+  weekNumber: number,
+  subdir?: string
+) {
   const originalName = sanitizeFileName(file.name || "attachment.pdf");
   const ext = getReportFileExtension(originalName) || path.extname(originalName).toLowerCase();
 
@@ -57,7 +62,10 @@ export async function saveReportUploadedFile(file: File, year: number, weekNumbe
   }
 
   const uploadRoot = getReportUploadDir();
-  const dir = path.join(uploadRoot, String(year), `w${String(weekNumber).padStart(2, "0")}`);
+  const weekFolder = `w${String(weekNumber).padStart(2, "0")}`;
+  const dir = subdir
+    ? path.join(uploadRoot, subdir, String(year), weekFolder)
+    : path.join(uploadRoot, String(year), weekFolder);
   await mkdir(dir, { recursive: true });
 
   const storedName = `${randomUUID()}${ext || ".bin"}`;
@@ -66,10 +74,14 @@ export async function saveReportUploadedFile(file: File, year: number, weekNumbe
 
   await writeFile(absolute, buffer);
 
+  const urlParts = subdir
+    ? [subdir, String(year), weekFolder, encodeURIComponent(storedName)]
+    : [String(year), weekFolder, encodeURIComponent(storedName)];
+
   return {
     originalName,
     storedName,
-    url: `/api/report/files/${year}/w${String(weekNumber).padStart(2, "0")}/${encodeURIComponent(storedName)}`,
+    url: `/api/report/files/${urlParts.join("/")}`,
     mimeType: file.type || null,
     size: buffer.byteLength,
   };

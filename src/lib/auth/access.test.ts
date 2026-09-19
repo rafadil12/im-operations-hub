@@ -100,6 +100,8 @@ describe("getRoleAccess", () => {
     expect(access.canManageOrganizationShift).toBe(false);
     expect(access.canManageOrganizationAttendance).toBe(false);
     expect(access.canCreateOrganizationEmployee).toBe(false);
+    expect(access.canViewReportProjects).toBe(true);
+    expect(access.canCreateReportProject).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {
@@ -280,7 +282,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 60 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(60);
+  it("has exactly 64 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(64);
   });
 });

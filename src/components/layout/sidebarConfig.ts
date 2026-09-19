@@ -206,6 +206,11 @@ export const navItems: NavItem[] = [
           },
         ],
       },
+      {
+        id: "projects",
+        labelKey: "reportProjects",
+        href: "/report/projects",
+      },
     ],
   },
   {
