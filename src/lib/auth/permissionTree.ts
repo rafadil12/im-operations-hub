@@ -18,6 +18,10 @@ export type PermissionTreeLabel =
         | "safety"
         | "training"
         | "report"
+        | "reportWeeklyReport"
+        | "reportSummary"
+        | "reportReports"
+        | "reportProjects"
         | "sparepart"
         | "settings"
         | "management"
@@ -264,6 +268,16 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
           PERMISSIONS.reportLineDelete,
           PERMISSIONS.reportSubmissionSubmit,
           PERMISSIONS.reportSubmissionReopen,
+        ],
+      },
+      {
+        id: "report-projects",
+        label: { source: "nav", key: "reportProjects" },
+        codes: [
+          PERMISSIONS.reportProjectRead,
+          PERMISSIONS.reportProjectCreate,
+          PERMISSIONS.reportProjectUpdate,
+          PERMISSIONS.reportProjectDelete,
         ],
       },
     ],

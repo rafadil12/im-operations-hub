@@ -79,6 +79,7 @@ const en = {
     reportWeeklyReport: "Weekly Report",
     reportSummary: "Summary",
     reportReports: "Reports",
+    reportProjects: "Projects",
     training: "Training",
     session: "Session",
     settings: "Settings",

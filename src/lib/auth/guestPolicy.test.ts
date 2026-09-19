@@ -36,6 +36,8 @@ describe("DEFAULT_GUEST_PERMISSION_CODES", () => {
     expect(DEFAULT_GUEST_PERMISSION_CODES).not.toContain(PERMISSIONS.itsmRequestExport);
     expect(DEFAULT_GUEST_PERMISSION_CODES).toContain(PERMISSIONS.sparepartHistoryRead);
     expect(DEFAULT_GUEST_PERMISSION_CODES).not.toContain(PERMISSIONS.sparepartHistoryExport);
+    expect(DEFAULT_GUEST_PERMISSION_CODES).toContain(PERMISSIONS.reportProjectRead);
+    expect(DEFAULT_GUEST_PERMISSION_CODES).not.toContain(PERMISSIONS.reportProjectCreate);
   });
 });
 

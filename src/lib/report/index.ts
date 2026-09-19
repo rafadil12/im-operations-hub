@@ -1,3 +1,6 @@
+export * from "./projectTypes";
+export * from "./projectCopy";
+export * from "./projectValidation";
 export * from "./types";
 export * from "./copy";
 export * from "./apiHelpers";

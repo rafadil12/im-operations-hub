@@ -81,6 +81,7 @@ const cn: Dict = {
     reportWeeklyReport: "周报",
     reportSummary: "汇总",
     reportReports: "报表",
+    reportProjects: "项目",
     training: "培训",
     session: "场次",
     settings: "设置",

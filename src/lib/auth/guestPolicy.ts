@@ -18,6 +18,7 @@ export const DEFAULT_GUEST_PERMISSION_CODES = [
   "training.session.read",
   "report.overview.view",
   "report.line.read",
+  "report.project.read",
   "sparepart.overview.view",
   "sparepart.stock.view",
   "sparepart.document.read",

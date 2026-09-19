@@ -34,6 +34,7 @@ export function Sidebar() {
     canUpdateTrainingSession,
     canViewReportOverview,
     canViewReportLines,
+    canViewReportProjects,
     canViewSparepartOverview,
     canViewSparepartStock,
     canViewSparepartDocuments,
@@ -104,7 +105,7 @@ export function Sidebar() {
           );
         }
         if (item.id === "report") {
-          return canViewReportOverview || canViewReportLines;
+          return canViewReportOverview || canViewReportLines || canViewReportProjects;
         }
         return true;
       })
@@ -229,6 +230,9 @@ export function Sidebar() {
                   if (!nested.length) return null;
                   return { ...child, children: nested };
                 }
+                if (child.id === "projects") {
+                  return canViewReportProjects ? child : null;
+                }
                 return child;
               })
               .filter((child): child is NavChild => child !== null),
@@ -291,6 +295,7 @@ export function Sidebar() {
     canUpdateTrainingSession,
     canViewReportOverview,
     canViewReportLines,
+    canViewReportProjects,
     canViewSparepartDocuments,
     canViewSparepartHistory,
     canViewSparepartMaterials,

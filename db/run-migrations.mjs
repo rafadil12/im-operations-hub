@@ -1802,5 +1802,14 @@ await applySqlFile(
   "Ensured sparepart.history.read/export and backfilled from document.read.",
 );
 
+// ---------------------------------------------------------------------------
+// 046: report projects (Excel-style project progress reports)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "046_report_projects.sql",
+  readMigrationSql,
+  "Ensured report_project_* tables and report.project.* permissions.",
+);
+
 await conn.end();
 console.log("Migrations complete.");
