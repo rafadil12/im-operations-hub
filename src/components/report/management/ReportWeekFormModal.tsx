@@ -15,6 +15,7 @@ import {
 } from "@/lib/report/weekFormDraft";
 import { validateWeekLineDraft } from "@/lib/report/weekFormValidation";
 import { hasUnmatchedSubItem } from "@/lib/report/gridPaste";
+import { completionBarColor } from "@/lib/report/completionColor";
 import {
   reportText,
   type ReportArea,
@@ -44,9 +45,79 @@ type ReportWeekFormModalProps = {
   onSubItemCreated?: (item: ReportSubItem) => void;
 };
 
-const field =
-  "w-full rounded-md border border-border bg-bg/40 px-3 py-1 text-sm text-text outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70";
-const label = "mb-1 block text-xs font-medium text-text-muted";
+const identityField =
+  "w-full rounded-lg border border-dashed border-border bg-bg/30 px-3 py-2.5 text-sm font-medium text-text outline-none disabled:cursor-default disabled:opacity-100";
+const identityLabel =
+  "mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-text-dim";
+
+function SectionHeading({
+  index,
+  title,
+  badge,
+}: {
+  index: string;
+  title: string;
+  badge?: string;
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <span className="inline-flex size-6 items-center justify-center rounded-md bg-accent/10 text-[10px] font-bold tabular-nums text-accent">
+        {index}
+      </span>
+      <h3 className="text-sm font-semibold text-text">{title}</h3>
+      {badge ? (
+        <span className="rounded-full border border-border-subtle bg-bg/40 px-2 py-0.5 text-[10px] font-medium text-text-muted">
+          {badge}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function AvgCompletionRing({ pct, label }: { pct: number; label: string }) {
+  const clamped = Math.min(100, Math.max(0, Math.round(pct)));
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const offset = c - (clamped / 100) * c;
+  const color = completionBarColor(clamped);
+
+  return (
+    <div className="flex items-center gap-2.5" title={`${label}: ${clamped}%`}>
+      <div className="relative size-11 shrink-0">
+        <svg className="size-11 -rotate-90" viewBox="0 0 44 44" aria-hidden>
+          <circle
+            cx="22"
+            cy="22"
+            r={r}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3.5"
+            className="text-border-subtle"
+          />
+          <circle
+            cx="22"
+            cy="22"
+            r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-text">
+          {clamped}%
+        </span>
+      </div>
+      <div className="hidden min-w-0 sm:block">
+        <p className="text-[9px] font-semibold uppercase tracking-wider text-text-dim">
+          {label}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function ReportWeekFormModal({
   open,
@@ -88,6 +159,17 @@ export function ReportWeekFormModal({
       ? localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, lang)
       : String(areaId);
   }, [areas, areaId, lang]);
+
+  const avgCompletionPct = useMemo(() => {
+    if (!lines.length) return 0;
+    const sum = lines.reduce((acc, line) => acc + (line.completionPct ?? 0), 0);
+    return sum / lines.length;
+  }, [lines]);
+
+  const linesBadge =
+    lines.length === 1
+      ? reportText("lineCountOne", language)
+      : reportText("linesCount", language).replace("{n}", String(lines.length));
 
   useEffect(() => {
     if (!open) return;
@@ -282,13 +364,21 @@ export function ReportWeekFormModal({
         onExit={onClose}
         exitDisabled={saving}
         exitButtonVariant="close"
+        headerAside={
+          loading ? null : (
+            <AvgCompletionRing
+              pct={avgCompletionPct}
+              label={reportText("avgCompletion", language)}
+            />
+          )
+        }
         footer={
           <>
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs text-text-muted disabled:opacity-50"
+              className="cursor-pointer rounded-md border border-border px-4 py-2 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50"
             >
               Cancel
             </button>
@@ -297,7 +387,7 @@ export function ReportWeekFormModal({
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saving || loading}
-                className="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="cursor-pointer rounded-md bg-accent px-4 py-2 text-xs font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
               >
                 {saving ? reportText("loading", language) : reportText("saveWeekReport", language)}
               </button>
@@ -308,53 +398,75 @@ export function ReportWeekFormModal({
         {loading ? (
           <SkeletonForm fields={4} />
         ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div>
-                <label className={label}>{reportText("year", language)}</label>
-                <input className={field} value={year} disabled readOnly />
+          <div className="mx-auto w-full max-w-6xl space-y-6">
+            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+              <SectionHeading
+                index="01"
+                title={reportText("reportInformation", language)}
+              />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className={identityLabel}>{reportText("year", language)}</label>
+                  <input className={identityField} value={year} disabled readOnly />
+                </div>
+                <div>
+                  <label className={identityLabel}>{reportText("week", language)}</label>
+                  <input
+                    className={identityField}
+                    value={`Week ${weekNumber}`}
+                    disabled
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label className={identityLabel}>
+                    {reportText("reportCategory", language)}
+                  </label>
+                  <input className={identityField} value={areaLabel} disabled readOnly />
+                </div>
               </div>
-              <div>
-                <label className={label}>{reportText("week", language)}</label>
-                <input className={field} value={`Week ${weekNumber}`} disabled readOnly />
-              </div>
-              <div>
-                <label className={label}>{reportText("reportCategory", language)}</label>
-                <input className={field} value={areaLabel} disabled readOnly />
-              </div>
-            </div>
+              {isSubmitted ? (
+                <p className="mt-3 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
+                  {reportText("submitted", language)}
+                </p>
+              ) : null}
+            </section>
 
-            {isSubmitted ? (
-              <p className="rounded-md border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
-                {reportText("submitted", language)}
-              </p>
-            ) : null}
+            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+              <SectionHeading index="02" title={reportText("attachments", language)} />
+              <ReportWeekAttachments
+                language={language}
+                readOnly={readOnly}
+                year={year}
+                weekNumber={weekNumber}
+                areaId={areaId}
+                savedAttachments={savedAttachments}
+                pendingFiles={pendingFiles}
+                uploading={attachmentUploading || saving}
+                onSavedAttachmentsChange={setSavedAttachments}
+                onPendingFilesChange={setPendingFiles}
+                onUploadingChange={setAttachmentUploading}
+                onError={setError}
+                uploadImmediately={mode === "edit"}
+              />
+            </section>
 
-            <ReportWeekAttachments
-              language={language}
-              readOnly={readOnly}
-              year={year}
-              weekNumber={weekNumber}
-              areaId={areaId}
-              savedAttachments={savedAttachments}
-              pendingFiles={pendingFiles}
-              uploading={attachmentUploading || saving}
-              onSavedAttachmentsChange={setSavedAttachments}
-              onPendingFilesChange={setPendingFiles}
-              onUploadingChange={setAttachmentUploading}
-              onError={setError}
-              uploadImmediately={mode === "edit"}
-            />
-
-            <ReportWeekGrid
-              language={language}
-              lines={lines}
-              areaId={areaId}
-              areaSubItems={areaSubItems}
-              readOnly={readOnly}
-              onChange={setLines}
-              onSubItemCreated={onSubItemCreated}
-            />
+            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+              <SectionHeading
+                index="03"
+                title={reportText("subItemsSection", language)}
+                badge={linesBadge}
+              />
+              <ReportWeekGrid
+                language={language}
+                lines={lines}
+                areaId={areaId}
+                areaSubItems={areaSubItems}
+                readOnly={readOnly}
+                onChange={setLines}
+                onSubItemCreated={onSubItemCreated}
+              />
+            </section>
           </div>
         )}
       </FullViewWorkspace>
