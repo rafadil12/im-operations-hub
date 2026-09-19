@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-19
+
+### Changed
+
+- Restyle Add / Edit / View Week Report form: numbered sections, dashed
+  identity fields, AVG completion ring, completion progress bar, and a
+  wider content column (~20% more than `max-w-6xl`).
+
 ## [0.5.0] - 2026-09-19
 
 ### Added
