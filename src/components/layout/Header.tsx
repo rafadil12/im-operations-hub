@@ -100,7 +100,7 @@ function AvatarCircle({
 export function Header({ title }: HeaderProps) {
   const { lang, setLang } = useLang();
   const { account, loading, logout } = useAuth();
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -111,6 +111,7 @@ export function Header({ title }: HeaderProps) {
   };
 
   useEffect(() => {
+    setNow(new Date());
     const timer = window.setInterval(() => {
       setNow(new Date());
     }, 1000);
@@ -136,6 +137,7 @@ export function Header({ title }: HeaderProps) {
   }, [menuOpen]);
 
   const currentDateTime = useMemo(() => {
+    if (!now) return "";
     const parts = new Intl.DateTimeFormat(lang === "cn" ? "zh-CN" : "en-US", {
       weekday: "long",
       month: "short",
@@ -205,8 +207,11 @@ export function Header({ title }: HeaderProps) {
             </button>
           </div>
           <ThemeToggle />
-          <span className="hidden rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted lg:inline">
-            {currentDateTime}
+          <span
+            className="hidden min-w-[11rem] rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-muted lg:inline"
+            suppressHydrationWarning
+          >
+            {currentDateTime || "\u00a0"}
           </span>
 
           {loading ? (
