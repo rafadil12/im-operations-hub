@@ -2,7 +2,8 @@ export const MOVEMENT_HISTORY_COLUMNS = [
   "date",
   "doc",
   "line",
-  "material",
+  "materialCode",
+  "description",
   "movementType",
   "qty",
   "uom",
@@ -16,12 +17,13 @@ export type MovementHistoryColumnId = (typeof MOVEMENT_HISTORY_COLUMNS)[number];
 
 export type MovementHistoryColumnVisibility = Record<MovementHistoryColumnId, boolean>;
 
-/** Default visible set: Posting Date, Material, Type, Qty, UoM, Created By. */
+/** Default visible set: Posting Date, Material Code, Description, Type, Qty, UoM, Created By. */
 export const DEFAULT_HISTORY_COLUMN_VISIBILITY: MovementHistoryColumnVisibility = {
   date: true,
   doc: false,
   line: false,
-  material: true,
+  materialCode: true,
+  description: true,
   movementType: true,
   qty: true,
   uom: true,
@@ -31,7 +33,7 @@ export const DEFAULT_HISTORY_COLUMN_VISIBILITY: MovementHistoryColumnVisibility 
   note: false,
 };
 
-export const HISTORY_COLUMNS_STORAGE_KEY = "sparepart.movementHistory.columns.v2";
+export const HISTORY_COLUMNS_STORAGE_KEY = "sparepart.movementHistory.columns.v3";
 
 export function parseHistoryColumnVisibility(raw: unknown): MovementHistoryColumnVisibility {
   const next = { ...DEFAULT_HISTORY_COLUMN_VISIBILITY };
@@ -39,6 +41,11 @@ export function parseHistoryColumnVisibility(raw: unknown): MovementHistoryColum
   const record = raw as Record<string, unknown>;
   for (const id of MOVEMENT_HISTORY_COLUMNS) {
     if (typeof record[id] === "boolean") next[id] = record[id];
+  }
+  // Migrate legacy combined "material" flag from column prefs v2.
+  if (typeof record.material === "boolean") {
+    if (typeof record.materialCode !== "boolean") next.materialCode = record.material;
+    if (typeof record.description !== "boolean") next.description = record.material;
   }
   if (!MOVEMENT_HISTORY_COLUMNS.some((id) => next[id])) {
     return { ...DEFAULT_HISTORY_COLUMN_VISIBILITY };
@@ -50,7 +57,12 @@ export function loadHistoryColumnVisibility(): MovementHistoryColumnVisibility {
   if (typeof window === "undefined") return DEFAULT_HISTORY_COLUMN_VISIBILITY;
   try {
     const raw = window.localStorage.getItem(HISTORY_COLUMNS_STORAGE_KEY);
-    if (!raw) return DEFAULT_HISTORY_COLUMN_VISIBILITY;
+    if (!raw) {
+      // Fall back once from v2 prefs so users keep their column choices.
+      const legacy = window.localStorage.getItem("sparepart.movementHistory.columns.v2");
+      if (!legacy) return DEFAULT_HISTORY_COLUMN_VISIBILITY;
+      return parseHistoryColumnVisibility(JSON.parse(legacy) as unknown);
+    }
     return parseHistoryColumnVisibility(JSON.parse(raw) as unknown);
   } catch {
     return DEFAULT_HISTORY_COLUMN_VISIBILITY;
