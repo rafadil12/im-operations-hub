@@ -26,7 +26,7 @@ export const sparepartDropdownFieldClass =
   "flex w-full items-center gap-2 rounded-md border border-border bg-bg text-left text-text outline-none focus:border-accent";
 
 export const sparepartDropdownMenuClass =
-  "absolute left-0 right-0 z-30 overflow-hidden rounded-md border border-border bg-bg-elevated py-1 shadow-lg";
+  "absolute left-0 right-0 z-30 max-h-[17.5rem] overflow-y-auto overscroll-contain rounded-md border border-border bg-bg-elevated py-1 shadow-lg";
 
 function ChevronDown({ className = "" }: { className?: string }) {
   return (
