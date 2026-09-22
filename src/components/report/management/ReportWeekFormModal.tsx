@@ -433,7 +433,24 @@ export function ReportWeekFormModal({
             </section>
 
             <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
-              <SectionHeading index="02" title={reportText("attachments", language)} />
+              <SectionHeading
+                index="02"
+                title={reportText("subItemsSection", language)}
+                badge={linesBadge}
+              />
+              <ReportWeekGrid
+                language={language}
+                lines={lines}
+                areaId={areaId}
+                areaSubItems={areaSubItems}
+                readOnly={readOnly}
+                onChange={setLines}
+                onSubItemCreated={onSubItemCreated}
+              />
+            </section>
+
+            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
+              <SectionHeading index="03" title={reportText("attachments", language)} />
               <ReportWeekAttachments
                 language={language}
                 readOnly={readOnly}
@@ -448,23 +465,6 @@ export function ReportWeekFormModal({
                 onUploadingChange={setAttachmentUploading}
                 onError={setError}
                 uploadImmediately={mode === "edit"}
-              />
-            </section>
-
-            <section className="rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">
-              <SectionHeading
-                index="03"
-                title={reportText("subItemsSection", language)}
-                badge={linesBadge}
-              />
-              <ReportWeekGrid
-                language={language}
-                lines={lines}
-                areaId={areaId}
-                areaSubItems={areaSubItems}
-                readOnly={readOnly}
-                onChange={setLines}
-                onSubItemCreated={onSubItemCreated}
               />
             </section>
           </div>
