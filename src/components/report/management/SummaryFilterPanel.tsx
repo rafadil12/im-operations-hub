@@ -4,6 +4,7 @@ import { ExportIcon, FullViewIcon } from "@/components/ui/ActionIcons";
 import { localizedName } from "@/lib/i18n";
 import {
   reportText,
+  type ReportArea,
   type ReportLanguage,
   type ReportSubItem,
 } from "@/lib/report";
@@ -40,11 +41,14 @@ type SummaryFilterPanelProps = {
   lang: "en" | "cn";
   year: number;
   onYearChange: (year: number) => void;
+  filterArea: number | "all";
+  onFilterAreaChange: (value: number | "all") => void;
   filterWeek: number | "all";
   onFilterWeekChange: (value: number | "all") => void;
   filterSubItem: number | "all";
   onFilterSubItemChange: (value: number | "all") => void;
   weekOptions: number[];
+  areas: ReportArea[];
   subItems: ReportSubItem[];
   search: string;
   onSearchChange: (value: string) => void;
@@ -62,11 +66,14 @@ export function SummaryFilterPanel({
   lang,
   year,
   onYearChange,
+  filterArea,
+  onFilterAreaChange,
   filterWeek,
   onFilterWeekChange,
   filterSubItem,
   onFilterSubItemChange,
   weekOptions,
+  areas,
   subItems,
   search,
   onSearchChange,
@@ -130,6 +137,21 @@ export function SummaryFilterPanel({
           {[2025, 2026, 2027].map((y) => (
             <option key={y} value={y}>
               {y}
+            </option>
+          ))}
+        </select>
+        <select
+          className={filterCtrl + " w-auto min-w-[120px]"}
+          value={filterArea === "all" ? "all" : String(filterArea)}
+          onChange={(e) =>
+            onFilterAreaChange(e.target.value === "all" ? "all" : Number(e.target.value))
+          }
+          aria-label={reportText("area", language)}
+        >
+          <option value="all">{reportText("all", language)}</option>
+          {areas.map((area) => (
+            <option key={area.id} value={area.id}>
+              {localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, lang)}
             </option>
           ))}
         </select>

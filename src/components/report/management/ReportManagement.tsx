@@ -133,6 +133,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     mode === "summary" ? "summary" : 0
   );
   const [filterWeek, setFilterWeek] = useState<number | "all">("all");
+  const [filterArea, setFilterArea] = useState<number | "all">("all");
   const [filterSubItem, setFilterSubItem] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [weeks, setWeeks] = useState<ReportWeek[]>([]);
@@ -235,6 +236,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
 
   useEffect(() => {
     setFilterWeek("all");
+    setFilterArea("all");
     setFilterSubItem("all");
     setSearch("");
     setWeekFormOpen(false);
@@ -263,6 +265,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const filteredLines = useMemo(() => {
     const q = isSummary ? search.trim().toLowerCase() : "";
     return lines.filter((row) => {
+      if (filterArea !== "all" && row.areaId !== filterArea) return false;
       if (filterWeek !== "all" && row.weekNumber !== filterWeek) return false;
       if (filterSubItem !== "all" && row.subItemId !== filterSubItem) return false;
       if (!q) return true;
@@ -280,7 +283,24 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
 
       return haystack.includes(q);
     });
-  }, [lines, filterWeek, filterSubItem, search, lang, areaById, isSummary]);
+  }, [lines, filterArea, filterWeek, filterSubItem, search, lang, areaById, isSummary]);
+
+  const summarySubItemOptions = useMemo(() => {
+    if (filterArea === "all") return subItems;
+    return subItems.filter((item) => item.areaId === filterArea);
+  }, [subItems, filterArea]);
+
+  const handleFilterAreaChange = useCallback(
+    (value: number | "all") => {
+      setFilterArea(value);
+      setFilterSubItem((current) => {
+        if (current === "all" || value === "all") return current;
+        const stillValid = subItems.some((item) => item.id === current && item.areaId === value);
+        return stillValid ? current : "all";
+      });
+    },
+    [subItems]
+  );
 
   const areaWeekRows = useMemo(() => {
     if (isSummary) return [];
@@ -418,12 +438,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     lang,
     year,
     onYearChange: setYear,
+    filterArea,
+    onFilterAreaChange: handleFilterAreaChange,
     filterWeek,
     onFilterWeekChange: setFilterWeek,
     filterSubItem,
     onFilterSubItemChange: setFilterSubItem,
     weekOptions,
-    subItems,
+    areas,
+    subItems: summarySubItemOptions,
     search,
     onSearchChange: setSearch,
     tableControls: summaryTableControls,
@@ -432,6 +455,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   };
 
   const summaryContextSubtitle = [
+    filterArea !== "all"
+      ? localizedName(
+          {
+            name_en: areas.find((area) => area.id === filterArea)?.nameEn ?? "",
+            name_cn: areas.find((area) => area.id === filterArea)?.nameCn ?? "",
+          },
+          lang
+        )
+      : null,
     filterWeek !== "all" ? `Week ${filterWeek}` : reportText("all", language),
     filterSubItem !== "all"
       ? localizedName(
