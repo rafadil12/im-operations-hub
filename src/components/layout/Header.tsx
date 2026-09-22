@@ -1,12 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 import { getDict, useLang } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 import { ThemeToggle } from "./ThemeToggle";
+
+let clockMsValue = 0;
+
+function subscribeClock(onStoreChange: () => void) {
+  clockMsValue = Date.now();
+  const timer = window.setInterval(() => {
+    clockMsValue = Date.now();
+    onStoreChange();
+  }, 1000);
+  return () => window.clearInterval(timer);
+}
+
+function getClockSnapshot() {
+  return clockMsValue;
+}
+
+/** Server + hydration: fixed snapshot so SSR/client HTML match. */
+function getClockServerSnapshot() {
+  return 0;
+}
+
+function subscribeIsClient() {
+  return () => {};
+}
+
+function getIsClientSnapshot() {
+  return true;
+}
+
+function getIsClientServerSnapshot() {
+  return false;
+}
 
 type HeaderProps = {
   title: string;
@@ -100,7 +132,12 @@ function AvatarCircle({
 export function Header({ title }: HeaderProps) {
   const { lang, setLang } = useLang();
   const { account, loading, logout } = useAuth();
-  const [now, setNow] = useState<Date | null>(null);
+  const isClient = useSyncExternalStore(
+    subscribeIsClient,
+    getIsClientSnapshot,
+    getIsClientServerSnapshot
+  );
+  const clockMs = useSyncExternalStore(subscribeClock, getClockSnapshot, getClockServerSnapshot);
   const [menuOpen, setMenuOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -109,14 +146,6 @@ export function Header({ title }: HeaderProps) {
   const toggle = (next: Lang) => {
     if (next !== lang) setLang(next);
   };
-
-  useEffect(() => {
-    setNow(new Date());
-    const timer = window.setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -137,7 +166,7 @@ export function Header({ title }: HeaderProps) {
   }, [menuOpen]);
 
   const currentDateTime = useMemo(() => {
-    if (!now) return "";
+    if (!isClient) return "";
     const parts = new Intl.DateTimeFormat(lang === "cn" ? "zh-CN" : "en-US", {
       weekday: "long",
       month: "short",
@@ -146,12 +175,12 @@ export function Header({ title }: HeaderProps) {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    }).formatToParts(now);
+    }).formatToParts(new Date(clockMs));
     const valueOf = (type: Intl.DateTimeFormatPartTypes) =>
       parts.find((part) => part.type === type)?.value ?? "";
 
     return `${valueOf("weekday")}, ${valueOf("month")} ${valueOf("day")}, ${valueOf("year")} · ${valueOf("hour")}:${valueOf("minute")}`;
-  }, [lang, now]);
+  }, [lang, clockMs, isClient]);
 
   const menuItemClass =
     "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left text-sm text-text-muted transition-colors hover:bg-surface-hover hover:text-text";
