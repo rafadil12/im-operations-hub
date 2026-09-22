@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import { getDict, localizedField, localizedName } from "@/lib/i18n";
+import { contentDispositionAttachment, exportFilename } from "@/lib/exportFilenames";
 import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type { Lang, SparepartItem } from "@/lib/types";
 
@@ -127,11 +128,12 @@ export async function GET(request: NextRequest) {
     byLoc.getRow(1).font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
+    const filename = exportFilename("sparepartMaterials", lang);
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="sparepart-export.xlsx"`,
+        "Content-Disposition": contentDispositionAttachment(filename),
       },
     });
   } catch (error) {

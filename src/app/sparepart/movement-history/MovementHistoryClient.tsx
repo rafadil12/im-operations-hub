@@ -22,6 +22,7 @@ import {
 } from "@/lib/sparepart/movementHistoryColumns";
 import { pad2, todayLocalDateInputValue } from "@/lib/sparepart/postDraft";
 import { formatUomDisplay } from "@/lib/sparepart/uoms";
+import { exportFilename } from "@/lib/exportFilenames";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/StockTable";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
@@ -197,7 +198,7 @@ export default function MovementHistoryPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "sparepart-movement-history.xlsx";
+      a.download = exportFilename("sparepartMovementHistory", lang);
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -11,6 +11,7 @@ import {
   stockStatusReportHeaders,
   stockStatusReportStatusLabel,
 } from "@/lib/sparepart/stockStatusReport";
+import { contentDispositionAttachment, exportFilename } from "@/lib/exportFilenames";
 import type { Lang } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -130,11 +131,12 @@ export async function GET(request: NextRequest) {
     sheet.getRow(1).font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
+    const filename = exportFilename("sparepartStockStatus", lang);
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="sparepart-stock-status-report.xlsx"`,
+        "Content-Disposition": contentDispositionAttachment(filename),
       },
     });
   } catch (error) {

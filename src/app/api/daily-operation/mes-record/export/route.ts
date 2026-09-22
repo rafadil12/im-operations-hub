@@ -3,6 +3,7 @@ import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveRange } from "@/lib/dateRange";
 import { buildActivitiesExport } from "@/lib/daily-operation/mesRecordImport";
+import { contentDispositionAttachment, exportFilename } from "@/lib/exportFilenames";
 import type { Lang, MesDataRow } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -82,13 +83,16 @@ export async function GET(request: NextRequest) {
 
     const startLabel = start.slice(0, 10);
     const endLabel = end.slice(0, 10);
-    const filename = `daily-activities-export_${startLabel}_${endLabel}.xlsx`;
+    const filename = exportFilename("dailyActivities", lang, {
+      start: startLabel,
+      end: endLabel,
+    });
 
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": contentDispositionAttachment(filename),
         "Cache-Control": "no-store",
       },
     });

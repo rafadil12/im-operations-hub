@@ -20,6 +20,7 @@ import {
 } from "@/components/sparepart/StockTable";
 import { sortStockBalanceRows } from "@/lib/sparepart/sort";
 import type { StockLevelStatus } from "@/lib/sparepart/categories";
+import { exportFilename } from "@/lib/exportFilenames";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
 
@@ -181,7 +182,9 @@ export default function StockOverviewPage() {
       const a = document.createElement("a");
       a.href = objectUrl;
       a.download =
-        kind === "stock-report" ? "sparepart-stock-status-report.xlsx" : "sparepart-export.xlsx";
+        kind === "stock-report"
+          ? exportFilename("sparepartStockStatus", lang)
+          : exportFilename("sparepartMaterials", lang);
       document.body.appendChild(a);
       a.click();
       a.remove();
