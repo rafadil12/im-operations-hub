@@ -77,7 +77,8 @@ describe("parseHistoryColumnVisibility", () => {
       date: false,
       doc: false,
       line: false,
-      material: false,
+      materialCode: false,
+      description: false,
       movementType: false,
       qty: false,
       uom: false,
@@ -88,14 +89,24 @@ describe("parseHistoryColumnVisibility", () => {
     };
     const parsed = parseHistoryColumnVisibility(allOff);
     expect(parsed.date).toBe(true);
-    expect(parsed.material).toBe(true);
+    expect(parsed.materialCode).toBe(true);
+    expect(parsed.description).toBe(true);
     expect(parsed.doc).toBe(false);
+  });
+
+  it("migrates legacy combined material column flag", () => {
+    const parsed = parseHistoryColumnVisibility({ material: false, qty: false });
+    expect(parsed.materialCode).toBe(false);
+    expect(parsed.description).toBe(false);
+    expect(parsed.qty).toBe(false);
+    expect(parsed.date).toBe(true);
   });
 
   it("uses compact default visibility", () => {
     const defaults = parseHistoryColumnVisibility(null);
     expect(defaults.date).toBe(true);
-    expect(defaults.material).toBe(true);
+    expect(defaults.materialCode).toBe(true);
+    expect(defaults.description).toBe(true);
     expect(defaults.movementType).toBe(true);
     expect(defaults.qty).toBe(true);
     expect(defaults.uom).toBe(true);

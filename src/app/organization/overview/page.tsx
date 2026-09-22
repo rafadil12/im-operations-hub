@@ -128,6 +128,7 @@ type DailyStats = {
   presentEmployees: Employee[];
   dayShiftEmployees: Employee[];
   nightShiftEmployees: Employee[];
+  fourHourEmployees: Employee[];
 };
 
 type DepartmentSummary = {
@@ -2530,6 +2531,7 @@ export default function AttendanceOverviewPage() {
         const presentEmployees: Employee[] = [];
         const dayShiftEmployees: Employee[] = [];
         const nightShiftEmployees: Employee[] = [];
+        const fourHourEmployees: Employee[] = [];
         for (const employee of employees) {
           const attendance =
             attendanceMap.get(
@@ -2595,7 +2597,8 @@ export default function AttendanceOverviewPage() {
             if (
               schedule?.schedule_type === "D" ||
               schedule?.schedule_type === "D/S"||
-              schedule?.schedule_type === "1"
+              schedule?.schedule_type === "1" ||
+              schedule?.schedule_type === "4"
             ) {
               dayShiftEmployees.push(employee);
             }
@@ -2654,6 +2657,7 @@ export default function AttendanceOverviewPage() {
           presentEmployees,
           dayShiftEmployees,
           nightShiftEmployees,
+          fourHourEmployees,
         };
       },
     );
@@ -4266,6 +4270,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
                               <p className="mt-0.5 truncate text-[9px] text-text-dim">
                                 {employee.employee_no}
                               </p>
+                                {scheduleMap.get(
+                                  `${employee.employee_no}|${currentDateKey}`,
+                                )?.schedule_type === "4" && (
+                                  <span className="mt-1 inline-block rounded bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold text-amber-500">
+                                    4 Hours
+                                  </span>
+                                )}
                             </div>
                           </div>
 

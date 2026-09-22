@@ -21,8 +21,10 @@ function columnLabel(id: MovementHistoryColumnId, t: ReturnType<typeof useLang>[
       return t.sparepart.docNumber;
     case "line":
       return t.sparepart.lineNo;
-    case "material":
-      return t.sparepart.item;
+    case "materialCode":
+      return t.sparepart.code;
+    case "description":
+      return t.sparepart.name;
     case "movementType":
       return t.sparepart.movementType;
     case "qty":

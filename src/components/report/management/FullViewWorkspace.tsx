@@ -14,6 +14,8 @@ type FullViewWorkspaceProps = {
   showExitButton?: boolean;
   /** "close" = ✕ dismiss (forms); "fullView" = exit fullscreen toggle (summary table) */
   exitButtonVariant?: "close" | "fullView";
+  /** Optional content on the right side of the header (before exit button). */
+  headerAside?: ReactNode;
   toolbar?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
@@ -28,6 +30,7 @@ export function FullViewWorkspace({
   exitDisabled = false,
   showExitButton = true,
   exitButtonVariant = "fullView",
+  headerAside,
   toolbar,
   footer,
   children,
@@ -65,35 +68,40 @@ export function FullViewWorkspace({
       role="region"
       aria-label={ariaLabel}
     >
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-5 py-3">
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-text">{title}</h2>
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-3 py-3 sm:px-5">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold tracking-tight text-text sm:text-lg">
+            {title}
+          </h2>
           {subtitle ? <p className="mt-0.5 text-xs text-text-muted">{subtitle}</p> : null}
         </div>
-        {showExitButton ? (
-          <button
-            type="button"
-            onClick={onExit}
-            disabled={exitDisabled}
-            className={exitBtnClass}
-            title={exitLabel}
-            aria-label={exitLabel}
-          >
-            {exitButtonVariant === "close" ? "✕" : <FullViewIcon className="size-3.5" />}
-          </button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-3">
+          {headerAside}
+          {showExitButton ? (
+            <button
+              type="button"
+              onClick={onExit}
+              disabled={exitDisabled}
+              className={exitBtnClass}
+              title={exitLabel}
+              aria-label={exitLabel}
+            >
+              {exitButtonVariant === "close" ? "✕" : <FullViewIcon className="size-3.5" />}
+            </button>
+          ) : null}
+        </div>
       </header>
 
       {toolbar ? (
-        <div className="relative z-10 shrink-0 border-b border-border-subtle px-5 py-3">
+        <div className="relative z-10 shrink-0 border-b border-border-subtle px-3 py-3 sm:px-5">
           {toolbar}
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-3">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 pt-4 sm:px-5">{children}</div>
 
       {footer ? (
-        <div className="flex shrink-0 justify-end gap-2 border-t border-border-subtle px-5 py-3">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border-subtle bg-surface/80 px-3 py-3 sm:px-5">
           {footer}
         </div>
       ) : null}

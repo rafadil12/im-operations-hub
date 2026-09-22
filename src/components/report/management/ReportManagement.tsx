@@ -77,46 +77,47 @@ function ReportFilterBar({
   onToday,
 }: ReportFilterBarProps) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-3">
-      <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
-        <FilterField label={reportText("year", language)} className="min-w-[88px]">
-          <select
-            className={filterCtrl + " w-full min-w-[88px]"}
-            value={year}
-            onChange={(e) => onYearChange(Number(e.target.value))}
-            aria-label={reportText("year", language)}
-          >
-            {[2025, 2026, 2027].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-        <FilterField label={reportText("week", language)} className="min-w-[120px]">
-          <select
-            className={filterCtrl + " w-full min-w-[120px]"}
-            value={filterWeek === "all" ? "all" : String(filterWeek)}
-            onChange={(e) =>
-              onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
-          >
-            <option value="all">{reportText("allWeeks", language)}</option>
-            {weekOptions.map((w) => (
-              <option key={w} value={w}>
-                Week {w}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-        <button
-          type="button"
-          onClick={onToday}
-          className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-3">
+      <FilterField label={reportText("year", language)} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-auto sm:min-w-[88px]">
+        <select
+          className={filterCtrl + " w-full sm:min-w-[88px]"}
+          value={year}
+          onChange={(e) => onYearChange(Number(e.target.value))}
+          aria-label={reportText("year", language)}
         >
-          {reportText("today", language)}
-        </button>
-      </div>
+          {[2025, 2026, 2027].map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </FilterField>
+      <FilterField label={reportText("week", language)} className="w-[calc(50%-0.375rem)] min-w-0 sm:w-auto sm:min-w-[140px]">
+        <select
+          className={filterCtrl + " w-full sm:min-w-[140px]"}
+          value={filterWeek === "all" ? "all" : String(filterWeek)}
+          onChange={(e) =>
+            onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
+          }
+        >
+          <option value="all">{reportText("allWeeks", language)}</option>
+          {weekOptions.map((w) => (
+            <option key={w} value={w}>
+              Week {w}
+            </option>
+          ))}
+        </select>
+      </FilterField>
+      <button
+        type="button"
+        onClick={onToday}
+        className="cursor-pointer rounded-md border border-border bg-bg/40 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
+      >
+        {reportText("today", language)}
+      </button>
+      <p className="min-w-0 flex-1 basis-full rounded-md border border-accent/20 bg-accent/5 px-3 py-1 text-xs leading-relaxed text-text-muted sm:basis-0">
+        {reportText("oneReportRule", language)}
+      </p>
     </div>
   );
 }
@@ -132,6 +133,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     mode === "summary" ? "summary" : 0
   );
   const [filterWeek, setFilterWeek] = useState<number | "all">("all");
+  const [filterArea, setFilterArea] = useState<number | "all">("all");
   const [filterSubItem, setFilterSubItem] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [weeks, setWeeks] = useState<ReportWeek[]>([]);
@@ -234,6 +236,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
 
   useEffect(() => {
     setFilterWeek("all");
+    setFilterArea("all");
     setFilterSubItem("all");
     setSearch("");
     setWeekFormOpen(false);
@@ -262,6 +265,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   const filteredLines = useMemo(() => {
     const q = isSummary ? search.trim().toLowerCase() : "";
     return lines.filter((row) => {
+      if (filterArea !== "all" && row.areaId !== filterArea) return false;
       if (filterWeek !== "all" && row.weekNumber !== filterWeek) return false;
       if (filterSubItem !== "all" && row.subItemId !== filterSubItem) return false;
       if (!q) return true;
@@ -279,7 +283,24 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
 
       return haystack.includes(q);
     });
-  }, [lines, filterWeek, filterSubItem, search, lang, areaById, isSummary]);
+  }, [lines, filterArea, filterWeek, filterSubItem, search, lang, areaById, isSummary]);
+
+  const summarySubItemOptions = useMemo(() => {
+    if (filterArea === "all") return subItems;
+    return subItems.filter((item) => item.areaId === filterArea);
+  }, [subItems, filterArea]);
+
+  const handleFilterAreaChange = useCallback(
+    (value: number | "all") => {
+      setFilterArea(value);
+      setFilterSubItem((current) => {
+        if (current === "all" || value === "all") return current;
+        const stillValid = subItems.some((item) => item.id === current && item.areaId === value);
+        return stillValid ? current : "all";
+      });
+    },
+    [subItems]
+  );
 
   const areaWeekRows = useMemo(() => {
     if (isSummary) return [];
@@ -417,12 +438,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     lang,
     year,
     onYearChange: setYear,
+    filterArea,
+    onFilterAreaChange: handleFilterAreaChange,
     filterWeek,
     onFilterWeekChange: setFilterWeek,
     filterSubItem,
     onFilterSubItemChange: setFilterSubItem,
     weekOptions,
-    subItems,
+    areas,
+    subItems: summarySubItemOptions,
     search,
     onSearchChange: setSearch,
     tableControls: summaryTableControls,
@@ -431,6 +455,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   };
 
   const summaryContextSubtitle = [
+    filterArea !== "all"
+      ? localizedName(
+          {
+            name_en: areas.find((area) => area.id === filterArea)?.nameEn ?? "",
+            name_cn: areas.find((area) => area.id === filterArea)?.nameCn ?? "",
+          },
+          lang
+        )
+      : null,
     filterWeek !== "all" ? `Week ${filterWeek}` : reportText("all", language),
     filterSubItem !== "all"
       ? localizedName(
@@ -455,10 +488,16 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
     .replace("{year}", String(year));
 
   return (
-    <div className="space-y-0">
+    <div
+      className={
+        isSummary
+          ? "space-y-4"
+          : "flex h-[calc(100dvh-var(--topbar-height)-2.5rem)] flex-col gap-4 overflow-hidden"
+      }
+    >
       {mode === "reports" ? (
-        <div className="overflow-x-auto border-b border-border-subtle">
-          <div className="flex min-w-max gap-6">
+        <div className="shrink-0 overflow-x-auto border-b border-border-subtle [-ms-overflow-style:none] [scrollbar-width:thin]">
+          <div className="flex min-w-max gap-3 px-0.5 sm:gap-5">
             {areas.map((area) => {
               const active = activeTab === area.id;
               const color = areaColor(area.code);
@@ -468,7 +507,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
                   type="button"
                   onClick={() => setActiveTab(area.id)}
                   className={[
-                    "relative flex cursor-pointer items-center gap-2 pb-3 pt-1 text-sm font-medium transition-colors",
+                    "relative flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap pb-3 pt-1 text-sm font-medium transition-colors",
                     active ? "text-text" : "text-text-muted hover:text-text",
                   ].join(" ")}
                 >
@@ -491,7 +530,7 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
         </div>
       ) : null}
 
-      <div className="py-4">
+      <div className="shrink-0">
         {isSummary ? (
           <SummaryFilterPanel {...summaryFilterPanelProps} />
         ) : (
@@ -506,12 +545,6 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
           />
         )}
       </div>
-
-      {!isSummary ? (
-        <p className="mb-4 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-text-muted">
-          {reportText("oneReportRule", language)}
-        </p>
-      ) : null}
 
       {loading ? (
         <SkeletonTable />
@@ -533,24 +566,26 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
             wrapperClassName="overflow-auto rounded-xl border border-border-subtle bg-surface min-h-[32rem] max-h-[calc(100dvh-14rem)]"
           />
         ) : (
-          <WeekReportList
-            language={language}
-            lang={lang}
-            title={listTitle}
-            rows={areaWeekRows}
-            canCreate={canCreate}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            canSubmit={canSubmit}
-            canReopen={canReopen}
-            submitting={submitting}
-            onAdd={openCreateWeek}
-            onEdit={openEditWeek}
-            onView={openViewWeek}
-            onDelete={setDeleteWeekRow}
-            onSubmit={(weekNumber) => void submitWeek(weekNumber)}
-            onReopen={setReopenWeekNumber}
-          />
+          <div className="min-h-0 flex-1">
+            <WeekReportList
+              language={language}
+              lang={lang}
+              title={listTitle}
+              rows={areaWeekRows}
+              canCreate={canCreate}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              canSubmit={canSubmit}
+              canReopen={canReopen}
+              submitting={submitting}
+              onAdd={openCreateWeek}
+              onEdit={openEditWeek}
+              onView={openViewWeek}
+              onDelete={setDeleteWeekRow}
+              onSubmit={(weekNumber) => void submitWeek(weekNumber)}
+              onReopen={setReopenWeekNumber}
+            />
+          </div>
         )
       ) : null}
 

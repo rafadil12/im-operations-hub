@@ -47,6 +47,23 @@ export function weeksInCalendarMonth(year: number, month: number): number[] {
   return weeks;
 }
 
+/**
+ * Report Submitted (month) weeks: week numbers whose Friday end falls in the month.
+ * Denominator can be 4 or 5 depending on how many Fridays the month has.
+ * Example: Sep 2026 → 36–39; Oct 2026 → 40–44.
+ */
+export function weeksEndingInCalendarMonth(year: number, month: number): number[] {
+  const weeks: number[] = [];
+  for (let weekNumber = 1; weekNumber <= 53; weekNumber += 1) {
+    const { endsOn } = weekDateRange(year, weekNumber);
+    const end = new Date(`${endsOn}T00:00:00`);
+    if (end.getFullYear() === year && end.getMonth() + 1 === month) {
+      weeks.push(weekNumber);
+    }
+  }
+  return weeks;
+}
+
 export function monthLabel(year: number, month: number, lang: "en" | "cn" = "en"): string {
   if (lang === "cn") return `${year}年${month}月`;
   const date = new Date(year, month - 1, 1);

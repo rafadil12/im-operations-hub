@@ -20,9 +20,15 @@ import type {
   ReportTrendRow,
 } from "./types";
 import {
+  buildWeekIdByNumber,
+  countFullySubmittedWeeks,
+  countWeekAreaSubmissions,
+  submissionStatusForArea,
+} from "./submissionCount";
+import {
   monthLabel,
   parseCompletionRate,
-  weeksInCalendarMonth,
+  weeksEndingInCalendarMonth,
   weekDateRange,
   weekLabel,
 } from "./weekCalendar";
@@ -162,10 +168,12 @@ function computeOnTimeRate(
   let submitted = 0;
 
   for (const areaId of areaIds) {
-    const sub = submissions.find((s) => s.weekId === weekId && s.areaId === areaId);
-    if (!sub || sub.status !== "submitted") continue;
+    if (submissionStatusForArea(submissions, weekId, areaId) !== "submitted") continue;
+    const sub = submissions.find(
+      (s) => s.weekId === weekId && s.areaId === areaId && s.status === "submitted"
+    );
     submitted += 1;
-    if (sub.submittedAt) {
+    if (sub?.submittedAt) {
       const at = new Date(sub.submittedAt);
       if (at <= due) onTime += 1;
     } else {
@@ -183,11 +191,13 @@ function computeReportCompletionRate(
   areaIds: number[]
 ): number {
   if (!weekId || !areaIds.length) return 0;
-  const submitted = areaIds.filter((areaId) => {
-    const sub = submissions.find((s) => s.weekId === weekId && s.areaId === areaId);
-    return sub?.status === "submitted";
-  }).length;
-  return Math.round((submitted / areaIds.length) * 1000) / 10;
+  const { submittedCount, expectedCount } = countWeekAreaSubmissions(
+    submissions,
+    weekId,
+    areaIds
+  );
+  if (!expectedCount) return 0;
+  return Math.round((submittedCount / expectedCount) * 1000) / 10;
 }
 
 function computeWeekAchievement(lines: ReportLine[]): number {
@@ -275,6 +285,7 @@ function computeCurrentMonthMetrics(
     areas: ReportArea[];
     rows: ReportLineRow[];
     submissions: { weekId: number; areaId: number; status: "draft" | "submitted" }[];
+    weeks?: { id: number; weekNumber: number }[];
     asOf?: Date;
     lang?: "en" | "cn";
   }
@@ -283,7 +294,10 @@ function computeCurrentMonthMetrics(
   const calYear = asOf.getFullYear();
   const month = asOf.getMonth() + 1;
   const lang = input.lang ?? "en";
-  const monthWeekNumbers = weeksInCalendarMonth(calYear, month);
+  const monthWeekNumbers = weeksEndingInCalendarMonth(calYear, month);
+  const areaIds = input.areas.map((area) => area.id);
+  const weekIdByNumber = buildWeekIdByNumber(input.weeks, input.rows);
+  const monthWeekIds = monthWeekNumbers.map((weekNumber) => weekIdByNumber.get(weekNumber) ?? null);
 
   const monthRows = input.rows.filter((row) => {
     const rowYear = Number(row.year ?? calYear);
@@ -294,15 +308,9 @@ function computeCurrentMonthMetrics(
   const monthLines = monthRows.map(mapReportLineRow);
   const achievement = computeWeekAchievement(monthLines);
 
-  const weekIdsInMonth = new Set<number>();
-  for (const row of monthRows) {
-    const weekId = Number(row.week_id);
-    if (weekId) weekIdsInMonth.add(weekId);
-  }
-
-  const monthSubmissions = input.submissions.filter((s) => weekIdsInMonth.has(s.weekId));
-  const submittedCount = monthSubmissions.filter((s) => s.status === "submitted").length;
-  const draftCount = monthSubmissions.filter((s) => s.status === "draft").length;
+  const submittedCount = countFullySubmittedWeeks(monthWeekIds, input.submissions, areaIds);
+  const expectedCount = monthWeekNumbers.length;
+  const draftCount = Math.max(0, expectedCount - submittedCount);
 
   const byArea = input.areas.map((area) => {
     const areaMonthLines = monthLines.filter((line) => line.areaId === area.id);
@@ -310,11 +318,10 @@ function computeCurrentMonthMetrics(
       .map((line) => line.weeklyCompletionRate)
       .filter((rate): rate is number => rate != null && Number.isFinite(rate));
 
-    const submittedWeeks = new Set(
-      monthSubmissions
-        .filter((s) => s.areaId === area.id && s.status === "submitted")
-        .map((s) => s.weekId)
-    ).size;
+    const submittedWeeks = monthWeekIds.filter((weekId) => {
+      if (weekId == null) return false;
+      return submissionStatusForArea(input.submissions, weekId, area.id) === "submitted";
+    }).length;
 
     return {
       areaId: area.id,
@@ -335,6 +342,7 @@ function computeCurrentMonthMetrics(
     achievement,
     submittedCount,
     draftCount,
+    expectedCount,
     totalLines: monthLines.length,
     byArea,
   };
@@ -352,6 +360,8 @@ export function computeReportOverviewMetrics(input: {
     submittedAt?: string | null;
   }[];
   weekId?: number | null;
+  weeks?: { id: number; weekNumber: number }[];
+  asOf?: Date;
 }): ReportOverviewMetrics {
   const { year, weekNumber } = input;
   const range = weekDateRange(year, weekNumber);
@@ -431,9 +441,9 @@ export function computeReportOverviewMetrics(input: {
       .map((line) => line.weeklyCompletionRate)
       .filter((rate): rate is number => rate != null && Number.isFinite(rate));
 
-    const submission = weekId
-      ? input.submissions.find((s) => s.weekId === weekId && s.areaId === area.id)
-      : undefined;
+    const submissionStatus = weekId
+      ? submissionStatusForArea(input.submissions, weekId, area.id)
+      : null;
 
     return {
       areaId: area.id,
@@ -443,7 +453,7 @@ export function computeReportOverviewMetrics(input: {
       workCompletionRate: avgRateFromFractions(dailyRates),
       projectProgressRate: projectRates.length ? avgRateFromFractions(projectRates) : null,
       lineCount: areaLines.length,
-      submissionStatus: submission?.status ?? null,
+      submissionStatus,
     };
   });
 
@@ -451,14 +461,15 @@ export function computeReportOverviewMetrics(input: {
   const safetyRates = safetyLines
     .map((line) => line.weeklyCompletionRate)
     .filter((rate): rate is number => rate != null && Number.isFinite(rate));
-  const safetySubmission = weekId && safetyArea
-    ? input.submissions.find((s) => s.weekId === weekId && s.areaId === safetyArea.id)
-    : undefined;
+  const safetySubmissionStatus =
+    weekId && safetyArea
+      ? submissionStatusForArea(input.submissions, weekId, safetyArea.id)
+      : null;
 
   const safety: ReportSafetyMetrics = {
     lineCount: safetyLines.length,
     avgCompletionRate: avgRateFromFractions(safetyRates),
-    submissionStatus: safetySubmission?.status ?? null,
+    submissionStatus: safetySubmissionStatus,
     openFindings: safetyLines.filter((line) => lineStatus(line.weeklyCompletionRate) !== "completed").length,
   };
 
@@ -536,11 +547,19 @@ export function computeReportOverviewMetrics(input: {
       };
     });
 
-  const weekSubmissions = weekId
-    ? input.submissions.filter((s) => s.weekId === weekId)
-    : [];
-  const submittedCount = weekSubmissions.filter((s) => s.status === "submitted").length;
-  const draftCount = weekSubmissions.filter((s) => s.status === "draft").length;
+  const currentMonthMetrics = computeCurrentMonthMetrics({
+    areas: input.areas,
+    rows: input.rows,
+    submissions: input.submissions,
+    weeks: input.weeks,
+    // Month card follows the Friday of the selected week (report due day).
+    asOf: input.asOf ?? new Date(`${range.endsOn}T00:00:00`),
+  });
+
+  const weekAreaCounts = countWeekAreaSubmissions(input.submissions, weekId, allAreaIds);
+  const submittedCount = weekAreaCounts.submittedCount;
+  const draftCount = weekAreaCounts.draftCount;
+  const expectedCount = weekAreaCounts.expectedCount;
 
   const prevLineCount = prevLines.length;
   const lineDelta =
@@ -569,12 +588,6 @@ export function computeReportOverviewMetrics(input: {
         )
       : null;
 
-  const currentMonth = computeCurrentMonthMetrics({
-    areas: input.areas,
-    rows: input.rows,
-    submissions: input.submissions,
-  });
-
   return {
     year,
     weekNumber,
@@ -592,12 +605,13 @@ export function computeReportOverviewMetrics(input: {
       delta: lineDelta,
     },
     currentWeekStatus: weekStatus(achievement),
-    currentMonth,
+    currentMonth: currentMonthMetrics,
     totalLines: lines.length,
     totalWeeks: new Set(input.rows.map((row) => `${row.year}-${row.week_number}`)).size,
     avgCompletionRate: achievement,
     submittedCount,
     draftCount,
+    expectedCount,
     byArea,
     weeklyTrend,
     divisions,

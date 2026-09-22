@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedField, localizedName, useLang } from "@/lib/i18n";
+import { exportFilename } from "@/lib/exportFilenames";
+import { renderTopicText } from "@/lib/training/topicText";
 import {
   divisionColor,
   trainingText,
@@ -143,8 +145,8 @@ export function TrainingSessionClient() {
     setForm({
       sessionDate: session.sessionDate,
       divisionId: session.divisionId,
-      topicEn: session.topicEn,
-      topicCn: session.topicCn,
+      topicEn: renderTopicText(session.topicEn),
+      topicCn: renderTopicText(session.topicCn),
       participants: [...session.participants],
       file: null,
       removeAttachment: false,
@@ -174,7 +176,7 @@ export function TrainingSessionClient() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "training-sessions.xlsx";
+      a.download = exportFilename("trainingSessions", lang);
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -401,8 +403,8 @@ export function TrainingSessionClient() {
                   >
                     <td className={`${td} whitespace-nowrap`}>{row.sessionDate}</td>
                     <td className={`${td} max-w-sm`}>
-                      <span className="line-clamp-2 font-medium text-text">
-                        {localizedField(row.topicEn, row.topicCn, lang)}
+                      <span className="line-clamp-2 font-medium uppercase text-text">
+                        {renderTopicText(localizedField(row.topicEn, row.topicCn, lang))}
                       </span>
                     </td>
                     <td className={`${td} whitespace-nowrap text-center`}>
@@ -602,8 +604,10 @@ export function TrainingSessionClient() {
               {trainingText("topicEn", language)}
               <input
                 value={form.topicEn}
-                onChange={(e) => setForm((prev) => ({ ...prev, topicEn: e.target.value }))}
-                className={`mt-1 w-full ${ctrl}`}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, topicEn: renderTopicText(e.target.value) }))
+                }
+                className={`mt-1 w-full uppercase ${ctrl}`}
               />
             </label>
 
@@ -611,8 +615,10 @@ export function TrainingSessionClient() {
               {trainingText("topicCn", language)}
               <input
                 value={form.topicCn}
-                onChange={(e) => setForm((prev) => ({ ...prev, topicCn: e.target.value }))}
-                className={`mt-1 w-full ${ctrl}`}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, topicCn: renderTopicText(e.target.value) }))
+                }
+                className={`mt-1 w-full uppercase ${ctrl}`}
               />
             </label>
 

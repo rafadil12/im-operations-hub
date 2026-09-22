@@ -84,6 +84,21 @@ export default function StorageLocationsPage() {
     setIsActive(true);
   };
 
+  useEffect(() => {
+    if (!creating) return;
+    let cancelled = false;
+    apiGetAbs<{ code: string }>("/api/sparepart/storage-locations/next-code")
+      .then((data) => {
+        if (!cancelled) setCode(data.code);
+      })
+      .catch(() => {
+        if (!cancelled) setCode("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [creating]);
+
   const openEdit = (row: SparepartStorageLocation) => {
     setEditing(row);
     setCreating(false);
@@ -263,7 +278,7 @@ export default function StorageLocationsPage() {
     return <SortMenu />;
   };
 
-  const canSave = Boolean(nameEn.trim() && nameCn.trim());
+  const canSave = Boolean(nameEn.trim() && nameCn.trim() && (!creating || code.trim()));
 
   return (
     <SparepartGate allow={(a) => a.canManageSparepartLocations}>
@@ -363,12 +378,23 @@ export default function StorageLocationsPage() {
             <div className="space-y-3">
               <div>
                 <label className={label}>{t.sparepart.locationCode}</label>
-                <input
-                  className={field}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="AUTO"
-                />
+                {creating ? (
+                  <input
+                    className={`${field} pointer-events-none cursor-default bg-bg/60 text-text-muted`}
+                    value={code}
+                    readOnly
+                    tabIndex={-1}
+                    aria-readonly="true"
+                    placeholder={t.sparepart.locationCodeAutoHint}
+                    onFocus={(e) => e.currentTarget.blur()}
+                  />
+                ) : (
+                  <input
+                    className={field}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                  />
+                )}
               </div>
               <div>
                 <label className={label}>{t.sparepart.locationNameEn} *</label>

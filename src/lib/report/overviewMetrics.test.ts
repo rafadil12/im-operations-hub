@@ -80,6 +80,55 @@ describe("computeReportOverviewMetrics", () => {
     expect(metrics.divisions).toHaveLength(3);
     expect(metrics.safety.lineCount).toBe(0);
     expect(metrics.attention.length).toBeGreaterThan(0);
+    expect(metrics.reportCompletion.value).toBe(75);
+    expect(metrics.submittedCount).toBe(3);
+    expect(metrics.expectedCount).toBe(4);
+  });
+
+  it("uses Friday-in-month weeks for dashboard and area count for current week", () => {
+    const areaIds = areas.map((area) => area.id);
+    const weeks = [36, 37, 38, 39, 40].map((weekNumber) => ({ id: weekNumber, weekNumber }));
+    const allSubmitted = (weekId: number) =>
+      areaIds.map((areaId) => ({
+        weekId,
+        areaId,
+        status: "submitted" as const,
+        submittedAt: "2026-09-10T10:00:00Z",
+      }));
+
+    const emptyWeek38 = computeReportOverviewMetrics({
+      year: 2026,
+      weekNumber: 38,
+      areas,
+      rows: [],
+      submissions: [...allSubmitted(36), ...allSubmitted(37)],
+      weekId: 38,
+      weeks,
+      asOf: new Date("2026-09-18T00:00:00"),
+    });
+
+    // Overview Current Week: no areas submitted in week 38
+    expect(emptyWeek38.submittedCount).toBe(0);
+    expect(emptyWeek38.expectedCount).toBe(4);
+    // Dashboard / Current Month: weeks 36+37 fully submitted of Sep Fridays 36–39
+    expect(emptyWeek38.currentMonth.submittedCount).toBe(2);
+    expect(emptyWeek38.currentMonth.expectedCount).toBe(4);
+
+    const completeWeek38 = computeReportOverviewMetrics({
+      year: 2026,
+      weekNumber: 38,
+      areas,
+      rows: [],
+      submissions: [...allSubmitted(36), ...allSubmitted(37), ...allSubmitted(38)],
+      weekId: 38,
+      weeks,
+      asOf: new Date("2026-09-18T00:00:00"),
+    });
+
+    expect(completeWeek38.submittedCount).toBe(4);
+    expect(completeWeek38.expectedCount).toBe(4);
+    expect(completeWeek38.currentMonth.submittedCount).toBe(3);
+    expect(completeWeek38.currentMonth.expectedCount).toBe(4);
   });
 
   it("returns empty week metrics without throwing", () => {
@@ -97,6 +146,8 @@ describe("computeReportOverviewMetrics", () => {
     expect(metrics.projects.activeCount).toBe(0);
     expect(metrics.projects.overallProgress).toBeNull();
     expect(metrics.attention).toHaveLength(0);
+    expect(metrics.submittedCount).toBe(0);
+    expect(metrics.expectedCount).toBe(4);
     expect(metrics.currentMonth).toBeDefined();
     expect(metrics.currentMonth.totalLines).toBeGreaterThanOrEqual(0);
   });

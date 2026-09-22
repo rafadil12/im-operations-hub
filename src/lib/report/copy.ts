@@ -29,6 +29,8 @@ const REPORT_TEXT = {
   resetColumnWidths: ["Reset column widths", "重置列宽"] as TextPair,
   totalLines: ["Report Lines", "事项总数"] as TextPair,
   avgCompletion: ["Avg Completion", "平均完成度"] as TextPair,
+  reportInformation: ["Report Information", "汇报信息"] as TextPair,
+  subItemsSection: ["Sub-items", "子项事项"] as TextPair,
   submittedAreas: ["Submitted", "已提交"] as TextPair,
   draftAreas: ["Draft", "草稿"] as TextPair,
   weeklyTrend: ["Weekly Trend", "周趋势"] as TextPair,

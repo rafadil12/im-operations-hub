@@ -57,6 +57,7 @@ describe("GUEST_PERMISSIONS seed", () => {
     expect([...GUEST_PERMISSIONS].sort()).toEqual([...DEFAULT_GUEST_PERMISSION_CODES].sort());
     expect(GUEST_PERMISSIONS).not.toContain(PERMISSIONS.itsmRequestExport);
     expect(GUEST_PERMISSIONS).not.toContain(PERMISSIONS.dailyRecordExport);
+    expect(GUEST_PERMISSIONS).not.toContain(PERMISSIONS.sparepartHistoryExport);
   });
 });
 
@@ -88,6 +89,8 @@ describe("getRoleAccess", () => {
     expect(access.canViewSparepartOverview).toBe(true);
     expect(access.canViewSparepartStock).toBe(true);
     expect(access.canViewSparepartDocuments).toBe(true);
+    expect(access.canViewSparepartHistory).toBe(true);
+    expect(access.canExportSparepartHistory).toBe(false);
     expect(access.canPostSparepartDocument).toBe(false);
     expect(access.canReverseSparepartDocument).toBe(false);
     expect(access.canViewOrganizationOverview).toBe(true);
@@ -97,6 +100,8 @@ describe("getRoleAccess", () => {
     expect(access.canManageOrganizationShift).toBe(false);
     expect(access.canManageOrganizationAttendance).toBe(false);
     expect(access.canCreateOrganizationEmployee).toBe(false);
+    expect(access.canViewReportProjects).toBe(true);
+    expect(access.canCreateReportProject).toBe(false);
   });
 
   it("gates edit/delete independently from create", () => {
@@ -189,8 +194,29 @@ describe("getRoleAccess", () => {
     expect(access.canViewSparepartStock).toBe(true);
     expect(access.canPostSparepartDocument).toBe(true);
     expect(access.canViewSparepartDocuments).toBe(false);
+    expect(access.canViewSparepartHistory).toBe(false);
+    expect(access.canExportSparepartHistory).toBe(false);
     expect(access.canViewSparepartMaterials).toBe(false);
     expect(access.canManageSparepartLocations).toBe(false);
+  });
+
+  it("gates sparepart history independently from documents", () => {
+    const historyOnly = getRoleAccess(
+      account({
+        permissions: [PERMISSIONS.sparepartHistoryRead],
+      })
+    );
+    expect(historyOnly.canViewSparepartHistory).toBe(true);
+    expect(historyOnly.canExportSparepartHistory).toBe(false);
+    expect(historyOnly.canViewSparepartDocuments).toBe(false);
+
+    const withExport = getRoleAccess(
+      account({
+        permissions: [PERMISSIONS.sparepartHistoryRead, PERMISSIONS.sparepartHistoryExport],
+      })
+    );
+    expect(withExport.canViewSparepartHistory).toBe(true);
+    expect(withExport.canExportSparepartHistory).toBe(true);
   });
 
   it("gates safety modules independently", () => {
@@ -256,7 +282,7 @@ describe("privileged role assignment helpers", () => {
 });
 
 describe("PERMISSIONS catalog", () => {
-  it("has exactly 58 codes", () => {
-    expect(Object.keys(PERMISSIONS)).toHaveLength(58);
+  it("has exactly 64 codes", () => {
+    expect(Object.keys(PERMISSIONS)).toHaveLength(64);
   });
 });

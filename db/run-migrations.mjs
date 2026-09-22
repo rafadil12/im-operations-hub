@@ -1793,5 +1793,40 @@ await applySqlFile(
   "Removed viewer role (if present).",
 );
 
+// ---------------------------------------------------------------------------
+// 045: sparepart movement history permissions (read + export)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "045_sparepart_history_permissions.sql",
+  readMigrationSql,
+  "Ensured sparepart.history.read/export and backfilled from document.read.",
+);
+
+// ---------------------------------------------------------------------------
+// 046: report projects (Excel-style project progress reports)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "046_report_projects.sql",
+  readMigrationSql,
+  "Ensured report_project_* tables and report.project.* permissions.",
+);
+
+// Fresh installs get status from 046 CREATE TABLE; existing DBs need ALTER.
+if (!(await columnExists("report_project_reports", "status"))) {
+  await conn.query(
+    "ALTER TABLE `report_project_reports` ADD COLUMN `status` ENUM('draft','submitted') NOT NULL DEFAULT 'draft' AFTER `week_number`",
+  );
+  console.log("Added report_project_reports.status.");
+}
+
+// ---------------------------------------------------------------------------
+// 047: report project attachments
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "047_report_project_attachments.sql",
+  readMigrationSql,
+  "Ensured report_project_attachments table.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

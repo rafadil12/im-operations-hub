@@ -1,20 +1,28 @@
 "use client";
 
+import { useMemo } from "react";
 import { ExportIcon, FullViewIcon } from "@/components/ui/ActionIcons";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { localizedName } from "@/lib/i18n";
 import {
   reportText,
+  type ReportArea,
   type ReportLanguage,
   type ReportSubItem,
 } from "@/lib/report";
 import { SummaryColumnFilter } from "./SummaryColumnFilter";
 import type { SummaryTableControls } from "./useSummaryTableControls";
 
-const filterCtrl =
-  "rounded-md border border-border bg-bg/40 px-2.5 py-2 text-xs text-text outline-none focus:border-accent";
-
 const actionBtnClass =
   "inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50";
+
+/** Fixed filter widths — do not grow with selected label length. */
+const FILTER_WIDTH = {
+  year: "w-[4.75rem] shrink-0",
+  area: "w-[7.5rem] shrink-0",
+  week: "w-[6.75rem] shrink-0",
+  subItem: "w-[9.5rem] shrink-0",
+} as const;
 
 function SearchIcon() {
   return (
@@ -40,11 +48,14 @@ type SummaryFilterPanelProps = {
   lang: "en" | "cn";
   year: number;
   onYearChange: (year: number) => void;
+  filterArea: number | "all";
+  onFilterAreaChange: (value: number | "all") => void;
   filterWeek: number | "all";
   onFilterWeekChange: (value: number | "all") => void;
   filterSubItem: number | "all";
   onFilterSubItemChange: (value: number | "all") => void;
   weekOptions: number[];
+  areas: ReportArea[];
   subItems: ReportSubItem[];
   search: string;
   onSearchChange: (value: string) => void;
@@ -62,11 +73,14 @@ export function SummaryFilterPanel({
   lang,
   year,
   onYearChange,
+  filterArea,
+  onFilterAreaChange,
   filterWeek,
   onFilterWeekChange,
   filterSubItem,
   onFilterSubItemChange,
   weekOptions,
+  areas,
   subItems,
   search,
   onSearchChange,
@@ -79,6 +93,49 @@ export function SummaryFilterPanel({
     tableControls;
 
   const exitLabel = reportText("summaryExitFullView", language);
+  const allLabel = reportText("all", language);
+
+  const yearOptions = useMemo(
+    () =>
+      [2025, 2026, 2027].map((y) => ({
+        value: String(y),
+        label: String(y),
+      })),
+    []
+  );
+
+  const areaOptions = useMemo(
+    () => [
+      { value: "all", label: allLabel },
+      ...areas.map((area) => ({
+        value: String(area.id),
+        label: localizedName({ name_en: area.nameEn, name_cn: area.nameCn }, lang),
+      })),
+    ],
+    [areas, allLabel, lang]
+  );
+
+  const weekFilterOptions = useMemo(
+    () => [
+      { value: "all", label: allLabel },
+      ...weekOptions.map((w) => ({
+        value: String(w),
+        label: `Week ${w}`,
+      })),
+    ],
+    [weekOptions, allLabel]
+  );
+
+  const subItemOptions = useMemo(
+    () => [
+      { value: "all", label: allLabel },
+      ...subItems.map((item) => ({
+        value: String(item.id),
+        label: localizedName({ name_en: item.nameEn, name_cn: item.nameCn }, lang),
+      })),
+    ],
+    [subItems, allLabel, lang]
+  );
 
   return (
     <div className="relative z-10 space-y-2">
@@ -121,48 +178,38 @@ export function SummaryFilterPanel({
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
-        <select
-          className={filterCtrl + " w-auto min-w-[88px]"}
-          value={year}
-          onChange={(e) => onYearChange(Number(e.target.value))}
-          aria-label={reportText("year", language)}
-        >
-          {[2025, 2026, 2027].map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <select
-          className={filterCtrl + " w-auto min-w-[108px]"}
+        <SparepartDropdown
+          className={FILTER_WIDTH.year}
+          compact
+          value={String(year)}
+          onChange={(next) => onYearChange(Number(next))}
+          options={yearOptions}
+          placeholder={reportText("year", language)}
+        />
+        <SparepartDropdown
+          className={FILTER_WIDTH.area}
+          compact
+          value={filterArea === "all" ? "all" : String(filterArea)}
+          onChange={(next) => onFilterAreaChange(next === "all" ? "all" : Number(next))}
+          options={areaOptions}
+          placeholder={reportText("area", language)}
+        />
+        <SparepartDropdown
+          className={FILTER_WIDTH.week}
+          compact
           value={filterWeek === "all" ? "all" : String(filterWeek)}
-          onChange={(e) =>
-            onFilterWeekChange(e.target.value === "all" ? "all" : Number(e.target.value))
-          }
-          aria-label={reportText("week", language)}
-        >
-          <option value="all">{reportText("all", language)}</option>
-          {weekOptions.map((w) => (
-            <option key={w} value={w}>
-              Week {w}
-            </option>
-          ))}
-        </select>
-        <select
-          className={filterCtrl + " w-auto min-w-[140px]"}
+          onChange={(next) => onFilterWeekChange(next === "all" ? "all" : Number(next))}
+          options={weekFilterOptions}
+          placeholder={reportText("week", language)}
+        />
+        <SparepartDropdown
+          className={FILTER_WIDTH.subItem}
+          compact
           value={filterSubItem === "all" ? "all" : String(filterSubItem)}
-          onChange={(e) =>
-            onFilterSubItemChange(e.target.value === "all" ? "all" : Number(e.target.value))
-          }
-          aria-label={reportText("subItem", language)}
-        >
-          <option value="all">{reportText("all", language)}</option>
-          {subItems.map((item) => (
-            <option key={item.id} value={item.id}>
-              {localizedName({ name_en: item.nameEn, name_cn: item.nameCn }, lang)}
-            </option>
-          ))}
-        </select>
+          onChange={(next) => onFilterSubItemChange(next === "all" ? "all" : Number(next))}
+          options={subItemOptions}
+          placeholder={reportText("subItem", language)}
+        />
         <SummaryColumnFilter
           language={language}
           visibility={columnVisibility}

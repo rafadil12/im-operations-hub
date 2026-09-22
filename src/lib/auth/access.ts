@@ -37,11 +37,17 @@ export const PERMISSIONS = {
   reportLineDelete: "report.line.delete",
   reportSubmissionSubmit: "report.submission.submit",
   reportSubmissionReopen: "report.submission.reopen",
+  reportProjectRead: "report.project.read",
+  reportProjectCreate: "report.project.create",
+  reportProjectUpdate: "report.project.update",
+  reportProjectDelete: "report.project.delete",
   sparepartOverviewView: "sparepart.overview.view",
   sparepartStockView: "sparepart.stock.view",
   sparepartDocumentRead: "sparepart.document.read",
   sparepartDocumentPost: "sparepart.document.post",
   sparepartDocumentReverse: "sparepart.document.reverse",
+  sparepartHistoryRead: "sparepart.history.read",
+  sparepartHistoryExport: "sparepart.history.export",
   sparepartMaterialsRead: "sparepart.materials.read",
   sparepartMaterialsCreate: "sparepart.materials.create",
   sparepartMaterialsUpdate: "sparepart.materials.update",
@@ -122,11 +128,17 @@ export type RoleAccess = {
   canDeleteReportLine: boolean;
   canSubmitReport: boolean;
   canReopenReport: boolean;
+  canViewReportProjects: boolean;
+  canCreateReportProject: boolean;
+  canUpdateReportProject: boolean;
+  canDeleteReportProject: boolean;
   canViewSparepartOverview: boolean;
   canViewSparepartStock: boolean;
   canViewSparepartDocuments: boolean;
   canPostSparepartDocument: boolean;
   canReverseSparepartDocument: boolean;
+  canViewSparepartHistory: boolean;
+  canExportSparepartHistory: boolean;
   canViewSparepartMaterials: boolean;
   canCreateSparepartMaterial: boolean;
   canUpdateSparepartMaterial: boolean;
@@ -234,11 +246,17 @@ export function getRoleAccess(
     canDeleteReportLine: hasPermission(PERMISSIONS.reportLineDelete),
     canSubmitReport: hasPermission(PERMISSIONS.reportSubmissionSubmit),
     canReopenReport: hasPermission(PERMISSIONS.reportSubmissionReopen),
+    canViewReportProjects: hasPermission(PERMISSIONS.reportProjectRead),
+    canCreateReportProject: hasPermission(PERMISSIONS.reportProjectCreate),
+    canUpdateReportProject: hasPermission(PERMISSIONS.reportProjectUpdate),
+    canDeleteReportProject: hasPermission(PERMISSIONS.reportProjectDelete),
     canViewSparepartOverview: hasPermission(PERMISSIONS.sparepartOverviewView),
     canViewSparepartStock: hasPermission(PERMISSIONS.sparepartStockView),
     canViewSparepartDocuments: hasPermission(PERMISSIONS.sparepartDocumentRead),
     canPostSparepartDocument: hasPermission(PERMISSIONS.sparepartDocumentPost),
     canReverseSparepartDocument: hasPermission(PERMISSIONS.sparepartDocumentReverse),
+    canViewSparepartHistory: hasPermission(PERMISSIONS.sparepartHistoryRead),
+    canExportSparepartHistory: hasPermission(PERMISSIONS.sparepartHistoryExport),
     canViewSparepartMaterials: hasPermission(PERMISSIONS.sparepartMaterialsRead),
     canCreateSparepartMaterial: hasPermission(PERMISSIONS.sparepartMaterialsCreate),
     canUpdateSparepartMaterial: hasPermission(PERMISSIONS.sparepartMaterialsUpdate),

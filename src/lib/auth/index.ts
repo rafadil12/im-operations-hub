@@ -6,6 +6,7 @@ import {
   loadGuestPermissions,
 } from "./guestPermissions";
 import { jsonGuestForbidden } from "./guestForbidden";
+import { jsonSessionExpired } from "./sessionExpired";
 import { getAccountPublic } from "./accounts";
 import { clearSessionCookie, readSession } from "./session";
 import type { AuthAccountPublic, SessionPayload } from "./types";
@@ -38,6 +39,12 @@ export {
   validateGuestPermissionIds,
 } from "./guestPermissions";
 export { guestHasPermission } from "./access";
+export {
+  SESSION_EXPIRED_AUTH,
+  SESSION_EXPIRED_MESSAGE,
+  isSessionExpiredPayload,
+  jsonSessionExpired,
+} from "./sessionExpired";
 export { generateTemporaryPassword, hashPassword, verifyPassword } from "./password";
 export {
   SESSION_COOKIE,
@@ -62,7 +69,7 @@ export { MIN_PASSWORD_LENGTH } from "./constants";
 
 async function unauthorized(): Promise<NextResponse> {
   await clearSessionCookie();
-  return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  return jsonSessionExpired();
 }
 
 export async function requireSession(): Promise<

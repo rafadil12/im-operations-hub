@@ -22,6 +22,7 @@ import {
   type ReportLanguage,
   type ReportSubItem,
 } from "@/lib/report";
+import { completionBarColor } from "@/lib/report/completionColor";
 import {
   MAX_WEEK_REPORT_LINES,
   newWeekLineDraft,
@@ -39,12 +40,12 @@ type ReportWeekGridProps = {
 };
 
 const thClass =
-  "sticky top-0 z-10 border border-border-subtle bg-surface px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-text-dim whitespace-nowrap";
-const tdClass = "border border-border-subtle p-0 align-top";
+  "sticky top-0 z-10 border-b border-border-subtle bg-bg/80 px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-text-dim whitespace-nowrap backdrop-blur-sm";
+const tdClass = "border-b border-border-subtle p-0 align-top";
 const cellInput =
   "block w-full min-w-0 border-0 bg-transparent px-2 py-1.5 text-xs text-text outline-none focus:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-70";
 const cellTextarea =
-  "block w-full min-w-[9rem] resize-y border-0 bg-transparent px-2 py-1.5 text-xs leading-5 text-text outline-none focus:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-70";
+  "block w-full min-w-[6rem] resize-y border-0 bg-transparent px-2 py-1.5 text-xs leading-5 text-text outline-none focus:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-70 sm:min-w-[9rem]";
 const dialogField =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-1.5 text-sm text-text outline-none focus:border-accent";
 
@@ -201,14 +202,13 @@ export function ReportWeekGrid({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-text">{reportText("subItem", language)}</h3>
-          {!readOnly ? (
-            <p className="mt-0.5 max-w-3xl text-[11px] text-text-muted">
-              {reportText("pasteHint", language)}
-            </p>
-          ) : null}
-        </div>
+        {!readOnly ? (
+          <p className="max-w-3xl text-[11px] text-text-muted">
+            {reportText("pasteHint", language)}
+          </p>
+        ) : (
+          <span />
+        )}
         {!readOnly ? (
           <button
             type="button"
@@ -223,15 +223,15 @@ export function ReportWeekGrid({
                 lines.length >= MAX_WEEK_REPORT_LINES ? lines : [...lines, newWeekLineDraft()]
               )
             }
-            className="cursor-pointer rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-text hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
+            className="cursor-pointer rounded-md border border-dashed border-border px-2.5 py-1.5 text-xs font-medium text-text-muted hover:border-accent hover:bg-accent/5 hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
           >
             + {reportText("addLine", language)}
           </button>
         ) : null}
       </div>
 
-      <div className="overflow-auto rounded-lg border border-border-subtle">
-        <table className="w-full min-w-[1100px] border-collapse text-left">
+      <div className="overflow-auto rounded-xl border border-border-subtle bg-bg/20">
+        <table className="w-full min-w-[640px] border-collapse text-left sm:min-w-[900px] lg:min-w-[1100px]">
           <thead>
             <tr>
               <th className={`${thClass} w-10 text-center`}>#</th>
@@ -292,27 +292,38 @@ export function ReportWeekGrid({
                       </button>
                     ) : null}
                   </td>
-                  <td className={`${tdClass} w-20`}>
-                    <input
-                      id={cellId(rowIndex, 1)}
-                      type="text"
-                      inputMode="numeric"
-                      className={`${cellInput} text-center tabular-nums`}
-                      value={String(line.completionPct)}
-                      disabled={readOnly}
-                      onFocus={() => {
-                        focusRef.current = { row: rowIndex, col: 1 };
-                      }}
-                      onChange={(e) => {
-                        const pct = parseCompletionCell(e.target.value);
-                        if (pct == null && e.target.value.trim() !== "") return;
-                        updateLine(line.key, {
-                          completionPct: pct ?? 0,
-                        });
-                      }}
-                      onPaste={(e) => handlePaste(e, rowIndex, 1)}
-                      onKeyDown={(e) => handleKeyDown(e, rowIndex, 1)}
-                    />
+                  <td className={`${tdClass} w-24`}>
+                    <div className="px-2 py-1.5">
+                      <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-border-subtle">
+                        <div
+                          className="h-full rounded-full transition-[width] duration-150"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, line.completionPct))}%`,
+                            backgroundColor: completionBarColor(line.completionPct),
+                          }}
+                        />
+                      </div>
+                      <input
+                        id={cellId(rowIndex, 1)}
+                        type="text"
+                        inputMode="numeric"
+                        className={`${cellInput} px-0 text-center tabular-nums`}
+                        value={String(line.completionPct)}
+                        disabled={readOnly}
+                        onFocus={() => {
+                          focusRef.current = { row: rowIndex, col: 1 };
+                        }}
+                        onChange={(e) => {
+                          const pct = parseCompletionCell(e.target.value);
+                          if (pct == null && e.target.value.trim() !== "") return;
+                          updateLine(line.key, {
+                            completionPct: pct ?? 0,
+                          });
+                        }}
+                        onPaste={(e) => handlePaste(e, rowIndex, 1)}
+                        onKeyDown={(e) => handleKeyDown(e, rowIndex, 1)}
+                      />
+                    </div>
                   </td>
                   {(
                     [

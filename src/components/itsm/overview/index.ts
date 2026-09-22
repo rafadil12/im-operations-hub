@@ -6,8 +6,7 @@ export { default as Highlights } from "./Highlights";
 export { default as TopTechnician } from "./TopTechnician";
 export { default as TopRequester } from "./TopRequester";
 
-export { default as RecentTickets } from "./RecentTickets";
-export { default as OldestTickets } from "./OldestTickets";
+export { default as TicketMonitoring } from "./TicketMonitoring";
 
 export { default as SummaryCard } from "./SummaryCard";
 

@@ -3,6 +3,7 @@ import {
   GUEST_FORBIDDEN_MESSAGE,
   isGuestForbiddenPayload,
 } from "@/lib/auth/guestForbidden";
+import { isSessionExpiredPayload } from "@/lib/auth/sessionExpired";
 
 const BASES = {
   daily: "/api/daily-operation",
@@ -30,18 +31,40 @@ export class ApiError extends Error {
 }
 
 let guestForbiddenHandler: (() => void) | null = null;
+let sessionExpiredHandler: (() => void) | null = null;
+let sessionExpiredNotified = false;
 let clientGuestMode = true;
 
 export function registerGuestForbiddenHandler(handler: (() => void) | null): void {
   guestForbiddenHandler = handler;
 }
 
+export function registerSessionExpiredHandler(handler: (() => void) | null): void {
+  sessionExpiredHandler = handler;
+  if (!handler) sessionExpiredNotified = false;
+}
+
 export function setClientGuestMode(isGuest: boolean): void {
   clientGuestMode = isGuest;
 }
 
+export function resetSessionExpiredNotice(): void {
+  sessionExpiredNotified = false;
+}
+
+/** Fire at most once until reset (login / handler unregister). */
+export function notifySessionExpired(): void {
+  if (sessionExpiredNotified) return;
+  sessionExpiredNotified = true;
+  sessionExpiredHandler?.();
+}
+
 export function isGuestForbiddenError(error: unknown): boolean {
   return error instanceof ApiError && error.auth === GUEST_FORBIDDEN_AUTH;
+}
+
+export function isSessionExpiredError(error: unknown): boolean {
+  return error instanceof ApiError && error.auth === "session_expired";
 }
 
 export function notifyGuestForbiddenFromPayload(
@@ -49,6 +72,10 @@ export function notifyGuestForbiddenFromPayload(
   data: unknown,
   method?: string
 ): boolean {
+  if (notifySessionExpiredFromPayload(status, data)) {
+    return true;
+  }
+
   if (isGuestForbiddenPayload(data)) {
     guestForbiddenHandler?.();
     return true;
@@ -56,6 +83,21 @@ export function notifyGuestForbiddenFromPayload(
 
   if (clientGuestMode && method && method !== "GET" && (status === 401 || status === 403)) {
     guestForbiddenHandler?.();
+    return true;
+  }
+
+  return false;
+}
+
+function notifySessionExpiredFromPayload(status: number, data: unknown): boolean {
+  if (isSessionExpiredPayload(data)) {
+    notifySessionExpired();
+    return true;
+  }
+
+  // Logged-in client: plain 401 means the session cookie is gone/invalid.
+  if (!clientGuestMode && status === 401) {
+    notifySessionExpired();
     return true;
   }
 
@@ -79,7 +121,9 @@ export function getApiErrorMessage(error: unknown): string {
   return "Request failed.";
 }
 
-function notifyGuestForbidden(status: number, data: unknown, method?: string): void {
+function notifyAuthFailure(status: number, data: unknown, method?: string): void {
+  if (notifySessionExpiredFromPayload(status, data)) return;
+
   if (isGuestForbiddenPayload(data)) {
     guestForbiddenHandler?.();
     return;
@@ -98,7 +142,7 @@ async function handle<T>(res: Response, method?: string): Promise<T> {
     const message =
       (data as { error?: string }).error ||
       (auth === GUEST_FORBIDDEN_AUTH ? GUEST_FORBIDDEN_MESSAGE : `Request failed (${res.status})`);
-    notifyGuestForbidden(res.status, data, method);
+    notifyAuthFailure(res.status, data, method);
     throw new ApiError(message, res.status, auth);
   }
 
@@ -167,4 +211,9 @@ export function handleGuestForbiddenResponse(
   method?: string
 ): boolean {
   return notifyGuestForbiddenFromPayload(status, data, method);
+}
+
+/** Use with raw `fetch` when a logged-in session may have expired. */
+export function handleSessionExpiredResponse(status: number, data: unknown): boolean {
+  return notifySessionExpiredFromPayload(status, data);
 }

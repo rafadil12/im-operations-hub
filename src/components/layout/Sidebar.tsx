@@ -34,9 +34,11 @@ export function Sidebar() {
     canUpdateTrainingSession,
     canViewReportOverview,
     canViewReportLines,
+    canViewReportProjects,
     canViewSparepartOverview,
     canViewSparepartStock,
     canViewSparepartDocuments,
+    canViewSparepartHistory,
     canPostSparepartDocument,
     canViewSparepartMaterials,
     canManageSparepartLocations,
@@ -87,6 +89,7 @@ export function Sidebar() {
             canViewSparepartStock ||
             canPostSparepartDocument ||
             canViewSparepartDocuments ||
+            canViewSparepartHistory ||
             canViewSparepartMaterials ||
             canManageSparepartLocations
           );
@@ -102,7 +105,7 @@ export function Sidebar() {
           );
         }
         if (item.id === "report") {
-          return canViewReportOverview || canViewReportLines;
+          return canViewReportOverview || canViewReportLines || canViewReportProjects;
         }
         return true;
       })
@@ -174,6 +177,7 @@ export function Sidebar() {
             canViewSparepartStock,
             canPostSparepartDocument,
             canViewSparepartDocuments,
+            canViewSparepartHistory,
             canViewSparepartMaterials,
             canManageSparepartLocations,
           };
@@ -225,6 +229,9 @@ export function Sidebar() {
                     .filter((leaf): leaf is NavChild => leaf !== null);
                   if (!nested.length) return null;
                   return { ...child, children: nested };
+                }
+                if (child.id === "projects") {
+                  return canViewReportProjects ? child : null;
                 }
                 return child;
               })
@@ -288,7 +295,9 @@ export function Sidebar() {
     canUpdateTrainingSession,
     canViewReportOverview,
     canViewReportLines,
+    canViewReportProjects,
     canViewSparepartDocuments,
+    canViewSparepartHistory,
     canViewSparepartMaterials,
     canViewSparepartOverview,
     canViewSparepartStock,

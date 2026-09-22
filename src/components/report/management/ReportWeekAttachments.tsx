@@ -9,8 +9,7 @@ import {
   REPORT_FILE_ACCEPT,
 } from "@/lib/report/attachmentAccept";
 
-const section =
-  "rounded-lg border border-border-subtle bg-bg/30 p-3 space-y-3";
+const section = "space-y-3";
 
 function formatSize(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -131,12 +130,10 @@ export function ReportWeekAttachments({
 
   return (
     <div className={section}>
-      <h3 className="text-sm font-semibold text-text">{reportText("attachments", language)}</h3>
-
       {canUpload ? (
         <label
           className={[
-            "group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-4 py-5 text-center transition-colors",
+            "group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-4 py-8 text-center transition-colors",
             dragOver
               ? "border-accent bg-accent/5"
               : "border-border bg-bg/20 hover:border-accent/60 hover:bg-accent/5",
@@ -153,6 +150,22 @@ export function ReportWeekAttachments({
             void handleFiles(e.dataTransfer.files);
           }}
         >
+          <span className="mb-2 flex size-10 items-center justify-center rounded-full bg-accent/10 text-accent">
+            <svg
+              viewBox="0 0 24 24"
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 16V4m0 0 4 4m-4-4-4 4M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5"
+              />
+            </svg>
+          </span>
           <span className="text-xs font-medium text-text">
             {reportText("uploadAttachment", language)}
           </span>

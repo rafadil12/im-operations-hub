@@ -74,7 +74,7 @@ export function mapReportToOverview(
       achievement: metrics.currentMonth.achievement,
       submittedCount: metrics.currentMonth.submittedCount,
       draftCount: metrics.currentMonth.draftCount,
-      areaCount: metrics.byArea.length,
+      areaCount: metrics.currentMonth.expectedCount,
       totalLines: metrics.currentMonth.totalLines,
       byArea: metrics.currentMonth.byArea.map((a) => ({
         label: areaLabel(a.nameEn, a.nameCn),

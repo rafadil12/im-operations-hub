@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGet, apiSend, getApiErrorMessage } from "@/lib/apiClient";
 import { getOperationalWeek } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
+import {
+  exportFilename,
+  parseContentDispositionFilename,
+} from "@/lib/exportFilenames";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
 import { FilterBar, type Filters } from "@/components/daily-operation/FilterBar";
 import { ActivitiesTable, type PageSize } from "@/components/daily-operation/ActivitiesTable";
@@ -208,8 +212,12 @@ export default function ManagementPage() {
 
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition");
-      const match = disposition?.match(/filename="([^"]+)"/);
-      const filename = match?.[1] ?? `daily-activities-export_${filters.start}_${filters.end}.xlsx`;
+      const filename =
+        parseContentDispositionFilename(disposition) ??
+        exportFilename("dailyActivities", lang, {
+          start: filters.start,
+          end: filters.end,
+        });
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

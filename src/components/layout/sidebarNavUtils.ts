@@ -54,15 +54,15 @@ export function isSparepartLeafVisible(
     canViewSparepartStock: boolean;
     canPostSparepartDocument: boolean;
     canViewSparepartDocuments: boolean;
+    canViewSparepartHistory: boolean;
     canViewSparepartMaterials: boolean;
     canManageSparepartLocations: boolean;
   }
 ) {
   if (childId === "stock") return access.canViewSparepartStock;
   if (childId === "post") return access.canPostSparepartDocument;
-  if (childId === "documents" || childId === "movement-history") {
-    return access.canViewSparepartDocuments;
-  }
+  if (childId === "documents") return access.canViewSparepartDocuments;
+  if (childId === "movement-history") return access.canViewSparepartHistory;
   if (childId === "materials") return access.canViewSparepartMaterials;
   if (childId === "locations") return access.canManageSparepartLocations;
   return true;

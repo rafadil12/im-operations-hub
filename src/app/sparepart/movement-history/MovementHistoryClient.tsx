@@ -22,6 +22,7 @@ import {
 } from "@/lib/sparepart/movementHistoryColumns";
 import { pad2, todayLocalDateInputValue } from "@/lib/sparepart/postDraft";
 import { formatUomDisplay } from "@/lib/sparepart/uoms";
+import { exportFilename } from "@/lib/exportFilenames";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/StockTable";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
@@ -102,7 +103,7 @@ function locationLabel(
 export default function MovementHistoryPage() {
   const { t, lang } = useLang();
   const { success: toastSuccess, error: toastError } = useToast();
-  const { canReverseSparepartDocument } = useRoleAccess();
+  const { canReverseSparepartDocument, canExportSparepartHistory } = useRoleAccess();
   const [filters, setFilters] = useState<HistoryFilters>(defaultHistoryFilters);
   const [applied, setApplied] = useState<HistoryFilters>(defaultHistoryFilters);
   const [rows, setRows] = useState<SparepartMovementHistoryRow[]>([]);
@@ -197,7 +198,7 @@ export default function MovementHistoryPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "sparepart-movement-history.xlsx";
+      a.download = exportFilename("sparepartMovementHistory", lang);
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -245,7 +246,7 @@ export default function MovementHistoryPage() {
   const show = (id: MovementHistoryColumnId) => columnVisibility[id];
 
   return (
-    <SparepartGate allow={(access) => access.canViewSparepartDocuments}>
+    <SparepartGate allow={(access) => access.canViewSparepartHistory}>
       <div>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -257,15 +258,17 @@ export default function MovementHistoryPage() {
               visibility={columnVisibility}
               onVisibilityChange={setColumnVisible}
             />
-            <button
-              type="button"
-              onClick={() => void handleExport()}
-              disabled={exporting || loading}
-              className={toolbarBtn}
-            >
-              <ExportIcon className="size-3.5" />
-              {exporting ? t.common.exporting : t.common.export}
-            </button>
+            {canExportSparepartHistory ? (
+              <button
+                type="button"
+                onClick={() => void handleExport()}
+                disabled={exporting || loading}
+                className={toolbarBtn}
+              >
+                <ExportIcon className="size-3.5" />
+                {exporting ? t.common.exporting : t.common.export}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -368,7 +371,8 @@ export default function MovementHistoryPage() {
                     {show("date") ? <th className={th}>{t.sparepart.date}</th> : null}
                     {show("doc") ? <th className={th}>{t.sparepart.docNumber}</th> : null}
                     {show("line") ? <th className={th}>{t.sparepart.lineNo}</th> : null}
-                    {show("material") ? <th className={th}>{t.sparepart.item}</th> : null}
+                    {show("materialCode") ? <th className={th}>{t.sparepart.code}</th> : null}
+                    {show("description") ? <th className={th}>{t.sparepart.name}</th> : null}
                     {show("movementType") ? (
                       <th className={th}>{t.sparepart.movementType}</th>
                     ) : null}
@@ -386,10 +390,6 @@ export default function MovementHistoryPage() {
                 <tbody>
                   {pagedRows.map((row) => {
                     const itemName = localizedField(row.item_name_en, row.item_name_cn, lang);
-                    const material =
-                      itemName && itemName !== "-"
-                        ? `${row.item_code} — ${itemName}`
-                        : row.item_code;
                     return (
                       <tr
                         key={`${row.doc_id}-${row.line_no}`}
@@ -406,9 +406,14 @@ export default function MovementHistoryPage() {
                         {show("line") ? (
                           <td className={`${td} tabular-nums`}>{row.line_no}</td>
                         ) : null}
-                        {show("material") ? (
+                        {show("materialCode") ? (
+                          <td className={`${td} whitespace-nowrap font-medium text-text`}>
+                            {row.item_code}
+                          </td>
+                        ) : null}
+                        {show("description") ? (
                           <td className={`${td} max-w-xs`}>
-                            <span className="line-clamp-2">{material}</span>
+                            <span className="line-clamp-2">{itemName !== "-" ? itemName : "—"}</span>
                           </td>
                         ) : null}
                         {show("movementType") ? (
