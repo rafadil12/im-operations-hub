@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { localizedName, useLang } from "@/lib/i18n";
@@ -20,8 +20,30 @@ import {
 } from "@/components/sparepart/StockTable";
 import { sortStockBalanceRows } from "@/lib/sparepart/sort";
 import type { StockLevelStatus } from "@/lib/sparepart/categories";
+import { exportFilename } from "@/lib/exportFilenames";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
+
+type ExportKind = "standard" | "stock-report";
+
+function ExportChevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+      className={`ml-0.5 size-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+    >
+      <path
+        d="M3 4.5 6 7.5 9 4.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 type StockResponse = {
   rows: SparepartStockBalanceRow[];
@@ -59,6 +81,8 @@ export default function StockOverviewPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [detail, setDetail] = useState<SparepartItem | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(
     async (filters: StockFilters) => {
@@ -125,22 +149,46 @@ export default function StockOverviewPage() {
     }
   };
 
-  const handleExport = async () => {
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!exportMenuRef.current?.contains(event.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExportMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [exportMenuOpen]);
+
+  const handleExport = async (kind: ExportKind) => {
+    setExportMenuOpen(false);
     setExporting(true);
     try {
-      const res = await fetch(`/api/sparepart/materials/export?lang=${lang}`, {
-        cache: "no-store",
-      });
+      const url =
+        kind === "stock-report"
+          ? `/api/sparepart/stock/export-report?lang=${lang}`
+          : `/api/sparepart/materials/export?lang=${lang}`;
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(t.toast.exportFailed);
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = "sparepart-export.xlsx";
+      a.href = objectUrl;
+      a.download =
+        kind === "stock-report"
+          ? exportFilename("sparepartStockStatus", lang)
+          : exportFilename("sparepartMaterials", lang);
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(objectUrl);
     } catch (e) {
       toastError(e instanceof Error ? e.message : t.toast.exportFailed);
     } finally {
@@ -190,15 +238,43 @@ export default function StockOverviewPage() {
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {canExportSparepartMaterials ? (
-              <button
-                type="button"
-                onClick={handleExport}
-                disabled={exporting || loading}
-                className={toolbarBtn}
-              >
-                <ExportIcon className="size-3.5" />
-                {exporting ? t.common.exporting : t.common.export}
-              </button>
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setExportMenuOpen((open) => !open)}
+                  disabled={exporting || loading}
+                  aria-expanded={exportMenuOpen}
+                  aria-haspopup="menu"
+                  className={toolbarBtn}
+                >
+                  <ExportIcon className="size-3.5" />
+                  {exporting ? t.common.exporting : t.common.export}
+                  <ExportChevron open={exportMenuOpen} />
+                </button>
+                {exportMenuOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute right-0 z-30 mt-1 min-w-[11.5rem] overflow-hidden rounded-md border border-border bg-bg-elevated py-1 shadow-lg"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => void handleExport("standard")}
+                      className="flex w-full px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+                    >
+                      {t.sparepart.exportStandard}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => void handleExport("stock-report")}
+                      className="flex w-full px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+                    >
+                      {t.sparepart.exportStockReport}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
             {canPostSparepartDocument ? (
               <Link href="/sparepart/post" className={toolbarBtn}>

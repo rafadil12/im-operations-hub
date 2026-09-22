@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { localizedField, localizedName } from "@/lib/i18n";
+import { contentDispositionAttachment, exportFilename } from "@/lib/exportFilenames";
 import type { Lang } from "@/lib/types";
 import { jsonError, parseDivisionId } from "@/lib/training/apiHelpers";
 import { trainingText, type TrainingLanguage } from "@/lib/training";
@@ -80,12 +81,13 @@ export async function GET(request: Request) {
     sheet.getRow(1).font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
+    const filename = exportFilename("trainingSessions", lang);
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="training-sessions.xlsx"`,
+        "Content-Disposition": contentDispositionAttachment(filename),
       },
     });
   } catch (error) {

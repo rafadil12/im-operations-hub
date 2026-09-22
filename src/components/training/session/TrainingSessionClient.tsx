@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { localizedField, localizedName, useLang } from "@/lib/i18n";
+import { exportFilename } from "@/lib/exportFilenames";
 import { renderTopicText } from "@/lib/training/topicText";
 import {
   divisionColor,
@@ -175,7 +176,7 @@ export function TrainingSessionClient() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "training-sessions.xlsx";
+      a.download = exportFilename("trainingSessions", lang);
       document.body.appendChild(a);
       a.click();
       a.remove();
