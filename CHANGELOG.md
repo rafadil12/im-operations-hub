@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-22
+
+### Added
+
+- Stock Overview export dropdown with a dedicated stock status report Excel
+  (consumption this month, last outbound, stock status, amount placeholder).
+- Shared bilingual export download filenames for Sparepart, Training, and
+  Daily Operation exports (ITSM and Organization unchanged).
+
+### Fixed
+
+- Avoid Header clock hydration mismatch by rendering the live datetime only
+  after client hydration.
+
 ## [0.5.0] - 2026-09-19
 
 ### Added

@@ -19,6 +19,7 @@ import {
   formatPostingDateOnly,
   movementLabel,
 } from "@/lib/sparepart/documentDisplay";
+import { exportFilename } from "@/lib/exportFilenames";
 import { DocumentDetailModal } from "./DocumentDetailModal";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
@@ -116,7 +117,7 @@ export default function MaterialDocumentsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "sparepart-transaction-history.xlsx";
+      a.download = exportFilename("sparepartDocuments", lang);
       document.body.appendChild(a);
       a.click();
       a.remove();

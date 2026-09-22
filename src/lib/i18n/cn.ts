@@ -99,6 +99,8 @@ const cn: Dict = {
     overviewDesc: "按类别与地点查看库存水平、流转与分布",
     stockTitle: "库存总览",
     stockDesc: "按物料汇总当前库存（各地点合计）— 库存仅通过过账变更",
+    exportStandard: "标准导出",
+    exportStockReport: "库存状态报表",
     stockSearchHint: "按物料编码、描述、品牌或型号搜索",
     postTitle: "库存事务",
     postDesc: "收货入库、发货出库或在地点与楼层之间调拨",

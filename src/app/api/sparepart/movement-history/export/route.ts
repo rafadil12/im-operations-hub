@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { query } from "@/lib/db";
 import { getDict, localizedField } from "@/lib/i18n";
+import { contentDispositionAttachment, exportFilename } from "@/lib/exportFilenames";
 import { appendLevelLabel, formatLocationLabel, movementLabel } from "@/lib/sparepart/documentDisplay";
 import {
   MOVEMENT_HISTORY_FROM,
@@ -115,11 +116,12 @@ export async function GET(request: NextRequest) {
     sheet.getRow(1).font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
+    const filename = exportFilename("sparepartMovementHistory", lang);
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": 'attachment; filename="sparepart-movement-history.xlsx"',
+        "Content-Disposition": contentDispositionAttachment(filename),
         "Cache-Control": "no-store",
       },
     });

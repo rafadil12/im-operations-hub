@@ -98,6 +98,8 @@ const en = {
     stockTitle: "Stock Overview",
     stockDesc:
       "Current stock by material — totals across all storage locations, stock changes only via goods movements",
+    exportStandard: "Standard",
+    exportStockReport: "Stock status report",
     stockSearchHint: "Search by material code, description, brand, or model",
     postTitle: "Stock Transactions",
     postDesc: "Receive, issue, or transfer stock between storage locations and levels",
