@@ -28,8 +28,6 @@ type ReportRow = {
   category_code: string;
   category_name_en: string | null;
   category_name_cn: string | null;
-  inbound_this_month: number | null;
-  last_inbound_date: string | null;
   consumption_this_month: number | null;
   last_outbound_date: string | null;
 };
@@ -61,8 +59,6 @@ export async function GET(request: NextRequest) {
          c.code AS category_code,
          c.name_en AS category_name_en,
          c.name_cn AS category_name_cn,
-         COALESCE(m.inbound_this_month, 0) AS inbound_this_month,
-         m.last_inbound_date,
          COALESCE(m.consumption_this_month, 0) AS consumption_this_month,
          m.last_outbound_date
        FROM sparepart_items i
@@ -70,20 +66,6 @@ export async function GET(request: NextRequest) {
        LEFT JOIN (
          SELECT
            li.item_id,
-           SUM(
-             CASE
-               WHEN d.movement_type = '101'
-                 AND d.posting_date >= ?
-                 AND d.posting_date <= ?
-               THEN li.qty
-               WHEN d.movement_type = '102'
-                 AND d.posting_date >= ?
-                 AND d.posting_date <= ?
-               THEN -li.qty
-               ELSE 0
-             END
-           ) AS inbound_this_month,
-           MAX(CASE WHEN d.movement_type = '101' THEN d.posting_date END) AS last_inbound_date,
            SUM(
              CASE
                WHEN d.movement_type = '201'
@@ -100,12 +82,12 @@ export async function GET(request: NextRequest) {
            MAX(CASE WHEN d.movement_type = '201' THEN d.posting_date END) AS last_outbound_date
          FROM sparepart_mat_doc_items li
          JOIN sparepart_mat_docs d ON d.id = li.doc_id
-         WHERE d.movement_type IN ('101', '102', '201', '202')
+         WHERE d.movement_type IN ('201', '202')
          GROUP BY li.item_id
        ) m ON m.item_id = i.id
        WHERE i.deleted_at IS NULL
        ORDER BY i.code ASC`,
-      [start, end, start, end, start, end, start, end]
+      [start, end, start, end]
     );
 
     const workbook = new ExcelJS.Workbook();
@@ -116,8 +98,6 @@ export async function GET(request: NextRequest) {
       { header: headers.materialName, key: "name", width: 28 },
       { header: headers.brand, key: "brand", width: 16 },
       { header: headers.model, key: "model", width: 20 },
-      { header: headers.inboundThisMonth, key: "inbound_this_month", width: 16 },
-      { header: headers.lastInboundDate, key: "last_inbound_date", width: 16 },
       { header: headers.consumptionThisMonth, key: "consumption_this_month", width: 16 },
       { header: headers.lastOutboundDate, key: "last_outbound_date", width: 16 },
       { header: headers.currentStock, key: "stock_current", width: 14 },
@@ -138,8 +118,6 @@ export async function GET(request: NextRequest) {
         name: localizedField(row.name_en, row.name_cn, lang),
         brand: localizedField(row.brand_en, row.brand_cn, lang),
         model: row.model ?? "",
-        inbound_this_month: Number(row.inbound_this_month ?? 0),
-        last_inbound_date: formatStockReportDate(row.last_inbound_date, lang),
         consumption_this_month: Number(row.consumption_this_month ?? 0),
         last_outbound_date: formatStockReportDate(row.last_outbound_date, lang),
         stock_current: Number(row.stock_current ?? 0),
@@ -152,13 +130,11 @@ export async function GET(request: NextRequest) {
     sheet.getRow(1).font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const filename =
-      lang === "cn" ? "sparepart-stock-status-report.xlsx" : "sparepart-stock-status-report.xlsx";
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `attachment; filename="sparepart-stock-status-report.xlsx"`,
       },
     });
   } catch (error) {
