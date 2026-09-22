@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-22
+
+### Changed
+
+- Movement History: split the Material column into Material Code and
+  Description (both toggleable via Filter Columns).
+
 ## [0.7.0] - 2026-09-22
 
 ### Added
