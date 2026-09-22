@@ -94,6 +94,7 @@ export function SparepartDropdown({
           compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm",
           disabled ? "cursor-not-allowed opacity-60" : "",
         ].join(" ")}
+        title={selected?.label || placeholder || undefined}
       >
         {selected?.icon ? (
           <span className={selected ? "shrink-0 text-text-muted" : "shrink-0 text-text-dim"}>
@@ -111,6 +112,7 @@ export function SparepartDropdown({
           role="listbox"
           className={[
             sparepartDropdownMenuClass,
+            "w-max min-w-full max-w-[16rem]",
             menuPlacement === "top" ? "bottom-full mb-1" : "mt-1",
           ].join(" ")}
         >
@@ -125,6 +127,7 @@ export function SparepartDropdown({
                     setOpen(false);
                   }}
                   className={sparepartDropdownOptionClass(active, compact)}
+                  title={option.label}
                 >
                   {option.icon ? (
                     <span className={active ? "shrink-0 text-white" : "shrink-0 text-text-muted"}>
