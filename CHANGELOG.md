@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-22
+
+### Added
+
+- Report Summary: area (category) filter beside year/week/sub-item filters.
+
+### Changed
+
+- Summary filter dropdowns use fixed widths with ellipsis and hover tooltips.
+- Shared dropdown menus cap visible height (~10 options) with scroll for the
+  rest.
+
 ## [0.6.1] - 2026-09-22
 
 ### Changed
