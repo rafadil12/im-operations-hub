@@ -70,12 +70,24 @@ function personLabel(person: { nameEn: string; nameCn: string }, lang: string): 
   return lang === "cn" ? person.nameCn || person.nameEn : person.nameEn || person.nameCn;
 }
 
-function NameChip({ label, muted = false }: { label: string; muted?: boolean }) {
+function NameChip({
+  label,
+  muted = false,
+  tone = "name",
+}: {
+  label: string;
+  muted?: boolean;
+  tone?: "name" | "count";
+}) {
   return (
     <span
       className={[
-        "w-full shrink-0 truncate rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold",
-        muted ? "text-text-muted" : "text-text",
+        "w-full shrink-0 truncate rounded-md border-1 px-2 py-1.5 text-center text-[9px] font-semibold",
+        tone === "count"
+          ? "border-slate-500/50 bg-slate-500/15 uppercase tracking-wide text-text-muted"
+          : muted
+            ? "border-slate-400 bg-bg/60 text-text-muted"
+            : "border-slate-400 bg-bg/60 text-text",
       ].join(" ")}
       title={label}
     >
@@ -154,7 +166,10 @@ function OrgTreeSection({
                         {reports.length > 0 ? (
                           <>
                             <TreeLineVertical height={12} />
-                            <NameChip label={`${personelLabel} : ${reports.length}`} />
+                            <NameChip
+                              tone="count"
+                              label={`${personelLabel.toUpperCase()} : ${reports.length}`}
+                            />
                             {reports.map((person) => (
                               <div
                                 key={`${division.name}-${person.nameEn}-${person.nameCn}`}
