@@ -22,6 +22,20 @@ function findNode(nodes: PermissionTreeDef[], id: string): PermissionTreeDef | u
 }
 
 describe("PERMISSION_TREE", () => {
+  it("keeps top-level modules in the same order as the sidebar", () => {
+    expect(PERMISSION_TREE.map((node) => node.id)).toEqual([
+      "dashboard",
+      "itsm",
+      "daily-operation",
+      "organization",
+      "training",
+      "safety",
+      "sparepart",
+      "report",
+      "settings",
+    ]);
+  });
+
   it("covers every catalog permission so none fall under Other", () => {
     const claimed = new Set(PERMISSION_TREE.flatMap(collectCodes));
     const catalog = Object.values(PERMISSIONS);

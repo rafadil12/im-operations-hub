@@ -220,7 +220,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "safety",
-    number: 3,
+    number: 5,
     title: "SECURITY (SAFETY) DASHBOARD",
     icon: "shield",
     accentColor: "#ef4444",
@@ -255,7 +255,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "sparepart",
-    number: 4,
+    number: 6,
     title: "SPAREPART DASHBOARD",
     icon: "sparepart",
     accentColor: "#a855f7",
@@ -283,7 +283,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "organization",
-    number: 5,
+    number: 3,
     title: "ORGANIZATION DASHBOARD",
     icon: "organization",
     accentColor: "#38bdf8",
@@ -312,7 +312,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "training",
-    number: 6,
+    number: 4,
     title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",

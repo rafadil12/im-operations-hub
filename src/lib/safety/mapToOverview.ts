@@ -779,7 +779,7 @@ export function mapSafetyToOverview(
   return {
     id: "safety",
 
-    number: 3,
+    number: 5,
 
     title:
       labels.title,

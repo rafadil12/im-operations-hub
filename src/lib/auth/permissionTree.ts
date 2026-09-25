@@ -116,6 +116,58 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     ],
   },
   {
+    id: "organization",
+    label: { source: "nav", key: "organization" },
+    children: [
+      {
+        id: "organization-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.organizationOverviewView],
+      },
+      {
+        id: "organization-employees",
+        label: { source: "nav", key: "moduleManagement" },
+        codes: [
+          PERMISSIONS.organizationEmployeeRead,
+          PERMISSIONS.organizationEmployeeCreate,
+          PERMISSIONS.organizationEmployeeUpdate,
+          PERMISSIONS.organizationEmployeeDelete,
+        ],
+      },
+      {
+        id: "organization-shift",
+        label: { source: "nav", key: "shift" },
+        codes: [PERMISSIONS.organizationShiftRead, PERMISSIONS.organizationShiftManage],
+      },
+      {
+        id: "organization-attendance",
+        label: { source: "nav", key: "attendance" },
+        codes: [PERMISSIONS.organizationAttendanceRead, PERMISSIONS.organizationAttendanceManage],
+      },
+    ],
+  },
+  {
+    id: "training",
+    label: { source: "nav", key: "training" },
+    children: [
+      {
+        id: "training-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.trainingOverviewView],
+      },
+      {
+        id: "training-activities",
+        label: { source: "nav", key: "management" },
+        codes: [
+          PERMISSIONS.trainingSessionRead,
+          PERMISSIONS.trainingSessionCreate,
+          PERMISSIONS.trainingSessionUpdate,
+          PERMISSIONS.trainingSessionDelete,
+        ],
+      },
+    ],
+  },
+  {
     id: "safety",
     label: { source: "nav", key: "safety" },
     children: [
@@ -193,58 +245,6 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
             label: { source: "nav", key: "sparepartLocations" },
             codes: [PERMISSIONS.sparepartLocationsManage],
           },
-        ],
-      },
-    ],
-  },
-  {
-    id: "organization",
-    label: { source: "nav", key: "organization" },
-    children: [
-      {
-        id: "organization-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.organizationOverviewView],
-      },
-      {
-        id: "organization-employees",
-        label: { source: "nav", key: "moduleManagement" },
-        codes: [
-          PERMISSIONS.organizationEmployeeRead,
-          PERMISSIONS.organizationEmployeeCreate,
-          PERMISSIONS.organizationEmployeeUpdate,
-          PERMISSIONS.organizationEmployeeDelete,
-        ],
-      },
-      {
-        id: "organization-shift",
-        label: { source: "nav", key: "shift" },
-        codes: [PERMISSIONS.organizationShiftRead, PERMISSIONS.organizationShiftManage],
-      },
-      {
-        id: "organization-attendance",
-        label: { source: "nav", key: "attendance" },
-        codes: [PERMISSIONS.organizationAttendanceRead, PERMISSIONS.organizationAttendanceManage],
-      },
-    ],
-  },
-  {
-    id: "training",
-    label: { source: "nav", key: "training" },
-    children: [
-      {
-        id: "training-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.trainingOverviewView],
-      },
-      {
-        id: "training-activities",
-        label: { source: "nav", key: "management" },
-        codes: [
-          PERMISSIONS.trainingSessionRead,
-          PERMISSIONS.trainingSessionCreate,
-          PERMISSIONS.trainingSessionUpdate,
-          PERMISSIONS.trainingSessionDelete,
         ],
       },
     ],
