@@ -25,35 +25,17 @@ type Props = {
   height?: number;
   compact?: boolean;
   legendLabels?: string[];
-  palette?: "itsm" | "training";
 };
 
-export function TicketTrendChart({
-  data,
-  height = 140,
-  compact = false,
-  legendLabels,
-  palette = "itsm",
-}: Props) {
+export function TicketTrendChart({ data, height = 140, compact = false, legendLabels }: Props) {
   const { lang } = useLang();
   const { theme } = useTheme();
 
-  const isTraining = palette === "training";
   const axisFill = theme === "dark" ? "#FFFFFF" : "#475569";
   const gridStroke = theme === "dark" ? "#E5E7EB" : "#cbd5e1ab";
   const legendColor = theme === "dark" ? "#CBD5E1" : "#475569";
-  const currentLabelColor = isTraining
-    ? "#6366f1"
-    : theme === "dark"
-      ? "#26d371"
-      : "#22b7af";
-  const previousLabelColor = isTraining
-    ? "#94a3b8"
-    : theme === "dark"
-      ? "#f8fafc76"
-      : "#33415553";
-  const currentStroke = isTraining ? "#6366f1" : "url(#overviewTicketTrendGradient)";
-  const previousStroke = isTraining ? "#94a3b8" : "#C9D1DB";
+  const currentLabelColor = theme === "dark" ? "#26d371" : "#22b7af";
+  const previousLabelColor = theme === "dark" ? "#f8fafc76" : "#33415553";
   const fontSize = compact ? 11 : 13;
   const labelFontSize = compact ? 11 : 15;
 
@@ -161,7 +143,7 @@ export function TicketTrendChart({
                 </div>
                 <div
                   style={{
-                    color: isTraining ? "#A5B4FC" : "#60A5FA",
+                    color: "#60A5FA",
                     fontWeight: 700,
                     fontSize: 13,
                     marginBottom: showPrevious ? 4 : 0,
@@ -184,8 +166,8 @@ export function TicketTrendChart({
             type="natural"
             dataKey="previous"
             name="previous"
-            stroke={previousStroke}
-            strokeWidth={isTraining ? 2 : 2.5}
+            stroke="#C9D1DB"
+            strokeWidth={2.5}
             animationDuration={1800}
             animationEasing="ease-in-out"
             dot={{
@@ -232,20 +214,19 @@ export function TicketTrendChart({
           type="natural"
           dataKey="current"
           name="current"
-          stroke={currentStroke}
-          strokeWidth={isTraining ? 2 : 3}
+          stroke="url(#overviewTicketTrendGradient)"
+          strokeWidth={3}
           animationDuration={1800}
           animationEasing="ease-in-out"
           dot={(props) => {
             const { cx, cy, payload } = props;
-            const hot = !isTraining && payload.current >= 15;
 
             return (
               <circle
                 cx={cx}
                 cy={cy}
-                r={hot ? 6 : compact ? 3 : 4}
-                fill={isTraining ? "#6366f1" : hot ? "#EF4444" : "#2563EB"}
+                r={payload.current >= 15 ? 6 : compact ? 3 : 4}
+                fill={payload.current >= 15 ? "#EF4444" : "#2563EB"}
                 stroke="#ffffff"
                 strokeWidth={2}
               />
