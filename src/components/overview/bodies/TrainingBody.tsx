@@ -9,11 +9,9 @@ import { ChartSection } from "../ModuleCardShared";
 
 function RecentTrainingTable({
   rows,
-  expanded,
   labels,
 }: {
   rows: TrainingRow[];
-  expanded: boolean;
   labels: {
     trainingName: string;
     date: string;
@@ -26,16 +24,10 @@ function RecentTrainingTable({
       <table className="w-full min-w-0 text-left text-[11px]">
         <thead>
           <tr className="border-b border-border-subtle text-text-dim">
-            {expanded ? (
-              <th className="pb-2 pr-2 font-medium">{labels.trainingName}</th>
-            ) : null}
+            <th className="pb-2 pr-2 font-medium">{labels.trainingName}</th>
             <th className="pb-2 pr-2 font-medium">{labels.date}</th>
-            {expanded ? (
-              <th className="pb-2 pr-2 font-medium">{labels.participant}</th>
-            ) : null}
-            <th className={expanded ? "pb-2 font-medium" : "pb-2 pr-2 font-medium"}>
-              {labels.division}
-            </th>
+            <th className="pb-2 pr-2 font-medium">{labels.participant}</th>
+            <th className="pb-2 font-medium">{labels.division}</th>
           </tr>
         </thead>
 
@@ -45,10 +37,10 @@ function RecentTrainingTable({
               key={`${row.name}-${row.date}`}
               className="border-b border-border-subtle/60 text-text"
             >
-              {expanded ? <td className="py-2 pr-2 font-medium">{row.name}</td> : null}
+              <td className="py-2 pr-2 font-medium">{row.name}</td>
               <td className="py-2 pr-2 text-text-muted">{row.date}</td>
-              {expanded ? <td className="py-2 pr-2">{row.participants}</td> : null}
-              <td className={expanded ? "py-2" : "py-2 pr-2"}>{row.avgScore}</td>
+              <td className="py-2 pr-2">{row.participants}</td>
+              <td className="py-2">{row.avgScore}</td>
             </tr>
           ))}
         </tbody>
@@ -57,12 +49,12 @@ function RecentTrainingTable({
   );
 }
 
-export function TrainingBody({ data, expanded }: { data: ModuleCardData; expanded: boolean }) {
+export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean }) {
   const { lang } = useLang();
   const language = lang as TrainingLanguage;
   const t = getDict(lang);
   const recentRows = data.recentRows ?? [];
-  const showOverviewDonut = expanded && (data.trainingByDivision?.length ?? 0) > 0;
+  const showOverviewDonut = (data.trainingByDivision?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -78,7 +70,6 @@ export function TrainingBody({ data, expanded }: { data: ModuleCardData; expande
           {recentRows.length > 0 ? (
             <RecentTrainingTable
               rows={recentRows}
-              expanded={expanded}
               labels={{
                 trainingName: t.dashboard.trainingName,
                 date: t.dashboard.date,
@@ -116,11 +107,7 @@ export function TrainingBody({ data, expanded }: { data: ModuleCardData; expande
       </div>
 
       <section className="w-full rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <ChartSection
-          data={data}
-          expanded={expanded}
-          trendHeight={{ compact: 160, expanded: 280 }}
-        />
+        <ChartSection data={data} expanded trendHeight={{ compact: 160, expanded: 280 }} />
       </section>
     </div>
   );
