@@ -25,9 +25,15 @@ export type OrganizationDepartmentSummary = {
   attendanceRate: number;
 };
 
+export type OrganizationChartPerson = {
+  nameEn: string;
+  nameCn: string;
+};
+
 export type OrganizationChartDivision = {
   name: string;
   personnelCount: number;
+  people: OrganizationChartPerson[];
 };
 
 export type OrganizationChart = {

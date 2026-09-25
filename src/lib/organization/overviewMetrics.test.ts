@@ -60,7 +60,12 @@ describe("computeOrganizationOverviewMetrics", () => {
     expect(metrics.onLeaveCount).toBe(3);
     expect(metrics.attendanceRate).toBe(33.3);
     expect(metrics.orgChart.leader).toBe("WANG CHUNLAI");
+    expect(metrics.orgChart.divisions[0]?.people.map((p) => p.nameEn)).toEqual([
+      "Ari Wira Saputra",
+    ]);
+    expect(metrics.orgChart.divisions[1]?.people.map((p) => p.nameEn)).toEqual(["Antoni Lau"]);
     expect(metrics.orgChart.divisions[2]?.personnelCount).toBe(1);
+    expect(metrics.orgChart.divisions[2]?.people.map((p) => p.nameEn)).toEqual(["Galuh"]);
     expect(metrics.departmentPerformance).toHaveLength(3);
     expect(metrics.departmentPerformance[2]?.employees).toBe(1);
   });
@@ -100,6 +105,7 @@ describe("computeOrganizationOverviewMetrics", () => {
     });
 
     expect(metrics.orgChart.divisions[2]?.personnelCount).toBe(1);
+    expect(metrics.orgChart.divisions[2]?.people.map((p) => p.nameEn)).toEqual(["Active Staff"]);
     expect(metrics.departmentPerformance[0]?.employees).toBe(1);
   });
 });

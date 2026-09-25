@@ -16,6 +16,12 @@ function displayName(row: OrganizationEmployeeRow): string {
   return name.toUpperCase();
 }
 
+function personNames(row: OrganizationEmployeeRow): { nameEn: string; nameCn: string } {
+  const nameEn = row.name_en?.trim() || row.name_cn?.trim() || row.employee_no;
+  const nameCn = row.name_cn?.trim() || row.name_en?.trim() || row.employee_no;
+  return { nameEn, nameCn };
+}
+
 function normalizeDivisionName(name: string | null): string | null {
   if (!name) return null;
   const trimmed = name.trim();
@@ -27,7 +33,7 @@ function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart 
   const leaderRow = employees.find((row) => row.employee_no === GM_EMPLOYEE_NO);
   const leader = leaderRow ? displayName(leaderRow) : "WANG CHUNLAI";
 
-  const countsByDivision = new Map<string, number>();
+  const peopleByDivision = new Map<string, { nameEn: string; nameCn: string }[]>();
 
   for (const row of employees) {
     if (!isDirectoryStaffRow(row)) continue;
@@ -35,13 +41,21 @@ function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart 
     const division = normalizeDivisionName(row.division_name_en);
     if (!division) continue;
 
-    countsByDivision.set(division, (countsByDivision.get(division) ?? 0) + 1);
+    const list = peopleByDivision.get(division) ?? [];
+    list.push(personNames(row));
+    peopleByDivision.set(division, list);
   }
 
-  const divisions = DIVISION_ORDER.map((name) => ({
-    name,
-    personnelCount: countsByDivision.get(name) ?? 0,
-  }));
+  const divisions = DIVISION_ORDER.map((name) => {
+    const people = [...(peopleByDivision.get(name) ?? [])].sort((a, b) =>
+      a.nameEn.localeCompare(b.nameEn)
+    );
+    return {
+      name,
+      personnelCount: people.length,
+      people,
+    };
+  });
 
   return {
     company: "Intelligent Manufacturing Department",
@@ -51,9 +65,7 @@ function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart 
 }
 
 function staffEmployeeNos(employees: OrganizationEmployeeRow[]): Set<string> {
-  return new Set(
-    employees.filter(isDirectoryStaffRow).map((row) => row.employee_no)
-  );
+  return new Set(employees.filter(isDirectoryStaffRow).map((row) => row.employee_no));
 }
 
 function countMonthlyAttendance(
@@ -87,8 +99,7 @@ function countMonthlyAttendance(
     }
   }
 
-  const attendanceRate =
-    scoredDays > 0 ? Math.round((presentCount / scoredDays) * 1000) / 10 : 0;
+  const attendanceRate = scoredDays > 0 ? Math.round((presentCount / scoredDays) * 1000) / 10 : 0;
 
   return { presentCount, absentCount, onLeaveCount, attendanceRate };
 }
@@ -116,10 +127,7 @@ function buildDepartmentPerformance(
     attendanceMap.set(`${row.employee_no}|${row.attendance_date}`, row.attendance_value);
   }
 
-  const map = new Map<
-    string,
-    Omit<OrganizationDepartmentSummary, "attendanceRate">
-  >();
+  const map = new Map<string, Omit<OrganizationDepartmentSummary, "attendanceRate">>();
 
   for (const employee of employees) {
     if (!isDirectoryStaffRow(employee)) continue;

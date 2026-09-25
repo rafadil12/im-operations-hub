@@ -10,21 +10,10 @@ import type { ReportTrendRow, ReportPeriodStatus } from "@/lib/report/types";
 import type { TrainingOverviewMetrics } from "@/lib/training/types";
 
 export type ModuleId =
-  | "itsm"
-  | "daily-operation"
-  | "safety"
-  | "sparepart"
-  | "organization"
-  | "report"
-  | "training";
+  "itsm" | "daily-operation" | "safety" | "sparepart" | "organization" | "report" | "training";
 
 export type ModuleLayout =
-  | "default"
-  | "safety"
-  | "sparepart"
-  | "organization"
-  | "report"
-  | "training";
+  "default" | "safety" | "sparepart" | "organization" | "report" | "training";
 
 export type StatItem = {
   label: string;
@@ -114,6 +103,7 @@ export type ModuleCardData = {
     divisions: {
       name: string;
       personnelCount: number;
+      people?: { nameEn: string; nameCn: string }[];
     }[];
   };
   /** Monthly department attendance breakdown. */
@@ -304,9 +294,9 @@ export const dashboardModules: ModuleCardData[] = [
       company: "Intelligent Manufacturing Department",
       leader: "WANG CHUNLAI",
       divisions: [
-        { name: "MES", personnelCount: 0 },
-        { name: "IT", personnelCount: 0 },
-        { name: "Intelligent Logistics", personnelCount: 0 },
+        { name: "MES", personnelCount: 0, people: [] },
+        { name: "IT", personnelCount: 0, people: [] },
+        { name: "Intelligent Logistics", personnelCount: 0, people: [] },
       ],
     },
   },

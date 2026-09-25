@@ -66,44 +66,58 @@ function TreeLineHorizontal() {
   );
 }
 
+function personLabel(person: { nameEn: string; nameCn: string }, lang: string): string {
+  return lang === "cn" ? person.nameCn || person.nameEn : person.nameEn || person.nameCn;
+}
+
 function OrgTreeSection({
   chart,
-  personelLabel,
   orgTreeTitle,
+  lang,
 }: {
   chart: NonNullable<ModuleCardData["orgChart"]>;
-  personelLabel: string;
   orgTreeTitle: string;
+  lang: string;
 }) {
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border-subtle bg-bg/30 p-4">
-      <h4 className="mb-5 shrink-0 text-xs font-medium text-text-muted">{orgTreeTitle}</h4>
+      <h4 className="mb-4 shrink-0 text-xs font-medium text-text-muted">{orgTreeTitle}</h4>
 
-      <div className="mx-auto flex w-full max-w-full flex-1 flex-col justify-center">
-        {/* Root */}
-        <div className="flex justify-center">
+      <div className="mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col">
+        <div className="flex shrink-0 justify-center">
           <span className="max-w-full rounded-md border-1 border-slate-400 bg-bg/50 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text shadow-sm">
             {chart.company}
           </span>
         </div>
 
-        <div className="flex justify-center">
-          <TreeLineVertical height={32} />
+        <div className="flex shrink-0 justify-center">
+          <TreeLineVertical height={16} />
         </div>
 
-        <div className="relative px-1 pt-0">
+        <div className="flex shrink-0 justify-center">
+          <span className="max-w-full rounded-md border-1 border-slate-400 bg-bg/60 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text shadow-sm">
+            {chart.leader}
+          </span>
+        </div>
+
+        <div className="flex shrink-0 justify-center">
+          <TreeLineVertical height={24} />
+        </div>
+
+        <div className="relative min-h-0 flex-1 px-1">
           <TreeLineHorizontal />
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid h-full min-h-0 grid-cols-3 gap-2">
             {chart.divisions.map((division, index) => {
               const style = DIVISION_STYLES[index] ?? DIVISION_STYLES[0];
+              const people = division.people ?? [];
 
               return (
-                <div key={division.name} className="flex flex-col items-center">
-                  <TreeLineVertical height={32} />
+                <div key={division.name} className="flex min-h-0 flex-col items-center">
+                  <TreeLineVertical height={24} />
 
                   <span
-                    className="w-full truncate rounded-md border-2 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide shadow-md"
+                    className="w-full shrink-0 truncate rounded-md border-2 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide shadow-md"
                     style={{
                       backgroundColor: style.bg,
                       borderColor: style.bg,
@@ -113,11 +127,25 @@ function OrgTreeSection({
                     {division.name}
                   </span>
 
-                  <TreeLineVertical height={12} />
+                  <TreeLineVertical height={10} />
 
-                  <span className="w-full rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold uppercase tracking-wide text-text">
-                    {personelLabel} : {division.personnelCount}
-                  </span>
+                  <div className="flex min-h-0 w-full flex-1 flex-col gap-1.5 overflow-y-auto">
+                    {people.length > 0 ? (
+                      people.map((person) => (
+                        <span
+                          key={`${division.name}-${person.nameEn}-${person.nameCn}`}
+                          className="w-full truncate rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold text-text"
+                          title={personLabel(person, lang)}
+                        >
+                          {personLabel(person, lang)}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="w-full rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold text-text-muted">
+                        —
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -141,11 +169,7 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       {chart ? (
-        <OrgTreeSection
-          chart={chart}
-          personelLabel={t.dashboard.personelLabel}
-          orgTreeTitle={t.dashboard.orgTree}
-        />
+        <OrgTreeSection chart={chart} orgTreeTitle={t.dashboard.orgTree} lang={lang} />
       ) : null}
 
       {departments.length ? (
