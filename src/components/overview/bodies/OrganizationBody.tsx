@@ -129,19 +129,19 @@ function OrgTreeSection({
 
                   <TreeLineVertical height={10} />
 
-                  <div className="flex min-h-0 w-full flex-1 flex-col gap-1.5 overflow-y-auto">
+                  <div className="flex min-h-0 w-full flex-1 flex-col gap-2.5 overflow-y-auto">
                     {people.length > 0 ? (
                       people.map((person) => (
                         <span
                           key={`${division.name}-${person.nameEn}-${person.nameCn}`}
-                          className="w-full truncate rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold text-text"
+                          className="flex min-h-8 w-full flex-1 items-center justify-center truncate rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-2 text-center text-[9px] font-semibold text-text"
                           title={personLabel(person, lang)}
                         >
                           {personLabel(person, lang)}
                         </span>
                       ))
                     ) : (
-                      <span className="w-full rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold text-text-muted">
+                      <span className="flex min-h-8 w-full flex-1 items-center justify-center rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-2 text-center text-[9px] font-semibold text-text-muted">
                         —
                       </span>
                     )}
