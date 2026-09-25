@@ -103,7 +103,7 @@ export type ModuleCardData = {
     divisions: {
       name: string;
       personnelCount: number;
-      people?: { nameEn: string; nameCn: string }[];
+      people?: { nameEn: string; nameCn: string; isLead?: boolean }[];
     }[];
   };
   /** Monthly department attendance breakdown. */

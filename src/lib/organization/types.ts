@@ -6,6 +6,7 @@ export type OrganizationEmployeeRow = {
   position_id: number | null;
   position_name_en: string | null;
   employment_status: string | null;
+  is_manager?: boolean | number | string | null;
 };
 
 export type OrganizationAttendanceRow = {
@@ -28,6 +29,7 @@ export type OrganizationDepartmentSummary = {
 export type OrganizationChartPerson = {
   nameEn: string;
   nameCn: string;
+  isLead?: boolean;
 };
 
 export type OrganizationChartDivision = {

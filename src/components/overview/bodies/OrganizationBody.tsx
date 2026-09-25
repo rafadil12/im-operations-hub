@@ -70,13 +70,29 @@ function personLabel(person: { nameEn: string; nameCn: string }, lang: string): 
   return lang === "cn" ? person.nameCn || person.nameEn : person.nameEn || person.nameCn;
 }
 
+function NameChip({ label, muted = false }: { label: string; muted?: boolean }) {
+  return (
+    <span
+      className={[
+        "w-full shrink-0 truncate rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold",
+        muted ? "text-text-muted" : "text-text",
+      ].join(" ")}
+      title={label}
+    >
+      {label}
+    </span>
+  );
+}
+
 function OrgTreeSection({
   chart,
   orgTreeTitle,
+  personelLabel,
   lang,
 }: {
   chart: NonNullable<ModuleCardData["orgChart"]>;
   orgTreeTitle: string;
+  personelLabel: string;
   lang: string;
 }) {
   return (
@@ -91,7 +107,7 @@ function OrgTreeSection({
         </div>
 
         <div className="flex shrink-0 justify-center">
-          <TreeLineVertical height={16} />
+          <TreeLineVertical height={12} />
         </div>
 
         <div className="flex shrink-0 justify-center">
@@ -101,7 +117,7 @@ function OrgTreeSection({
         </div>
 
         <div className="flex shrink-0 justify-center">
-          <TreeLineVertical height={24} />
+          <TreeLineVertical height={100} />
         </div>
 
         <div className="relative min-h-0 flex-1 px-1">
@@ -111,6 +127,7 @@ function OrgTreeSection({
             {chart.divisions.map((division, index) => {
               const style = DIVISION_STYLES[index] ?? DIVISION_STYLES[0];
               const people = division.people ?? [];
+              const [lead, ...reports] = people;
 
               return (
                 <div key={division.name} className="flex min-h-0 flex-col items-center">
@@ -127,23 +144,31 @@ function OrgTreeSection({
                     {division.name}
                   </span>
 
-                  <TreeLineVertical height={10} />
+                  <TreeLineVertical height={12} />
 
-                  <div className="flex min-h-0 w-full flex-1 flex-col gap-1.5 overflow-y-auto">
-                    {people.length > 0 ? (
-                      people.map((person) => (
-                        <span
-                          key={`${division.name}-${person.nameEn}-${person.nameCn}`}
-                          className="w-full truncate rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold text-text"
-                          title={personLabel(person, lang)}
-                        >
-                          {personLabel(person, lang)}
-                        </span>
-                      ))
+                  <div className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto">
+                    {lead ? (
+                      <>
+                        <NameChip label={personLabel(lead, lang)} />
+
+                        {reports.length > 0 ? (
+                          <>
+                            <TreeLineVertical height={12} />
+                            <NameChip label={`${personelLabel} : ${reports.length}`} />
+                            {reports.map((person) => (
+                              <div
+                                key={`${division.name}-${person.nameEn}-${person.nameCn}`}
+                                className="flex w-full flex-col items-center"
+                              >
+                                <TreeLineVertical height={12} />
+                                <NameChip label={personLabel(person, lang)} />
+                              </div>
+                            ))}
+                          </>
+                        ) : null}
+                      </>
                     ) : (
-                      <span className="w-full rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold text-text-muted">
-                        —
-                      </span>
+                      <NameChip label="—" muted />
                     )}
                   </div>
                 </div>
@@ -169,7 +194,12 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       {chart ? (
-        <OrgTreeSection chart={chart} orgTreeTitle={t.dashboard.orgTree} lang={lang} />
+        <OrgTreeSection
+          chart={chart}
+          orgTreeTitle={t.dashboard.orgTree}
+          personelLabel={t.dashboard.personelLabel}
+          lang={lang}
+        />
       ) : null}
 
       {departments.length ? (

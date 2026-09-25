@@ -66,6 +66,7 @@ describe("computeOrganizationOverviewMetrics", () => {
     expect(metrics.orgChart.divisions[1]?.people.map((p) => p.nameEn)).toEqual(["Antoni Lau"]);
     expect(metrics.orgChart.divisions[2]?.personnelCount).toBe(1);
     expect(metrics.orgChart.divisions[2]?.people.map((p) => p.nameEn)).toEqual(["Galuh"]);
+    expect(metrics.orgChart.divisions[2]?.people[0]?.isLead).toBe(true);
     expect(metrics.departmentPerformance).toHaveLength(3);
     expect(metrics.departmentPerformance[2]?.employees).toBe(1);
   });
@@ -107,5 +108,79 @@ describe("computeOrganizationOverviewMetrics", () => {
     expect(metrics.orgChart.divisions[2]?.personnelCount).toBe(1);
     expect(metrics.orgChart.divisions[2]?.people.map((p) => p.nameEn)).toEqual(["Active Staff"]);
     expect(metrics.departmentPerformance[0]?.employees).toBe(1);
+  });
+
+  it("puts Galuh first in Intelligent Logistics when no is_manager flag", () => {
+    const metrics = computeOrganizationOverviewMetrics({
+      employees: [
+        {
+          employee_no: "IL01",
+          name_en: "Aulia Rahman Harahap",
+          name_cn: null,
+          division_name_en: "Intelligent Logistics",
+          position_id: 10,
+          position_name_en: "Intelligent Logistics Staff",
+          employment_status: "Active",
+        },
+        {
+          employee_no: "IL02",
+          name_en: "Galuh Sapin Saputra",
+          name_cn: null,
+          division_name_en: "Intelligent Logistics",
+          position_id: 11,
+          position_name_en: "Intelligent Logistics Staff",
+          employment_status: "Active",
+        },
+        {
+          employee_no: "IL03",
+          name_en: "Jose Juliman Manalu",
+          name_cn: null,
+          division_name_en: "Intelligent Logistics",
+          position_id: 12,
+          position_name_en: "Intelligent Logistics Staff",
+          employment_status: "Active",
+        },
+      ],
+      attendanceRows: [],
+    });
+
+    expect(metrics.orgChart.divisions[2]?.people.map((p) => p.nameEn)).toEqual([
+      "Galuh Sapin Saputra",
+      "Aulia Rahman Harahap",
+      "Jose Juliman Manalu",
+    ]);
+    expect(metrics.orgChart.divisions[2]?.people[0]?.isLead).toBe(true);
+  });
+
+  it("prefers is_manager over the Galuh name fallback", () => {
+    const metrics = computeOrganizationOverviewMetrics({
+      employees: [
+        {
+          employee_no: "IL01",
+          name_en: "Aulia Rahman Harahap",
+          name_cn: null,
+          division_name_en: "Intelligent Logistics",
+          position_id: 10,
+          position_name_en: "Intelligent Logistics Staff",
+          employment_status: "Active",
+          is_manager: 1,
+        },
+        {
+          employee_no: "IL02",
+          name_en: "Galuh Sapin Saputra",
+          name_cn: null,
+          division_name_en: "Intelligent Logistics",
+          position_id: 11,
+          position_name_en: "Intelligent Logistics Staff",
+          employment_status: "Active",
+        },
+      ],
+      attendanceRows: [],
+    });
+
+    expect(metrics.orgChart.divisions[2]?.people.map((p) => p.nameEn)).toEqual([
+      "Aulia Rahman Harahap",
+      "Galuh Sapin Saputra",
+    ]);
   });
 });
