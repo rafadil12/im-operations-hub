@@ -109,12 +109,32 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    id: "training",
-    labelKey: "training",
-    icon: "training",
+    id: "report",
+    labelKey: "report",
+    icon: "report",
     children: [
-      { id: "overview", labelKey: "overview", href: "/training" },
-      { id: "session", labelKey: "session", href: "/training/session" },
+      { id: "overview", labelKey: "overview", href: "/report" },
+      {
+        id: "weekly-report",
+        labelKey: "reportWeeklyReport",
+        children: [
+          {
+            id: "summary",
+            labelKey: "reportSummary",
+            href: "/report/summary",
+          },
+          {
+            id: "reports",
+            labelKey: "reportReports",
+            href: "/report/reports",
+          },
+        ],
+      },
+      {
+        id: "projects",
+        labelKey: "reportProjects",
+        href: "/report/projects",
+      },
     ],
   },
   {
@@ -185,32 +205,12 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    id: "report",
-    labelKey: "report",
-    icon: "report",
+    id: "training",
+    labelKey: "training",
+    icon: "training",
     children: [
-      { id: "overview", labelKey: "overview", href: "/report" },
-      {
-        id: "weekly-report",
-        labelKey: "reportWeeklyReport",
-        children: [
-          {
-            id: "summary",
-            labelKey: "reportSummary",
-            href: "/report/summary",
-          },
-          {
-            id: "reports",
-            labelKey: "reportReports",
-            href: "/report/reports",
-          },
-        ],
-      },
-      {
-        id: "projects",
-        labelKey: "reportProjects",
-        href: "/report/projects",
-      },
+      { id: "overview", labelKey: "overview", href: "/training" },
+      { id: "session", labelKey: "session", href: "/training/session" },
     ],
   },
   {

@@ -312,12 +312,13 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "training",
-    number: 4,
+    number: 7,
     title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",
     href: "/training",
     layout: "training",
+    colSpan: 3,
     stats: [
       { label: "Total Training", value: "—", tone: "accent" },
       { label: "Participants", value: "—", tone: "accent" },
@@ -349,13 +350,13 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "report",
-    number: 7,
+    number: 4,
     title: "REPORT DASHBOARD",
     icon: "report",
     accentColor: "#eab308",
     href: "/report",
     layout: "report",
-    colSpan: 3,
+    colSpan: 2,
     stats: [
       { label: "Achievement", value: EMPTY, tone: "success" },
       { label: "Work Completion", value: EMPTY, tone: "accent" },

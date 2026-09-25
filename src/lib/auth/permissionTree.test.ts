@@ -28,10 +28,10 @@ describe("PERMISSION_TREE", () => {
       "itsm",
       "daily-operation",
       "organization",
-      "training",
+      "report",
       "safety",
       "sparepart",
-      "report",
+      "training",
       "settings",
     ]);
   });

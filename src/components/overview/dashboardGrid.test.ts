@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { dashboardGridClass, sortDashboardModules } from "./dashboardGrid";
 
 describe("dashboardGrid", () => {
-  it("places organization before training so row-span packs beside ITSM+Daily", () => {
+  it("places organization before report so row-span packs beside ITSM+Daily", () => {
     const sorted = sortDashboardModules([
       { id: "report" },
       { id: "training" },
@@ -16,18 +16,18 @@ describe("dashboardGrid", () => {
       "itsm",
       "daily-operation",
       "organization",
-      "training",
+      "report",
       "safety",
       "sparepart",
-      "report",
+      "training",
     ]);
   });
 
   it("assigns wireframe spans on the 6-column grid", () => {
     expect(dashboardGridClass("itsm")).toContain("xl:col-span-2");
-    expect(dashboardGridClass("training")).toContain("xl:col-span-4");
+    expect(dashboardGridClass("report")).toContain("xl:col-span-4");
     expect(dashboardGridClass("organization")).toContain("xl:row-span-2");
     expect(dashboardGridClass("safety")).toContain("xl:col-span-3");
-    expect(dashboardGridClass("report")).toContain("col-span-full");
+    expect(dashboardGridClass("training")).toContain("col-span-full");
   });
 });
