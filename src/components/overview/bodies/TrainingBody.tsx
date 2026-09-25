@@ -67,21 +67,7 @@ export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean
             data.secondaryChart ? "lg:col-span-5" : "lg:col-span-10",
           ].join(" ")}
         >
-          <h4 className="mb-3 text-xs font-medium text-text-muted">{t.dashboard.recentTraining}</h4>
-
-          {recentRows.length > 0 ? (
-            <RecentTrainingTable
-              rows={recentRows}
-              labels={{
-                trainingName: t.dashboard.trainingName,
-                date: t.dashboard.date,
-                participant: t.dashboard.participant,
-                division: t.fields.division,
-              }}
-            />
-          ) : (
-            <p className="py-6 text-center text-[11px] text-text-muted">{t.common.noData}</p>
-          )}
+          <ChartSection data={data} expanded trendHeight={{ compact: 160, expanded: 200 }} />
         </section>
 
         {data.secondaryChart ? (
@@ -115,7 +101,21 @@ export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean
       </div>
 
       <section className="w-full rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <ChartSection data={data} expanded trendHeight={{ compact: 160, expanded: 280 }} />
+        <h4 className="mb-3 text-xs font-medium text-text-muted">{t.dashboard.recentTraining}</h4>
+
+        {recentRows.length > 0 ? (
+          <RecentTrainingTable
+            rows={recentRows}
+            labels={{
+              trainingName: t.dashboard.trainingName,
+              date: t.dashboard.date,
+              participant: t.dashboard.participant,
+              division: t.fields.division,
+            }}
+          />
+        ) : (
+          <p className="py-6 text-center text-[11px] text-text-muted">{t.common.noData}</p>
+        )}
       </section>
     </div>
   );
