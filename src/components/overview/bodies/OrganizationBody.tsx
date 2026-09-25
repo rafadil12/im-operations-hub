@@ -76,10 +76,10 @@ function OrgTreeSection({
   orgTreeTitle: string;
 }) {
   return (
-    <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-      <h4 className="mb-4 text-xs font-medium text-text-muted">{orgTreeTitle}</h4>
+    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border-subtle bg-bg/30 p-4">
+      <h4 className="mb-5 shrink-0 text-xs font-medium text-text-muted">{orgTreeTitle}</h4>
 
-      <div className="mx-auto max-w-full">
+      <div className="mx-auto flex w-full max-w-full flex-1 flex-col justify-center">
         {/* Root */}
         <div className="flex justify-center">
           <span className="max-w-full rounded-md border-1 border-slate-400 bg-bg/50 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text shadow-sm">
@@ -88,7 +88,7 @@ function OrgTreeSection({
         </div>
 
         <div className="flex justify-center">
-          <TreeLineVertical height={25} />
+          <TreeLineVertical height={32} />
         </div>
 
         <div className="relative px-1 pt-0">
@@ -100,7 +100,7 @@ function OrgTreeSection({
 
               return (
                 <div key={division.name} className="flex flex-col items-center">
-                  <TreeLineVertical height={25} />
+                  <TreeLineVertical height={32} />
 
                   <span
                     className="w-full truncate rounded-md border-2 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide shadow-md"
@@ -139,7 +139,7 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {chart ? (
         <OrgTreeSection
           chart={chart}
@@ -149,8 +149,8 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
       ) : null}
 
       {departments.length ? (
-        <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <div className="mb-3">
+        <section className="shrink-0 rounded-lg border border-border-subtle bg-bg/30 p-4">
+          <div className="mb-4">
             <h4 className="text-xs font-semibold text-text">
               {t.dashboard.monthlyDepartmentPerformance}
             </h4>

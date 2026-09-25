@@ -13,11 +13,13 @@ export function ChartSection({
   expanded,
   align = "start",
   trendHeight,
+  palette,
 }: {
   data: ModuleCardData;
   expanded: boolean;
   align?: "start" | "center";
   trendHeight?: { compact: number; expanded: number };
+  palette?: "itsm" | "training";
 }) {
   return (
     <>
@@ -36,6 +38,7 @@ export function ChartSection({
           height={expanded ? (trendHeight?.expanded ?? 260) : (trendHeight?.compact ?? 140)}
           compact={!expanded}
           legendLabels={data.chart.legend.map((item) => item.label)}
+          palette={palette}
         />
       ) : (
         <DonutChartPlaceholder

@@ -22,7 +22,7 @@ export function SafetyBody({ data, expanded }: { data: ModuleCardData; expanded:
     <>
       <div className="mb-4 grid flex-1 gap-4 md:grid-cols-2">
         {data.trendBars ? (
-          <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+          <section className="flex h-full min-h-[160px] flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
             <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
               {data.trendBars.title}
             </h4>
@@ -47,7 +47,7 @@ export function SafetyBody({ data, expanded }: { data: ModuleCardData; expanded:
       <section
         className={[
           "rounded-lg border border-border-subtle bg-bg/30 p-3",
-          isDonut ? "flex min-h-[188px] flex-col justify-center" : "",
+          isDonut ? "flex min-h-[220px] flex-col justify-center" : "",
         ].join(" ")}
       >
         <ChartSection data={data} expanded={expanded} align="center" />

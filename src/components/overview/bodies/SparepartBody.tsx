@@ -18,7 +18,11 @@ export function SparepartBody({ data, expanded }: { data: ModuleCardData; expand
       ) : null}
 
       <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <ChartSection data={data} expanded={expanded} />
+        <ChartSection
+          data={data}
+          expanded={expanded}
+          trendHeight={{ compact: 180, expanded: 280 }}
+        />
       </section>
     </>
   );

@@ -157,7 +157,8 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
           : undefined
       }
       className={[
-        "flex h-full flex-col rounded-xl border border-border bg-surface p-4 transition-colors",
+        "flex h-full min-h-0 flex-col rounded-xl border border-border bg-surface transition-colors",
+        data.layout === "training" || data.layout === "organization" ? "p-5" : "p-4",
         onOpen
           ? "cursor-pointer hover:border-accent/50 hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           : "",
@@ -190,18 +191,27 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
 
       <div
         className={[
-          "mb-4 grid gap-2",
-          data.stats.length <= 2 ? "grid-cols-2" : "grid-cols-2 xl:grid-cols-4",
+          "grid",
+          data.layout === "training"
+            ? "mb-5 grid-cols-4 gap-3"
+            : data.stats.length <= 2
+              ? "mb-4 grid-cols-2 gap-2"
+              : "mb-4 grid-cols-2 gap-2 xl:grid-cols-4",
         ].join(" ")}
       >
         {data.stats.map((stat) => (
           <div key={stat.label} className="min-w-0">
-            <StatPill stat={stat} />
+            <StatPill
+              stat={stat}
+              variant={data.layout === "training" ? "open" : "pill"}
+            />
           </div>
         ))}
       </div>
 
-      <CardBody data={data} expanded={expanded} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <CardBody data={data} expanded={expanded} />
+      </div>
     </article>
   );
 }
