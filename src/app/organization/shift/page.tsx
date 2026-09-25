@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { handleGuestForbiddenResponse } from "@/lib/apiClient";
@@ -108,6 +109,16 @@ type PersonalOffDay = {
   databaseId?: number;
 };
 
+type ShiftScheduleChange = {
+  id: number;
+  employee_no: string;
+  change_date: string;
+  from_shift: "D/S" | "N/S";
+  to_shift: "D/S" | "N/S";
+  off_date: string | null;
+  rotation_rule_id: number | null;
+};
+
 type CalendarWorkSchedule = {
   id: string;
   employeeId: string;
@@ -115,6 +126,8 @@ type CalendarWorkSchedule = {
   scheduleType: "1" | "4" | "OFF";
   databaseId?: number;
 };
+
+type CalendarDraftValue = "1" | "4" | "OFF" | null;
 
 type RotationMember = {
   id: number;
@@ -192,10 +205,11 @@ const SHIFT_TEXT = {
   search: ["Search employee...", "搜索员工..."],
   allDepartments: ["All Departments", "全部部门"],
   allShifts: ["All Shifts", "全部班次"],
-  day: ["Day", "白班"],
-  night: ["Night", "夜班"],
+  day: ["DAY", "白班"],
+  night: ["NIGHT", "夜班"],
   off: ["OFF", "休息"],
   generate: ["Generate Schedule", "生成排班"],
+  generateSuccess: ["Schedule generated successfully.", "排班生成成功。"],
   exportExcel: ["Export Excel", "导出 Excel"],
   today: ["Today", "今天"],
   employee: ["Employee", "员工"],
@@ -218,8 +232,7 @@ const SHIFT_TEXT = {
     "Choose your personal OFF days, then fix them.",
     "选择个人休息日，然后锁定。",
   ],
-  saveAndFix: ["Save & Fix", "保存并锁定"],
-  resetUnfixed: ["Reset Unfixed", "重置未锁定"],
+  resetUnfixed: ["Reset", "重置"],
   fixedOff: ["Fixed OFF", "已锁定休息"],
   selectedOff: ["Selected OFF", "已选择休息"],
   currentAccount: ["Current account", "当前账户"],
@@ -243,6 +256,8 @@ const SHIFT_TEXT = {
     "You can only generate schedules for a future month.",
     "只能生成未来月份的排班。",
   ],
+  more: ["more", "人"],
+ showLess: ["show less", "收起"],
 } as const;
 
 function text(key: keyof typeof SHIFT_TEXT, language: OrganizationLanguage) {
@@ -574,65 +589,30 @@ function MyOffCalendar({
   language,
   organizationEmployees,
   personalOffDays,
+  currentEmployeeId,
+  authLoading,
   onPersonalOffDaysChange,
   onScheduleChanged,
 }: {
   language: OrganizationLanguage;
   organizationEmployees: OrganizationEmployee[];
   personalOffDays: PersonalOffDay[];
+  currentEmployeeId: string | null;
+  authLoading: boolean;
   onPersonalOffDaysChange: (days: PersonalOffDay[]) => void;
   onScheduleChanged?: () => void;
 }) {
   const { error: toastError } = useToast();
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [workSchedules, setWorkSchedules] = useState<CalendarWorkSchedule[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadCurrentLoginUser() {
-      setAuthLoading(true);
-
-      try {
-        const payload = await fetchJson<CurrentLoginResponse>("/api/auth/me");
-
-        if (cancelled) return;
-
-        const employeeNo = payload.account?.employeeNo ?? null;
-
-        if (!employeeNo) {
-          setCurrentEmployeeId(null);
-          setMessage(text("accountNotDetected", language));
-          return;
-        }
-
-        setCurrentEmployeeId(String(employeeNo));
-        setMessage(null);
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Failed to load current login account", error);
-          setCurrentEmployeeId(null);
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : text("accountNotDetected", language),
-          );
-        }
-      } finally {
-        if (!cancelled) setAuthLoading(false);
-      }
-    }
-
-    void loadCurrentLoginUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [language]);
+  const [shiftScheduleChanges, setShiftScheduleChanges] =
+    useState<ShiftScheduleChange[]>([]);
+  const [pendingCalendarChanges, setPendingCalendarChanges] =
+    useState<Record<string, CalendarDraftValue>>({});
+  const [expandedCalendarPeople, setExpandedCalendarPeople] =
+    useState<Set<string>>(new Set());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -699,6 +679,35 @@ function MyOffCalendar({
     };
   }, [currentEmployeeId, year, month]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadShiftScheduleChanges() {
+      try {
+        const payload = await fetchJson<{
+          data?: ShiftScheduleChange[];
+        }>(
+          `${API_BASE}/changes?year=${year}&month=${month + 1}`,
+        );
+
+        if (cancelled) return;
+
+        setShiftScheduleChanges(payload.data ?? []);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load shift schedule changes", error);
+          setShiftScheduleChanges([]);
+        }
+      }
+    }
+
+    void loadShiftScheduleChanges();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [year, month]);
+
   const today = new Date();
   const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -721,6 +730,66 @@ function MyOffCalendar({
       ),
     [workSchedules, currentEmployeeId],
   );
+
+  const myShiftChanges = useMemo(
+    () =>
+      shiftScheduleChanges.filter(
+        (item) => item.employee_no === currentEmployeeId,
+      ),
+    [shiftScheduleChanges, currentEmployeeId],
+  );
+
+  const myChangeDateMap = useMemo(
+    () =>
+      new Map(
+        myShiftChanges.map((item) => [
+          String(item.change_date).slice(0, 10),
+          item,
+        ]),
+      ),
+    [myShiftChanges],
+  );
+
+  const myChangeOffDateMap = useMemo(
+    () =>
+      new Map(
+        myShiftChanges
+          .filter((item) => item.off_date)
+          .map((item) => [
+            String(item.off_date).slice(0, 10),
+            item,
+          ]),
+      ),
+    [myShiftChanges],
+  );
+
+  const allChangesByDate = useMemo(() => {
+    const map = new Map<string, ShiftScheduleChange[]>();
+
+    for (const item of shiftScheduleChanges) {
+      const key = String(item.change_date).slice(0, 10);
+      const current = map.get(key) ?? [];
+      current.push(item);
+      map.set(key, current);
+    }
+
+    return map;
+  }, [shiftScheduleChanges]);
+
+  const allChangeOffsByDate = useMemo(() => {
+    const map = new Map<string, ShiftScheduleChange[]>();
+
+    for (const item of shiftScheduleChanges) {
+      if (!item.off_date) continue;
+
+      const key = String(item.off_date).slice(0, 10);
+      const current = map.get(key) ?? [];
+      current.push(item);
+      map.set(key, current);
+    }
+
+    return map;
+  }, [shiftScheduleChanges]);
 
   const otherOffsByDate = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -754,6 +823,10 @@ function MyOffCalendar({
 
   const usesScheduleOffFallback = !currentEmployee;
 
+  useEffect(() => {
+    setPendingCalendarChanges({});
+  }, [currentEmployeeId, year, month]);
+
   const calendarCells = useMemo(
     () => getCalendarCells(year, month),
     [year, month],
@@ -767,7 +840,11 @@ function MyOffCalendar({
     year > currentCalendarYear ||
     (year === currentCalendarYear && selectedCalendarMonth > currentCalendarMonth);
 
-  async function saveWorkSchedule(date: string, scheduleType: "1" | "4" | "OFF") {
+  async function saveWorkSchedule(
+    date: string,
+    scheduleType: "1" | "4" | "OFF",
+    options?: { notifyParent?: boolean },
+  ) {
     if (!currentEmployeeId) return false;
 
     try {
@@ -796,7 +873,9 @@ function MyOffCalendar({
         ];
       });
 
-      onScheduleChanged?.();
+      if (options?.notifyParent !== false) {
+        onScheduleChanged?.();
+      }
       return true;
     } catch (error) {
       const message =
@@ -807,7 +886,10 @@ function MyOffCalendar({
     }
   }
 
-  async function deleteWorkSchedule(date: string) {
+  async function deleteWorkSchedule(
+    date: string,
+    options?: { notifyParent?: boolean },
+  ) {
     if (!currentEmployeeId) return false;
 
     try {
@@ -826,7 +908,9 @@ function MyOffCalendar({
         ),
       );
 
-      onScheduleChanged?.();
+      if (options?.notifyParent !== false) {
+        onScheduleChanged?.();
+      }
       return true;
     } catch (error) {
       const message =
@@ -837,89 +921,328 @@ function MyOffCalendar({
     }
   }
 
-  async function toggleDate(day: number) {
+  function hasPendingCalendarChange(date: string) {
+    return Object.prototype.hasOwnProperty.call(
+      pendingCalendarChanges,
+      date,
+    );
+  }
+
+  function getBaseCalendarValue(
+    date: string,
+    existingWork?: CalendarWorkSchedule,
+    existingOff?: PersonalOffDay,
+  ): CalendarDraftValue {
+    if (existingWork?.date === date) {
+      return existingWork.scheduleType;
+    }
+
+    if (existingOff?.date === date) {
+      return "OFF";
+    }
+
+    return null;
+  }
+
+  function getEffectiveCalendarValue(
+    date: string,
+    existingWork?: CalendarWorkSchedule,
+    existingOff?: PersonalOffDay,
+  ): CalendarDraftValue {
+    if (hasPendingCalendarChange(date)) {
+      return pendingCalendarChanges[date];
+    }
+
+    return getBaseCalendarValue(date, existingWork, existingOff);
+  }
+
+  function setCalendarDraft(date: string, value: CalendarDraftValue) {
+    setPendingCalendarChanges((current) => ({
+      ...current,
+      [date]: value,
+    }));
+    setMessage(null);
+  }
+
+  function toggleDate(day: number) {
     if (!isFutureOffMonth || !currentEmployeeId || saving) return;
 
     const key = dateKey(year, month, day);
     const existingWork = workScheduleMap.get(key);
     const existingOff = myDayMap.get(key);
+    const shiftChange = myChangeDateMap.get(key);
+    const shiftChangeOff = myChangeOffDateMap.get(key);
+
+    // A generated rotation OFF date or a fixed manual OFF date is always locked.
+    if (shiftChangeOff || existingOff?.fixed) {
+      return;
+    }
+
+    // NIGHT rotation (D/S -> N/S) is always locked.
+    if (shiftChange?.to_shift === "N/S") {
+      return;
+    }
+
+    const currentValue = getEffectiveCalendarValue(
+      key,
+      existingWork,
+      existingOff,
+    );
+
+    // DAY rotation (N/S -> D/S) is editable.
+    // Clicking it toggles only DAY <-> OFF.
+    if (shiftChange?.to_shift === "D/S") {
+      setCalendarDraft(key, currentValue === "OFF" ? null : "OFF");
+      return;
+    }
+
+    // Normal editable dates: null -> 1 -> 4 -> OFF -> null.
+    const nextValue: CalendarDraftValue =
+      currentValue === null
+        ? "1"
+        : currentValue === "1"
+          ? "4"
+          : currentValue === "4"
+            ? "OFF"
+            : null;
+
+    setCalendarDraft(key, nextValue);
+  }
+
+  async function savePendingChanges() {
+    if (
+      !isFutureOffMonth ||
+      !currentEmployeeId ||
+      saving
+    ) {
+      return;
+    }
+
+    const entries = Object.entries(pendingCalendarChanges);
+
+    if (entries.length === 0) {
+      setMessage(
+        language === "cn"
+          ? "没有需要保存的更改。"
+          : "There are no changes to save.",
+      );
+      return;
+    }
 
     setSaving(true);
     setMessage(null);
 
     try {
-      // 1 -> 4
-      if (existingWork?.scheduleType === "1") {
-        await saveWorkSchedule(key, "4");
-        return;
-      }
+      let nextWorkSchedules = [...workSchedules];
+      let nextPersonalOffDays = [...personalOffDays];
 
-      // 4 -> OFF
-      if (existingWork?.scheduleType === "4") {
-        if (usesScheduleOffFallback) {
-          await saveWorkSchedule(key, "OFF");
-          return;
+      for (const [date, desiredValue] of entries) {
+        const baseWork = nextWorkSchedules.find(
+          (item) =>
+            item.employeeId === currentEmployeeId &&
+            item.date === date,
+        );
+        const baseOff = nextPersonalOffDays.find(
+          (item) =>
+            item.employeeId === currentEmployeeId &&
+            item.date === date,
+        );
+        const shiftChange = myChangeDateMap.get(date);
+        const shiftChangeOff = myChangeOffDateMap.get(date);
+
+        // Never change locked rotation OFF/NIGHT dates or fixed OFF dates.
+        if (shiftChangeOff || baseOff?.fixed || shiftChange?.to_shift === "N/S") {
+          continue;
         }
 
-        await deleteWorkSchedule(key);
+        if (desiredValue === "1" || desiredValue === "4") {
+          if (baseOff && !baseOff.fixed) {
+            await fetchJson(`${API_BASE}/off-days`, {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                employeeNo: currentEmployeeId,
+                date,
+              }),
+            });
 
-        const payload = await fetchJson<{ data?: OffDayApiRow[] }>(`${API_BASE}/off-days`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            employeeNo: currentEmployeeId,
-            dates: [key],
-            fixed: false,
-          }),
-        });
+            nextPersonalOffDays = nextPersonalOffDays.filter(
+              (item) => item.id !== baseOff.id,
+            );
+          }
 
-        const offRow = (payload.data ?? []).find(
-          (row) => String(row.off_date).slice(0, 10) === key,
-        );
+          await fetchJson(`${API_BASE}/schedules`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employeeNo: currentEmployeeId,
+              date,
+              scheduleType: desiredValue,
+            }),
+          });
 
-        if (offRow) {
-          onPersonalOffDaysChange([
-            ...personalOffDays.filter((item) => item.id !== String(offRow.id) && item.date !== key),
+          nextWorkSchedules = [
+            ...nextWorkSchedules.filter(
+              (item) =>
+                !(
+                  item.employeeId === currentEmployeeId &&
+                  item.date === date
+                ),
+            ),
             {
-              id: String(offRow.id),
-              employeeId: offRow.employee_no,
-              date: key,
-              fixed: toBoolean(offRow.is_fixed),
-              databaseId: offRow.id,
+              id: baseWork?.id ?? `${currentEmployeeId}-${date}`,
+              employeeId: currentEmployeeId,
+              date,
+              scheduleType: desiredValue,
+              databaseId: baseWork?.databaseId,
             },
-          ]);
+          ];
+
+          continue;
         }
 
-        return;
+        if (desiredValue === "OFF") {
+          if (usesScheduleOffFallback) {
+            await fetchJson(`${API_BASE}/schedules`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                employeeNo: currentEmployeeId,
+                date,
+                scheduleType: "OFF",
+              }),
+            });
+
+            nextWorkSchedules = [
+              ...nextWorkSchedules.filter(
+                (item) =>
+                  !(
+                    item.employeeId === currentEmployeeId &&
+                    item.date === date
+                  ),
+              ),
+              {
+                id: baseWork?.id ?? `${currentEmployeeId}-${date}`,
+                employeeId: currentEmployeeId,
+                date,
+                scheduleType: "OFF",
+                databaseId: baseWork?.databaseId,
+              },
+            ];
+
+            continue;
+          }
+
+          if (baseWork) {
+            await fetchJson(`${API_BASE}/schedules`, {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                employeeNo: currentEmployeeId,
+                date,
+              }),
+            });
+
+            nextWorkSchedules = nextWorkSchedules.filter(
+              (item) =>
+                !(
+                  item.employeeId === currentEmployeeId &&
+                  item.date === date
+                ),
+            );
+          }
+
+          if (!baseOff) {
+            const payload = await fetchJson<{ data?: OffDayApiRow[] }>(
+              `${API_BASE}/off-days`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  employeeNo: currentEmployeeId,
+                  dates: [date],
+                  fixed: true,
+                }),
+              },
+            );
+
+            const offRow = (payload.data ?? []).find(
+              (row) => String(row.off_date).slice(0, 10) === date,
+            );
+
+            if (offRow) {
+              nextPersonalOffDays = [
+                ...nextPersonalOffDays.filter(
+                  (item) =>
+                    !(
+                      item.employeeId === currentEmployeeId &&
+                      item.date === date
+                    ),
+                ),
+                {
+                  id: String(offRow.id),
+                  employeeId: offRow.employee_no,
+                  date,
+                  fixed: toBoolean(offRow.is_fixed),
+                  databaseId: offRow.id,
+                },
+              ];
+            }
+          }
+
+          continue;
+        }
+
+        // desiredValue === null: remove only the manual override.
+        if (baseWork) {
+          await fetchJson(`${API_BASE}/schedules`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employeeNo: currentEmployeeId,
+              date,
+            }),
+          });
+
+          nextWorkSchedules = nextWorkSchedules.filter(
+            (item) =>
+              !(
+                item.employeeId === currentEmployeeId &&
+                item.date === date
+              ),
+          );
+        }
+
+        if (baseOff && !baseOff.fixed) {
+          await fetchJson(`${API_BASE}/off-days`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employeeNo: currentEmployeeId,
+              date,
+            }),
+          });
+
+          nextPersonalOffDays = nextPersonalOffDays.filter(
+            (item) => item.id !== baseOff.id,
+          );
+        }
       }
 
-      // OFF -> clear
-      if (usesScheduleOffFallback && existingWork?.scheduleType === "OFF") {
-        await deleteWorkSchedule(key);
-        return;
-      }
-
-      if (existingOff) {
-        await fetchJson(`${API_BASE}/off-days`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            employeeNo: currentEmployeeId,
-            date: key,
-          }),
-        });
-
-        onPersonalOffDaysChange(
-          personalOffDays.filter((item) => item.id !== existingOff.id),
-        );
-        return;
-      }
-
-      // clear -> 1
-      await saveWorkSchedule(key, "1");
+      setWorkSchedules(nextWorkSchedules);
+      onPersonalOffDaysChange(nextPersonalOffDays);
+      setPendingCalendarChanges({});
+      onScheduleChanged?.();
+      setMessage(
+        language === "cn"
+          ? "排班更改已保存。"
+          : "Schedule changes saved.",
+      );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to change calendar schedule.";
+        error instanceof Error
+          ? error.message
+          : "Failed to save schedule changes.";
       toastError(message);
       setMessage(message);
     } finally {
@@ -930,43 +1253,31 @@ function MyOffCalendar({
   async function resetUnfixed() {
     if (!isFutureOffMonth || !currentEmployeeId || saving) return;
 
-    const dates = myDays.filter((item) => !item.fixed).map((item) => item.date);
-    if (dates.length === 0) return;
+    // In a future month, Reset must remove manual overrides even if the row
+    // is currently marked fixed. Rotation-generated OFF dates are handled
+    // separately through shiftChangeOff and are never removed here.
+    const resetDates = new Set(
+      myDays.map((item) => item.date),
+    );
 
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      await fetchJson(`${API_BASE}/off-days`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeNo: currentEmployeeId,
-          dates,
-        }),
-      });
-
-      onPersonalOffDaysChange(
-        personalOffDays.filter(
-          (item) => item.employeeId !== currentEmployeeId || item.fixed,
-        ),
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to reset OFF days.";
-      toastError(message);
-      setMessage(message);
-    } finally {
-      setSaving(false);
+    // Saved 1 / 4 / OFF overrides can also live in shift_schedules.
+    // Include them so Reset can remove those database records as well.
+    for (const item of workSchedules) {
+      if (item.employeeId === currentEmployeeId) {
+        resetDates.add(item.date);
+      }
     }
-  }
 
-  async function saveAndFix() {
-    if (!isFutureOffMonth || !currentEmployeeId || saving) return;
+    for (const date of Object.keys(pendingCalendarChanges)) {
+      resetDates.add(date);
+    }
 
-    const unfixed = myDays.filter((item) => !item.fixed);
-    if (unfixed.length === 0) {
-      setMessage(text("saveSuccess", language));
+    if (resetDates.size === 0) {
+      setMessage(
+        language === "cn"
+          ? "没有需要重置的手动更改。"
+          : "There are no manual changes to reset.",
+      );
       return;
     }
 
@@ -974,33 +1285,83 @@ function MyOffCalendar({
     setMessage(null);
 
     try {
-      const payload = await fetchJson<{ data: OffDayApiRow[] }>(`${API_BASE}/off-days`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeNo: currentEmployeeId,
-          dates: unfixed.map((item) => item.date),
-          fixed: true,
-        }),
-      });
+      let nextWorkSchedules = [...workSchedules];
+      let nextPersonalOffDays = [...personalOffDays];
 
-      const fixedRows = (payload.data ?? []).map<PersonalOffDay>((row) => ({
-        id: String(row.id),
-        employeeId: row.employee_no,
-        date: String(row.off_date).slice(0, 10),
-        fixed: toBoolean(row.is_fixed),
-        databaseId: row.id,
-      }));
+      for (const date of resetDates) {
+        const existingWork = nextWorkSchedules.find(
+          (item) =>
+            item.employeeId === currentEmployeeId &&
+            item.date === date,
+        );
+        const existingOff = nextPersonalOffDays.find(
+          (item) =>
+            item.employeeId === currentEmployeeId &&
+            item.date === date,
+        );
+        const shiftChange = myChangeDateMap.get(date);
+        const shiftChangeOff = myChangeOffDateMap.get(date);
 
-      const otherEmployees = personalOffDays.filter(
-        (item) => item.employeeId !== currentEmployeeId,
+        // Never reset a rotation-generated OFF date.
+        // Manual overrides can be reset even on a NIGHT rotation date because
+        // Reset removes only the manual DB override and leaves the rotation rule intact.
+        if (shiftChangeOff) {
+          continue;
+        }
+
+        // Remove manual work schedule overrides (1 / 4 / OFF) from DB.
+        if (existingWork) {
+          await fetchJson(`${API_BASE}/schedules`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employeeNo: currentEmployeeId,
+              date,
+            }),
+          });
+
+          nextWorkSchedules = nextWorkSchedules.filter(
+            (item) =>
+              !(
+                item.employeeId === currentEmployeeId &&
+                item.date === date
+              ),
+          );
+        }
+
+        // Remove manual personal OFF from DB, including rows previously marked fixed.
+        // Reset is allowed for future months, so Fixed only controls calendar editing;
+        // it does not prevent a future-month Reset from clearing the manual override.
+        if (existingOff) {
+          await fetchJson(`${API_BASE}/off-days`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employeeNo: currentEmployeeId,
+              date,
+            }),
+          });
+
+          nextPersonalOffDays = nextPersonalOffDays.filter(
+            (item) => item.id !== existingOff.id,
+          );
+        }
+      }
+
+      setWorkSchedules(nextWorkSchedules);
+      onPersonalOffDaysChange(nextPersonalOffDays);
+      setPendingCalendarChanges({});
+      onScheduleChanged?.();
+      setMessage(
+        language === "cn"
+          ? "手动更改已重置并从数据库删除。"
+          : "Manual changes were reset and removed from the database.",
       );
-
-      onPersonalOffDaysChange([...otherEmployees, ...fixedRows]);
-      setMessage(text("saveSuccess", language));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to save personal OFF days.";
+        error instanceof Error
+          ? error.message
+          : "Failed to reset unfixed changes.";
       toastError(message);
       setMessage(message);
     } finally {
@@ -1023,8 +1384,8 @@ function MyOffCalendar({
           </h1>
           <p className="mt-1 text-[11px] text-text-muted">
             {language === "cn"
-              ? "为未来日期选择 1、4 小时或休息。"
-              : "Choose 1, 4 hours, or OFF for future dates."}
+              ? "为未来日期选择 1、4 小时或休息，点击保存后写入数据库。"
+              : "Choose 1, 4 hours, or OFF for future dates. Changes are saved to the database only after clicking Save."}
           </p>
         </div>
       </div>
@@ -1103,19 +1464,28 @@ function MyOffCalendar({
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
+                  onClick={() => void savePendingChanges()}
+                  disabled={
+                    !currentEmployeeId ||
+                    authLoading ||
+                    saving ||
+                    Object.keys(pendingCalendarChanges).length === 0
+                  }
+                  className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-cyan-200 bg-cyan-50 px-3 text-[10px] font-bold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving
+                    ? text("loading", language)
+                    : language === "cn"
+                      ? "保存"
+                      : "Save"}
+                </button>
+                <button
+                  type="button"
                   onClick={resetUnfixed}
                   disabled={!currentEmployeeId || authLoading || saving}
                   className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border bg-surface px-3 text-[10px] font-bold text-text-muted transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {text("resetUnfixed", language)}
-                </button>
-                <button
-                  type="button"
-                  onClick={saveAndFix}
-                  disabled={!currentEmployeeId || authLoading || saving}
-                  className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[10px] font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {saving ? text("loading", language) : text("saveAndFix", language)}
                 </button>
               </div>
             )}
@@ -1158,19 +1528,100 @@ function MyOffCalendar({
               const key = dateKey(year, month, day);
               const off = myDayMap.get(key);
               const work = workScheduleMap.get(key);
+              const shiftChange = myChangeDateMap.get(key);
+              const shiftChangeOff = myChangeOffDateMap.get(key);
+              const allDateChanges = allChangesByDate.get(key) ?? [];
+              const allDateChangeOffs = allChangeOffsByDate.get(key) ?? [];
+              const otherChangeOffs = allDateChangeOffs.filter(
+                (item) => item.employee_no !== currentEmployeeId,
+              );
               const otherOffs = otherOffsByDate.get(key) ?? [];
+              const otherChangeEntries = allDateChanges
+                .filter((item) => item.employee_no !== currentEmployeeId)
+                .map((item) => {
+                  const employee = organizationEmployees.find(
+                    (entry) => entry.employee_no === item.employee_no,
+                  );
+                  const name =
+                    language === "cn"
+                      ? employee?.name_cn || employee?.name_en || item.employee_no
+                      : employee?.name_en || employee?.name_cn || item.employee_no;
+                  const isDay =
+                    item.from_shift === "N/S" && item.to_shift === "D/S";
+
+                  return {
+                    id: `change-${item.id}`,
+                    name,
+                    label: isDay ? text("day", language) : text("night", language),
+                    tone: isDay ? "text-orange-500" : "text-violet-500",
+                    title: `${name} ${item.from_shift} → ${item.to_shift}`,
+                  };
+                });
+
+              const otherChangeOffEntries = otherChangeOffs.map((item) => {
+                const employee = organizationEmployees.find(
+                  (entry) => entry.employee_no === item.employee_no,
+                );
+                const name =
+                  language === "cn"
+                    ? employee?.name_cn || employee?.name_en || item.employee_no
+                    : employee?.name_en || employee?.name_cn || item.employee_no;
+
+                return {
+                  id: `change-off-${item.id}`,
+                  name,
+                  label: text("off", language),
+                  tone: "text-rose-500",
+                  title: `${name} ${text("off", language)}`,
+                };
+              });
+
+              const otherOffEntries = otherOffs.map((name, offIndex) => ({
+                id: `off-${offIndex}-${name}`,
+                name,
+                label: text("off", language),
+                tone: "text-rose-500",
+                title: `${name} ${text("off", language)}`,
+              }));
+
+              const calendarPeople = [
+                ...otherChangeEntries,
+                ...otherChangeOffEntries,
+                ...otherOffEntries,
+              ];
+              const isPeopleExpanded = expandedCalendarPeople.has(key);
+              const visibleCalendarPeople = isPeopleExpanded
+                ? calendarPeople
+                : calendarPeople.slice(0, 6);
+              const moreCalendarPeopleCount = Math.max(0, calendarPeople.length - 6);
               const dateObject = new Date(year, month, day);
               const weekday = dateObject.getDay();
               const isWeekend = weekday === 0 || weekday === 6;
               const isToday = key === todayKey;
-              const isFixed = Boolean(off?.fixed);
-              const status = work?.scheduleType ?? (off ? "OFF" : null);
+              const isPending = hasPendingCalendarChange(key);
+              const isNightRotation = shiftChange?.to_shift === "N/S";
+              const isLockedOff = Boolean(off?.fixed || shiftChangeOff);
+              const isFixed = isLockedOff || isNightRotation;
+              const isDayRotation = shiftChange?.to_shift === "D/S";
+              const status = isPending
+                ? pendingCalendarChanges[key]
+                : shiftChangeOff
+                  ? "OFF"
+                  : work?.scheduleType ?? (off ? "OFF" : null);
+              const showShiftChange = Boolean(
+                shiftChange &&
+                !(shiftChange.to_shift === "D/S" && status === "OFF")
+              );
 
               return (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => void toggleDate(day)}
+                  onClick={() => {
+                    if (!isFixed) {
+                      toggleDate(day);
+                    }
+                  }}
                   disabled={!isFutureOffMonth || !currentEmployeeId || authLoading || saving}
                   className={`work-schedule-cell group relative border-b border-r border-border-subtle p-2.5 text-left align-top transition-colors ${
                     isToday
@@ -1179,12 +1630,14 @@ function MyOffCalendar({
                         ? "bg-slate-50/45 hover:bg-slate-50"
                         : "bg-white hover:bg-slate-50/70"
                   } ${
+                    isPending && !isFixed ? "ring-1 ring-inset ring-cyan-200" : ""
+                  } ${
                     !isFutureOffMonth || !currentEmployeeId || authLoading || saving || isFixed
                       ? "cursor-not-allowed"
                       : "cursor-pointer"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2">
                     <span
                       className={`text-[11px] font-bold ${
                         isToday ? "text-cyan-700" : isWeekend ? "text-slate-500" : "text-text"
@@ -1193,23 +1646,64 @@ function MyOffCalendar({
                       {day}
                     </span>
 
-                    {isToday && (
-                      <span className="rounded-md border border-cyan-200 bg-white px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide text-cyan-700">
-                        {text("today", language)}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {moreCalendarPeopleCount > 0 && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="cursor-pointer select-none text-[8px] font-semibold text-slate-400 hover:text-slate-600"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setExpandedCalendarPeople((current) => {
+                              const next = new Set(current);
+                              if (next.has(key)) {
+                                next.delete(key);
+                              } else {
+                                next.add(key);
+                              }
+                              return next;
+                            });
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setExpandedCalendarPeople((current) => {
+                                const next = new Set(current);
+                                if (next.has(key)) {
+                                  next.delete(key);
+                                } else {
+                                  next.add(key);
+                                }
+                                return next;
+                              });
+                            }
+                          }}
+                        >
+                          {isPeopleExpanded
+                            ? text("showLess", language)
+                            : `+${moreCalendarPeopleCount} ${text("more", language)}`}
+                        </span>
+                      )}
+                      {isToday && (
+                        <span className="rounded-md border border-cyan-200 bg-white px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide text-cyan-700">
+                          {text("today", language)}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mt-3">
                     {status === "1" && (
-                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[9px] font-bold text-emerald-700">
+                      <div className="pointer-events-none flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[9px] font-bold text-emerald-700">
                         <span className="size-1.5 rounded-full bg-emerald-500" />
                         <span>1 · 08:00–17:00</span>
                       </div>
                     )}
 
                     {status === "4" && (
-                      <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[9px] font-bold text-amber-700">
+                      <div className="pointer-events-none flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[9px] font-bold text-amber-700">
                         <span className="size-1.5 rounded-full bg-amber-500" />
                         <span>4 · {language === "cn" ? "4小时" : "4 Hours"}</span>
                       </div>
@@ -1217,7 +1711,7 @@ function MyOffCalendar({
 
                     {status === "OFF" && (
                       <div
-                        className={`flex items-center justify-between rounded-lg border px-2.5 py-2 text-[9px] font-bold ${
+                        className={`pointer-events-none flex items-center justify-between rounded-lg border px-2.5 py-2 text-[9px] font-bold ${
                           isFixed
                             ? "border-rose-200 bg-rose-50 text-rose-600"
                             : "border-slate-200 bg-slate-50 text-slate-600"
@@ -1232,22 +1726,93 @@ function MyOffCalendar({
                     )}
                   </div>
 
-                  {otherOffs.length > 0 && (
-                    <div className="mt-2 space-y-0.5">
-                      {otherOffs.slice(0, 2).map((name) => (
-                        <div
-                          key={`${key}-${name}`}
-                          className="truncate text-[8px] font-semibold text-rose-500"
-                          title={`${name} ${text("off", language)}`}
+                  {showShiftChange && shiftChange && (
+                    <div
+                      className={`pointer-events-none mt-2 rounded-lg border px-2.5 py-2 text-[8px] font-bold ${
+                        shiftChange.from_shift === "N/S" &&
+                        shiftChange.to_shift === "D/S"
+                          ? "border-orange-200 bg-orange-50 text-orange-700"
+                          : "border-violet-200 bg-violet-50 text-violet-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span
+                            className={`size-1.5 shrink-0 rounded-full ${
+                              shiftChange.from_shift === "N/S" &&
+                              shiftChange.to_shift === "D/S"
+                                ? "bg-orange-500"
+                                : "bg-violet-500"
+                            }`}
+                          />
+                          <span className="truncate">
+                            {shiftChange.from_shift} → {shiftChange.to_shift}
+                          </span>
+                        </span>
+
+                        <span
+                          className={`shrink-0 text-[8px] font-bold ${
+                            shiftChange.from_shift === "N/S" &&
+                            shiftChange.to_shift === "D/S"
+                              ? "text-orange-600"
+                              : "text-violet-600"
+                          }`}
                         >
-                          {name} {text("off", language)}
-                        </div>
-                      ))}
-                      {otherOffs.length > 2 && (
-                        <div className="text-[8px] font-semibold text-slate-400">
-                          +{otherOffs.length - 2} more
-                        </div>
-                      )}
+                          {shiftChange.from_shift === "N/S" &&
+                          shiftChange.to_shift === "D/S"
+                            ? text("day", language)
+                              : text("night", language)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {calendarPeople.length > 0 && (
+                    <div className="mt-2">
+                      <div className="space-y-0.5">
+                        {Array.from({ length: 3 }).map((_, rowIndex) => {
+                          const leftPerson = visibleCalendarPeople[rowIndex];
+                          const rightPerson = visibleCalendarPeople[rowIndex + 3];
+                          const hasTwoColumns = visibleCalendarPeople.length > 3;
+
+                          return (
+                            <div
+                              key={`${key}-people-row-${rowIndex}`}
+                              className={`grid w-full items-center gap-x-3 text-[8px] font-semibold leading-3 ${
+                                hasTwoColumns ? "grid-cols-2" : "grid-cols-1"
+                              }`}
+                            >
+                              {leftPerson && (
+                                <div className="flex min-w-0 items-center justify-between gap-2">
+                                  <span
+                                    className={`min-w-0 truncate ${leftPerson.tone}`}
+                                    title={leftPerson.title}
+                                  >
+                                    {leftPerson.name.trim().split(/\s+/).slice(0, 3).join(" ")}
+                                  </span>
+                                  <span className={`shrink-0 whitespace-nowrap ${leftPerson.tone}`}>
+                                    {leftPerson.label}
+                                  </span>
+                                </div>
+                              )}
+
+                              {rightPerson && (
+                                <div className="flex min-w-0 items-center justify-between gap-2">
+                                  <span
+                                    className={`min-w-0 truncate ${rightPerson.tone}`}
+                                    title={rightPerson.title}
+                                  >
+                                    {rightPerson.name.trim().split(/\s+/).slice(0, 3).join(" ")}
+                                  </span>
+                                  <span className={`shrink-0 whitespace-nowrap ${rightPerson.tone}`}>
+                                    {rightPerson.label}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </button>
@@ -1294,6 +1859,7 @@ function ShiftManagementView() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [shiftFilter, setShiftFilter] = useState("all");
   const [generated, setGenerated] = useState(false);
+  const [showGenerateSuccess, setShowGenerateSuccess] = useState(false);
   const [savingEmployee, setSavingEmployee] = useState<string | null>(null);
   const [currentLoginEmployeeNo, setCurrentLoginEmployeeNo] = useState<string | null>(null);
   const [isSupervisor, setIsSupervisor] = useState(false);
@@ -1980,6 +2546,11 @@ function ShiftManagementView() {
       await loadGeneratedSchedules(true);
       setGenerated(true);
       setActiveTab("schedule");
+
+      setShowGenerateSuccess(true);
+      window.setTimeout(() => {
+        setShowGenerateSuccess(false);
+      }, 3000);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to generate schedule.";
@@ -3548,7 +4119,13 @@ function ShiftManagementView() {
                       {text("employee", language)}
                     </th>
                     {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
-                      const isRotationDay = day === 15 || day === 16;
+                      const isRotationDay =
+                        day === 1 ||
+                        day === 2 ||
+                        day === 3 ||
+                        day === 15 ||
+                        day === 16 ||
+                        day === 17;
                       const isToday = dateKey(year, month, day) === todayKey;
                       return (
                         <th
@@ -3616,7 +4193,13 @@ function ShiftManagementView() {
                       </td>
                       {row.schedule.map((value, index) => {
                         const day = index + 1;
-                        const isRotationDay = day === 15 || day === 16;
+                        const isRotationDay =
+                        day === 1 ||
+                        day === 2 ||
+                        day === 3 ||
+                        day === 15 ||
+                        day === 16 ||
+                        day === 17;
                         const isToday = dateKey(year, month, day) === todayKey;
                         return (
                           <td
@@ -3655,11 +4238,50 @@ function ShiftManagementView() {
             language={language}
             organizationEmployees={organizationEmployees}
             personalOffDays={personalOffDays}
+            currentEmployeeId={currentLoginEmployeeNo}
+            authLoading={authLoading}
             onPersonalOffDaysChange={setPersonalOffDays}
             onScheduleChanged={() => void loadGeneratedSchedules(true)}
           />
         )}
       </div>
+      {typeof document !== "undefined" && showGenerateSuccess
+  ? createPortal(
+      <div
+        className="pointer-events-none fixed inset-0 z-[9999]"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="pointer-events-auto fixed right-5 top-5 flex w-[min(420px,calc(100vw-2rem))] items-start gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3.5 shadow-[0_14px_40px_rgba(15,23,42,0.18)] ring-1 ring-black/5">
+          <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            ✓
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold !text-slate-900">
+              {text("generateSuccess", language)}
+            </p>
+
+            <p className="mt-0.5 text-[11px] font-semibold !text-slate-700">
+              {language === "cn"
+                ? "本月排班已成功生成并加载。"
+                : "The schedule has been generated and loaded."}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowGenerateSuccess(false)}
+            aria-label="Close"
+            className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          >
+            ×
+          </button>
+        </div>
+      </div>,
+      document.body,
+    )
+  : null}
     </AppShell>
     </OrganizationGate>
   );

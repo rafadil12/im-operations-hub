@@ -610,13 +610,11 @@ async function buildSchedule(
     initialState[second.employee_no] = 'N/S';
   }
 
-  const fixedOff = new Set(
-    fixedOffDays
-      .filter((row) => toBoolean(row.is_fixed))
-      .map(
-        (row) =>
-          `${row.employee_no}|${String(row.off_date).slice(0, 10)}`,
-      ),
+  const personalOff = new Set(
+    fixedOffDays.map(
+      (row) =>
+        `${row.employee_no}|${String(row.off_date).slice(0, 10)}`,
+    ),
   );
 
   const pairGroups = new Map<string, RotationMemberRow[]>();
@@ -899,13 +897,13 @@ async function buildSchedule(
     }
 
     /*
-     * Fixed OFF days override generated values.
+     * Personal OFF days (personal_off_days) override generated values.
      * The fairness ledger is corrected so an overridden N becomes DAY/OFF.
      */
     for (const employee of employees) {
       for (let day = 1; day <= daysInMonth; day += 1) {
         const key = `${employee.employee_no}|${dateKey(year, month, day)}`;
-        if (!fixedOff.has(key)) continue;
+        if (!personalOff.has(key)) continue;
 
         const index = day - 1;
         const previous = values[employee.employee_no][index];
@@ -995,60 +993,16 @@ async function buildSchedule(
     };
   };
 
-  const scoreWaveBenefit = (
-    before: SimulationResult,
-    after: SimulationResult,
-  ) => {
-    const beforeScore = scoreSimulation(before);
-    const afterScore = scoreSimulation(after);
-
-    return {
-      before: beforeScore,
-      after: afterScore,
-    };
-  };
-
-  const compareScores = (
-    a: ReturnType<typeof scoreSimulation>,
-    b: ReturnType<typeof scoreSimulation>,
-  ) => {
-    /* Hard rule first: never accept >16 days on the same shift in a month. */
-    if (a.monthlyOverLimit !== b.monthlyOverLimit) {
-      return a.monthlyOverLimit - b.monthlyOverLimit;
-    }
-
-    /* Never prefer a plan that leaves more employees on only one shift. */
-    if (a.monthlyOneShiftOnly !== b.monthlyOneShiftOnly) {
-      return a.monthlyOneShiftOnly - b.monthlyOneShiftOnly;
-    }
-
-    /* Prefer the closest monthly D/N split before cumulative fairness. */
-    if (a.monthlyImbalance !== b.monthlyImbalance) {
-      return a.monthlyImbalance - b.monthlyImbalance;
-    }
-
-    if (a.maxAbsoluteDifference !== b.maxAbsoluteDifference) {
-      return a.maxAbsoluteDifference - b.maxAbsoluteDifference;
-    }
-
-    if (a.totalAbsoluteDifference !== b.totalAbsoluteDifference) {
-      return a.totalAbsoluteDifference - b.totalAbsoluteDifference;
-    }
-
-    return a.squaredDifference - b.squaredDifference;
-  };
-
   /*
    * FIXED CALENDAR ROTATION WINDOWS
    *
-   * Change Shift must stay around the same dates every month. We therefore
-   * always select exactly TWO wave anchors from two fixed calendar windows:
+   * Change Shift must stay on the same calendar dates every month:
    *
-   *   Wave 1: last 2 days of previous month + day 1 + day 2 of this month
-   *   Wave 2: day 14 + day 15 + day 16 + day 17 of this month
+   *   Wave 1 anchor: day 1 (pairs continue on 2, 3, …)
+   *   Wave 2 anchor: day 15 (pairs continue on 16, 17, …)
    *
-   * The exact date inside each window is still selected by the balance score,
-   * but the window itself never drifts forward from month to month.
+   * Wave anchors are not re-optimized on regenerate so rotation OFF dates
+   * stay stable. Only cross-month continuity may move wave 1 earlier.
    */
 
   /*
@@ -1085,78 +1039,26 @@ async function buildSchedule(
       ? dateSerial(previousMonthFirstWaveStart)
       : null;
 
-  const firstWaveCandidateSerials = continuationAnchorSerial !== null
-    ? [continuationAnchorSerial]
-    : [monthStartSerial, monthStartSerial + 1];
-
-  const secondWaveCandidateSerials = [
-    monthStartSerial + 13, // day 14
-    monthStartSerial + 14, // day 15
-    monthStartSerial + 15, // day 16
-    monthStartSerial + 16, // day 17
-  ].filter((serial) => serial <= monthEndSerial);
-
-  const preferredFirstWaveSerial =
+  const firstAnchorSerial =
     continuationAnchorSerial ?? monthStartSerial;
-  const preferredSecondWaveSerial = monthStartSerial + 14;
+  const secondAnchorSerial = monthStartSerial + 14; // day 15
 
-  let bestFixedPlan: {
-    waves: Wave[];
-    simulation: SimulationResult;
-    score: ReturnType<typeof scoreSimulation>;
-    tieDistance: number;
-  } | null = null;
-
-  for (const firstAnchorSerial of firstWaveCandidateSerials) {
-    for (const secondAnchorSerial of secondWaveCandidateSerials) {
-      /* Keep a sensible gap between the two wave starts. */
-      if (secondAnchorSerial - firstAnchorSerial < 10) continue;
-
-      const candidateWaves: Wave[] = [
-        { anchorSerial: firstAnchorSerial },
-        { anchorSerial: secondAnchorSerial },
-      ];
-
-      const simulation = simulatePlan(candidateWaves);
-      const score = scoreSimulation(simulation);
-
-      const tieDistance =
-        Math.abs(firstAnchorSerial - preferredFirstWaveSerial) +
-        Math.abs(secondAnchorSerial - preferredSecondWaveSerial);
-
-      if (!bestFixedPlan) {
-        bestFixedPlan = {
-          waves: candidateWaves,
-          simulation,
-          score,
-          tieDistance,
-        };
-        continue;
-      }
-
-      const scoreComparison = compareScores(score, bestFixedPlan.score);
-
-      if (
-        scoreComparison < 0 ||
-        (scoreComparison === 0 && tieDistance < bestFixedPlan.tieDistance)
-      ) {
-        bestFixedPlan = {
-          waves: candidateWaves,
-          simulation,
-          score,
-          tieDistance,
-        };
-      }
-    }
-  }
-
-  if (!bestFixedPlan) {
+  if (secondAnchorSerial > monthEndSerial) {
     throw new Error(
-      'Unable to select the two fixed calendar rotation waves. Check the rotation configuration.',
+      'This month is too short for the fixed day-15 Change Shift wave.',
     );
   }
 
-  const waves = bestFixedPlan.waves;
+  if (secondAnchorSerial - firstAnchorSerial < 10) {
+    throw new Error(
+      'Unable to place both Change Shift waves with the required gap. Check rotation continuity from the previous month.',
+    );
+  }
+
+  const waves: Wave[] = [
+    { anchorSerial: firstAnchorSerial },
+    { anchorSerial: secondAnchorSerial },
+  ];
 
   /*
    * A cross-month first wave is inherited from the actual previous-month
@@ -1401,6 +1303,24 @@ export async function POST(request: NextRequest) {
       rule,
     );
 
+    const personalOffKeys = new Set(
+      offDays.map(
+        (row) =>
+          `${row.employee_no}|${String(row.off_date).slice(0, 10)}`,
+      ),
+    );
+
+    for (const row of offDays) {
+      const dateStr = String(row.off_date).slice(0, 10);
+      const day = Number(dateStr.slice(8, 10));
+      if (day < 1 || day > getDaysInMonth(year, month)) continue;
+
+      const values = valuesByEmployee[row.employee_no];
+      if (values) {
+        values[day - 1] = 'OFF';
+      }
+    }
+
     // Fairness is cumulative from the baseline forward.
     // Rotation timing is now calendar-based (month midpoint), not a fixed
     // 15/16 date. OFF counts as DAY for fairness.
@@ -1479,6 +1399,38 @@ export async function POST(request: NextRequest) {
            * Do not overwrite Calendar-manual 1 / 4.
            */
           if (manualScheduleMap.has(manualKey)) {
+            continue;
+          }
+
+          /*
+           * Personal OFF (personal_off_days) must survive every regenerate.
+           */
+          if (personalOffKeys.has(manualKey)) {
+            const scheduleType = "OFF";
+            await execute(
+              `
+                INSERT INTO shift_schedules (
+                  employee_no,
+                  schedule_date,
+                  shift_code,
+                  schedule_type,
+                  rotation_rule_id
+                )
+                VALUES (?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                  shift_code = VALUES(shift_code),
+                  schedule_type = VALUES(schedule_type),
+                  rotation_rule_id = VALUES(rotation_rule_id),
+                  updated_at = CURRENT_TIMESTAMP
+              `,
+              [
+                employee.employee_no,
+                scheduleDate,
+                null,
+                scheduleType,
+                rule.id,
+              ],
+            );
             continue;
           }
 
