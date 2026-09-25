@@ -94,9 +94,12 @@ export function TrainingTrendChart({
 export function TrainingCategoryDonut({
   data,
   language,
+  fill = false,
 }: {
   data: TrainingOverviewMetrics["byDivision"];
   language: TrainingLanguage;
+  /** Fill the parent height instead of using the overview-page 260px chart. */
+  fill?: boolean;
 }) {
   const chartData = data
     .filter((row) => row.sessions > 0)
@@ -107,17 +110,25 @@ export function TrainingCategoryDonut({
     }));
 
   const total = chartData.reduce((sum, row) => sum + row.value, 0);
+  const labelGap = fill ? 8 : 12;
+  const labelExt = fill ? 16 : 26;
 
   return (
-    <div className="relative">
-      <ResponsiveContainer width="100%" height={260}>
-        <PieChart margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
+    <div className={fill ? "relative h-full min-h-0" : "relative"}>
+      <ResponsiveContainer width="100%" height={fill ? "100%" : 260}>
+        <PieChart
+          margin={
+            fill
+              ? { top: 4, right: 16, bottom: 4, left: 16 }
+              : { top: 8, right: 24, bottom: 8, left: 24 }
+          }
+        >
           <Pie
             data={chartData}
             dataKey="value"
             nameKey="name"
-            innerRadius={58}
-            outerRadius={88}
+            innerRadius={fill ? "38%" : 58}
+            outerRadius={fill ? "58%" : 88}
             paddingAngle={2}
             labelLine={false}
             label={({ cx, cy, midAngle, outerRadius, value, percent, payload }) => {
@@ -127,14 +138,13 @@ export function TrainingCategoryDonut({
               const sin = Math.sin(-midAngle * RADIAN);
               const cos = Math.cos(-midAngle * RADIAN);
               const color =
-                (payload as { color?: string } | undefined)?.color ??
-                "var(--color-text, #0f172a)";
+                (payload as { color?: string } | undefined)?.color ?? "var(--color-text, #0f172a)";
 
               const sx = cx + outerRadius * cos;
               const sy = cy + outerRadius * sin;
-              const mx = cx + (outerRadius + 12) * cos;
-              const my = cy + (outerRadius + 12) * sin;
-              const ex = cx + (cos >= 0 ? 1 : -1) * (outerRadius + 26);
+              const mx = cx + (outerRadius + labelGap) * cos;
+              const my = cy + (outerRadius + labelGap) * sin;
+              const ex = cx + (cos >= 0 ? 1 : -1) * (outerRadius + labelExt);
               const ey = my;
               const textX = ex + (cos >= 0 ? 1 : -1) * 8;
               const pct = Math.round((percent ?? 0) * 100);
@@ -154,7 +164,7 @@ export function TrainingCategoryDonut({
                     fill={color}
                     textAnchor={cos >= 0 ? "start" : "end"}
                     dominantBaseline="central"
-                    fontSize={11}
+                    fontSize={fill ? 10 : 11}
                     fontWeight={600}
                   >
                     {`${value} (${pct}%)`}
@@ -168,11 +178,16 @@ export function TrainingCategoryDonut({
             ))}
           </Pie>
           <Tooltip />
-          <Legend />
+          <Legend wrapperStyle={fill ? { fontSize: 11 } : undefined} />
         </PieChart>
       </ResponsiveContainer>
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-semibold text-text">{total}</span>
+      <div
+        className={[
+          "pointer-events-none absolute inset-0 flex flex-col items-center justify-center",
+          fill ? "pb-5" : "",
+        ].join(" ")}
+      >
+        <span className={`${fill ? "text-lg" : "text-2xl"} font-semibold text-text`}>{total}</span>
         <span className="text-[10px] text-text-dim">{trainingText("sessions", language)}</span>
       </div>
     </div>
@@ -207,16 +222,20 @@ export function TrainingTopParticipantsChart({
 
   return (
     <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 28)}>
-      <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle, #e2e8f0)" horizontal={false} />
+      <BarChart
+        data={chartData}
+        layout="vertical"
+        margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+      >
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="var(--color-border-subtle, #e2e8f0)"
+          horizontal={false}
+        />
         <XAxis type="number" stroke={axis} fontSize={11} allowDecimals={false} />
         <YAxis type="category" dataKey="label" stroke={axis} fontSize={10} width={88} />
         <Tooltip />
-        <Bar
-          dataKey="sessions"
-          name={trainingText("sessions", language)}
-          radius={[0, 4, 4, 0]}
-        >
+        <Bar dataKey="sessions" name={trainingText("sessions", language)} radius={[0, 4, 4, 0]}>
           {chartData.map((row, index) => (
             <Cell
               key={row.label}

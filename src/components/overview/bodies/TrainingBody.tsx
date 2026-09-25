@@ -7,6 +7,8 @@ import { getDict, useLang } from "@/lib/i18n";
 import type { TrainingLanguage } from "@/lib/training";
 import { ChartSection } from "../ModuleCardShared";
 
+const RECENT_TRAINING_LIMIT = 5;
+
 function RecentTrainingTable({
   rows,
   labels,
@@ -53,12 +55,12 @@ export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean
   const { lang } = useLang();
   const language = lang as TrainingLanguage;
   const t = getDict(lang);
-  const recentRows = data.recentRows ?? [];
+  const recentRows = (data.recentRows ?? []).slice(0, RECENT_TRAINING_LIMIT);
   const showOverviewDonut = (data.trainingByDivision?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="grid gap-4 lg:grid-cols-10">
+      <div className="grid items-stretch gap-4 lg:grid-cols-10">
         <section
           className={[
             "rounded-lg border border-border-subtle bg-bg/30 p-3",
@@ -83,25 +85,31 @@ export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean
         </section>
 
         {data.secondaryChart ? (
-          <section className="rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-5">
-            <h4 className="mb-3 text-xs font-medium text-text-muted">
+          <section className="flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-5">
+            <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
               {data.secondaryChart.title}
             </h4>
 
-            {showOverviewDonut ? (
-              <TrainingCategoryDonut data={data.trainingByDivision!} language={language} />
-            ) : (
-              <DonutChartPlaceholder
-                legend={data.secondaryChart.legend}
-                segments={data.secondaryChart.segments}
-                centerValue={data.secondaryChart.centerValue}
-                centerLabel={data.secondaryChart.centerLabel}
-                layout="column"
-                legendVariant="split"
-                size="md"
-                align="center"
-              />
-            )}
+            <div className="relative min-h-0 flex-1">
+              <div className="absolute inset-0">
+                {showOverviewDonut ? (
+                  <TrainingCategoryDonut fill data={data.trainingByDivision!} language={language} />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <DonutChartPlaceholder
+                      legend={data.secondaryChart.legend}
+                      segments={data.secondaryChart.segments}
+                      centerValue={data.secondaryChart.centerValue}
+                      centerLabel={data.secondaryChart.centerLabel}
+                      layout="column"
+                      legendVariant="split"
+                      size="md"
+                      align="center"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </section>
         ) : null}
       </div>

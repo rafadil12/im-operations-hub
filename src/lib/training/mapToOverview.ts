@@ -21,7 +21,11 @@ export function mapTrainingToOverview(
     stats: [
       { label: t.dashboard.totalTraining, value: String(metrics.totalSessions), tone: "accent" },
       { label: t.dashboard.participants, value: String(metrics.totalParticipants), tone: "accent" },
-      { label: t.dashboard.uniqueParticipants, value: String(metrics.uniqueParticipants), tone: "success" },
+      {
+        label: t.dashboard.uniqueParticipants,
+        value: String(metrics.uniqueParticipants),
+        tone: "success",
+      },
       {
         label: t.dashboard.totalTopics,
         value: String(metrics.totalTopics),
@@ -55,8 +59,10 @@ export function mapTrainingToOverview(
       centerValue: String(metrics.totalSessions),
       centerLabel: t.dashboard.sessions,
     },
-    recentRows: metrics.recentSessions.slice(0, 4).map((row) => ({
-      name: renderTopicText(lang === "cn" ? row.topicCn || row.topicEn : row.topicEn || row.topicCn),
+    recentRows: metrics.recentSessions.slice(0, 5).map((row) => ({
+      name: renderTopicText(
+        lang === "cn" ? row.topicCn || row.topicEn : row.topicEn || row.topicCn
+      ),
       date: row.sessionDate,
       participants: row.participantCount,
       completion: row.attachment ? t.dashboard.attachment : "—",
