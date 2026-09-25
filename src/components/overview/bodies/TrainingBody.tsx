@@ -60,18 +60,18 @@ export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="grid items-stretch gap-4 lg:grid-cols-10">
+      <div className="grid items-stretch gap-4 lg:grid-cols-8">
         <section
           className={[
             "rounded-lg border border-border-subtle bg-bg/30 p-3",
-            data.secondaryChart ? "lg:col-span-5" : "lg:col-span-10",
+            data.secondaryChart ? "lg:col-span-5" : "lg:col-span-8",
           ].join(" ")}
         >
           <ChartSection data={data} expanded trendHeight={{ compact: 160, expanded: 200 }} />
         </section>
 
         {data.secondaryChart ? (
-          <section className="flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-5">
+          <section className="flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-3">
             <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
               {data.secondaryChart.title}
             </h4>
