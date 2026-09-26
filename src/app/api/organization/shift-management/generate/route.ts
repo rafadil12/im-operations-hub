@@ -291,7 +291,7 @@ async function loadFixedOffDays(startDate: string, nextMonthDate: string) {
       ON u.id = eo.user_id
     WHERE pod.off_date >= ?
       AND pod.off_date < DATE_ADD(?, INTERVAL 1 MONTH)
-    ORDER BY pod.off_date ASC
+    AND pod.is_fixed = 1
   `, [startDate, nextMonthDate]);
 }
 
@@ -548,6 +548,15 @@ async function buildSchedule(
       }
     }
   }
+  const rotatingEmployeeNos = new Set(
+  rotationMembers
+    .filter(
+      (member) =>
+        member.is_active &&
+        !excluded.has(member.employee_no),
+    )
+    .map((member) => member.employee_no),
+);
 
   if (isBaselineMonth) {
     for (const member of rotationMembers) {
@@ -627,13 +636,26 @@ async function buildSchedule(
     pairGroups.set(member.pair_group, rows);
   }
 
-  const pairs = Array.from(pairGroups.values())
-    .filter((rows) => rows.length === 2)
-    .sort(
-      (a, b) =>
-        Math.min(...a.map((row) => row.id)) -
-        Math.min(...b.map((row) => row.id)),
+  const pairOrder: Record<string, number> = {
+  PAIR_A: 1,
+  PAIR_B: 2,
+};
+
+const pairs = Array.from(pairGroups.values())
+  .filter((rows) => rows.length === 2)
+  .sort((a, b) => {
+    const groupA = a[0]?.pair_group ?? "";
+    const groupB = b[0]?.pair_group ?? "";
+
+    const orderA = pairOrder[groupA] ?? 999;
+    const orderB = pairOrder[groupB] ?? 999;
+
+    return (
+      orderA - orderB ||
+      Math.min(...a.map((row) => row.id)) -
+        Math.min(...b.map((row) => row.id))
     );
+  });
 
   const pairEvents = pairs.map((members) => ({ members }));
 
@@ -931,8 +953,11 @@ async function buildSchedule(
 
   const scoreSimulation = (simulation: SimulationResult) => {
     const balances = employees
-      .map((employee) => simulation.ledger[employee.employee_no])
-      .filter(Boolean);
+  .filter((employee) =>
+    rotatingEmployeeNos.has(employee.employee_no),
+  )
+  .map((employee) => simulation.ledger[employee.employee_no])
+  .filter(Boolean);
 
     const absolute = balances.map((item) => Math.abs(item.difference));
 
@@ -1039,54 +1064,113 @@ async function buildSchedule(
       ? dateSerial(previousMonthFirstWaveStart)
       : null;
 
-  const firstAnchorSerial =
-    continuationAnchorSerial ?? monthStartSerial;
-  const secondAnchorSerial = monthStartSerial + 14; // day 15
+ const firstAnchorSerial =
+  continuationAnchorSerial ?? monthStartSerial;
 
-  if (secondAnchorSerial > monthEndSerial) {
-    throw new Error(
-      'This month is too short for the fixed day-15 Change Shift wave.',
-    );
-  }
+/*
+ * Try several Wave 2 dates instead of forcing day 15.
+ *
+ * Example:
+ *   anchor 15 -> PAIR_B changes on 16
+ *   anchor 16 -> PAIR_B changes on 17
+ *   anchor 17 -> PAIR_B changes on 18
+ *
+ * This allows the generator to correct cumulative D/N imbalance
+ * while still keeping the second wave around the normal midpoint.
+ */
+const candidateSecondAnchors = [
+  monthStartSerial + 14, // day 15
+  monthStartSerial + 15, // day 16
+  monthStartSerial + 16, // day 17
+  monthStartSerial + 17, // day 18
+].filter(
+  (serial) =>
+    serial <= monthEndSerial &&
+    serial - firstAnchorSerial >= 10,
+);
 
-  if (secondAnchorSerial - firstAnchorSerial < 10) {
-    throw new Error(
-      'Unable to place both Change Shift waves with the required gap. Check rotation continuity from the previous month.',
-    );
-  }
+let selectedWaves: Wave[] | null = null;
+let finalSimulation: SimulationResult | null = null;
+let bestScore:
+  | ReturnType<typeof scoreSimulation>
+  | null = null;
 
-  const waves: Wave[] = [
+for (const secondAnchorSerial of candidateSecondAnchors) {
+  const candidateWaves: Wave[] = [
     { anchorSerial: firstAnchorSerial },
     { anchorSerial: secondAnchorSerial },
   ];
 
+  const simulation = simulatePlan(candidateWaves);
+  const score = scoreSimulation(simulation);
+
   /*
-   * A cross-month first wave is inherited from the actual previous-month
-   * pair-0 Change Shift marker. In that case, keep the inherited anchor even
-   * though it is outside the generated month; pair events that fall inside this
-   * month are then reproduced deterministically from the persisted month-end
-   * state.
+   * HARD MONTHLY RULE
+   * A candidate is invalid when:
+   * - D > 16
+   * - N > 16
+   * - employee has only D
+   * - employee has only N
    */
-  if (continuationAnchorSerial !== null && waves[0]?.anchorSerial !== continuationAnchorSerial) {
-    throw new Error(
-      'Cross-month Change Shift continuity was not preserved. The first wave must continue from the previous month.',
+ const monthlyInvalid = employees.some((employee) => {
+  if (!rotatingEmployeeNos.has(employee.employee_no)) {
+    return false;
+  }
+
+  const count =
+    simulation.monthlyShiftCounts[employee.employee_no];
+
+  if (!count) return false;
+
+  return (
+    count.dayCount > 16 ||
+    count.nightCount > 16 ||
+    count.dayCount === 0 ||
+    count.nightCount === 0
+  );
+});
+
+  if (monthlyInvalid) {
+    continue;
+  }
+
+  /*
+   * Prefer candidates that produce the smallest cumulative
+   * D/N difference for every employee.
+   */
+  const isBetter =
+    !bestScore ||
+    score.maxAbsoluteDifference <
+      bestScore.maxAbsoluteDifference ||
+    (
+      score.maxAbsoluteDifference ===
+        bestScore.maxAbsoluteDifference &&
+      score.totalAbsoluteDifference <
+        bestScore.totalAbsoluteDifference
+    ) ||
+    (
+      score.maxAbsoluteDifference ===
+        bestScore.maxAbsoluteDifference &&
+      score.totalAbsoluteDifference ===
+        bestScore.totalAbsoluteDifference &&
+      score.squaredDifference <
+        bestScore.squaredDifference
     );
-  }
 
-  /*
-   * Exactly two waves are required by the rotation rule.
-   */
-  if (waves.length !== 2) {
-    throw new Error('Exactly two Change Shift waves are required.');
+  if (isBetter) {
+    selectedWaves = candidateWaves;
+    finalSimulation = simulation;
+    bestScore = score;
   }
+}
 
-  /*
-   * Validate that every selected wave is actually a valid complete chain at
-   * the state level. We do not allow Pair A to rotate while Pair B is skipped.
-   * The simulator places all pair events one day apart, so a failed pair is a
-   * configuration issue rather than an excuse to compress the chain.
-   */
-  const finalSimulation = simulatePlan(waves);
+if (!selectedWaves || !finalSimulation || !bestScore) {
+  throw new Error(
+    'Unable to find a valid monthly rotation plan within the allowed Change Shift windows.',
+  );
+}
+
+const waves = selectedWaves;
 
   /*
    * HARD MONTHLY LIMIT
