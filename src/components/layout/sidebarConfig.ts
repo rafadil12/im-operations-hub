@@ -62,99 +62,6 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    id: "organization",
-    labelKey: "organization",
-    icon: "organization",
-    children: [
-      {
-        id: "overview",
-        labelKey: "overview",
-        label: ["Summary", "汇总"],
-        href: "/organization/overview",
-      },
-      {
-        id: "employees",
-        labelKey: "moduleManagement",
-        href: "/organization/employees",
-      },
-      {
-        id: "shift",
-        labelKey: "shift",
-        href: "/organization/shift",
-      },
-      {
-        id: "attendance",
-        labelKey: "moduleManagement",
-        label: ["Attendance", "考勤管理"],
-        children: [
-          {
-            id: "overview",
-            labelKey: "overview",
-            href: "/organization/attendance/overview",
-          },
-          {
-            id: "daily",
-            labelKey: "moduleManagement",
-            label: ["Daily Attendance", "每日考勤"],
-            href: "/organization/attendance/daily-attendance",
-          },
-          {
-            id: "leave-permission",
-            labelKey: "moduleManagement",
-            label: ["Leave / Permission", "请假 / 外出"],
-            href: "/organization/attendance/leave",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "report",
-    labelKey: "report",
-    icon: "report",
-    children: [
-      { id: "overview", labelKey: "overview", href: "/report" },
-      {
-        id: "weekly-report",
-        labelKey: "reportWeeklyReport",
-        children: [
-          {
-            id: "summary",
-            labelKey: "reportSummary",
-            href: "/report/summary",
-          },
-          {
-            id: "reports",
-            labelKey: "reportReports",
-            href: "/report/reports",
-          },
-        ],
-      },
-      {
-        id: "projects",
-        labelKey: "reportProjects",
-        href: "/report/projects",
-      },
-    ],
-  },
-  {
-    id: "safety",
-    labelKey: "safety",
-    icon: "safety",
-    children: [
-      {
-        id: "overview",
-        labelKey: "overview",
-        href: "/safety",
-      },
-      {
-        id: "management",
-        labelKey: "moduleManagement",
-        href: "/safety/management",
-      },
-    ],
-  },
-  {
     id: "sparepart",
     labelKey: "sparepart",
     icon: "sparepart",
@@ -205,12 +112,105 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    id: "safety",
+    labelKey: "safety",
+    icon: "safety",
+    children: [
+      {
+        id: "overview",
+        labelKey: "overview",
+        href: "/safety",
+      },
+      {
+        id: "management",
+        labelKey: "moduleManagement",
+        href: "/safety/management",
+      },
+    ],
+  },
+  {
     id: "training",
     labelKey: "training",
     icon: "training",
     children: [
       { id: "overview", labelKey: "overview", href: "/training" },
       { id: "session", labelKey: "session", href: "/training/session" },
+    ],
+  },
+  {
+    id: "report",
+    labelKey: "report",
+    icon: "report",
+    children: [
+      { id: "overview", labelKey: "overview", href: "/report" },
+      {
+        id: "weekly-report",
+        labelKey: "reportWeeklyReport",
+        children: [
+          {
+            id: "summary",
+            labelKey: "reportSummary",
+            href: "/report/summary",
+          },
+          {
+            id: "reports",
+            labelKey: "reportReports",
+            href: "/report/reports",
+          },
+        ],
+      },
+      {
+        id: "projects",
+        labelKey: "reportProjects",
+        href: "/report/projects",
+      },
+    ],
+  },
+  {
+    id: "organization",
+    labelKey: "organization",
+    icon: "organization",
+    children: [
+      {
+        id: "overview",
+        labelKey: "overview",
+        label: ["Summary", "汇总"],
+        href: "/organization/overview",
+      },
+      {
+        id: "employees",
+        labelKey: "moduleManagement",
+        href: "/organization/employees",
+      },
+      {
+        id: "shift",
+        labelKey: "shift",
+        href: "/organization/shift",
+      },
+      {
+        id: "attendance",
+        labelKey: "moduleManagement",
+        label: ["Attendance", "考勤管理"],
+        children: [
+          {
+            id: "overview",
+            labelKey: "overview",
+            href: "/organization/attendance/overview",
+          },
+          {
+            id: "daily",
+            labelKey: "moduleManagement",
+            label: ["Daily Attendance", "每日考勤"],
+            href: "/organization/attendance/daily-attendance",
+          },
+          {
+            id: "leave-permission",
+            labelKey: "moduleManagement",
+            label: ["Leave / Permission", "请假 / 外出"],
+            href: "/organization/attendance/leave",
+          },
+        ],
+      },
     ],
   },
   {

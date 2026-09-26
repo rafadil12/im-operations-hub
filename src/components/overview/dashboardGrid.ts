@@ -4,11 +4,11 @@ import type { ModuleCardData, ModuleId } from "@/data/overview";
 export const DASHBOARD_GRID_ORDER: ModuleId[] = [
   "itsm",
   "daily-operation",
-  "organization",
-  "report",
-  "safety",
   "sparepart",
+  "safety",
   "training",
+  "report",
+  "organization",
 ];
 
 export function sortDashboardModules<T extends Pick<ModuleCardData, "id">>(modules: T[]): T[] {
@@ -16,17 +16,14 @@ export function sortDashboardModules<T extends Pick<ModuleCardData, "id">>(modul
   return [...modules].sort((a, b) => (rank.get(a.id) ?? 99) - (rank.get(b.id) ?? 99));
 }
 
-/** 6-column xl grid: 1+2+3 / 4+3 / 5+6 / 7. */
+/** 6-column xl grid: 1+2+3 / 4+5 / 6 full / 7 full. */
 export function dashboardGridClass(id: ModuleId): string {
   switch (id) {
-    case "organization":
-      return "h-full min-h-0 xl:col-span-2 xl:row-span-2";
-    case "report":
-      return "h-full min-h-0 xl:col-span-4";
     case "safety":
-    case "sparepart":
-      return "h-full min-h-0 xl:col-span-3";
     case "training":
+      return "h-full min-h-0 xl:col-span-3";
+    case "report":
+    case "organization":
       return "col-span-full";
     default:
       return "h-full min-h-0 xl:col-span-2";

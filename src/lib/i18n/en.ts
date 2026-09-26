@@ -771,6 +771,9 @@ const en = {
     itInfrastructure: "IT Infrastructure",
     intelligentLogistics: "Intelligent Logistics",
     orgTree: "Organization Tree",
+    orgDepartmentManager: "Department Manager",
+    orgLead: "Lead",
+    orgPersonelRole: "Personel",
     monthlyDepartmentPerformance: "Monthly Department Performance",
     monthlyDepartmentPerformanceDesc:
       "Department attendance performance across the whole month.",

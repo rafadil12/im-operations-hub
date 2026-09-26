@@ -210,7 +210,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "safety",
-    number: 5,
+    number: 4,
     title: "SECURITY (SAFETY) DASHBOARD",
     icon: "shield",
     accentColor: "#ef4444",
@@ -245,7 +245,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "sparepart",
-    number: 6,
+    number: 3,
     title: "SPAREPART DASHBOARD",
     icon: "sparepart",
     accentColor: "#a855f7",
@@ -273,12 +273,13 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "organization",
-    number: 3,
+    number: 7,
     title: "ORGANIZATION DASHBOARD",
     icon: "organization",
     accentColor: "#38bdf8",
     href: "/organization/overview",
     layout: "organization",
+    colSpan: 3,
     stats: [
       { label: "Total Personel", value: EMPTY, tone: "accent" },
       { label: "Attendance Rate", value: EMPTY, tone: "success" },
@@ -302,13 +303,13 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "training",
-    number: 7,
+    number: 5,
     title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",
     href: "/training",
     layout: "training",
-    colSpan: 3,
+    colSpan: 2,
     stats: [
       { label: "Total Training", value: "—", tone: "accent" },
       { label: "Participants", value: "—", tone: "accent" },
@@ -340,13 +341,13 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "report",
-    number: 4,
+    number: 6,
     title: "REPORT DASHBOARD",
     icon: "report",
     accentColor: "#eab308",
     href: "/report",
     layout: "report",
-    colSpan: 2,
+    colSpan: 3,
     stats: [
       { label: "Achievement", value: EMPTY, tone: "success" },
       { label: "Work Completion", value: EMPTY, tone: "accent" },

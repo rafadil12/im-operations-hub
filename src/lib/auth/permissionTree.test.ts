@@ -27,11 +27,11 @@ describe("PERMISSION_TREE", () => {
       "dashboard",
       "itsm",
       "daily-operation",
-      "organization",
-      "report",
-      "safety",
       "sparepart",
+      "safety",
       "training",
+      "report",
+      "organization",
       "settings",
     ]);
   });

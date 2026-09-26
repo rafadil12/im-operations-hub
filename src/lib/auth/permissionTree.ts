@@ -116,91 +116,6 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     ],
   },
   {
-    id: "organization",
-    label: { source: "nav", key: "organization" },
-    children: [
-      {
-        id: "organization-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.organizationOverviewView],
-      },
-      {
-        id: "organization-employees",
-        label: { source: "nav", key: "moduleManagement" },
-        codes: [
-          PERMISSIONS.organizationEmployeeRead,
-          PERMISSIONS.organizationEmployeeCreate,
-          PERMISSIONS.organizationEmployeeUpdate,
-          PERMISSIONS.organizationEmployeeDelete,
-        ],
-      },
-      {
-        id: "organization-shift",
-        label: { source: "nav", key: "shift" },
-        codes: [PERMISSIONS.organizationShiftRead, PERMISSIONS.organizationShiftManage],
-      },
-      {
-        id: "organization-attendance",
-        label: { source: "nav", key: "attendance" },
-        codes: [PERMISSIONS.organizationAttendanceRead, PERMISSIONS.organizationAttendanceManage],
-      },
-    ],
-  },
-  {
-    id: "report",
-    label: { source: "nav", key: "report" },
-    children: [
-      {
-        id: "report-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.reportOverviewView],
-      },
-      {
-        id: "report-management",
-        label: { source: "nav", key: "management" },
-        codes: [
-          PERMISSIONS.reportLineRead,
-          PERMISSIONS.reportLineCreate,
-          PERMISSIONS.reportLineUpdate,
-          PERMISSIONS.reportLineDelete,
-          PERMISSIONS.reportSubmissionSubmit,
-          PERMISSIONS.reportSubmissionReopen,
-        ],
-      },
-      {
-        id: "report-projects",
-        label: { source: "nav", key: "reportProjects" },
-        codes: [
-          PERMISSIONS.reportProjectRead,
-          PERMISSIONS.reportProjectCreate,
-          PERMISSIONS.reportProjectUpdate,
-          PERMISSIONS.reportProjectDelete,
-        ],
-      },
-    ],
-  },
-  {
-    id: "safety",
-    label: { source: "nav", key: "safety" },
-    children: [
-      {
-        id: "safety-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.safetyOverviewView],
-      },
-      {
-        id: "safety-management",
-        label: { source: "nav", key: "moduleManagement" },
-        codes: [
-          PERMISSIONS.safetySubmissionRead,
-          PERMISSIONS.safetySubmissionCreate,
-          PERMISSIONS.safetySubmissionUpdate,
-          PERMISSIONS.safetySubmissionDelete,
-        ],
-      },
-    ],
-  },
-  {
     id: "sparepart",
     label: { source: "nav", key: "sparepart" },
     children: [
@@ -262,6 +177,27 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     ],
   },
   {
+    id: "safety",
+    label: { source: "nav", key: "safety" },
+    children: [
+      {
+        id: "safety-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.safetyOverviewView],
+      },
+      {
+        id: "safety-management",
+        label: { source: "nav", key: "moduleManagement" },
+        codes: [
+          PERMISSIONS.safetySubmissionRead,
+          PERMISSIONS.safetySubmissionCreate,
+          PERMISSIONS.safetySubmissionUpdate,
+          PERMISSIONS.safetySubmissionDelete,
+        ],
+      },
+    ],
+  },
+  {
     id: "training",
     label: { source: "nav", key: "training" },
     children: [
@@ -279,6 +215,70 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
           PERMISSIONS.trainingSessionUpdate,
           PERMISSIONS.trainingSessionDelete,
         ],
+      },
+    ],
+  },
+  {
+    id: "report",
+    label: { source: "nav", key: "report" },
+    children: [
+      {
+        id: "report-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.reportOverviewView],
+      },
+      {
+        id: "report-management",
+        label: { source: "nav", key: "management" },
+        codes: [
+          PERMISSIONS.reportLineRead,
+          PERMISSIONS.reportLineCreate,
+          PERMISSIONS.reportLineUpdate,
+          PERMISSIONS.reportLineDelete,
+          PERMISSIONS.reportSubmissionSubmit,
+          PERMISSIONS.reportSubmissionReopen,
+        ],
+      },
+      {
+        id: "report-projects",
+        label: { source: "nav", key: "reportProjects" },
+        codes: [
+          PERMISSIONS.reportProjectRead,
+          PERMISSIONS.reportProjectCreate,
+          PERMISSIONS.reportProjectUpdate,
+          PERMISSIONS.reportProjectDelete,
+        ],
+      },
+    ],
+  },
+  {
+    id: "organization",
+    label: { source: "nav", key: "organization" },
+    children: [
+      {
+        id: "organization-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.organizationOverviewView],
+      },
+      {
+        id: "organization-employees",
+        label: { source: "nav", key: "moduleManagement" },
+        codes: [
+          PERMISSIONS.organizationEmployeeRead,
+          PERMISSIONS.organizationEmployeeCreate,
+          PERMISSIONS.organizationEmployeeUpdate,
+          PERMISSIONS.organizationEmployeeDelete,
+        ],
+      },
+      {
+        id: "organization-shift",
+        label: { source: "nav", key: "shift" },
+        codes: [PERMISSIONS.organizationShiftRead, PERMISSIONS.organizationShiftManage],
+      },
+      {
+        id: "organization-attendance",
+        label: { source: "nav", key: "attendance" },
+        codes: [PERMISSIONS.organizationAttendanceRead, PERMISSIONS.organizationAttendanceManage],
       },
     ],
   },

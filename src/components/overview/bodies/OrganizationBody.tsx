@@ -51,13 +51,13 @@ function TreeLineVertical({ height = 20 }: { height?: number }) {
   );
 }
 
-function TreeLineHorizontal() {
+function TreeLineHorizontal({ inset = "16.666%" }: { inset?: string }) {
   return (
     <div
       className="absolute top-0"
       style={{
-        left: "16.666%",
-        right: "16.666%",
+        left: inset,
+        right: inset,
         height: 2,
         backgroundColor: TREE_LINE,
         borderRadius: 1,
@@ -70,41 +70,72 @@ function personLabel(person: { nameEn: string; nameCn: string }, lang: string): 
   return lang === "cn" ? person.nameCn || person.nameEn : person.nameEn || person.nameCn;
 }
 
-function NameChip({
-  label,
-  muted = false,
-  tone = "name",
+function divisionRolePrefix(name: string): string {
+  if (/logistics/i.test(name)) return "Logistics";
+  return name;
+}
+
+function PersonNode({
+  name,
+  role,
+  accent,
+  compact = false,
 }: {
-  label: string;
-  muted?: boolean;
-  tone?: "name" | "count";
+  name: string;
+  role: string;
+  accent?: string;
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <div className="flex w-full min-w-0 flex-col items-center rounded-lg border border-border-subtle bg-bg/60 px-1.5 py-2 text-center">
+        <span
+          className="mb-1 inline-flex size-5 items-center justify-center rounded-full text-[9px] font-semibold text-white"
+          style={{ backgroundColor: accent ?? "#64748b" }}
+          aria-hidden
+        >
+          {name.trim().charAt(0) || "?"}
+        </span>
+        <p className="w-full truncate text-[8px] font-semibold uppercase leading-tight text-text">
+          {name}
+        </p>
+        <p className="w-full truncate text-[8px] text-text-muted">{role}</p>
+      </div>
+    );
+  }
+
   return (
-    <span
-      className={[
-        "w-full shrink-0 truncate rounded-md border-1 px-2 py-1.5 text-center text-[9px] font-semibold",
-        tone === "count"
-          ? "border-slate-500/50 bg-slate-500/15 uppercase tracking-wide text-text-muted"
-          : muted
-            ? "border-slate-400 bg-bg/60 text-text-muted"
-            : "border-slate-400 bg-bg/60 text-text",
-      ].join(" ")}
-      title={label}
-    >
-      {label}
-    </span>
+    <div className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-border-subtle bg-bg/60 px-2.5 py-2">
+      <span
+        className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+        style={{ backgroundColor: accent ?? "#64748b" }}
+        aria-hidden
+      >
+        {name.trim().charAt(0) || "?"}
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-text">
+          {name}
+        </p>
+        <p className="truncate text-[9px] text-text-muted">{role}</p>
+      </div>
+    </div>
   );
 }
 
 function OrgTreeSection({
   chart,
   orgTreeTitle,
-  personelLabel,
+  departmentManager,
+  leadLabel,
+  personelRole,
   lang,
 }: {
   chart: NonNullable<ModuleCardData["orgChart"]>;
   orgTreeTitle: string;
-  personelLabel: string;
+  departmentManager: string;
+  leadLabel: string;
+  personelRole: string;
   lang: string;
 }) {
   return (
@@ -113,79 +144,103 @@ function OrgTreeSection({
 
       <div className="mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col">
         <div className="flex shrink-0 justify-center">
-          <span className="max-w-full rounded-md border-1 border-slate-400 bg-bg/50 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text shadow-sm">
-            {chart.company}
-          </span>
+          <div className="max-w-xl rounded-lg border border-border-subtle bg-bg/60 px-4 py-2 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-text">
+              {chart.company}
+            </p>
+          </div>
         </div>
 
         <div className="flex shrink-0 justify-center">
-          <TreeLineVertical height={12} />
+          <TreeLineVertical height={16} />
         </div>
 
         <div className="flex shrink-0 justify-center">
-          <span className="max-w-full rounded-md border-1 border-slate-400 bg-bg/60 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text shadow-sm">
-            {chart.leader}
-          </span>
+          <div className="w-full max-w-xs">
+            <PersonNode name={chart.leader} role={departmentManager} accent="#0ea5e9" />
+          </div>
         </div>
 
         <div className="flex shrink-0 justify-center">
-          <TreeLineVertical height={100} />
+          <TreeLineVertical height={20} />
         </div>
 
         <div className="relative min-h-0 flex-1 px-1">
           <TreeLineHorizontal />
 
-          <div className="grid h-full min-h-0 grid-cols-3 gap-2">
+          <div className="grid h-full min-h-0 grid-cols-3 gap-3">
             {chart.divisions.map((division, index) => {
               const style = DIVISION_STYLES[index] ?? DIVISION_STYLES[0];
               const people = division.people ?? [];
               const [lead, ...reports] = people;
+              const prefix = divisionRolePrefix(division.name);
+              const count = division.personnelCount || people.length;
 
               return (
                 <div key={division.name} className="flex min-h-0 flex-col items-center">
-                  <TreeLineVertical height={24} />
+                  <TreeLineVertical height={16} />
 
-                  <span
-                    className="w-full shrink-0 truncate rounded-md border-2 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide shadow-md"
-                    style={{
-                      backgroundColor: style.bg,
-                      borderColor: style.bg,
-                      color: style.text,
-                    }}
+                  <div
+                    className="flex w-full shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-white shadow-md"
+                    style={{ backgroundColor: style.bg }}
                   >
-                    {division.name}
-                  </span>
+                    <span className="truncate text-[10px] font-semibold uppercase tracking-wide">
+                      {division.name}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-semibold">
+                      {count}
+                    </span>
+                  </div>
 
                   <TreeLineVertical height={12} />
 
-                  <div className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto">
-                    {lead ? (
-                      <>
-                        <NameChip label={personLabel(lead, lang)} />
+                  {lead ? (
+                    <PersonNode
+                      name={personLabel(lead, lang)}
+                      role={`${prefix} ${leadLabel}`}
+                      accent={style.bg}
+                    />
+                  ) : (
+                    <PersonNode name="—" role={personelRole} />
+                  )}
 
-                        {reports.length > 0 ? (
-                          <>
-                            <TreeLineVertical height={12} />
-                            <NameChip
-                              tone="count"
-                              label={`${personelLabel.toUpperCase()} : ${reports.length}`}
-                            />
+                  {reports.length > 0 ? (
+                    <>
+                      <TreeLineVertical height={12} />
+                      {reports.length === 1 ? (
+                        <PersonNode
+                          name={personLabel(reports[0], lang)}
+                          role={`${prefix} ${personelRole}`}
+                          accent="#64748b"
+                        />
+                      ) : (
+                        <div className="relative w-full pt-0">
+                          <TreeLineHorizontal inset="12.5%" />
+                          <div
+                            className="grid gap-1.5"
+                            style={{
+                              gridTemplateColumns: `repeat(${Math.min(reports.length, 4)}, minmax(0, 1fr))`,
+                            }}
+                          >
                             {reports.map((person) => (
                               <div
                                 key={`${division.name}-${person.nameEn}-${person.nameCn}`}
-                                className="flex w-full flex-col items-center"
+                                className="flex min-w-0 flex-col items-center"
                               >
                                 <TreeLineVertical height={12} />
-                                <NameChip label={personLabel(person, lang)} />
+                                <PersonNode
+                                  compact
+                                  name={personLabel(person, lang)}
+                                  role={`${prefix} ${personelRole}`}
+                                  accent={style.bg}
+                                />
                               </div>
                             ))}
-                          </>
-                        ) : null}
-                      </>
-                    ) : (
-                      <NameChip label="—" muted />
-                    )}
-                  </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
                 </div>
               );
             })}
@@ -212,7 +267,9 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
         <OrgTreeSection
           chart={chart}
           orgTreeTitle={t.dashboard.orgTree}
-          personelLabel={t.dashboard.personelLabel}
+          departmentManager={t.dashboard.orgDepartmentManager}
+          leadLabel={t.dashboard.orgLead}
+          personelRole={t.dashboard.orgPersonelRole}
           lang={lang}
         />
       ) : null}
