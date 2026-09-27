@@ -1584,8 +1584,15 @@ function MyOffCalendar({
                 title: `${name} ${text("off", language)}`,
               }));
 
+              const offEmployeeNames = new Set([
+                ...otherChangeOffEntries.map((item) => item.name),
+                ...otherOffEntries.map((item) => item.name),
+              ]);
+
               const calendarPeople = [
-                ...otherChangeEntries,
+                ...otherChangeEntries.filter(
+                  (item) => !offEmployeeNames.has(item.name)
+                ),
                 ...otherChangeOffEntries,
                 ...otherOffEntries,
               ];
