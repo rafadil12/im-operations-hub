@@ -188,18 +188,20 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         </div>
       ) : null}
 
-      <div
-        className={[
-          "mb-4 grid gap-2",
-          data.stats.length <= 2 ? "grid-cols-2" : "grid-cols-2 xl:grid-cols-4",
-        ].join(" ")}
-      >
-        {data.stats.map((stat) => (
-          <div key={stat.label} className="min-w-0">
-            <StatPill stat={stat} />
-          </div>
-        ))}
-      </div>
+      {data.layout !== "organization" ? (
+        <div
+          className={[
+            "mb-4 grid gap-2",
+            data.stats.length <= 2 ? "grid-cols-2" : "grid-cols-2 xl:grid-cols-4",
+          ].join(" ")}
+        >
+          {data.stats.map((stat) => (
+            <div key={stat.label} className="min-w-0">
+              <StatPill stat={stat} />
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col">
         <CardBody data={data} expanded={expanded} />
