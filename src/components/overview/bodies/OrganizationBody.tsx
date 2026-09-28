@@ -88,7 +88,7 @@ function PersonNode({
 }) {
   if (compact) {
     return (
-      <div className="flex w-full min-w-0 flex-col items-center rounded-lg border border-border-subtle bg-bg/60 px-1.5 py-2 text-center">
+      <div className="inline-flex w-fit max-w-full flex-col items-center rounded-lg border border-border-subtle bg-bg/60 p-2 text-center">
         <span
           className="mb-1 inline-flex size-5 items-center justify-center rounded-full text-[9px] font-semibold text-white"
           style={{ backgroundColor: accent ?? "#64748b" }}
@@ -96,16 +96,16 @@ function PersonNode({
         >
           {name.trim().charAt(0) || "?"}
         </span>
-        <p className="w-full truncate text-[8px] font-semibold uppercase leading-tight text-text">
+        <p className="max-w-full truncate text-[8px] font-semibold uppercase leading-tight text-text">
           {name}
         </p>
-        <p className="w-full truncate text-[8px] text-text-muted">{role}</p>
+        <p className="max-w-full truncate text-[8px] text-text-muted">{role}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-border-subtle bg-bg/60 px-2.5 py-2">
+    <div className="inline-flex w-fit max-w-full items-center gap-2 rounded-lg border border-border-subtle bg-bg/60 p-2">
       <span
         className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
         style={{ backgroundColor: accent ?? "#64748b" }}
@@ -113,11 +113,11 @@ function PersonNode({
       >
         {name.trim().charAt(0) || "?"}
       </span>
-      <div className="min-w-0">
-        <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-text">
+      <div className="flex min-w-0 flex-col items-center justify-center">
+        <p className="max-w-full truncate text-center text-[10px] font-semibold uppercase tracking-wide text-text">
           {name}
         </p>
-        <p className="truncate text-[9px] text-text-muted">{role}</p>
+        <p className="max-w-full truncate text-center text-[9px] text-text-muted">{role}</p>
       </div>
     </div>
   );
@@ -155,10 +155,8 @@ function OrgTreeSection({
           <TreeLineVertical height={16} />
         </div>
 
-        <div className="flex shrink-0 justify-center">
-          <div className="w-full max-w-xs">
-            <PersonNode name={chart.leader} role={departmentManager} accent="#0ea5e9" />
-          </div>
+        <div className="flex shrink-0 items-center justify-center">
+          <PersonNode name={chart.leader} role={departmentManager} accent="#0ea5e9" />
         </div>
 
         <div className="flex shrink-0 justify-center">
