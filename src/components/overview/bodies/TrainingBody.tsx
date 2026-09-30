@@ -7,11 +7,12 @@ import { getDict, useLang } from "@/lib/i18n";
 import type { TrainingLanguage } from "@/lib/training";
 import { ChartSection } from "../ModuleCardShared";
 
-const RECENT_TRAINING_LIMIT = 5;
+const RECENT_TRAINING_LIMIT = 4;
 
 function RecentTrainingTable({
   rows,
   labels,
+  showDetails,
 }: {
   rows: TrainingRow[];
   labels: {
@@ -20,15 +21,16 @@ function RecentTrainingTable({
     participant: string;
     division: string;
   };
+  showDetails: boolean;
 }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-0 text-left text-[11px]">
         <thead>
           <tr className="border-b border-border-subtle text-text-dim">
-            <th className="pb-2 pr-2 font-medium">{labels.trainingName}</th>
+            {showDetails ? <th className="pb-2 pr-2 font-medium">{labels.trainingName}</th> : null}
             <th className="pb-2 pr-2 font-medium">{labels.date}</th>
-            <th className="pb-2 pr-2 font-medium">{labels.participant}</th>
+            {showDetails ? <th className="pb-2 pr-2 font-medium">{labels.participant}</th> : null}
             <th className="pb-2 font-medium">{labels.division}</th>
           </tr>
         </thead>
@@ -39,9 +41,9 @@ function RecentTrainingTable({
               key={`${row.name}-${row.date}`}
               className="border-b border-border-subtle/60 text-text"
             >
-              <td className="py-2 pr-2 font-medium">{row.name}</td>
+              {showDetails ? <td className="py-2 pr-2 font-medium">{row.name}</td> : null}
               <td className="py-2 pr-2 text-text-muted">{row.date}</td>
-              <td className="py-2 pr-2">{row.participants}</td>
+              {showDetails ? <td className="py-2 pr-2">{row.participants}</td> : null}
               <td className="py-2">{row.avgScore}</td>
             </tr>
           ))}
@@ -51,7 +53,7 @@ function RecentTrainingTable({
   );
 }
 
-export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean }) {
+export function TrainingBody({ data, expanded }: { data: ModuleCardData; expanded: boolean }) {
   const { lang } = useLang();
   const language = lang as TrainingLanguage;
   const t = getDict(lang);
@@ -60,18 +62,42 @@ export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="grid items-stretch gap-4 lg:grid-cols-8">
-        <section
-          className={[
-            "rounded-lg border border-border-subtle bg-bg/30 p-3",
-            data.secondaryChart ? "lg:col-span-5" : "lg:col-span-8",
-          ].join(" ")}
-        >
-          <ChartSection data={data} expanded trendHeight={{ compact: 160, expanded: 200 }} />
+      <div className="grid items-stretch gap-4 lg:grid-cols-12">
+      <section
+        className={[
+          "rounded-lg border border-border-subtle bg-bg/30 p-3",
+          data.secondaryChart
+            ? expanded
+              ? "lg:col-span-7" // expand → 50%
+              : "lg:col-span-5" // non-expand → 62.5% (5/8)
+            : "lg:col-span-8",
+        ].join(" ")}
+      >
+          <h4 className="mb-3 text-xs font-medium text-text-muted">{t.dashboard.recentTraining}</h4>
+
+          {recentRows.length > 0 ? (
+            <RecentTrainingTable
+              rows={recentRows}
+              showDetails={expanded}
+              labels={{
+                trainingName: t.dashboard.trainingName,
+                date: t.dashboard.date,
+                participant: t.dashboard.participant,
+                division: t.fields.division,
+              }}
+            />
+          ) : (
+            <p className="py-6 text-center text-[11px] text-text-muted">{t.common.noData}</p>
+          )}
         </section>
 
         {data.secondaryChart ? (
-          <section className="flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3 lg:col-span-3">
+          <section
+            className={[
+              "flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3",
+              expanded ? "lg:col-span-5" : "lg:col-span-7",
+            ].join(" ")}
+          >
             <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
               {data.secondaryChart.title}
             </h4>
@@ -101,21 +127,7 @@ export function TrainingBody({ data }: { data: ModuleCardData; expanded: boolean
       </div>
 
       <section className="w-full rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <h4 className="mb-3 text-xs font-medium text-text-muted">{t.dashboard.recentTraining}</h4>
-
-        {recentRows.length > 0 ? (
-          <RecentTrainingTable
-            rows={recentRows}
-            labels={{
-              trainingName: t.dashboard.trainingName,
-              date: t.dashboard.date,
-              participant: t.dashboard.participant,
-              division: t.fields.division,
-            }}
-          />
-        ) : (
-          <p className="py-6 text-center text-[11px] text-text-muted">{t.common.noData}</p>
-        )}
+        <ChartSection data={data} expanded trendHeight={{ compact: 160, expanded: 200 }} />
       </section>
     </div>
   );
