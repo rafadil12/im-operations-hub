@@ -31,7 +31,7 @@ export function OverviewGrid() {
         <p className="text-sm text-text-muted">{t.dashboard.subtitle}</p>
       </div>
 
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-6">
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[repeat(30,minmax(0,1fr))]">
         {isLoading
           ? skeletonModules.map((module) => (
               <div key={module.id} className={dashboardGridClass(module.id)}>

@@ -724,6 +724,7 @@ const cn: Dict = {
     purchaseRequest: "采购申请",
     topUsedItems: "常用物料",
     mostUsedItems: "最常用物料（本月）",
+    recentUsed: "最近领用",
     inventoryTrend: "库存趋势",
     usedTrend: "用量趋势",
     stockIn: "入库",

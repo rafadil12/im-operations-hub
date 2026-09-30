@@ -1,7 +1,6 @@
 "use client";
 
 import type { ModuleCardData } from "@/data/overview";
-import { StatPill } from "@/components/ui/StatPill";
 import { getDict, useLang } from "@/lib/i18n";
 import { divisionColor } from "@/lib/training/copy";
 
@@ -304,36 +303,23 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
   const t = getDict(lang);
   const chart = data.orgChart;
   const departments = data.departmentPerformance ?? [];
-  const stats = data.stats ?? [];
 
-  if (!chart && !departments.length && !stats.length) {
+  if (!chart && !departments.length) {
     return null;
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="flex min-h-0 min-w-0 flex-1 gap-4">
-        {chart ? (
-          <OrgTreeSection
-            chart={chart}
-            orgTreeTitle={t.dashboard.orgTree}
-            departmentManager={t.dashboard.orgDepartmentManager}
-            leadLabel={t.dashboard.orgLead}
-            personelRole={t.dashboard.orgPersonelRole}
-            lang={lang}
-          />
-        ) : null}
-
-        {stats.length ? (
-          <section className="flex w-56 shrink-0 flex-col gap-2 self-stretch">
-            {stats.map((stat) => (
-              <div key={stat.label} className="flex min-h-0 flex-1">
-                <StatPill stat={stat} className="flex h-full w-full flex-col justify-center" />
-              </div>
-            ))}
-          </section>
-        ) : null}
-      </div>
+      {chart ? (
+        <OrgTreeSection
+          chart={chart}
+          orgTreeTitle={t.dashboard.orgTree}
+          departmentManager={t.dashboard.orgDepartmentManager}
+          leadLabel={t.dashboard.orgLead}
+          personelRole={t.dashboard.orgPersonelRole}
+          lang={lang}
+        />
+      ) : null}
 
       {departments.length ? (
         <section className="w-full shrink-0 rounded-lg border border-border-subtle bg-bg/30 p-4">

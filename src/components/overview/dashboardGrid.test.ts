@@ -15,20 +15,20 @@ describe("dashboardGrid", () => {
     expect(sorted.map((item) => item.id)).toEqual([
       "itsm",
       "daily-operation",
-      "sparepart",
       "safety",
+      "sparepart",
       "training",
       "report",
       "organization",
     ]);
   });
 
-  it("assigns wireframe spans on the 6-column grid", () => {
-    expect(dashboardGridClass("itsm")).toContain("xl:col-span-2");
-    expect(dashboardGridClass("sparepart")).toContain("xl:col-span-2");
-    expect(dashboardGridClass("safety")).toContain("xl:col-span-3");
-    expect(dashboardGridClass("training")).toContain("xl:col-span-3");
-    expect(dashboardGridClass("report")).toContain("col-span-full");
-    expect(dashboardGridClass("organization")).toContain("col-span-full");
+  it("assigns wireframe spans on the 30-track grid", () => {
+    expect(dashboardGridClass("itsm")).toContain("xl:col-span-[10]");
+    expect(dashboardGridClass("safety")).toContain("xl:col-span-[10]");
+    expect(dashboardGridClass("sparepart")).toContain("xl:col-span-[15]");
+    expect(dashboardGridClass("training")).toContain("xl:col-span-[15]");
+    expect(dashboardGridClass("report")).toContain("xl:col-span-[12]");
+    expect(dashboardGridClass("organization")).toContain("xl:col-span-[18]");
   });
 });

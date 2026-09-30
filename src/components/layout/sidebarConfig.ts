@@ -62,6 +62,23 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    id: "safety",
+    labelKey: "safety",
+    icon: "safety",
+    children: [
+      {
+        id: "overview",
+        labelKey: "overview",
+        href: "/safety",
+      },
+      {
+        id: "management",
+        labelKey: "moduleManagement",
+        href: "/safety/management",
+      },
+    ],
+  },
+  {
     id: "sparepart",
     labelKey: "sparepart",
     icon: "sparepart",
@@ -108,23 +125,6 @@ export const navItems: NavItem[] = [
             href: "/sparepart/locations",
           },
         ],
-      },
-    ],
-  },
-  {
-    id: "safety",
-    labelKey: "safety",
-    icon: "safety",
-    children: [
-      {
-        id: "overview",
-        labelKey: "overview",
-        href: "/safety",
-      },
-      {
-        id: "management",
-        labelKey: "moduleManagement",
-        href: "/safety/management",
       },
     ],
   },

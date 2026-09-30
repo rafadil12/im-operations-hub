@@ -5,6 +5,18 @@ export type SparepartMostUsedItem = {
   qty: number;
 };
 
+export type SparepartRecentUsedItem = {
+  date: string;
+  code: string;
+  name_en: string;
+  name_cn: string;
+  qty: number;
+  uom_code: string;
+  uom_name_cn: string;
+  doc_id: number;
+  line_no: number;
+};
+
 export type SparepartUsedTrendPoint = {
   date: string;
   current: number;
@@ -17,6 +29,7 @@ export type SparepartAnalysisResult = {
   usageThisMonth: number;
   usageThisYear: number;
   mostUsed: SparepartMostUsedItem[];
+  recentUsed: SparepartRecentUsedItem[];
   usedTrend: SparepartUsedTrendPoint[];
 };
 

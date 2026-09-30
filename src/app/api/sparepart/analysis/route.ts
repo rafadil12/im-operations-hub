@@ -21,6 +21,18 @@ type MostUsedRow = {
   qty: number;
 };
 
+type RecentUsedRow = {
+  posting_date: string | Date;
+  code: string;
+  name_en: string | null;
+  name_cn: string | null;
+  qty: number;
+  uom_code: string | null;
+  uom_name_cn: string | null;
+  doc_id: number;
+  line_no: number;
+};
+
 type TrendRow = {
   month_key: string;
   qty: number;
@@ -78,7 +90,7 @@ export async function GET() {
        ORDER BY month_key ASC
     `;
 
-    const [[summary], [monthUsage], [yearUsage], mostUsed, trendRows, prevTrendRows] =
+    const [[summary], [monthUsage], [yearUsage], mostUsed, recentUsed, trendRows, prevTrendRows] =
       await Promise.all([
         query<SummaryRow[]>(
           `SELECT
@@ -121,6 +133,26 @@ export async function GET() {
          LIMIT 3`,
           monthParams
         ),
+        query<RecentUsedRow[]>(
+          `SELECT
+           DATE_FORMAT(d.posting_date, '%Y-%m-%d') AS posting_date,
+           i.code,
+           i.name_en,
+           i.name_cn,
+           li.qty,
+           u.code AS uom_code,
+           u.name_cn AS uom_name_cn,
+           d.id AS doc_id,
+           li.line_no
+         FROM sparepart_mat_doc_items li
+         JOIN sparepart_mat_docs d ON d.id = li.doc_id
+         JOIN sparepart_items i ON i.id = li.item_id
+         LEFT JOIN uoms u ON u.id = i.uom_id
+         WHERE d.movement_type = '201'
+           AND i.deleted_at IS NULL
+         ORDER BY d.posting_date DESC, d.id DESC, li.line_no ASC
+         LIMIT 4`
+        ),
         query<TrendRow[]>(trendSql, yearParams),
         query<TrendRow[]>(trendSql, prevYearParams),
       ]);
@@ -141,6 +173,17 @@ export async function GET() {
         name_en: row.name_en?.trim() || row.code,
         name_cn: row.name_cn?.trim() || row.name_en?.trim() || row.code,
         qty: Number(row.qty ?? 0),
+      })),
+      recentUsed: recentUsed.map((row) => ({
+        date: String(row.posting_date).slice(0, 10),
+        code: row.code,
+        name_en: row.name_en?.trim() || row.code,
+        name_cn: row.name_cn?.trim() || row.name_en?.trim() || row.code,
+        qty: Number(row.qty ?? 0),
+        uom_code: row.uom_code?.trim() || "",
+        uom_name_cn: row.uom_name_cn?.trim() || "",
+        doc_id: Number(row.doc_id),
+        line_no: Number(row.line_no),
       })),
       usedTrend: allMonths(year).map((date) => {
         const monthKey = date.slice(5, 7);

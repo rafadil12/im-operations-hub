@@ -569,9 +569,6 @@ export function mapSafetyToOverview(
         value:
           `${metrics.overallCompletion}%`,
 
-        trend:
-          `${metrics.weeklyCompletion}%`,
-
         tone: "accent",
       },
 
@@ -580,9 +577,6 @@ export function mapSafetyToOverview(
           labels.closure,
 
         value:
-          `${metrics.closureRate}%`,
-
-        trend:
           `${metrics.closureRate}%`,
 
         tone:
@@ -598,9 +592,6 @@ export function mapSafetyToOverview(
         value:
           `${metrics.trainingRate}%`,
 
-        trend:
-          `${metrics.trainingRate}%`,
-
         tone:
           metrics.trainingRate >= 80
             ? "success"
@@ -612,9 +603,6 @@ export function mapSafetyToOverview(
           labels.score,
 
         value:
-          `${metrics.safetyScore}%`,
-
-        trend:
           `${metrics.safetyScore}%`,
 
         tone:
@@ -779,7 +767,7 @@ export function mapSafetyToOverview(
   return {
     id: "safety",
 
-    number: 4,
+    number: 3,
 
     title:
       labels.title,

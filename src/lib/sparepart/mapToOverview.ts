@@ -49,6 +49,17 @@ export function mapSparepartToOverview(
         color: BAR_COLORS[index % BAR_COLORS.length],
       })),
     },
+    recentUsedRows: (result.recentUsed ?? []).map((item) => ({
+      date: item.date,
+      code: item.code,
+      nameEn: item.name_en,
+      nameCn: item.name_cn,
+      qty: item.qty,
+      uomCode: item.uom_code,
+      uomNameCn: item.uom_name_cn,
+      docId: item.doc_id,
+      lineNo: item.line_no,
+    })),
     chart: {
       title: t.dashboard.usedTrend,
       type: "trend",

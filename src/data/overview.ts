@@ -52,6 +52,18 @@ export type TrainingRow = {
   avgScore: string;
 };
 
+export type SparepartRecentUsedRow = {
+  date: string;
+  code: string;
+  nameEn: string;
+  nameCn: string;
+  qty: number;
+  uomCode: string;
+  uomNameCn: string;
+  docId: number;
+  lineNo: number;
+};
+
 export type ModuleCardData = {
   id: ModuleId;
   number: number;
@@ -134,6 +146,8 @@ export type ModuleCardData = {
   };
   /** Training recent table. */
   recentRows?: TrainingRow[];
+  /** Sparepart recent goods-issue (201) lines. */
+  recentUsedRows?: SparepartRecentUsedRow[];
   /** Training division breakdown for expand-mode Recharts donut. */
   trainingByDivision?: TrainingOverviewMetrics["byDivision"];
   /** Set when live API data failed to load for this card. */
@@ -210,7 +224,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "safety",
-    number: 4,
+    number: 3,
     title: "SECURITY (SAFETY) DASHBOARD",
     icon: "shield",
     accentColor: "#ef4444",
@@ -245,7 +259,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "sparepart",
-    number: 3,
+    number: 4,
     title: "SPAREPART DASHBOARD",
     icon: "sparepart",
     accentColor: "#a855f7",

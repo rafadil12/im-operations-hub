@@ -14,25 +14,11 @@ export function ReportBody({ data, expanded }: { data: ModuleCardData; expanded:
   const trendTitle = data.trendBars?.title;
   const showTrend = hasWeeklyTrend || (data.trendBars?.items.length ?? 0) > 0;
   const currentMonth = data.reportCurrentMonth;
-  const sideBySide = showTrend && currentMonth != null;
 
   return (
-    <div
-      className={
-        sideBySide
-          ? "flex flex-col gap-4 md:flex-row md:items-stretch md:justify-between"
-          : "flex flex-col gap-4"
-      }
-    >
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {showTrend ? (
-        <section
-          className={[
-            "min-w-0 rounded-lg border border-border-subtle bg-bg/30 p-3",
-            sideBySide ? "flex-1" : undefined,
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
+        <section className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-bg/30 p-3">
           {trendTitle ? (
             <h4 className="mb-3 text-xs font-medium text-text-muted">{trendTitle}</h4>
           ) : null}
@@ -51,11 +37,7 @@ export function ReportBody({ data, expanded }: { data: ModuleCardData; expanded:
       ) : null}
 
       {currentMonth ? (
-        <div
-          className={
-            sideBySide ? "min-w-0 shrink-0 md:w-[min(100%,22rem)] lg:w-[min(100%,24rem)]" : undefined
-          }
-        >
+        <section className="shrink-0">
           <ReportPeriodSummaryCard
             title={reportText("currentMonth", language)}
             subtitle={currentMonth.monthLabel}
@@ -70,7 +52,7 @@ export function ReportBody({ data, expanded }: { data: ModuleCardData; expanded:
             compact
             className="h-full"
           />
-        </div>
+        </section>
       ) : null}
     </div>
   );

@@ -738,6 +738,7 @@ const en = {
     purchaseRequest: "Purchase Request",
     topUsedItems: "Top Used Items",
     mostUsedItems: "Most Used Items (This Month)",
+    recentUsed: "Recent Used",
     inventoryTrend: "Inventory Trend",
     usedTrend: "Used Trend",
     stockIn: "Stock In",
