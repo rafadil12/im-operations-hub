@@ -13,40 +13,53 @@ export function ChartSection({
   expanded,
   align = "start",
   trendHeight,
+  fill = false,
 }: {
   data: ModuleCardData;
   expanded: boolean;
   align?: "start" | "center";
   trendHeight?: { compact: number; expanded: number };
+  /** Stretch chart to fill the parent zone (equal mid/bottom card bands). */
+  fill?: boolean;
 }) {
+  const trendPx = expanded ? (trendHeight?.expanded ?? 260) : (trendHeight?.compact ?? 140);
+
   return (
-    <>
+    <div className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
       <h4
         className={[
-          "mb-3 text-xs font-medium text-text-muted",
+          "mb-2 shrink-0 text-xs font-medium text-text-muted",
           align === "center" ? "text-center" : "",
         ].join(" ")}
       >
         {data.chart.title}
       </h4>
 
-      {data.chart.type === "trend" ? (
-        <TicketTrendChart
-          data={data.chart.series ?? []}
-          height={expanded ? (trendHeight?.expanded ?? 260) : (trendHeight?.compact ?? 140)}
-          compact={!expanded}
-          legendLabels={data.chart.legend.map((item) => item.label)}
-        />
-      ) : (
-        <DonutChartPlaceholder
-          legend={data.chart.legend}
-          segments={data.chart.segments}
-          centerValue={data.chart.centerValue}
-          centerLabel={data.chart.centerLabel}
-          align={align}
-        />
-      )}
-    </>
+      <div className={fill ? "min-h-0 flex-1" : undefined}>
+        {data.chart.type === "trend" ? (
+          <TicketTrendChart
+            data={data.chart.series ?? []}
+            height={fill ? "100%" : trendPx}
+            compact={!expanded}
+            legendLabels={data.chart.legend.map((item) => item.label)}
+          />
+        ) : (
+          <div
+            className={
+              fill ? "flex h-full min-h-0 items-center justify-center overflow-hidden" : undefined
+            }
+          >
+            <DonutChartPlaceholder
+              legend={data.chart.legend}
+              segments={data.chart.segments}
+              centerValue={data.chart.centerValue}
+              centerLabel={data.chart.centerLabel}
+              align={align}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
