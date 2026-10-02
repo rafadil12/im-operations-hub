@@ -13,7 +13,7 @@ export function TwoZoneCardBody({ mid, bottom }: { mid: ReactNode; bottom: React
         {mid}
       </div>
 
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg/30 p-3">
+      <section className="flex min-h-[12.5rem] flex-1 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
         {bottom}
       </section>
     </div>

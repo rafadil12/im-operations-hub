@@ -23,6 +23,8 @@ export function ChartSection({
   fill?: boolean;
 }) {
   const trendPx = expanded ? (trendHeight?.expanded ?? 260) : (trendHeight?.compact ?? 140);
+  // Never use % height for trend when expanded — expand modal content is height:auto.
+  const trendHeightValue = fill && !expanded ? ("100%" as const) : trendPx;
 
   return (
     <div className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
@@ -35,11 +37,14 @@ export function ChartSection({
         {data.chart.title}
       </h4>
 
-      <div className={fill ? "min-h-0 flex-1" : undefined}>
+      <div
+        className={fill ? "min-h-0 flex-1" : undefined}
+        style={!fill && data.chart.type === "trend" ? { minHeight: trendPx } : undefined}
+      >
         {data.chart.type === "trend" ? (
           <TicketTrendChart
             data={data.chart.series ?? []}
-            height={fill ? "100%" : trendPx}
+            height={trendHeightValue}
             compact={!expanded}
             legendLabels={data.chart.legend.map((item) => item.label)}
           />

@@ -15,10 +15,6 @@ function pct(part: number, total: number): number {
   return Math.round((part / total) * 1000) / 10;
 }
 
-function pctLabel(part: number, total: number): string {
-  return `${pct(part, total)}%`;
-}
-
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -69,7 +65,6 @@ export function mapAnalysisToOverview(
       {
         label: t.dashboard.completed,
         value: String(completed),
-        trend: pctLabel(completed, total),
         tone: "success",
       },
       {
