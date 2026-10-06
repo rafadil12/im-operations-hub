@@ -6,6 +6,7 @@ import { TrainingCategoryDonut } from "@/components/training/overview/TrainingCh
 import { getDict, useLang } from "@/lib/i18n";
 import type { TrainingLanguage } from "@/lib/training";
 import { ChartSection } from "../ModuleCardShared";
+import { ROW2_TREND_HEIGHT, TwoZoneCardBody } from "./TwoZoneCardBody";
 
 const RECENT_TRAINING_LIMIT = 4;
 
@@ -61,74 +62,70 @@ export function TrainingBody({ data, expanded }: { data: ModuleCardData; expande
   const showOverviewDonut = (data.trainingByDivision?.length ?? 0) > 0;
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="grid items-stretch gap-4 lg:grid-cols-12">
-      <section
-        className={[
-          "rounded-lg border border-border-subtle bg-bg/30 p-3",
-          data.secondaryChart
-            ? expanded
-              ? "lg:col-span-7" // expand → 50%
-              : "lg:col-span-5" // non-expand → 62.5% (5/8)
-            : "lg:col-span-8",
-        ].join(" ")}
-      >
-          <h4 className="mb-3 text-xs font-medium text-text-muted">{t.dashboard.recentTraining}</h4>
-
-          {recentRows.length > 0 ? (
-            <RecentTrainingTable
-              rows={recentRows}
-              showDetails={expanded}
-              labels={{
-                trainingName: t.dashboard.trainingName,
-                date: t.dashboard.date,
-                participant: t.dashboard.participant,
-                division: t.fields.division,
-              }}
-            />
-          ) : (
-            <p className="py-6 text-center text-[11px] text-text-muted">{t.common.noData}</p>
-          )}
-        </section>
-
-        {data.secondaryChart ? (
-          <section
-            className={[
-              "flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3",
-              expanded ? "lg:col-span-5" : "lg:col-span-7",
-            ].join(" ")}
-          >
+    <TwoZoneCardBody
+      bottomFit
+      mid={
+        <>
+          <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
             <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
-              {data.secondaryChart.title}
+              {t.dashboard.recentTraining}
             </h4>
 
-            <div className="relative min-h-0 flex-1">
-              <div className="absolute inset-0">
-                {showOverviewDonut ? (
-                  <TrainingCategoryDonut fill data={data.trainingByDivision!} language={language} />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <DonutChartPlaceholder
-                      legend={data.secondaryChart.legend}
-                      segments={data.secondaryChart.segments}
-                      centerValue={data.secondaryChart.centerValue}
-                      centerLabel={data.secondaryChart.centerLabel}
-                      layout="column"
-                      legendVariant="split"
-                      size="md"
-                      align="center"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            {recentRows.length > 0 ? (
+              <RecentTrainingTable
+                rows={recentRows}
+                showDetails={expanded}
+                labels={{
+                  trainingName: t.dashboard.trainingName,
+                  date: t.dashboard.date,
+                  participant: t.dashboard.participant,
+                  division: t.fields.division,
+                }}
+              />
+            ) : (
+              <p className="flex flex-1 items-center justify-center py-6 text-center text-[11px] text-text-muted">
+                {t.common.noData}
+              </p>
+            )}
           </section>
-        ) : null}
-      </div>
 
-      <section className="w-full rounded-lg border border-border-subtle bg-bg/30 p-3">
-        <ChartSection data={data} expanded trendHeight={{ compact: 160, expanded: 200 }} />
-      </section>
-    </div>
+          {data.secondaryChart ? (
+            <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+              <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
+                {data.secondaryChart.title}
+              </h4>
+
+              <div className="relative min-h-0 flex-1">
+                <div className="absolute inset-0">
+                  {showOverviewDonut ? (
+                    <TrainingCategoryDonut
+                      fill
+                      data={data.trainingByDivision!}
+                      language={language}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <DonutChartPlaceholder
+                        legend={data.secondaryChart.legend}
+                        segments={data.secondaryChart.segments}
+                        centerValue={data.secondaryChart.centerValue}
+                        centerLabel={data.secondaryChart.centerLabel}
+                        layout="column"
+                        legendVariant="split"
+                        size="md"
+                        align="center"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          ) : null}
+        </>
+      }
+      bottom={
+        <ChartSection data={data} expanded={expanded} trendHeight={ROW2_TREND_HEIGHT} />
+      }
+    />
   );
 }

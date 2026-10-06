@@ -5,6 +5,7 @@ import { BarChartPlaceholder } from "@/components/ui/ChartPlaceholder";
 import { getDict, useLang } from "@/lib/i18n";
 import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import { ChartSection } from "../ModuleCardShared";
+import { ROW2_TREND_HEIGHT, TwoZoneCardBody } from "./TwoZoneCardBody";
 
 const RECENT_USED_LIMIT = 4;
 
@@ -87,50 +88,52 @@ export function SparepartBody({ data, expanded }: { data: ModuleCardData; expand
   const recentRows = (data.recentUsedRows ?? []).slice(0, RECENT_USED_LIMIT);
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
-        {data.bars ? (
-          <section className="flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
-            <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">{data.bars.title}</h4>
-            <div className="min-h-0 flex-1">
-              <BarChartPlaceholder items={data.bars.items} />
-            </div>
+    <TwoZoneCardBody
+      bottomFit
+      mid={
+        <>
+          {data.bars ? (
+            <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+              <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">{data.bars.title}</h4>
+              <div className="min-h-0 flex-1">
+                <BarChartPlaceholder items={data.bars.items} />
+              </div>
+            </section>
+          ) : null}
+
+          <section className="flex h-full min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+            <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
+              {t.dashboard.recentUsed}
+            </h4>
+
+            {recentRows.length > 0 ? (
+              <RecentUsedTable
+                rows={recentRows}
+                showDetails={expanded}
+                lang={lang}
+                labels={{
+                  date: t.dashboard.date,
+                  code: t.sparepart.code,
+                  description: t.fields.description,
+                  qty: t.sparepart.qty,
+                  uom: t.sparepart.uom,
+                }}
+              />
+            ) : (
+              <p className="flex flex-1 items-center justify-center py-6 text-center text-[11px] text-text-muted">
+                {t.common.noData}
+              </p>
+            )}
           </section>
-        ) : null}
-
-        <section className="flex min-h-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">
-            {t.dashboard.recentUsed}
-          </h4>
-
-          {recentRows.length > 0 ? (
-            <RecentUsedTable
-              rows={recentRows}
-              showDetails={expanded}
-              lang={lang}
-              labels={{
-                date: t.dashboard.date,
-                code: t.sparepart.code,
-                description: t.fields.description,
-                qty: t.sparepart.qty,
-                uom: t.sparepart.uom,
-              }}
-            />
-          ) : (
-            <p className="flex flex-1 items-center justify-center py-6 text-center text-[11px] text-text-muted">
-              {t.common.noData}
-            </p>
-          )}
-        </section>
-      </div>
-
-      <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
+        </>
+      }
+      bottom={
         <ChartSection
           data={data}
           expanded={expanded}
-          trendHeight={{ compact: 180, expanded: 280 }}
+          trendHeight={ROW2_TREND_HEIGHT}
         />
-      </section>
-    </div>
+      }
+    />
   );
 }
