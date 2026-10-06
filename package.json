@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "d3-org-chart": "^3.1.1",
     "exceljs": "^4.4.0",
     "html-to-image": "^1.11.13",
     "lucide-react": "^1.29.0",

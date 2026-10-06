@@ -188,7 +188,7 @@ export function ModuleCard({ data, expanded = false, onOpen }: ModuleCardProps) 
         </div>
       ) : null}
 
-      {data.stats.length > 0 ? (
+      {data.stats.length > 0 && data.layout !== "organization" ? (
         <div
           className={[
             "mb-4 grid gap-2",
