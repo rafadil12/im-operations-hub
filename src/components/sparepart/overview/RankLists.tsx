@@ -1,13 +1,24 @@
 "use client";
 
 import { localizedName, useLang } from "@/lib/i18n";
-import { localizedCategoryLabel } from "@/lib/sparepart/categories";
+import {
+  categoryColor,
+  localizedCategoryLabel,
+} from "@/lib/sparepart/categories";
 import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import type {
   SparepartOverviewCategoryTab,
   SparepartOverviewLocationStock,
   SparepartOverviewTopUsedItem,
 } from "@/lib/sparepart/overview";
+
+const RANK_TONES = [
+  "bg-[#3b82f6]/15 text-[#2563eb] ring-1 ring-[#3b82f6]/25",
+  "bg-[#8b5cf6]/15 text-[#7c3aed] ring-1 ring-[#8b5cf6]/25",
+  "bg-[#14b8a6]/15 text-[#0f766e] ring-1 ring-[#14b8a6]/25",
+  "bg-[#f59e0b]/15 text-[#d97706] ring-1 ring-[#f59e0b]/25",
+  "bg-[#64748b]/15 text-[#475569] ring-1 ring-[#64748b]/25",
+] as const;
 
 export function TopUsedList({
   items,
@@ -17,23 +28,6 @@ export function TopUsedList({
   categories: SparepartOverviewCategoryTab[];
 }) {
   const { t, lang } = useLang();
-  const rankTone = [
-    {
-      badge: "bg-[#3b82f6]/12 text-[#2563eb] ring-1 ring-[#3b82f6]/20",
-    },
-    {
-      badge: "bg-[#8b5cf6]/12 text-[#7c3aed] ring-1 ring-[#8b5cf6]/20",
-    },
-    {
-      badge: "bg-[#14b8a6]/12 text-[#0f766e] ring-1 ring-[#14b8a6]/20",
-    },
-    {
-      badge: "bg-[#f59e0b]/12 text-[#d97706] ring-1 ring-[#f59e0b]/20",
-    },
-    {
-      badge: "bg-[#64748b]/12 text-[#475569] ring-1 ring-[#64748b]/20",
-    },
-  ] as const;
 
   return (
     <div className="flex min-h-[455px] flex-col overflow-y-auto">
@@ -42,52 +36,64 @@ export function TopUsedList({
           {t.common.noData}
         </p>
       ) : (
-        <div className="space-y-1">
-      {items.map((item, index) => (
-        <div
-          key={item.code}
-          className="rounded-xl border border-border-subtle bg-bg/30 p-3 shadow-[0_8px_24px_var(--shadow-color-soft)]"
-        >
-          <div className="flex items-start gap-3">
-            <span
-              className={[
-                "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                rankTone[index]?.badge ?? rankTone[4].badge,
-              ].join(" ")}
-            >
-              {index + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-text">{item.code}</p>
+        <ul className="flex flex-col gap-2">
+          {items.map((item, index) => {
+            const color = categoryColor(item.category_code);
+            const categoryLabel = localizedCategoryLabel(
+              item.category_code,
+              categories,
+              lang,
+              {
+                name_en: item.category_name_en,
+                name_cn: item.category_name_cn,
+              }
+            );
+            const uom = formatUomDisplay(
+              { code: item.uom_code, name_cn: item.uom_name_cn },
+              lang
+            );
+            const qtyLabel = uom
+              ? `${item.qty.toLocaleString()} ${uom}`
+              : `${item.qty.toLocaleString()} ${t.sparepart.qty}`;
+
+            return (
+              <li
+                key={item.code}
+                className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-2.5"
+              >
+                <span
+                  className={[
+                    "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                    RANK_TONES[index] ?? RANK_TONES[4],
+                  ].join(" ")}
+                >
+                  {index + 1}
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-text">{item.code}</p>
                   <p className="mt-0.5 truncate text-xs text-text-muted">
                     {localizedName(item, lang)}
                   </p>
+                  <span
+                    className="mt-1.5 inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide"
+                    style={{
+                      color,
+                      background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                      boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 32%, transparent)`,
+                    }}
+                  >
+                    {categoryLabel}
+                  </span>
                 </div>
-                <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-accent">
-                  {item.qty.toLocaleString()}
-                  {(() => {
-                    const uom = formatUomDisplay(
-                      { code: item.uom_code, name_cn: item.uom_name_cn },
-                      lang
-                    );
-                    return uom ? ` ${uom}` : ` ${t.sparepart.qty}`;
-                  })()}
-                </span>
-              </div>
 
-              <div className="mt-2 text-[11px] tracking-wide text-text-dim">
-                {localizedCategoryLabel(item.category_code, categories, lang, {
-                  name_en: item.category_name_en,
-                  name_cn: item.category_name_cn,
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-        </div>
+                <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-accent">
+                  {qtyLabel}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
