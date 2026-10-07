@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-07
+
+### Changed
+
+- Sparepart Overview: restyle Top 5 Used as list cards (rank badge, code,
+  name, category chip, qty pill) with soft card shadow that is not clipped
+  on the last item.
+
 ## [0.9.0] - 2026-10-07
 
 ### Changed
