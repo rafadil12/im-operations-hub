@@ -68,21 +68,32 @@ export function preferredCanonicalCategoryRow<T extends { code: string }>(
   return group.find((row) => row.code.trim().toUpperCase() === canonicalCode) ?? group[0];
 }
 
-export function categoryColor(code: string | null | undefined): string {
-  const normalized = code ? normalizeCategoryCode(code) : null;
-  return normalized ? SPAREPART_CATEGORY_COLORS[normalized] : FALLBACK_CATEGORY_COLOR;
+function hashCategoryColor(code: string): string {
+  let hash = 0;
+  for (let i = 0; i < code.length; i += 1) {
+    hash = (hash * 31 + code.charCodeAt(i)) >>> 0;
+  }
+  return `hsl(${hash % 360} 55% 45%)`;
 }
 
-/** SQL predicate + params so ASSEMBLY also matches DB alias ASM. */
+export function categoryColor(code: string | null | undefined): string {
+  if (!code) return FALLBACK_CATEGORY_COLOR;
+  const normalized = normalizeCategoryCode(code);
+  if (normalized) return SPAREPART_CATEGORY_COLORS[normalized];
+  return hashCategoryColor(canonicalCategoryCode(code));
+}
+
+/** SQL predicate + params so ASSEMBLY also matches DB alias ASM. Accepts any DB category code. */
 export function categoryMatchSql(
   column: string,
-  filter: SparepartCategoryCode
+  filter: string
 ): { sql: string; params: string[] } {
+  const canon = canonicalCategoryCode(filter);
   const expr = `UPPER(TRIM(${column}))`;
-  if (filter === "ASSEMBLY") {
+  if (canon === "ASSEMBLY") {
     return { sql: `${expr} IN (?, ?)`, params: ["ASSEMBLY", "ASM"] };
   }
-  return { sql: `${expr} = ?`, params: [filter] };
+  return { sql: `${expr} = ?`, params: [canon] };
 }
 
 export function isItemActive(isActive: number | boolean | null | undefined): boolean {
