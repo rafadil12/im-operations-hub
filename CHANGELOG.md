@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-07
+
+### Added
+
+- Change Request activities can post a sparepart goods issue (201) on save:
+  one material, quantity, Issued To, and a storage location limited to points
+  that have stock.
+- Issued To is entered on the activity. The transaction note records the
+  change request; the line note is left blank.
+- Required issue fields are marked, and validation names only the fields that
+  fail, including quantity above available stock.
+- A linked activity cannot be deleted, and Reverse stays disabled on a
+  sparepart document that an activity points to. After posting, the material
+  fields stay visible but read-only and the activity type stays locked.
+
 ## [0.11.0] - 2026-10-07
 
 ### Changed
