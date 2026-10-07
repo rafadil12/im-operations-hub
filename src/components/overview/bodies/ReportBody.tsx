@@ -14,46 +14,66 @@ export function ReportBody({ data, expanded }: { data: ModuleCardData; expanded:
   const trendTitle = data.trendBars?.title;
   const showTrend = hasWeeklyTrend || (data.trendBars?.items.length ?? 0) > 0;
   const currentMonth = data.reportCurrentMonth;
+  const sideBySide = expanded && showTrend && Boolean(currentMonth);
+
+  const trendSection = showTrend ? (
+    <section
+      className={[
+        "flex min-h-0 min-w-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3",
+        sideBySide ? "h-full" : "flex-1",
+      ].join(" ")}
+    >
+      {trendTitle ? (
+        <h4 className="mb-2 shrink-0 text-xs font-medium text-text-muted">{trendTitle}</h4>
+      ) : null}
+
+      <div className={sideBySide ? "min-h-0 flex-1" : undefined}>
+        {hasWeeklyTrend ? (
+          <ReportWeeklyTrendChart
+            data={data.reportWeeklyTrend!}
+            height={expanded ? 260 : 120}
+            workLabel={reportText("workCompletion", language)}
+            projectLabel={reportText("projectTrend", language)}
+          />
+        ) : data.trendBars ? (
+          <VerticalBarChartPlaceholder items={data.trendBars.items} />
+        ) : null}
+      </div>
+    </section>
+  ) : null;
+
+  const monthSection = currentMonth ? (
+    <section className={sideBySide ? "flex h-full min-h-0 min-w-0 flex-col" : "shrink-0"}>
+      <ReportPeriodSummaryCard
+        title={reportText("currentMonth", language)}
+        subtitle={currentMonth.monthLabel}
+        status={currentMonth.status}
+        achievement={currentMonth.achievement}
+        submittedCount={currentMonth.submittedCount}
+        draftCount={currentMonth.draftCount}
+        areaCount={currentMonth.areaCount}
+        totalLines={currentMonth.totalLines}
+        byArea={currentMonth.byArea}
+        language={language}
+        compact
+        fillHeight={sideBySide}
+      />
+    </section>
+  ) : null;
+
+  if (sideBySide) {
+    return (
+      <div className="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        {trendSection}
+        {monthSection}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {showTrend ? (
-        <section className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-bg/30 p-3">
-          {trendTitle ? (
-            <h4 className="mb-3 text-xs font-medium text-text-muted">{trendTitle}</h4>
-          ) : null}
-
-          {hasWeeklyTrend ? (
-            <ReportWeeklyTrendChart
-              data={data.reportWeeklyTrend!}
-              height={expanded ? 220 : 180}
-              workLabel={reportText("workCompletion", language)}
-              projectLabel={reportText("projectTrend", language)}
-            />
-          ) : data.trendBars ? (
-            <VerticalBarChartPlaceholder items={data.trendBars.items} />
-          ) : null}
-        </section>
-      ) : null}
-
-      {currentMonth ? (
-        <section className="shrink-0">
-          <ReportPeriodSummaryCard
-            title={reportText("currentMonth", language)}
-            subtitle={currentMonth.monthLabel}
-            status={currentMonth.status}
-            achievement={currentMonth.achievement}
-            submittedCount={currentMonth.submittedCount}
-            draftCount={currentMonth.draftCount}
-            areaCount={currentMonth.areaCount}
-            totalLines={currentMonth.totalLines}
-            byArea={currentMonth.byArea}
-            language={language}
-            compact
-            className="h-full"
-          />
-        </section>
-      ) : null}
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {trendSection}
+      {monthSection}
     </div>
   );
 }

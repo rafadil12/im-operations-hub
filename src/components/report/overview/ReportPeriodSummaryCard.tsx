@@ -7,9 +7,11 @@ import type { ReportPeriodStatus } from "@/lib/report/types";
 function StatusBadge({
   status,
   language,
+  compact,
 }: {
   status: ReportPeriodStatus;
   language: ReportLanguage;
+  compact?: boolean;
 }) {
   const label =
     status === "on_target"
@@ -26,13 +28,34 @@ function StatusBadge({
         : "border-amber-400/30 bg-amber-500/12 text-amber-300";
 
   return (
-    <span className={`rounded-md border px-3 py-1.5 text-xs font-medium ${classes}`}>{label}</span>
+    <span
+      className={[
+        "rounded-md border font-medium",
+        compact ? "px-2 py-0.5 text-[10px]" : "px-3 py-1.5 text-xs",
+        classes,
+      ].join(" ")}
+    >
+      {label}
+    </span>
   );
 }
 
-function StatRow({ label, value }: { label: string; value: number | string }) {
+function StatRow({
+  label,
+  value,
+  compact,
+}: {
+  label: string;
+  value: number | string;
+  compact?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between gap-3 text-sm">
+    <div
+      className={[
+        "flex items-center justify-between gap-3",
+        compact ? "text-[11px]" : "text-sm",
+      ].join(" ")}
+    >
       <span className="text-text-muted">{label}</span>
       <span className="font-semibold text-text">{value}</span>
     </div>
@@ -58,6 +81,8 @@ type Props = {
   byArea: ByAreaRing[];
   language: ReportLanguage;
   compact?: boolean;
+  /** Stretch card and spread metric rows so leftover height is not empty below By category. */
+  fillHeight?: boolean;
   className?: string;
 };
 
@@ -72,51 +97,87 @@ export function ReportPeriodSummaryCard({
   byArea,
   language,
   compact = false,
+  fillHeight = false,
   className,
 }: Props) {
   return (
     <section
       className={[
         compact
-          ? "rounded-lg border border-border-subtle bg-bg/30 p-3"
+          ? "rounded-lg border border-border-subtle bg-bg/30 p-2.5"
           : "rounded-xl border border-border-subtle bg-surface p-4",
+        fillHeight ? "flex h-full min-h-0 flex-col" : "",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <div className={`flex items-start justify-between gap-3 ${compact ? "mb-3" : "mb-4"}`}>
-        <div>
+      <div
+        className={`flex shrink-0 items-start justify-between gap-2 ${compact ? "mb-2" : "mb-4"}`}
+      >
+        <div className="min-w-0">
           <h2
             className={
-              compact ? "text-xs font-bold" : "text-sm font-bold text-text"
+              compact ? "text-[11px] font-bold text-text" : "text-sm font-bold text-text"
             }
           >
             {title}
           </h2>
-          <p className="mt-1 text-[10px] text-text-dim">{subtitle}</p>
+          <p className={`text-text-dim ${compact ? "mt-0.5 text-[9px]" : "mt-1 text-[10px]"}`}>
+            {subtitle}
+          </p>
         </div>
-        <StatusBadge status={status} language={language} />
+        <StatusBadge status={status} language={language} compact={compact} />
       </div>
 
-      <div className="space-y-3">
-        <StatRow label={reportText("achievement", language)} value={`${achievement}%`} />
+      <div
+        className={[
+          fillHeight
+            ? "flex min-h-0 flex-1 flex-col justify-evenly"
+            : compact
+              ? "space-y-1.5"
+              : "space-y-3",
+        ].join(" ")}
+      >
         <StatRow
+          compact={compact}
+          label={reportText("achievement", language)}
+          value={`${achievement}%`}
+        />
+        <StatRow
+          compact={compact}
           label={reportText("submittedAreas", language)}
           value={`${submittedCount} / ${areaCount}`}
         />
-        <StatRow label={reportText("reportLinesKpi", language)} value={totalLines} />
+        <StatRow
+          compact={compact}
+          label={reportText("reportLinesKpi", language)}
+          value={totalLines}
+        />
       </div>
 
       {byArea.length > 0 ? (
-        <div className={`border-t border-border-subtle pt-4 ${compact ? "mt-4" : "mt-5"}`}>
-          <h3 className="mb-3 text-xs font-medium text-text-muted">
+        <div
+          className={[
+            "shrink-0 border-t border-border-subtle",
+            compact ? "mt-2.5 pt-2.5" : "mt-5 pt-4",
+          ].join(" ")}
+        >
+          <h3
+            className={`font-medium text-text-muted ${compact ? "mb-2 text-[10px]" : "mb-3 text-xs"}`}
+          >
             {reportText("byArea", language)}
           </h3>
-          <div className="flex flex-wrap items-center justify-around gap-3">
+          <div
+            className={[
+              "flex flex-wrap items-center justify-around",
+              compact ? "gap-2" : "gap-3",
+            ].join(" ")}
+          >
             {byArea.map((area) => (
               <ProgressRingItem
                 key={area.code ?? area.label}
+                size={compact ? "sm" : "md"}
                 ring={{
                   label: area.label,
                   value: area.value,

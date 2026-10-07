@@ -131,35 +131,62 @@ export function BarsAndPics({ data }: { data: ModuleCardData }) {
   );
 }
 
-export function ProgressRingItem({ ring }: { ring: ProgressRing }) {
-  const r = 18;
+export function ProgressRingItem({
+  ring,
+  size = "md",
+}: {
+  ring: ProgressRing;
+  size?: "sm" | "md";
+}) {
+  const r = size === "sm" ? 14 : 18;
   const c = 2 * Math.PI * r;
   const offset = c - (ring.value / 100) * c;
+  const view = size === "sm" ? 36 : 48;
+  const mid = view / 2;
+  const stroke = size === "sm" ? 3 : 4;
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <svg viewBox="0 0 48 48" className="size-12" aria-hidden>
-        <circle cx="24" cy="24" r={r} fill="none" stroke="var(--border)" strokeWidth="4" />
+    <div className={`flex flex-col items-center ${size === "sm" ? "gap-1" : "gap-1.5"}`}>
+      <svg
+        viewBox={`0 0 ${view} ${view}`}
+        className={size === "sm" ? "size-9" : "size-12"}
+        aria-hidden
+      >
+        <circle
+          cx={mid}
+          cy={mid}
+          r={r}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth={stroke}
+        />
 
         <circle
-          cx="24"
-          cy="24"
+          cx={mid}
+          cy={mid}
           r={r}
           fill="none"
           stroke={ring.color}
-          strokeWidth="4"
+          strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={offset}
-          transform="rotate(-90 24 24)"
+          transform={`rotate(-90 ${mid} ${mid})`}
         />
 
-        <text x="24" y="27" textAnchor="middle" className="fill-text text-[9px] font-semibold">
+        <text
+          x={mid}
+          y={mid + (size === "sm" ? 3 : 3)}
+          textAnchor="middle"
+          className={`fill-text font-semibold ${size === "sm" ? "text-[8px]" : "text-[9px]"}`}
+        >
           {ring.value}%
         </text>
       </svg>
 
-      <span className="text-[10px] text-text-muted">{ring.label}</span>
+      <span className={`text-text-muted ${size === "sm" ? "text-[9px]" : "text-[10px]"}`}>
+        {ring.label}
+      </span>
     </div>
   );
 }
