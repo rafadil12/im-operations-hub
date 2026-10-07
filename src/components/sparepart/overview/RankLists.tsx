@@ -59,7 +59,7 @@ export function TopUsedList({
             return (
               <li
                 key={item.code}
-                className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-2.5"
+                className="flex items-center gap-3 rounded-xl border border-border-subtle bg-bg/30 p-3 shadow-[0_8px_24px_var(--shadow-color-soft)]"
               >
                 <span
                   className={[
