@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-07
+
+### Changed
+
+- Sparepart Stock detail: show Level Code and Level Name as separate columns
+  (no longer combined as `CODE — Name`).
+- Stock levels seed (`L01`–`L04`): English names are now `1ST FLOOR` …
+  `4TH FLOOR` (Chinese labels unchanged).
+
 ## [0.10.0] - 2026-10-07
 
 ### Changed
