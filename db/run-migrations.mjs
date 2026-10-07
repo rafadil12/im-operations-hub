@@ -1837,5 +1837,32 @@ await applySqlFile(
   "Renamed mes_type name_en Request → Access Request.",
 );
 
+// ---------------------------------------------------------------------------
+// 049: Change Request activity → one goods issue (201)
+// ---------------------------------------------------------------------------
+if (await tableExists("mes_record")) {
+  const issueColumns = [
+    ["sparepart_item_id", "INT NULL"],
+    ["sparepart_qty", "INT NULL"],
+    ["sparepart_storage_location_id", "INT NULL"],
+    ["sparepart_level_id", "INT NULL"],
+    ["sparepart_mat_doc_id", "INT NULL"],
+  ];
+  for (const [name, definition] of issueColumns) {
+    if (!(await columnExists("mes_record", name))) {
+      await conn.query(`ALTER TABLE mes_record ADD COLUMN \`${name}\` ${definition}`);
+      console.log(`Added mes_record.${name}.`);
+    }
+  }
+  if (!(await indexExists("mes_record", "uk_mes_record_sparepart_mat_doc"))) {
+    await conn.query(
+      "ALTER TABLE mes_record ADD UNIQUE KEY uk_mes_record_sparepart_mat_doc (sparepart_mat_doc_id)",
+    );
+    console.log("Added uk_mes_record_sparepart_mat_doc.");
+  }
+} else {
+  console.log("mes_record missing; skipped 049 sparepart issue columns.");
+}
+
 await conn.end();
 console.log("Migrations complete.");

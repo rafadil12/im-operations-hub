@@ -79,6 +79,22 @@ export type MesDataRow = MesData & {
   type_cn: string | null;
   status_en: string | null;
   status_cn: string | null;
+  sparepart_item_id?: number | null;
+  sparepart_qty?: number | null;
+  sparepart_storage_location_id?: number | null;
+  sparepart_level_id?: number | null;
+  sparepart_mat_doc_id?: number | null;
+  sparepart_item_code?: string | null;
+  sparepart_item_name_en?: string | null;
+  sparepart_item_name_cn?: string | null;
+  sparepart_location_code?: string | null;
+  sparepart_location_name_en?: string | null;
+  sparepart_location_name_cn?: string | null;
+  sparepart_level_code?: string | null;
+  sparepart_level_name_en?: string | null;
+  sparepart_level_name_cn?: string | null;
+  sparepart_doc_number?: string | null;
+  sparepart_recipient?: string | null;
 };
 
 export type MesDataInput = {
@@ -94,6 +110,12 @@ export type MesDataInput = {
   status_id: number;
   start_time: string;
   end_time: string;
+  issue_material?: boolean;
+  sparepart_item_id?: number | null;
+  sparepart_qty?: number | null;
+  sparepart_storage_location_id?: number | null;
+  sparepart_level_id?: number | null;
+  sparepart_recipient?: string | null;
 };
 
 export type UserRankItem = {

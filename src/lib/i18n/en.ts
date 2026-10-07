@@ -258,6 +258,8 @@ const en = {
     postSuccess: "Posted document {doc}.",
     viewDocument: "View Document",
     reverseDocument: "Reverse Document",
+    reverseLinkedLocked:
+      "Reversal is disabled because this document is linked to a daily operation activity.",
     reversing: "Reversing...",
     reverseSuccess: "Reversal posted as {doc}.",
     docNumber: "Document",
@@ -968,6 +970,10 @@ const en = {
     solutionEn: "Solution (EN)",
     solutionCn: "Solution (CN)",
     type: "Type",
+    issueMaterial: "Issue material",
+    issueMaterialHint:
+      "Posts goods issue 201 when you save. Issued to, material, quantity, and storage location are required.",
+    linkedMaterialDoc: "Material document",
     status: "Status",
     startTime: "Start Time",
     endTime: "End Time",
@@ -1024,6 +1030,12 @@ const en = {
     cnNeedsChinese: "Chinese fields must include Chinese characters.",
     invalidDateTime: "Please enter a valid date and time.",
     fieldRequired: "This field is required.",
+    issueRecipientRequired: "Issued To is required.",
+    issueItemRequired: "Material is required.",
+    issueQtyRequired: "Quantity is required.",
+    issueQtyInvalid: "Quantity must be a positive integer.",
+    issueLocationRequired: "Storage location is required.",
+    issueQtyExceeds: "Quantity cannot exceed available stock ({n}).",
   },
   toast: {
     createSuccess: "Record created successfully.",

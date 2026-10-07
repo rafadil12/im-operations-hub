@@ -216,6 +216,7 @@ export type SparepartMatDoc = {
   client_request_id?: string | null;
   reversal_of_doc_id?: number | null;
   already_reversed?: boolean;
+  linked_activity?: boolean;
   created_at: string | null;
   line_count?: number;
   total_qty?: number;

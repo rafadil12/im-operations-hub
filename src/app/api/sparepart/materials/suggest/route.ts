@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
   const gate = await requireAnyPermission([
     PERMISSIONS.sparepartMaterialsRead,
     PERMISSIONS.sparepartDocumentPost,
+    PERMISSIONS.dailyRecordCreate,
+    PERMISSIONS.dailyRecordUpdate,
   ]);
   if (gate instanceof NextResponse) return gate;
 

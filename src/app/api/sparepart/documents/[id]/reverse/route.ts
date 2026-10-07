@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
+import { query } from "@/lib/db";
 import { reverseMaterialDocument, SparepartPostingError } from "@/lib/sparepart/posting";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -23,6 +24,17 @@ export async function POST(request: NextRequest, context: Ctx) {
       posting_date?: string;
       client_request_id?: string;
     };
+    const linked = await query<{ id: number }[]>(
+      `SELECT id FROM mes_record WHERE sparepart_mat_doc_id = ? LIMIT 1`,
+      [docId]
+    );
+    if (linked[0]) {
+      return NextResponse.json(
+        { error: "This document is linked to a daily operation activity and cannot be reversed." },
+        { status: 409 }
+      );
+    }
+
     const account = gate.account;
     const creatorLabel = account.employeeId
       ? `${account.employeeId} - ${account.displayName}`
