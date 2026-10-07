@@ -15,7 +15,12 @@ import {
   type MesValidationErrorKey,
 } from "@/lib/daily-operation/mesRecordValidation";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
-import { fieldErrorMessage } from "./mesFormHelpers";
+import {
+  collectIssueErrors,
+  issueErrorField,
+  type IssueFieldError,
+} from "@/lib/daily-operation/changeRequestIssueParse";
+import { fieldErrorMessage, issueErrorMessage } from "./mesFormHelpers";
 import { ChangeRequestMaterialFields } from "./ChangeRequestMaterialFields";
 import { MesFormFields } from "./MesFormFields";
 
@@ -72,6 +77,8 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
   );
   const [levelId, setLevelId] = useState<number | null>(initial?.sparepart_level_id ?? null);
   const [issuedTo, setIssuedTo] = useState("");
+  const [availableQty, setAvailableQty] = useState<number | null>(null);
+  const [issueErrors, setIssueErrors] = useState<IssueFieldError[]>([]);
 
   const categoryOptions = useMemo(
     () => categoriesForDivision(masters, divisionId),
@@ -170,6 +177,34 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
       if (first) focusField(first);
       return;
     }
+
+    if (isChangeRequest && issueMaterial && !materialLocked) {
+      const issueProblems = collectIssueErrors(
+        {
+          issue_material: true,
+          sparepart_item_id: itemId,
+          sparepart_qty: issueQty,
+          sparepart_storage_location_id: locationId,
+          sparepart_level_id: levelId,
+          sparepart_recipient: issuedTo,
+        },
+        availableQty
+      );
+      if (issueProblems.length > 0) {
+        setIssueErrors(issueProblems);
+        const summary = issueProblems
+          .map((error) => issueErrorMessage(error, t, availableQty))
+          .join(" ");
+        setError(summary);
+        const field = issueErrorField(issueProblems[0]);
+        document.querySelector(`[data-issue-field="${field}"]`)?.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth",
+        });
+        return;
+      }
+    }
+    setIssueErrors([]);
 
     savingRef.current = true;
     setSaving(true);
@@ -294,12 +329,40 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
               locationId={locationId}
               levelId={levelId}
               recipient={issuedTo}
-              onIssueMaterial={setIssueMaterial}
-              onItemId={setItemId}
-              onQty={setIssueQty}
-              onLocationId={setLocationId}
+              errors={issueErrors}
+              availableQty={availableQty}
+              onIssueMaterial={(value) => {
+                setIssueMaterial(value);
+                if (!value) setIssueErrors([]);
+              }}
+              onItemId={(value) => {
+                setItemId(value);
+                setIssueErrors((current) =>
+                  current.filter((error) => issueErrorField(error) !== "item")
+                );
+              }}
+              onQty={(value) => {
+                setIssueQty(value);
+                setIssueErrors((current) =>
+                  current.filter((error) => issueErrorField(error) !== "qty")
+                );
+              }}
+              onLocationId={(value) => {
+                setLocationId(value);
+                setIssueErrors((current) =>
+                  current.filter(
+                    (error) => issueErrorField(error) !== "location"
+                  )
+                );
+              }}
               onLevelId={setLevelId}
-              onRecipient={setIssuedTo}
+              onRecipient={(value) => {
+                setIssuedTo(value);
+                setIssueErrors((current) =>
+                  current.filter((error) => issueErrorField(error) !== "recipient")
+                );
+              }}
+              onAvailableQty={setAvailableQty}
             />
           ) : null
         }

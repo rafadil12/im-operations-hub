@@ -971,7 +971,8 @@ const en = {
     solutionCn: "Solution (CN)",
     type: "Type",
     issueMaterial: "Issue material",
-    issueMaterialHint: "Posts goods issue 201 when you save. Location and level are required.",
+    issueMaterialHint:
+      "Posts goods issue 201 when you save. Issued to, material, quantity, and storage location are required.",
     linkedMaterialDoc: "Material document",
     status: "Status",
     startTime: "Start Time",
@@ -1029,6 +1030,12 @@ const en = {
     cnNeedsChinese: "Chinese fields must include Chinese characters.",
     invalidDateTime: "Please enter a valid date and time.",
     fieldRequired: "This field is required.",
+    issueRecipientRequired: "Issued To is required.",
+    issueItemRequired: "Material is required.",
+    issueQtyRequired: "Quantity is required.",
+    issueQtyInvalid: "Quantity must be a positive integer.",
+    issueLocationRequired: "Storage location is required.",
+    issueQtyExceeds: "Quantity cannot exceed available stock ({n}).",
   },
   toast: {
     createSuccess: "Record created successfully.",

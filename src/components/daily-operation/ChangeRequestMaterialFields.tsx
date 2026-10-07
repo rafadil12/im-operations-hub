@@ -5,8 +5,10 @@ import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { apiGetAbs } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
+import type { IssueFieldError } from "@/lib/daily-operation/changeRequestIssueParse";
+import { issueErrorField } from "@/lib/daily-operation/changeRequestIssueParse";
 import type { MesDataRow, SparepartItem, SparepartStockBalance } from "@/lib/types";
-import { mesInputCls, mesLabelCls } from "./mesFormHelpers";
+import { issueErrorMessage, mesInputCls, mesInputErrorCls, mesLabelCls } from "./mesFormHelpers";
 
 type Props = {
   saving: boolean;
@@ -18,12 +20,15 @@ type Props = {
   locationId: number | null;
   levelId: number | null;
   recipient: string;
+  errors: IssueFieldError[];
+  availableQty: number | null;
   onIssueMaterial: (value: boolean) => void;
   onItemId: (value: number | null) => void;
   onQty: (value: string) => void;
   onLocationId: (value: number | null) => void;
   onLevelId: (value: number | null) => void;
   onRecipient: (value: string) => void;
+  onAvailableQty: (value: number | null) => void;
 };
 
 export function ChangeRequestMaterialFields({
@@ -36,12 +41,15 @@ export function ChangeRequestMaterialFields({
   locationId,
   levelId,
   recipient,
+  errors,
+  availableQty,
   onIssueMaterial,
   onItemId,
   onQty,
   onLocationId,
   onLevelId,
   onRecipient,
+  onAvailableQty,
 }: Props) {
   const { t, lang } = useLang();
   const [item, setItem] = useState<SparepartItem | null>(null);
@@ -61,6 +69,11 @@ export function ChangeRequestMaterialFields({
     (balance) =>
       balance.storage_location_id === locationId && balance.level_id === levelId
   );
+
+  const available = selectedPoint ? Number(selectedPoint.qty) : null;
+  useEffect(() => {
+    onAvailableQty(available);
+  }, [available, onAvailableQty]);
 
   if (locked) {
     return (
@@ -130,20 +143,26 @@ export function ChangeRequestMaterialFields({
       <p className="mt-1 text-[11px] text-text-dim">{t.fields.issueMaterialHint}</p>
       {issueMaterial ? (
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className={mesLabelCls}>{t.sparepart.recipient}</label>
+          <div className="sm:col-span-2" data-issue-field="recipient">
+            <label className={mesLabelCls}>
+              {t.sparepart.recipient} <span className="text-danger">*</span>
+            </label>
             <input
-              className={mesInputCls}
+              className={`${mesInputCls} ${fieldInvalid(errors, "recipient") ? mesInputErrorCls : ""}`}
               value={recipient}
               maxLength={255}
               disabled={saving}
+              aria-invalid={fieldInvalid(errors, "recipient")}
               onChange={(e) => onRecipient(e.target.value)}
             />
+            <FieldError errors={errors} field="recipient" availableQty={availableQty} />
           </div>
-          <div className="sm:col-span-2">
-            <label className={mesLabelCls}>{t.sparepart.item}</label>
+          <div className="sm:col-span-2" data-issue-field="item">
+            <label className={mesLabelCls}>
+              {t.sparepart.item} <span className="text-danger">*</span>
+            </label>
             <MaterialCombobox
-              className={mesInputCls}
+              className={`${mesInputCls} ${fieldInvalid(errors, "item") ? mesInputErrorCls : ""}`}
               value={itemId ? String(itemId) : ""}
               onChange={(next) => {
                 onLocationId(null);
@@ -159,20 +178,28 @@ export function ChangeRequestMaterialFields({
                   .catch(() => setItem(null));
               }}
             />
+            <FieldError errors={errors} field="item" availableQty={availableQty} />
           </div>
-          <div>
-            <label className={mesLabelCls}>{t.sparepart.qty}</label>
+          <div data-issue-field="qty">
+            <label className={mesLabelCls}>
+              {t.sparepart.qty} <span className="text-danger">*</span>
+            </label>
             <input
-              className={mesInputCls}
+              className={`${mesInputCls} ${fieldInvalid(errors, "qty") ? mesInputErrorCls : ""}`}
               inputMode="numeric"
               value={qty}
               disabled={saving}
+              aria-invalid={fieldInvalid(errors, "qty")}
               onChange={(e) => onQty(e.target.value.replace(/[^\d]/g, ""))}
             />
+            <FieldError errors={errors} field="qty" availableQty={availableQty} />
           </div>
-          <div>
-            <label className={mesLabelCls}>{t.sparepart.location}</label>
+          <div data-issue-field="location">
+            <label className={mesLabelCls}>
+              {t.sparepart.location} <span className="text-danger">*</span>
+            </label>
             <SparepartDropdown
+              className={fieldInvalid(errors, "location") ? "[&>button]:border-danger" : ""}
               value={stockPointValue}
               disabled={saving || !itemId}
               placeholder={t.sparepart.locationName}
@@ -191,6 +218,7 @@ export function ChangeRequestMaterialFields({
                 {t.sparepart.stockCurrent}: {selectedPoint.qty}
               </p>
             ) : null}
+            <FieldError errors={errors} field="location" availableQty={availableQty} />
           </div>
         </div>
       ) : null}
@@ -214,6 +242,25 @@ function stockPointLabel(balance: SparepartStockBalance, lang: "en" | "cn"): str
     lang
   );
   return `${balance.location_code ?? ""} — ${locationName} / ${balance.level_code ?? ""} — ${levelName} (${balance.qty})`;
+}
+
+function fieldInvalid(errors: IssueFieldError[], field: "recipient" | "item" | "qty" | "location") {
+  return errors.some((error) => issueErrorField(error) === field);
+}
+
+function FieldError({
+  errors,
+  field,
+  availableQty,
+}: {
+  errors: IssueFieldError[];
+  field: "recipient" | "item" | "qty" | "location";
+  availableQty: number | null;
+}) {
+  const { t } = useLang();
+  const match = errors.find((error) => issueErrorField(error) === field);
+  if (!match) return null;
+  return <p className="mt-1 text-[11px] text-danger">{issueErrorMessage(match, t, availableQty)}</p>;
 }
 
 function ReadOnly({ label, value }: { label: string; value: string }) {

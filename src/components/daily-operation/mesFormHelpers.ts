@@ -1,5 +1,6 @@
-import type { Dict } from "@/lib/i18n";
+import type { IssueFieldError } from "@/lib/daily-operation/changeRequestIssueParse";
 import type { MesValidationErrorKey } from "@/lib/daily-operation/mesRecordValidation";
+import type { Dict } from "@/lib/i18n";
 
 export const mesInputCls =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent";
@@ -22,5 +23,26 @@ export function fieldErrorMessage(key: MesValidationErrorKey, t: Dict): string {
       return t.validation.invalidDateTime;
     default:
       return t.validation.required;
+  }
+}
+
+export function issueErrorMessage(
+  error: IssueFieldError,
+  t: Dict,
+  availableQty: number | null
+): string {
+  switch (error) {
+    case "recipient_required":
+      return t.validation.issueRecipientRequired;
+    case "item_required":
+      return t.validation.issueItemRequired;
+    case "qty_required":
+      return t.validation.issueQtyRequired;
+    case "qty_invalid":
+      return t.validation.issueQtyInvalid;
+    case "location_required":
+      return t.validation.issueLocationRequired;
+    case "qty_exceeds":
+      return t.validation.issueQtyExceeds.replace("{n}", String(availableQty ?? 0));
   }
 }

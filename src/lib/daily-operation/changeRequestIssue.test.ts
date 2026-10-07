@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  ChangeRequestIssueError,
   assertIssueComplete,
+  collectIssueErrors,
   parseChangeRequestIssue,
 } from "./changeRequestIssueParse";
 
@@ -31,7 +31,7 @@ describe("parseChangeRequestIssue", () => {
 });
 
 describe("assertIssueComplete", () => {
-  it("rejects an incomplete issue", () => {
+  it("names only the fields that fail", () => {
     expect(() =>
       assertIssueComplete({
         issue_material: true,
@@ -41,6 +41,35 @@ describe("assertIssueComplete", () => {
         sparepart_level_id: 3,
         sparepart_recipient: "",
       })
-    ).toThrow(ChangeRequestIssueError);
+    ).toThrow("Issued To is required. Quantity is required.");
+  });
+
+  it("rejects a zero quantity as invalid", () => {
+    expect(
+      collectIssueErrors({
+        issue_material: true,
+        sparepart_item_id: 1,
+        sparepart_qty: 0,
+        sparepart_storage_location_id: 2,
+        sparepart_level_id: 3,
+        sparepart_recipient: "Line A",
+      })
+    ).toEqual(["qty_invalid"]);
+  });
+
+  it("rejects a quantity above available stock", () => {
+    expect(
+      collectIssueErrors(
+        {
+          issue_material: true,
+          sparepart_item_id: 1,
+          sparepart_qty: 5,
+          sparepart_storage_location_id: 2,
+          sparepart_level_id: 3,
+          sparepart_recipient: "Line A",
+        },
+        4
+      )
+    ).toEqual(["qty_exceeds"]);
   });
 });

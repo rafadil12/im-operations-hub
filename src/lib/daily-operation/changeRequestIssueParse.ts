@@ -49,17 +49,71 @@ export function issueClientRequestId(recordId: number): string {
   return `mes-record-${recordId}`;
 }
 
-export function assertIssueComplete(issue: ChangeRequestIssueInput): void {
-  if (!issue.issue_material) return;
-  if (
-    !issue.sparepart_item_id ||
-    !issue.sparepart_qty ||
-    !issue.sparepart_storage_location_id ||
-    !issue.sparepart_level_id ||
-    !issue.sparepart_recipient
-  ) {
-    throw new ChangeRequestIssueError(
-      "Material, quantity, storage location, level, and issued to are required to issue stock."
-    );
+export type IssueFieldError =
+  | "recipient_required"
+  | "item_required"
+  | "qty_required"
+  | "qty_invalid"
+  | "location_required"
+  | "qty_exceeds";
+
+const ISSUE_ERROR_TEXT: Record<IssueFieldError, string> = {
+  recipient_required: "Issued To is required.",
+  item_required: "Material is required.",
+  qty_required: "Quantity is required.",
+  qty_invalid: "Quantity must be a positive integer.",
+  location_required: "Storage location is required.",
+  qty_exceeds: "Quantity cannot exceed available stock.",
+};
+
+export function issueErrorField(error: IssueFieldError): "recipient" | "item" | "qty" | "location" {
+  if (error === "recipient_required") return "recipient";
+  if (error === "item_required") return "item";
+  if (error === "location_required") return "location";
+  return "qty";
+}
+
+export function collectIssueErrors(
+  body: {
+    issue_material?: unknown;
+    sparepart_item_id?: unknown;
+    sparepart_qty?: unknown;
+    sparepart_storage_location_id?: unknown;
+    sparepart_level_id?: unknown;
+    sparepart_recipient?: unknown;
+  },
+  availableQty?: number | null
+): IssueFieldError[] {
+  const issue =
+    body.issue_material === true || body.issue_material === 1 || body.issue_material === "1";
+  if (!issue) return [];
+
+  const errors: IssueFieldError[] = [];
+  if (!String(body.sparepart_recipient ?? "").trim()) errors.push("recipient_required");
+  if (!num(body.sparepart_item_id)) errors.push("item_required");
+
+  const qtyRaw = body.sparepart_qty;
+  const qtyEmpty = qtyRaw == null || String(qtyRaw).trim() === "";
+  if (qtyEmpty) {
+    errors.push("qty_required");
+  } else if (!num(qtyRaw)) {
+    errors.push("qty_invalid");
+  } else if (availableQty != null && Number(qtyRaw) > availableQty) {
+    errors.push("qty_exceeds");
   }
+
+  if (!num(body.sparepart_storage_location_id) || !num(body.sparepart_level_id)) {
+    errors.push("location_required");
+  }
+  return errors;
+}
+
+export function formatIssueErrors(errors: IssueFieldError[]): string {
+  return errors.map((error) => ISSUE_ERROR_TEXT[error]).join(" ");
+}
+
+export function assertIssueComplete(issue: ChangeRequestIssueInput): void {
+  const errors = collectIssueErrors(issue);
+  if (errors.length === 0) return;
+  throw new ChangeRequestIssueError(formatIssueErrors(errors));
 }
