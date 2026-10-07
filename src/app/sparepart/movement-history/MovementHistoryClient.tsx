@@ -20,7 +20,7 @@ import {
   type MovementHistoryColumnId,
   type MovementHistoryColumnVisibility,
 } from "@/lib/sparepart/movementHistoryColumns";
-import { pad2, todayLocalDateInputValue } from "@/lib/sparepart/postDraft";
+import { calendarMonthRange } from "@/lib/sparepart/movementHistoryFilters";
 import { formatUomDisplay } from "@/lib/sparepart/uoms";
 import { exportFilename } from "@/lib/exportFilenames";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/StockTable";
@@ -35,7 +35,6 @@ import type { SparepartMatDoc, SparepartMovementHistoryRow } from "@/lib/types";
 import { DocumentDetailModal } from "../documents/DocumentDetailModal";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
-const DEFAULT_RANGE_DAYS = 30;
 
 type ListResponse = { rows: SparepartMovementHistoryRow[] };
 type DetailResponse = { document: SparepartMatDoc };
@@ -49,20 +48,15 @@ type HistoryFilters = {
   end: string;
 };
 
-function localDateDaysAgo(days: number): string {
-  const now = new Date();
-  now.setDate(now.getDate() - days);
-  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
-}
-
 function defaultHistoryFilters(): HistoryFilters {
+  const { start, end } = calendarMonthRange();
   return {
     q: "",
     itemId: "",
     movementType: "",
     location: "",
-    start: localDateDaysAgo(DEFAULT_RANGE_DAYS),
-    end: todayLocalDateInputValue(),
+    start,
+    end,
   };
 }
 

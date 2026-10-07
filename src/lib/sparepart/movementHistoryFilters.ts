@@ -1,5 +1,17 @@
 import { MAT_DOC_MOVEMENT_TYPES } from "@/lib/sparepart/documentFilters";
+import { pad2 } from "@/lib/sparepart/postDraft";
 import type { MovementType } from "@/lib/types";
+
+/** Local calendar-month bounds (YYYY-MM-01 … YYYY-MM-lastDay). */
+export function calendarMonthRange(ref: Date = new Date()): { start: string; end: string } {
+  const year = ref.getFullYear();
+  const month = ref.getMonth(); // 0-based
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return {
+    start: `${year}-${pad2(month + 1)}-01`,
+    end: `${year}-${pad2(month + 1)}-${pad2(lastDay)}`,
+  };
+}
 
 export const MOVEMENT_HISTORY_FROM = `
        FROM sparepart_mat_doc_items li
