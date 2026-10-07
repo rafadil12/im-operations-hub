@@ -126,6 +126,16 @@ function findByName<T extends Named>(items: T[], name: string): T | undefined {
   );
 }
 
+/** Legacy Excel exports may still say "Request" after the Access Request rename. */
+function findTypeByName(masters: Masters, name: string): Masters["types"][number] | undefined {
+  const direct = findByName(masters.types, name);
+  if (direct) return direct;
+  if (name.trim().toLowerCase() === "request") {
+    return findByName(masters.types, "Access Request");
+  }
+  return undefined;
+}
+
 function displayName(item: Named): string {
   return item.name_en?.trim() || item.name_cn?.trim() || String(item.id);
 }
@@ -501,7 +511,7 @@ export async function parseActivitiesWorkbook(
       });
     }
 
-    const type = findByName(masters.types, typeName);
+    const type = findTypeByName(masters, typeName);
     if (!typeName) {
       errors.push({ row: r, field: "Type", message: "Type is required." });
     } else if (!type) {
