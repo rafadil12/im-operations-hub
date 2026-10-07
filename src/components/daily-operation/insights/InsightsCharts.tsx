@@ -197,7 +197,17 @@ export function InsightsCharts({ result }: { result: AnalysisResult }) {
             </div>
           }
         >
-          {renderUserRanking(userRankingCompact, { fillHeight: true })}
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1">
+              {renderUserRanking(userRankingCompact, { fillHeight: true })}
+            </div>
+            {userRanking.length > USER_RANKING_COMPACT_TOP_N ? (
+              <p className="mt-2 shrink-0 text-[11px] text-text-dim">
+                {t.analysis.showingTop.replace("{n}", String(USER_RANKING_COMPACT_TOP_N))} ·{" "}
+                {userRanking.length} total
+              </p>
+            ) : null}
+          </div>
         </ChartCard>
       </div>
 
