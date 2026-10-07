@@ -13,6 +13,8 @@ export async function GET(_request: NextRequest, context: Ctx) {
   const gate = await requireAnyPermission([
     PERMISSIONS.sparepartMaterialsRead,
     PERMISSIONS.sparepartStockView,
+    PERMISSIONS.dailyRecordCreate,
+    PERMISSIONS.dailyRecordUpdate,
   ]);
   if (gate instanceof NextResponse) return gate;
 

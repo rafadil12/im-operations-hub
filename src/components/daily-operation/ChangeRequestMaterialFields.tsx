@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
 import { apiGet } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
 import type { MesDataRow } from "@/lib/types";
@@ -11,7 +12,6 @@ type Named = { id: number; code: string; name_en: string | null; name_cn: string
 type Options = {
   locations: Named[];
   levels: Named[];
-  materials: Named[];
   available: number | null;
 };
 
@@ -47,32 +47,32 @@ export function ChangeRequestMaterialFields({
   onLevelId,
 }: Props) {
   const { t, lang } = useLang();
-  const [query, setQuery] = useState("");
   const [options, setOptions] = useState<Options>({
     locations: [],
     levels: [],
-    materials: [],
     available: null,
   });
 
   useEffect(() => {
-    if (locked) return;
-    const handle = window.setTimeout(() => {
-      const params = new URLSearchParams();
-      if (query) params.set("q", query);
-      if (itemId) params.set("itemId", String(itemId));
-      if (locationId) params.set("locationId", String(locationId));
-      if (levelId) params.set("levelId", String(levelId));
-      apiGet<Options>(`/sparepart-issue-options?${params.toString()}`)
-        .then(setOptions)
-        .catch(() => undefined);
-    }, 200);
-    return () => window.clearTimeout(handle);
-  }, [locked, query, itemId, locationId, levelId]);
+    if (locked || !issueMaterial) return;
+    const params = new URLSearchParams();
+    if (itemId) params.set("itemId", String(itemId));
+    if (locationId) params.set("locationId", String(locationId));
+    if (levelId) params.set("levelId", String(levelId));
+    apiGet<Options>(`/sparepart-issue-options?${params.toString()}`)
+      .then((data) =>
+        setOptions({
+          locations: data.locations,
+          levels: data.levels,
+          available: data.available,
+        })
+      )
+      .catch(() => undefined);
+  }, [locked, issueMaterial, itemId, locationId, levelId]);
 
   if (locked) {
     return (
-      <div className="mt-4 rounded-lg border border-border-subtle bg-bg/40 p-3">
+      <div className="rounded-lg border border-border-subtle bg-bg/40 p-3">
         <p className="text-xs font-semibold text-text">{t.fields.issueMaterial}</p>
         <p className="mt-1 text-[11px] text-text-dim">
           {t.fields.linkedMaterialDoc}: {initial?.sparepart_doc_number ?? "-"}
@@ -90,7 +90,10 @@ export function ChangeRequestMaterialFields({
             )}
           />
           <ReadOnly label={t.sparepart.qty} value={String(initial?.sparepart_qty ?? "-")} />
-          <ReadOnly label={t.sparepart.locationCode} value={initial?.sparepart_location_code ?? "-"} />
+          <ReadOnly
+            label={t.sparepart.locationCode}
+            value={initial?.sparepart_location_code ?? "-"}
+          />
           <ReadOnly
             label={t.sparepart.locationName}
             value={localizedName(
@@ -118,7 +121,7 @@ export function ChangeRequestMaterialFields({
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-border-subtle p-3">
+    <div className="rounded-lg border border-border-subtle p-3">
       <label className="flex items-center gap-2 text-xs font-semibold text-text">
         <input
           type="checkbox"
@@ -132,27 +135,12 @@ export function ChangeRequestMaterialFields({
       {issueMaterial ? (
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className={mesLabelCls}>{t.sparepart.code}</label>
-            <input
+            <label className={mesLabelCls}>{t.sparepart.item}</label>
+            <MaterialCombobox
               className={mesInputCls}
-              value={query}
-              disabled={saving}
-              placeholder={t.common.search}
-              onChange={(e) => setQuery(e.target.value)}
+              value={itemId ? String(itemId) : ""}
+              onChange={(next) => onItemId(next ? Number(next) : null)}
             />
-            <select
-              className={`${mesInputCls} mt-2`}
-              value={itemId ?? ""}
-              disabled={saving}
-              onChange={(e) => onItemId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">{t.common.none}</option>
-              {options.materials.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.code} — {localizedName(item, lang)}
-                </option>
-              ))}
-            </select>
           </div>
           <div>
             <label className={mesLabelCls}>{t.sparepart.qty}</label>

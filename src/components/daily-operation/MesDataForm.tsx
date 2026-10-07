@@ -280,24 +280,26 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
         setDescriptionEn={setDescriptionEn}
         setSolutionCn={setSolutionCn}
         setSolutionEn={setSolutionEn}
+        afterStatus={
+          isChangeRequest ? (
+            <ChangeRequestMaterialFields
+              saving={saving}
+              locked={materialLocked}
+              initial={initial}
+              issueMaterial={issueMaterial}
+              itemId={itemId}
+              qty={issueQty}
+              locationId={locationId}
+              levelId={levelId}
+              onIssueMaterial={setIssueMaterial}
+              onItemId={setItemId}
+              onQty={setIssueQty}
+              onLocationId={setLocationId}
+              onLevelId={setLevelId}
+            />
+          ) : null
+        }
       />
-      {isChangeRequest ? (
-        <ChangeRequestMaterialFields
-          saving={saving}
-          locked={materialLocked}
-          initial={initial}
-          issueMaterial={issueMaterial}
-          itemId={itemId}
-          qty={issueQty}
-          locationId={locationId}
-          levelId={levelId}
-          onIssueMaterial={setIssueMaterial}
-          onItemId={setItemId}
-          onQty={setIssueQty}
-          onLocationId={setLocationId}
-          onLevelId={setLevelId}
-        />
-      ) : null}
     </Modal>
   );
 }
