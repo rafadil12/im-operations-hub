@@ -220,6 +220,8 @@ const en = {
     fromLocation: "From Location",
     toLocation: "To Location",
     level: "Level",
+    levelCode: "Level Code",
+    levelName: "Level Name",
     fromLevel: "From Level",
     toLevel: "To Level",
     addCategory: "Add category",

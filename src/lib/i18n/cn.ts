@@ -221,6 +221,8 @@ const cn: Dict = {
     fromLocation: "发出地点",
     toLocation: "接收地点",
     level: "楼层",
+    levelCode: "楼层代码",
+    levelName: "楼层名称",
     fromLevel: "发出楼层",
     toLevel: "接收楼层",
     addCategory: "新增类别",
