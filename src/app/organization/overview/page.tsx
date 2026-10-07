@@ -284,8 +284,8 @@ function requestTypeStyle(requestType: LeaveType) {
       label: "bg-sky-500/10 text-sky-500",
     },
     MC: {
-      card: "border-rose-400/30 bg-rose-500/[0.04]",
-      label: "bg-rose-500/10 text-rose-500",
+     card: "border-purple-400/30 bg-purple-500/[0.04]",
+     label: "bg-purple-500/10 text-purple-500",
     },
     UPL: {
       card: "border-amber-400/30 bg-amber-500/[0.04]",
@@ -296,8 +296,8 @@ function requestTypeStyle(requestType: LeaveType) {
       label: "bg-slate-500/10 text-slate-500",
     },
     ALPA: {
-      card: "border-fuchsia-400/30 bg-fuchsia-500/[0.04]",
-      label: "bg-fuchsia-500/10 text-fuchsia-500",
+       card: "border-rose-400/30 bg-rose-500/[0.04]",
+       label: "bg-rose-500/10 text-rose-500",
     },
     OT: {
       card: "border-violet-400/30 bg-violet-500/[0.04]",
@@ -1503,7 +1503,7 @@ function EmployeeLeaveChart({
                 >
                   {item.alpa > 0 ? (
                     <div
-                      className="w-full bg-fuchsia-500 transition-all duration-300"
+                      className="w-full bg-rose-500 transition-all duration-300"
                       style={{ height: `${alpaHeight}px` }}
                       title={`ALPA: ${item.alpa}`}
                     />
@@ -1519,7 +1519,7 @@ function EmployeeLeaveChart({
 
                   {item.mc > 0 ? (
                     <div
-                      className="w-full bg-rose-500 transition-all duration-300"
+                      className="w-full bg-purple-500 transition-all duration-300"
                       style={{ height: `${mcHeight}px` }}
                       title={`MC: ${item.mc}`}
                     />
@@ -4963,18 +4963,14 @@ const recentRequests = allRecentRequests.slice(0, 4);
                         <td className="px-3 py-3 text-center">
                           <span
                             className={
-                              item.attendanceRate >=
-                              90
-                                ? "rounded-md bg-emerald-500/10 px-2 py-1 text-[9px] font-semibold text-emerald-300"
-                                : item.attendanceRate >=
-                                    70
-                                  ? "rounded-md bg-amber-500/10 px-2 py-1 text-[9px] font-semibold text-amber-300"
-                                  : "rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-semibold text-rose-300"
+                              item.attendanceRate >=90
+                                ? "rounded-md bg-emerald-500/10 px-2 py-1 text-[9px] font-semibold text-emerald-500"
+                                : item.attendanceRate >=70
+                                  ? "rounded-md bg-amber-500/10 px-2 py-1 text-[9px] font-semibold text-amber-500"
+                                  : "rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-semibold text-rose-500"
                             }
                           >
-                            {item.attendanceRate.toFixed(
-                              1,
-                            )}
+                            {item.attendanceRate.toFixed(1,)}
                             %
                           </span>
                         </td>
