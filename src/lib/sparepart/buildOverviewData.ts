@@ -114,13 +114,24 @@ export function buildOverviewData(args: {
     const key = `${row.day_key}|${code}`;
     dayCatMap.set(key, (dayCatMap.get(key) ?? 0) + n(row.qty));
   }
-  const trendDaily: SparepartOverviewTrendPoint[] = trendKeys.map((date) => ({
-    date,
-    IT: dayCatMap.get(`${date}|IT`) ?? 0,
-    AGV: dayCatMap.get(`${date}|AGV`) ?? 0,
-    ASSEMBLY: dayCatMap.get(`${date}|ASSEMBLY`) ?? 0,
-    MES: dayCatMap.get(`${date}|MES`) ?? 0,
-  }));
+  const codesFromCategories = [...groupByCanonicalCategory(categories).keys()];
+  const codesFromTrend = [
+    ...new Set(
+      [...dayCatMap.keys()].map((key) => key.slice(key.indexOf("|") + 1)).filter(Boolean)
+    ),
+  ];
+  const trendCategoryCodes = categoryFilter
+    ? [categoryFilter]
+    : [...new Set([...codesFromCategories, ...codesFromTrend])].sort((a, b) =>
+        a.localeCompare(b)
+      );
+  const trendDaily: SparepartOverviewTrendPoint[] = trendKeys.map((date) => {
+    const point: SparepartOverviewTrendPoint = { date };
+    for (const code of trendCategoryCodes) {
+      point[code] = dayCatMap.get(`${date}|${code}`) ?? 0;
+    }
+    return point;
+  });
 
   const sparkMap = new Map(sparkRows.map((row) => [String(row.day_key), n(row.qty)]));
   const heatDayMap = new Map(heatDayRows.map((row) => [String(row.day_key), n(row.qty)]));
@@ -194,15 +205,7 @@ export function buildOverviewData(args: {
       uom_name_cn: row.uom_name_cn,
       qty: n(row.qty),
     })),
-    trendDaily: categoryFilter
-      ? trendDaily.map((point) => ({
-          date: point.date,
-          IT: categoryFilter === "IT" ? point.IT : 0,
-          AGV: categoryFilter === "AGV" ? point.AGV : 0,
-          ASSEMBLY: categoryFilter === "ASSEMBLY" ? point.ASSEMBLY : 0,
-          MES: categoryFilter === "MES" ? point.MES : 0,
-        }))
-      : trendDaily,
+    trendDaily,
     stockByLocation: locRows
       .map((row) => ({
         locationId: n(row.location_id),

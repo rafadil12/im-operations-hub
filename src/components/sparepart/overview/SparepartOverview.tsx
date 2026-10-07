@@ -7,9 +7,7 @@ import { localizedName, useLang } from "@/lib/i18n";
 import {
   categoryColor,
   localizedCategoryLabel,
-  normalizeCategoryCode,
-  SPAREPART_CATEGORY_CODES,
-  type SparepartCategoryCode,
+  canonicalCategoryCode,
 } from "@/lib/sparepart/categories";
 import { overviewMatchesFilters, type SparepartOverviewData } from "@/lib/sparepart/overview";
 import { formatUomDisplay } from "@/lib/sparepart/uoms";
@@ -66,9 +64,9 @@ export function SparepartOverview({
   const { t, lang } = useLang();
   const router = useRouter();
   const ready = overviewMatchesFilters(data, category, range);
-  const visibleCodes = (
-    category ? [normalizeCategoryCode(category) ?? category] : SPAREPART_CATEGORY_CODES
-  ) as SparepartCategoryCode[];
+  const visibleCodes = category
+    ? [canonicalCategoryCode(category)]
+    : data.categories.map((tab) => canonicalCategoryCode(tab.code));
 
   return (
     <div className="space-y-4">
@@ -87,7 +85,7 @@ export function SparepartOverview({
             {t.common.all}
           </button>
           {data.categories.map((tab) => {
-            const tabCode = normalizeCategoryCode(tab.code) ?? tab.code;
+            const tabCode = canonicalCategoryCode(tab.code);
             const active = category === tabCode;
             return (
               <button

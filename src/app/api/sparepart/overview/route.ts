@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { eachDate, inclusiveDayCount, previousPeriod, toDateInput } from "@/lib/dateRange";
-import { categoryMatchSql, normalizeCategoryCode } from "@/lib/sparepart/categories";
+import { canonicalCategoryCode, categoryMatchSql } from "@/lib/sparepart/categories";
 import { buildOverviewData } from "@/lib/sparepart/buildOverviewData";
 import { fetchOverviewQueryBundle } from "@/lib/sparepart/fetchOverviewQueries";
 import { resolveOverviewRange } from "@/lib/sparepart/overviewRange";
@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const rawCategory = request.nextUrl.searchParams.get("category")?.trim() ?? "";
-    const categoryFilter = rawCategory ? normalizeCategoryCode(rawCategory) : null;
+    // Keep any DB category code (not only IT/AGV/ASSEMBLY/MES allowlist).
+    const categoryFilter = rawCategory ? canonicalCategoryCode(rawCategory) : null;
     const catMatch = categoryFilter ? categoryMatchSql("c.code", categoryFilter) : null;
 
     const period = resolveOverviewRange(
