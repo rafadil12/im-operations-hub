@@ -11,11 +11,6 @@ const DIVISION_ORDER = ["MES", "IT", "Intelligent Logistics"] as const;
 const PRESENT_VALUES = new Set(["10.5", "8", "4"]);
 const LEAVE_VALUES = new Set(["AL", "MC", "UPL"]);
 
-function displayName(row: OrganizationEmployeeRow): string {
-  const name = row.name_en?.trim() || row.name_cn?.trim() || row.employee_no;
-  return name.toUpperCase();
-}
-
 function personNames(row: OrganizationEmployeeRow): {
   nameEn: string;
   nameCn: string;
@@ -64,7 +59,12 @@ function normalizeDivisionName(name: string | null): string | null {
 
 function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart {
   const leaderRow = employees.find((row) => row.employee_no === GM_EMPLOYEE_NO);
-  const leader = leaderRow ? displayName(leaderRow) : "WANG CHUNLAI";
+  const leader = leaderRow
+    ? {
+        nameEn: leaderRow.name_en?.trim() || leaderRow.name_cn?.trim() || "WANG CHUNLAI",
+        nameCn: leaderRow.name_cn?.trim() || leaderRow.name_en?.trim() || "王春来",
+      }
+    : { nameEn: "WANG CHUNLAI", nameCn: "王春来" };
 
   const peopleByDivision = new Map<string, { nameEn: string; nameCn: string; isLead: boolean }[]>();
 

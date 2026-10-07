@@ -19,6 +19,11 @@ declare module "d3-org-chart" {
     compact(value: boolean): this;
     initialExpandLevel(level: number): this;
     nodeContent(renderer: (node: ChartNode) => string): this;
+    buttonContent(renderer: (args: { node: ChartNode; state: unknown }) => string): this;
+    nodeButtonWidth(accessor: (node: ChartNode) => number): this;
+    nodeButtonHeight(accessor: (node: ChartNode) => number): this;
+    nodeButtonX(accessor: (node: ChartNode) => number): this;
+    nodeButtonY(accessor: (node: ChartNode) => number): this;
     linkUpdate(
       updater: (this: SVGPathElement, node: ChartNode, index: number, nodes: SVGPathElement[]) => void
     ): this;

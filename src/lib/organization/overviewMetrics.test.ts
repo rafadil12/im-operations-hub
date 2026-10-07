@@ -9,7 +9,7 @@ describe("computeOrganizationOverviewMetrics", () => {
         {
           employee_no: "620000125",
           name_en: "Wang Chunlai",
-          name_cn: null,
+          name_cn: "王春来",
           division_name_en: null,
           position_id: 1,
           position_name_en: "General Manager",
@@ -59,7 +59,7 @@ describe("computeOrganizationOverviewMetrics", () => {
     expect(metrics.absentCount).toBe(1);
     expect(metrics.onLeaveCount).toBe(3);
     expect(metrics.attendanceRate).toBe(33.3);
-    expect(metrics.orgChart.leader).toBe("WANG CHUNLAI");
+    expect(metrics.orgChart.leader).toEqual({ nameEn: "Wang Chunlai", nameCn: "王春来" });
     expect(metrics.orgChart.divisions[0]?.people.map((p) => p.nameEn)).toEqual([
       "Ari Wira Saputra",
     ]);

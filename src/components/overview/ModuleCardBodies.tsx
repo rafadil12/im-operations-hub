@@ -17,7 +17,7 @@ export function CardBody({ data, expanded }: { data: ModuleCardData; expanded: b
       return <SparepartBody data={data} expanded={expanded} />;
 
     case "organization":
-      return <OrganizationBody data={data} />;
+      return <OrganizationBody data={data} expanded={expanded} />;
 
     case "report":
       return <ReportBody data={data} expanded={expanded} />;

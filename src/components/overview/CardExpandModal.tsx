@@ -36,6 +36,8 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
 
   const maxWidth =
     data.colSpan === 3 ? "max-w-7xl" : data.colSpan === 2 ? "max-w-6xl" : "max-w-4xl";
+  // Org chart uses .fit() — give it a fixed viewport height instead of content scroll.
+  const fillHeight = data.layout === "organization";
 
   const handleViewDetail = () => {
     router.push(data.href);
@@ -55,12 +57,13 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
         aria-modal="true"
         aria-labelledby="expanded-card-title"
         className={[
-          "relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]",
+          "relative z-10 flex w-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_var(--shadow-color)]",
+          fillHeight ? "h-[90vh] max-h-[90vh]" : "max-h-[90vh]",
           maxWidth,
         ].join(" ")}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
           <p id="expanded-card-title" className="text-sm font-semibold text-text">
             {data.number}. {data.title}
           </p>
@@ -85,11 +88,18 @@ export function CardExpandModal({ data, onClose }: CardExpandModalProps) {
           </div>
         </div>
 
-        <div className="overflow-y-auto p-4">
-          <ModuleCard data={data} expanded />
+        <div
+          className={[
+            "min-h-0 p-4",
+            fillHeight ? "flex flex-1 flex-col overflow-hidden" : "overflow-y-auto",
+          ].join(" ")}
+        >
+          <div className={fillHeight ? "min-h-0 flex-1" : undefined}>
+            <ModuleCard data={data} expanded />
+          </div>
         </div>
 
-        <p className="border-t border-border-subtle px-4 py-2 text-[11px] text-text-dim">
+        <p className="shrink-0 border-t border-border-subtle px-4 py-2 text-[11px] text-text-dim">
           {t.dashboard.viewDetailHint}
         </p>
       </div>

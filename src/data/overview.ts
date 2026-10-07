@@ -111,7 +111,7 @@ export type ModuleCardData = {
   /** Organization hierarchy chart. */
   orgChart?: {
     company: string;
-    leader: string;
+    leader: { nameEn: string; nameCn: string };
     divisions: {
       name: string;
       personnelCount: number;
@@ -307,7 +307,7 @@ export const dashboardModules: ModuleCardData[] = [
     },
     orgChart: {
       company: "Intelligent Manufacturing Department",
-      leader: "WANG CHUNLAI",
+      leader: { nameEn: "WANG CHUNLAI", nameCn: "王春来" },
       divisions: [
         { name: "MES", personnelCount: 0, people: [] },
         { name: "IT", personnelCount: 0, people: [] },

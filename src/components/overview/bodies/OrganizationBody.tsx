@@ -36,7 +36,13 @@ function DepartmentRateBar({
   );
 }
 
-export function OrganizationBody({ data }: { data: ModuleCardData }) {
+export function OrganizationBody({
+  data,
+  expanded = false,
+}: {
+  data: ModuleCardData;
+  expanded?: boolean;
+}) {
   const { lang } = useLang();
   const t = getDict(lang);
   const chart = data.orgChart;
@@ -70,6 +76,7 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
             <OrgChartView
               chart={chart}
               lang={lang}
+              fill={expanded}
               labels={{
                 departmentManager: t.dashboard.orgDepartmentManager,
                 lead: t.dashboard.orgLead,
@@ -83,9 +90,14 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
       )}
 
       {showRightColumn ? (
-        <div className="flex h-full min-h-0 flex-col gap-4">
+        <div className="flex h-full min-h-0 flex-col gap-3">
           {stats.length ? (
-            <div className="flex shrink-0 flex-col gap-2">
+            <div
+              className={[
+                "shrink-0 gap-2",
+                expanded ? "grid grid-cols-2" : "flex flex-col",
+              ].join(" ")}
+            >
               {stats.map((stat) => (
                 <StatPill key={stat.label} stat={stat} />
               ))}
@@ -93,8 +105,8 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
           ) : null}
 
           {departments.length ? (
-            <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border-subtle bg-bg/30 p-4">
-              <div className="mb-4 shrink-0">
+            <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+              <div className="shrink-0">
                 <h4 className="text-xs font-semibold text-text">
                   {t.dashboard.monthlyDepartmentPerformance}
                 </h4>
@@ -103,7 +115,7 @@ export function OrganizationBody({ data }: { data: ModuleCardData }) {
                 </p>
               </div>
 
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+              <div className="flex min-h-0 flex-1 flex-col justify-evenly">
                 {departments.map((item, index) => (
                   <DepartmentRateBar
                     key={item.department}

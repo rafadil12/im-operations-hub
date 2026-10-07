@@ -40,7 +40,7 @@ export type OrganizationChartDivision = {
 
 export type OrganizationChart = {
   company: string;
-  leader: string;
+  leader: { nameEn: string; nameCn: string };
   divisions: OrganizationChartDivision[];
 };
 
