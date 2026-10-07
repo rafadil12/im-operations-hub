@@ -19,6 +19,7 @@ type Props = {
   masters: Masters;
   saving: boolean;
   lockIdentityFields: boolean;
+  lockType?: boolean;
   divisionId: number | null;
   userId: number | null;
   categoryId: number | null;
@@ -58,6 +59,7 @@ export function MesFormFields(props: Props) {
     masters,
     saving,
     lockIdentityFields,
+    lockType = false,
     divisionId,
     userId,
     categoryId,
@@ -208,7 +210,7 @@ export function MesFormFields(props: Props) {
           data-mes-field="type_id"
           className={`${inputCls} ${markInvalid("type_id") ? inputErrorCls : ""}`}
           value={typeId ?? ""}
-          disabled={saving}
+          disabled={saving || lockType}
           aria-invalid={markInvalid("type_id")}
           onChange={(e) => {
             clearFieldError("type_id");

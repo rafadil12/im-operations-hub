@@ -79,12 +79,17 @@ export async function GET(_request: NextRequest, context: Ctx) {
       `SELECT id FROM sparepart_mat_docs WHERE reversal_of_doc_id = ? LIMIT 1`,
       [docId]
     );
+    const linkedActivity = await query<{ id: number }[]>(
+      `SELECT id FROM mes_record WHERE sparepart_mat_doc_id = ? LIMIT 1`,
+      [docId]
+    );
 
     return NextResponse.json({
       document: {
         ...header,
         lines,
         already_reversed: Boolean(alreadyReversed[0]),
+        linked_activity: Boolean(linkedActivity[0]),
       },
     });
   } catch (error) {

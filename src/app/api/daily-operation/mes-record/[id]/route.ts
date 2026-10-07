@@ -5,6 +5,19 @@ import {
   parseAndValidateMesBody,
   type MesValidationErrorKey,
 } from "@/lib/daily-operation/mesRecordValidation";
+import {
+  isChangeRequestType,
+  loadLinkedIssue,
+  postChangeRequestIssue,
+  saveIssueLink,
+} from "@/lib/daily-operation/changeRequestIssue";
+import {
+  ChangeRequestIssueError,
+  assertIssueComplete,
+  parseChangeRequestIssue,
+} from "@/lib/daily-operation/changeRequestIssueParse";
+import type { AuthAccountPublic } from "@/lib/auth/types";
+import { SparepartPostingError } from "@/lib/sparepart/posting";
 import type { MesData, MesDataInput } from "@/lib/types";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -38,12 +51,18 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   }
 }
 
+function creatorLabel(account: AuthAccountPublic | null): string | null {
+  if (!account) return null;
+  return account.employeeId ? `${account.employeeId} - ${account.displayName}` : account.displayName;
+}
+
 export async function PUT(request: NextRequest, ctx: Ctx) {
   const gate = await requirePermission(PERMISSIONS.dailyRecordUpdate);
   if (gate instanceof NextResponse) return gate;
 
   try {
     const { id } = await ctx.params;
+    const recordId = Number(id);
     const body = (await request.json()) as Partial<MesDataInput>;
     const parsed = parseAndValidateMesBody(body);
 
@@ -57,7 +76,15 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
       );
     }
 
+    const existing = await loadLinkedIssue(recordId);
+    if (!existing) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+
     const data = parsed.data;
+    const linked = existing.sparepart_mat_doc_id != null;
+    const typeId = linked ? existing.type_id : data.type_id;
+    const issue = parseChangeRequestIssue(body);
 
     const result = await execute(
       `UPDATE mes_record SET
@@ -74,11 +101,11 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
         data.description_en,
         data.solution_cn,
         data.solution_en,
-        data.type_id,
+        typeId,
         data.status_id,
         data.start_time,
         data.end_time,
-        Number(id),
+        recordId,
       ]
     );
 
@@ -86,8 +113,29 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
 
+    if (!linked && issue.issue_material) {
+      if (!(await isChangeRequestType(typeId))) {
+        return NextResponse.json(
+          { error: "Material issue is only available for Change Request." },
+          { status: 400 }
+        );
+      }
+      assertIssueComplete(issue);
+      const posted = await postChangeRequestIssue({
+        recordId,
+        data: { ...data, type_id: typeId },
+        issue,
+        createdBySystemUserId: gate.account?.systemUserId,
+        createdBy: creatorLabel(gate.account),
+      });
+      await saveIssueLink(recordId, issue, posted.id);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof ChangeRequestIssueError || error instanceof SparepartPostingError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("PUT /mes-record/[id] failed", error);
     return NextResponse.json({ error: "Failed to update record." }, { status: 500 });
   }
@@ -99,6 +147,16 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
 
   try {
     const { id } = await ctx.params;
+    const existing = await loadLinkedIssue(Number(id));
+    if (!existing) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+    if (existing.sparepart_mat_doc_id) {
+      return NextResponse.json(
+        { error: "Cannot delete an activity linked to a material document." },
+        { status: 409 }
+      );
+    }
     const result = await execute(
       "UPDATE mes_record SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
       [Number(id)]

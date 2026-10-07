@@ -258,6 +258,8 @@ const en = {
     postSuccess: "Posted document {doc}.",
     viewDocument: "View Document",
     reverseDocument: "Reverse Document",
+    reverseLinkedLocked:
+      "Reversal is disabled because this document is linked to a daily operation activity.",
     reversing: "Reversing...",
     reverseSuccess: "Reversal posted as {doc}.",
     docNumber: "Document",
@@ -968,6 +970,9 @@ const en = {
     solutionEn: "Solution (EN)",
     solutionCn: "Solution (CN)",
     type: "Type",
+    issueMaterial: "Issue material",
+    issueMaterialHint: "Posts goods issue 201 when you save. Location and level are required.",
+    linkedMaterialDoc: "Material document",
     status: "Status",
     startTime: "Start Time",
     endTime: "End Time",

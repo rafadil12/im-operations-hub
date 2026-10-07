@@ -16,6 +16,7 @@ import {
 } from "@/lib/daily-operation/mesRecordValidation";
 import type { Masters, MesDataInput, MesDataRow } from "@/lib/types";
 import { fieldErrorMessage } from "./mesFormHelpers";
+import { ChangeRequestMaterialFields } from "./ChangeRequestMaterialFields";
 import { MesFormFields } from "./MesFormFields";
 
 type Props = {
@@ -60,6 +61,16 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
     Partial<Record<MesFieldKey, MesValidationErrorKey>>
   >({});
   const [saving, setSaving] = useState(false);
+  const materialLocked = Boolean(initial?.sparepart_mat_doc_id);
+  const [issueMaterial, setIssueMaterial] = useState(materialLocked);
+  const [itemId, setItemId] = useState<number | null>(initial?.sparepart_item_id ?? null);
+  const [issueQty, setIssueQty] = useState(
+    initial?.sparepart_qty != null ? String(initial.sparepart_qty) : ""
+  );
+  const [locationId, setLocationId] = useState<number | null>(
+    initial?.sparepart_storage_location_id ?? null
+  );
+  const [levelId, setLevelId] = useState<number | null>(initial?.sparepart_level_id ?? null);
 
   const categoryOptions = useMemo(
     () => categoriesForDivision(masters, divisionId),
@@ -69,6 +80,9 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
     () => subcategoriesForCategory(masters, categoryId),
     [masters, categoryId]
   );
+  const selectedType = masters.types.find((type) => type.id === typeId);
+  const isChangeRequest = selectedType?.name_en === "Change Request";
+
   const userOptions = useMemo(() => {
     const list = usersForDivision(masters, divisionId);
     if (
@@ -161,7 +175,14 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
     setFieldErrors({});
 
     try {
-      await onSubmit(result.data);
+      await onSubmit({
+        ...result.data,
+        issue_material: isChangeRequest && issueMaterial && !materialLocked,
+        sparepart_item_id: itemId,
+        sparepart_qty: issueQty ? Number(issueQty) : null,
+        sparepart_storage_location_id: locationId,
+        sparepart_level_id: levelId,
+      });
     } catch (e) {
       const message = e instanceof Error ? e.message : t.toast.saveFailed;
       const isNetwork =
@@ -228,6 +249,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
         masters={masters}
         saving={saving}
         lockIdentityFields={lockIdentityFields}
+        lockType={materialLocked}
         divisionId={divisionId}
         userId={userId}
         categoryId={categoryId}
@@ -259,6 +281,23 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
         setSolutionCn={setSolutionCn}
         setSolutionEn={setSolutionEn}
       />
+      {isChangeRequest ? (
+        <ChangeRequestMaterialFields
+          saving={saving}
+          locked={materialLocked}
+          initial={initial}
+          issueMaterial={issueMaterial}
+          itemId={itemId}
+          qty={issueQty}
+          locationId={locationId}
+          levelId={levelId}
+          onIssueMaterial={setIssueMaterial}
+          onItemId={setItemId}
+          onQty={setIssueQty}
+          onLocationId={setLocationId}
+          onLevelId={setLevelId}
+        />
+      ) : null}
     </Modal>
   );
 }
