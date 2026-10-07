@@ -2,18 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { MaterialCombobox } from "@/components/sparepart/MaterialCombobox";
-import { apiGet } from "@/lib/apiClient";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { apiGetAbs } from "@/lib/apiClient";
 import { localizedName, useLang } from "@/lib/i18n";
-import type { MesDataRow } from "@/lib/types";
+import type { MesDataRow, SparepartItem, SparepartStockBalance } from "@/lib/types";
 import { mesInputCls, mesLabelCls } from "./mesFormHelpers";
-
-type Named = { id: number; code: string; name_en: string | null; name_cn: string | null };
-
-type Options = {
-  locations: Named[];
-  levels: Named[];
-  available: number | null;
-};
 
 type Props = {
   saving: boolean;
@@ -47,28 +40,23 @@ export function ChangeRequestMaterialFields({
   onLevelId,
 }: Props) {
   const { t, lang } = useLang();
-  const [options, setOptions] = useState<Options>({
-    locations: [],
-    levels: [],
-    available: null,
-  });
+  const [item, setItem] = useState<SparepartItem | null>(null);
 
   useEffect(() => {
-    if (locked || !issueMaterial) return;
-    const params = new URLSearchParams();
-    if (itemId) params.set("itemId", String(itemId));
-    if (locationId) params.set("locationId", String(locationId));
-    if (levelId) params.set("levelId", String(levelId));
-    apiGet<Options>(`/sparepart-issue-options?${params.toString()}`)
-      .then((data) =>
-        setOptions({
-          locations: data.locations,
-          levels: data.levels,
-          available: data.available,
-        })
-      )
-      .catch(() => undefined);
-  }, [locked, issueMaterial, itemId, locationId, levelId]);
+    if (locked || !itemId) return;
+    if (item?.id === itemId && item.balances) return;
+    void apiGetAbs<{ row: SparepartItem }>(`/api/sparepart/materials/${itemId}`)
+      .then((data) => setItem(data.row))
+      .catch(() => setItem(null));
+  }, [locked, itemId, item]);
+
+  const stockPoints = (item?.balances ?? []).filter((balance) => Number(balance.qty) > 0);
+  const stockPointValue =
+    locationId && levelId ? `${locationId}:${levelId}` : "";
+  const selectedPoint = stockPoints.find(
+    (balance) =>
+      balance.storage_location_id === locationId && balance.level_id === levelId
+  );
 
   if (locked) {
     return (
@@ -139,7 +127,19 @@ export function ChangeRequestMaterialFields({
             <MaterialCombobox
               className={mesInputCls}
               value={itemId ? String(itemId) : ""}
-              onChange={(next) => onItemId(next ? Number(next) : null)}
+              onChange={(next) => {
+                onLocationId(null);
+                onLevelId(null);
+                if (!next) {
+                  setItem(null);
+                  onItemId(null);
+                  return;
+                }
+                onItemId(Number(next));
+                void apiGetAbs<{ row: SparepartItem }>(`/api/sparepart/materials/${next}`)
+                  .then((data) => setItem(data.row))
+                  .catch(() => setItem(null));
+              }}
             />
           </div>
           <div>
@@ -154,43 +154,48 @@ export function ChangeRequestMaterialFields({
           </div>
           <div>
             <label className={mesLabelCls}>{t.sparepart.location}</label>
-            <select
-              className={mesInputCls}
-              value={locationId ?? ""}
-              disabled={saving}
-              onChange={(e) => onLocationId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">{t.common.none}</option>
-              {options.locations.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.code} — {localizedName(row, lang)}
-                </option>
-              ))}
-            </select>
+            <SparepartDropdown
+              value={stockPointValue}
+              disabled={saving || !itemId}
+              placeholder={t.sparepart.locationName}
+              options={stockPoints.map((balance) => ({
+                value: `${balance.storage_location_id}:${balance.level_id}`,
+                label: stockPointLabel(balance, lang),
+              }))}
+              onChange={(value) => {
+                const [locId, lvlId] = value.split(":");
+                onLocationId(locId ? Number(locId) : null);
+                onLevelId(lvlId ? Number(lvlId) : null);
+              }}
+            />
+            {selectedPoint ? (
+              <p className="mt-1 text-[11px] text-text-dim">
+                {t.sparepart.stockCurrent}: {selectedPoint.qty}
+              </p>
+            ) : null}
           </div>
-          <div>
-            <label className={mesLabelCls}>{t.sparepart.level}</label>
-            <select
-              className={mesInputCls}
-              value={levelId ?? ""}
-              disabled={saving}
-              onChange={(e) => onLevelId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">{t.common.none}</option>
-              {options.levels.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.code} — {localizedName(row, lang)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="text-[11px] text-text-dim sm:col-span-2">
-            {t.sparepart.stockCurrent}: {options.available ?? "-"}
-          </p>
         </div>
       ) : null}
     </div>
   );
+}
+
+function stockPointLabel(balance: SparepartStockBalance, lang: "en" | "cn"): string {
+  const locationName = localizedName(
+    {
+      name_en: balance.location_name_en ?? balance.location_name ?? null,
+      name_cn: balance.location_name_cn ?? null,
+    },
+    lang
+  );
+  const levelName = localizedName(
+    {
+      name_en: balance.level_name_en ?? null,
+      name_cn: balance.level_name_cn ?? null,
+    },
+    lang
+  );
+  return `${balance.location_code ?? ""} — ${locationName} / ${balance.level_code ?? ""} — ${levelName} (${balance.qty})`;
 }
 
 function ReadOnly({ label, value }: { label: string; value: string }) {
