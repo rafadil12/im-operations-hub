@@ -2363,13 +2363,15 @@ export default function AttendanceOverviewPage() {
   }, [dailyScheduleComparison]);
 
   const allScheduleVarianceExceptions = useMemo(() => {
-    return dailyScheduleComparison.flatMap((day) =>
-      day.exceptions.map((item) => ({
-        ...item,
-        day: day.day,
-        weekday: day.weekday,
-      })),
-    );
+    return dailyScheduleComparison
+      .flatMap((day) =>
+        day.exceptions.map((item) => ({
+          ...item,
+          day: day.day,
+          weekday: day.weekday,
+        })),
+      )
+      .sort((a, b) => b.date.localeCompare(a.date));
   }, [dailyScheduleComparison]);
 
   const employeeScheduleSummary = useMemo(() => {
