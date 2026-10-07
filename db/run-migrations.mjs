@@ -1828,5 +1828,14 @@ await applySqlFile(
   "Ensured report_project_attachments table.",
 );
 
+// ---------------------------------------------------------------------------
+// 048: mes_type Request → Access Request (EN label only)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "048_mes_type_access_request.sql",
+  readMigrationSql,
+  "Renamed mes_type name_en Request → Access Request.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

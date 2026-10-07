@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-07
+
+### Changed
+
+- Daily Operation: rename activity type `Request` to `Access Request`
+  (`mes_type.name_en`); Chinese label unchanged. Excel import still accepts
+  legacy `Request` as an alias.
+
 ## [0.8.1] - 2026-10-07
 
 ### Fixed
