@@ -167,7 +167,8 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                   <tr>
                     <th className={th}>{t.sparepart.locationCode}</th>
                     <th className={th}>{t.sparepart.locationName}</th>
-                    <th className={th}>{t.sparepart.level}</th>
+                    <th className={th}>{t.sparepart.levelCode}</th>
+                    <th className={th}>{t.sparepart.levelName}</th>
                     <th className={`${th} text-right`}>{t.sparepart.stockCurrent}</th>
                   </tr>
                 </thead>
@@ -184,15 +185,16 @@ export function MaterialDetailModal({ item, onClose }: Props) {
                           lang
                         )}
                       </td>
+                      <td className={td}>{b.level_code ?? "-"}</td>
                       <td className={td}>
-                        {b.level_code
-                          ? `${b.level_code} — ${localizedName(
+                        {b.level_code || b.level_name_en || b.level_name_cn
+                          ? localizedName(
                               {
                                 name_en: b.level_name_en ?? null,
                                 name_cn: b.level_name_cn ?? null,
                               },
                               lang
-                            )}`
+                            )
                           : "-"}
                       </td>
                       <td className={`${td} text-right tabular-nums`}>
