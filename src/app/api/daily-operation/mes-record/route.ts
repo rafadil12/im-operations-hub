@@ -40,7 +40,8 @@ const LIST_SQL = `
          sloc.name_en AS sparepart_location_name_en, sloc.name_cn AS sparepart_location_name_cn,
          slvl.code AS sparepart_level_code,
          slvl.name_en AS sparepart_level_name_en, slvl.name_cn AS sparepart_level_name_cn,
-         md.doc_number AS sparepart_doc_number
+         md.doc_number AS sparepart_doc_number,
+         md.recipient AS sparepart_recipient
   FROM mes_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id
@@ -139,7 +140,8 @@ const RECORD_DETAIL_SQL = `
     sloc.name_en AS sparepart_location_name_en, sloc.name_cn AS sparepart_location_name_cn,
     slvl.code AS sparepart_level_code,
     slvl.name_en AS sparepart_level_name_en, slvl.name_cn AS sparepart_level_name_cn,
-    md.doc_number AS sparepart_doc_number
+    md.doc_number AS sparepart_doc_number,
+    md.recipient AS sparepart_recipient
   FROM mes_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id

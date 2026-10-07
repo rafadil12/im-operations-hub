@@ -16,6 +16,7 @@ export type ChangeRequestIssueInput = {
   sparepart_qty: number | null;
   sparepart_storage_location_id: number | null;
   sparepart_level_id: number | null;
+  sparepart_recipient: string;
 };
 
 function num(value: unknown): number | null {
@@ -30,6 +31,7 @@ export function parseChangeRequestIssue(body: {
   sparepart_qty?: unknown;
   sparepart_storage_location_id?: unknown;
   sparepart_level_id?: unknown;
+  sparepart_recipient?: unknown;
 }): ChangeRequestIssueInput {
   const issue =
     body.issue_material === true || body.issue_material === 1 || body.issue_material === "1";
@@ -39,6 +41,7 @@ export function parseChangeRequestIssue(body: {
     sparepart_qty: num(body.sparepart_qty),
     sparepart_storage_location_id: num(body.sparepart_storage_location_id),
     sparepart_level_id: num(body.sparepart_level_id),
+    sparepart_recipient: String(body.sparepart_recipient ?? "").trim().slice(0, 255),
   };
 }
 
@@ -52,10 +55,11 @@ export function assertIssueComplete(issue: ChangeRequestIssueInput): void {
     !issue.sparepart_item_id ||
     !issue.sparepart_qty ||
     !issue.sparepart_storage_location_id ||
-    !issue.sparepart_level_id
+    !issue.sparepart_level_id ||
+    !issue.sparepart_recipient
   ) {
     throw new ChangeRequestIssueError(
-      "Material, quantity, storage location, and level are required to issue stock."
+      "Material, quantity, storage location, level, and issued to are required to issue stock."
     );
   }
 }

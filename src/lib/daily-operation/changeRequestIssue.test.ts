@@ -17,6 +17,7 @@ describe("parseChangeRequestIssue", () => {
       sparepart_qty: 2,
       sparepart_storage_location_id: 3,
       sparepart_level_id: 4,
+      sparepart_recipient: "  Line A  ",
     });
     expect(parsed).toEqual({
       issue_material: true,
@@ -24,6 +25,7 @@ describe("parseChangeRequestIssue", () => {
       sparepart_qty: 2,
       sparepart_storage_location_id: 3,
       sparepart_level_id: 4,
+      sparepart_recipient: "Line A",
     });
   });
 });
@@ -37,6 +39,7 @@ describe("assertIssueComplete", () => {
         sparepart_qty: null,
         sparepart_storage_location_id: 2,
         sparepart_level_id: 3,
+        sparepart_recipient: "",
       })
     ).toThrow(ChangeRequestIssueError);
   });

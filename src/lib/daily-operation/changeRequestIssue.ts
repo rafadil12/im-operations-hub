@@ -40,12 +40,6 @@ export async function postChangeRequestIssue(opts: {
 }): Promise<{ id: number; doc_number: string }> {
   assertIssueComplete(opts.issue);
   const issue = opts.issue;
-  const users = await query<{ name_en: string | null; name_cn: string | null }[]>(
-    "SELECT name_en, name_cn FROM users WHERE id = ? LIMIT 1",
-    [opts.data.user_id]
-  );
-  const recipient =
-    users[0]?.name_en?.trim() || users[0]?.name_cn?.trim() || `User ${opts.data.user_id}`;
   const header =
     opts.data.description_en.trim() || opts.data.description_cn.trim() || "Change Request";
   const { postGoodsMovement } = await import("@/lib/sparepart/posting");
@@ -54,12 +48,12 @@ export async function postChangeRequestIssue(opts: {
     movement_type: "201",
     posting_date: opts.data.start_time.replace("T", " ").slice(0, 19),
     header_text: `Change Request #${opts.recordId}: ${header}`.slice(0, 255),
-    recipient,
+    recipient: issue.sparepart_recipient,
     lines: [
       {
         item_id: issue.sparepart_item_id!,
         qty: issue.sparepart_qty!,
-        note: `MES ${opts.recordId}`,
+        note: "",
         storage_location_id: issue.sparepart_storage_location_id!,
         storage_level_id: issue.sparepart_level_id!,
       },

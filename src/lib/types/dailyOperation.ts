@@ -94,6 +94,7 @@ export type MesDataRow = MesData & {
   sparepart_level_name_en?: string | null;
   sparepart_level_name_cn?: string | null;
   sparepart_doc_number?: string | null;
+  sparepart_recipient?: string | null;
 };
 
 export type MesDataInput = {
@@ -114,6 +115,7 @@ export type MesDataInput = {
   sparepart_qty?: number | null;
   sparepart_storage_location_id?: number | null;
   sparepart_level_id?: number | null;
+  sparepart_recipient?: string | null;
 };
 
 export type UserRankItem = {

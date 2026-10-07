@@ -17,11 +17,13 @@ type Props = {
   qty: string;
   locationId: number | null;
   levelId: number | null;
+  recipient: string;
   onIssueMaterial: (value: boolean) => void;
   onItemId: (value: number | null) => void;
   onQty: (value: string) => void;
   onLocationId: (value: number | null) => void;
   onLevelId: (value: number | null) => void;
+  onRecipient: (value: string) => void;
 };
 
 export function ChangeRequestMaterialFields({
@@ -33,11 +35,13 @@ export function ChangeRequestMaterialFields({
   qty,
   locationId,
   levelId,
+  recipient,
   onIssueMaterial,
   onItemId,
   onQty,
   onLocationId,
   onLevelId,
+  onRecipient,
 }: Props) {
   const { t, lang } = useLang();
   const [item, setItem] = useState<SparepartItem | null>(null);
@@ -76,6 +80,10 @@ export function ChangeRequestMaterialFields({
               },
               lang
             )}
+          />
+          <ReadOnly
+            label={t.sparepart.recipient}
+            value={initial?.sparepart_recipient?.trim() || "-"}
           />
           <ReadOnly label={t.sparepart.qty} value={String(initial?.sparepart_qty ?? "-")} />
           <ReadOnly
@@ -122,6 +130,16 @@ export function ChangeRequestMaterialFields({
       <p className="mt-1 text-[11px] text-text-dim">{t.fields.issueMaterialHint}</p>
       {issueMaterial ? (
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={mesLabelCls}>{t.sparepart.recipient}</label>
+            <input
+              className={mesInputCls}
+              value={recipient}
+              maxLength={255}
+              disabled={saving}
+              onChange={(e) => onRecipient(e.target.value)}
+            />
+          </div>
           <div className="sm:col-span-2">
             <label className={mesLabelCls}>{t.sparepart.item}</label>
             <MaterialCombobox

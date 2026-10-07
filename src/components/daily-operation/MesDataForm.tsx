@@ -71,6 +71,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
     initial?.sparepart_storage_location_id ?? null
   );
   const [levelId, setLevelId] = useState<number | null>(initial?.sparepart_level_id ?? null);
+  const [issuedTo, setIssuedTo] = useState("");
 
   const categoryOptions = useMemo(
     () => categoriesForDivision(masters, divisionId),
@@ -182,6 +183,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
         sparepart_qty: issueQty ? Number(issueQty) : null,
         sparepart_storage_location_id: locationId,
         sparepart_level_id: levelId,
+        sparepart_recipient: issuedTo.trim(),
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : t.toast.saveFailed;
@@ -291,11 +293,13 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
               qty={issueQty}
               locationId={locationId}
               levelId={levelId}
+              recipient={issuedTo}
               onIssueMaterial={setIssueMaterial}
               onItemId={setItemId}
               onQty={setIssueQty}
               onLocationId={setLocationId}
               onLevelId={setLevelId}
+              onRecipient={setIssuedTo}
             />
           ) : null
         }
