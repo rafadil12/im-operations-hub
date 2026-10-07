@@ -24,7 +24,8 @@ export const PALETTE = [
 
 export const DIVISION_PALETTE = ["#6366f1", "#ef4444", "#22c55e", "#f59e0b"];
 export const COMPACT_TOP_N = 8;
-export const USER_RANKING_COMPACT_TOP_N = 9;
+/** Non-expand User Ranking list; expand mode renders the full ranking. */
+export const USER_RANKING_COMPACT_TOP_N = 10;
 /** Neutral used for aggregated "others" rows; readable on both themes. */
 export const NEUTRAL = "#64748b";
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-07
+
+### Fixed
+
+- Insights User Ranking: compact view shows the top 10 people; expand opens
+  the full ranking only when more than 10 people are in range.
+- Insights User Ranking: hide the "showing top 10 · N total" hint and expand
+  affordance when the ranking has 10 or fewer people.
+
 ## [0.8.0] - 2026-09-22
 
 ### Changed
