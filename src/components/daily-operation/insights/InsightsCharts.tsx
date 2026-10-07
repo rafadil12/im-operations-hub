@@ -191,10 +191,13 @@ export function InsightsCharts({ result }: { result: AnalysisResult }) {
 
         <ChartCard
           title={t.analysis.userRanking}
+          expandable={userRanking.length > USER_RANKING_COMPACT_TOP_N}
           expandedContent={
-            <div className="max-h-[65vh] overflow-y-auto pr-1">
-              {renderUserRanking(userRankingExpanded)}
-            </div>
+            userRanking.length > USER_RANKING_COMPACT_TOP_N ? (
+              <div className="max-h-[65vh] overflow-y-auto pr-1">
+                {renderUserRanking(userRankingExpanded)}
+              </div>
+            ) : undefined
           }
         >
           <div className="flex h-full flex-col">
