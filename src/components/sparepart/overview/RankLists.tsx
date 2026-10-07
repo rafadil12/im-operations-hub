@@ -30,7 +30,7 @@ export function TopUsedList({
   const { t, lang } = useLang();
 
   return (
-    <div className="flex min-h-[455px] flex-col overflow-y-auto">
+    <div className="flex min-h-[455px] flex-col">
       {items.length === 0 ? (
         <p className="flex flex-1 items-center justify-center text-sm text-text-muted">
           {t.common.noData}
@@ -59,7 +59,7 @@ export function TopUsedList({
             return (
               <li
                 key={item.code}
-                className="flex items-center gap-3 rounded-xl border border-border-subtle bg-bg/30 p-3 shadow-[0_8px_24px_var(--shadow-color-soft)]"
+                className="flex items-center gap-3 rounded-xl border border-border-subtle bg-bg/30 p-3 shadow-[0_6px_4px_var(--shadow-color-soft)]"
               >
                 <span
                   className={[
@@ -110,7 +110,7 @@ export function LocationBars({ rows }: { rows: SparepartOverviewLocationStock[] 
   }
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3.5">
       {data.map((row) => {
         const pctOfTotal = total > 0 ? Math.round((row.qty / total) * 100) : 0;
         const displayName = localizedName(
