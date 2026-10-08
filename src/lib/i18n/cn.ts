@@ -19,6 +19,7 @@ const cn: Dict = {
     brandLabel: "IM ONE — 智能运营，一个平台",
     add: "新增",
     edit: "编辑",
+    view: "查看",
     delete: "删除",
     confirm: "确认",
     actions: "操作",

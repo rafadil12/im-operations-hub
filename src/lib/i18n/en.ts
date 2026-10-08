@@ -17,6 +17,7 @@ const en = {
     brandLabel: "IM ONE — Intelligent Operations, One Platform",
     add: "Add",
     edit: "Edit",
+    view: "View",
     delete: "Delete",
     confirm: "Confirm",
     actions: "Actions",
