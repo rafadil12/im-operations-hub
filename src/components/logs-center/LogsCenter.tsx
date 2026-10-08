@@ -40,6 +40,12 @@ const MODULES = [
 
 const ACTIONS = ["login", "logout", "create", "update", "delete", "change"];
 
+function splitCreatedAt(value: string): { date: string; time: string } {
+  const match = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(value.trim());
+  if (!match) return { date: value, time: "" };
+  return { date: match[1], time: match[2] };
+}
+
 const fieldCls =
   "w-full rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 const labelCls = "mb-1 block text-[10px] uppercase text-text-dim";
@@ -165,11 +171,18 @@ export function LogsCenter() {
 
       <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
         <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-xs">
+        <table className="w-full table-fixed border-collapse text-left text-xs">
+          <colgroup>
+            <col style={{ width: "12.5%" }} />
+            <col style={{ width: "12.5%" }} />
+            <col style={{ width: "12.5%" }} />
+            <col style={{ width: "12.5%" }} />
+            <col style={{ width: "50%" }} />
+          </colgroup>
           <thead className="border-b border-border-subtle text-[10px] uppercase tracking-wide text-text-dim">
             <tr>
-              <th className="px-3 py-2">{t.logsCenter.when}</th>
-              <th className="px-3 py-2">{t.logsCenter.actor}</th>
+              <th className="px-3 py-2">{t.logsCenter.date}</th>
+              <th className="px-3 py-2">{t.logsCenter.username}</th>
               <th className="px-3 py-2">{t.logsCenter.module}</th>
               <th className="px-3 py-2">{t.logsCenter.action}</th>
               <th className="px-3 py-2">{t.logsCenter.summary}</th>
@@ -183,20 +196,28 @@ export function LogsCenter() {
                 </td>
               </tr>
             ) : data && data.rows.length > 0 ? (
-              data.rows.map((row) => (
-                <tr key={row.id} className="border-b border-border-subtle/70 last:border-0">
-                  <td className="whitespace-nowrap px-3 py-2 text-text-muted">{row.created_at}</td>
+              data.rows.map((row) => {
+                const created = splitCreatedAt(row.created_at);
+                return (
+                  <tr key={row.id} className="border-b border-border-subtle/70 last:border-0">
+                  <td className="whitespace-nowrap px-3 py-2">
+                    <span className="block font-semibold text-text">{created.date}</span>
+                    {created.time ? (
+                      <span className="mt-0.5 block text-[10px] text-text-dim">{created.time}</span>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-2 text-text">
-                    {row.actor_name || row.actor_label || "-"}
+                    <span className="block break-words">{row.actor_name || row.actor_label || "-"}</span>
                     {row.employee_no ? (
                       <span className="mt-0.5 block text-[10px] text-text-dim">{row.employee_no}</span>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2 text-text">{row.module}</td>
-                  <td className="px-3 py-2 text-text">{row.action}</td>
-                  <td className="px-3 py-2 text-text">{row.summary}</td>
-                </tr>
-              ))
+                  <td className="px-3 py-2 break-words text-text">{row.module}</td>
+                  <td className="px-3 py-2 break-words text-text">{row.action}</td>
+                  <td className="px-3 py-2 break-words text-text">{row.summary}</td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td className="px-3 py-4 text-text-muted" colSpan={5}>
