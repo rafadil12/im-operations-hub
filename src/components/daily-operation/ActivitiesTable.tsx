@@ -55,6 +55,7 @@ export function ActivitiesTable({
         <table className="w-full border-collapse">
           <thead className="border-b border-border-subtle bg-bg/40">
             <tr>
+              <th className={th}>{t.fields.id}</th>
               <th className={th}>{t.fields.pic}</th>
               <th className={th}>{t.fields.division}</th>
               <th className={th}>{t.fields.category}</th>
@@ -73,6 +74,9 @@ export function ActivitiesTable({
                 key={row.id}
                 className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
               >
+                <td className={`${td} whitespace-nowrap font-medium tabular-nums text-text`}>
+                  #{row.id}
+                </td>
                 <td className={`${td} whitespace-nowrap text-text`}>
                   {localizedField(row.pic_en, row.pic_cn, lang)}
                 </td>

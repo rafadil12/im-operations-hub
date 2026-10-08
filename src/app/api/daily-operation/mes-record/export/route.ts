@@ -66,11 +66,19 @@ export async function GET(request: NextRequest) {
 
     const q = sp.get("q");
     if (q) {
-      conditions.push(
-        "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
-      );
-      const like = `%${q}%`;
-      params.push(like, like, like, like);
+      const idText = q.trim().replace(/^#/, "");
+      const like = `%${q.trim()}%`;
+      if (/^\d+$/.test(idText)) {
+        conditions.push(
+          "(m.id = ? OR m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
+        );
+        params.push(Number(idText), like, like, like, like);
+      } else {
+        conditions.push(
+          "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
+        );
+        params.push(like, like, like, like);
+      }
     }
 
     const sql =

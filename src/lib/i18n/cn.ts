@@ -956,6 +956,8 @@ const cn: Dict = {
   totalTickets: "工单总数",
 },
   fields: {
+    id: "ID",
+    activitySearch: "编号或描述",
     pic: "负责人",
     division: "部门",
     category: "类别",

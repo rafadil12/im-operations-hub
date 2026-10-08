@@ -104,7 +104,7 @@ export function FilterBar({ masters, initial, onApply }: Props) {
         <input
           type="text"
           className={`${ctrl} w-full`}
-          placeholder={t.fields.description}
+          placeholder={t.fields.activitySearch}
           value={draft.q}
           onChange={(e) => update({ q: e.target.value })}
           onKeyDown={(e) => {

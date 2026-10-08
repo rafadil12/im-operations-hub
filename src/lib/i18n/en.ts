@@ -973,6 +973,8 @@ const en = {
   totalTickets: "Total Tickets",
 },
   fields: {
+    id: "ID",
+    activitySearch: "ID or description",
     pic: "PIC",
     division: "Division",
     category: "Category",
