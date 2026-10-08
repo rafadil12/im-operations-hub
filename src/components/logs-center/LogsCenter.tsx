@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
+import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/stockTableRows";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
+import { fillTemplate } from "@/lib/i18n/fillTemplate";
 
 type LogRow = {
   id: number;
@@ -38,7 +41,8 @@ const MODULES = [
 const ACTIONS = ["login", "logout", "create", "update", "delete", "change"];
 
 const fieldCls =
-  "w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent";
+  "w-full rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
+const labelCls = "mb-1 block text-[10px] uppercase text-text-dim";
 
 export function LogsCenter() {
   const { t } = useLang();
@@ -49,6 +53,7 @@ export function LogsCenter() {
   const [to, setTo] = useState("");
   const [applied, setApplied] = useState({ moduleName: "", action: "", q: "", from: "", to: "" });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(10);
   const [data, setData] = useState<LogResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +68,7 @@ export function LogsCenter() {
     if (applied.from) params.set("from", applied.from);
     if (applied.to) params.set("to", applied.to);
     params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
     try {
       const next = await apiGetAbs<LogResponse>(`/api/logs-center?${params.toString()}`);
       setData(next);
@@ -71,15 +77,25 @@ export function LogsCenter() {
     } finally {
       setLoading(false);
     }
-  }, [applied, page, t.logsCenter.loadFailed]);
+  }, [applied, page, pageSize, t.logsCenter.loadFailed]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const total = data?.total ?? 0;
-  const pageSize = data?.pageSize ?? 20;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const rangeFrom = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeTo = total === 0 ? 0 : Math.min(page * pageSize, total);
+  const pageSizeOptions = PAGE_SIZE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }));
+  const moduleOptions = [
+    { value: "", label: t.common.all },
+    ...MODULES.map((item) => ({ value: item, label: item })),
+  ];
+  const actionOptions = [
+    { value: "", label: t.common.all },
+    ...ACTIONS.map((item) => ({ value: item, label: item })),
+  ];
 
   return (
     <div className="space-y-4">
@@ -89,67 +105,66 @@ export function LogsCenter() {
       </div>
 
       <form
-        className="grid grid-cols-1 gap-3 rounded-lg border border-border-subtle bg-surface p-3 md:grid-cols-6"
+        className="flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3"
         onSubmit={(event) => {
           event.preventDefault();
           setApplied({ moduleName, action, q, from, to });
           setPage(1);
         }}
       >
-        <label className="text-xs text-text-muted">
-          {t.fields.from}
-          <input className={`${fieldCls} mt-1`} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label className="text-xs text-text-muted">
-          {t.fields.to}
-          <input className={`${fieldCls} mt-1`} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>
-        <label className="text-xs text-text-muted">
-          {t.logsCenter.module}
-          <select className={`${fieldCls} mt-1`} value={moduleName} onChange={(e) => setModuleName(e.target.value)}>
-            <option value="">{t.common.all}</option>
-            {MODULES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-text-muted">
-          {t.logsCenter.action}
-          <select className={`${fieldCls} mt-1`} value={action} onChange={(e) => setAction(e.target.value)}>
-            <option value="">{t.common.all}</option>
-            {ACTIONS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-text-muted md:col-span-2">
-          {t.common.search}
+        <div className="min-w-[140px]">
+          <label className={labelCls}>{t.fields.from}</label>
+          <input className={fieldCls} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </div>
+        <div className="min-w-[140px]">
+          <label className={labelCls}>{t.fields.to}</label>
+          <input className={fieldCls} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        <div className="min-w-[140px]">
+          <label className={labelCls}>{t.logsCenter.module}</label>
+          <SparepartDropdown
+            compact
+            className="w-full"
+            value={moduleName}
+            onChange={setModuleName}
+            options={moduleOptions}
+            placeholder={t.common.all}
+          />
+        </div>
+        <div className="min-w-[120px]">
+          <label className={labelCls}>{t.logsCenter.action}</label>
+          <SparepartDropdown
+            compact
+            className="w-full"
+            value={action}
+            onChange={setAction}
+            options={actionOptions}
+            placeholder={t.common.all}
+          />
+        </div>
+        <div className="min-w-[180px] flex-1">
+          <label className={labelCls}>{t.common.search}</label>
           <input
-            className={`${fieldCls} mt-1`}
+            className={fieldCls}
             value={q}
             placeholder={t.logsCenter.search}
             onChange={(e) => setQ(e.target.value)}
           />
-        </label>
-        <div className="md:col-span-6">
-          <button
-            type="submit"
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-          >
-            {t.common.apply}
-          </button>
         </div>
+        <button
+          type="submit"
+          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+        >
+          {t.common.apply}
+        </button>
       </form>
 
       {error ? (
         <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface">
+      <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
+        <div className="overflow-x-auto">
         <table className="min-w-full text-left text-xs">
           <thead className="border-b border-border-subtle text-[10px] uppercase tracking-wide text-text-dim">
             <tr>
@@ -191,29 +206,49 @@ export function LogsCenter() {
             )}
           </tbody>
         </table>
-      </div>
+        </div>
 
-      <div className="flex items-center justify-between text-xs text-text-muted">
-        <span>
-          {total} · {page}/{pageCount}
-        </span>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-border px-2 py-1 disabled:opacity-40"
-            disabled={page <= 1 || loading}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-          >
-            {t.common.previous}
-          </button>
-          <button
-            type="button"
-            className="rounded-md border border-border px-2 py-1 disabled:opacity-40"
-            disabled={page >= pageCount || loading}
-            onClick={() => setPage((current) => current + 1)}
-          >
-            {t.common.next}
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-3 py-2.5">
+          <p className="text-xs text-text-dim">
+            {fillTemplate(t.common.showingRange, { from: rangeFrom, to: rangeTo, total })}
+          </p>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-text-muted">
+              {t.common.rowsPerPage}
+              <span className="ml-2 inline-block align-middle">
+                <SparepartDropdown
+                  compact
+                  menuPlacement="top"
+                  className="min-w-[4.5rem]"
+                  value={String(pageSize)}
+                  onChange={(next) => {
+                    setPageSize(Number(next) as PageSize);
+                    setPage(1);
+                  }}
+                  options={pageSizeOptions}
+                />
+              </span>
+            </label>
+            <button
+              type="button"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t.common.previous}
+            </button>
+            <span className="text-xs text-text-muted">
+              {fillTemplate(t.common.pageOf, { page, total: pageCount })}
+            </span>
+            <button
+              type="button"
+              disabled={page >= pageCount || loading}
+              onClick={() => setPage((current) => current + 1)}
+              className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t.common.next}
+            </button>
+          </div>
         </div>
       </div>
     </div>
