@@ -241,7 +241,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
 
   return (
     <Modal
-      title={initial ? `${t.common.edit} #${initial.id}` : t.common.add}
+      title={initial ? `${t.common.edit} ${initial.id}` : t.common.add}
       onClose={onClose}
       size="lg"
       closeDisabled={saving}

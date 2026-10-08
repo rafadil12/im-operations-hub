@@ -75,7 +75,7 @@ export function ActivitiesTable({
                 className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
               >
                 <td className={`${td} whitespace-nowrap font-medium tabular-nums text-text`}>
-                  #{row.id}
+                  {row.id}
                 </td>
                 <td className={`${td} whitespace-nowrap text-text`}>
                   {localizedField(row.pic_en, row.pic_cn, lang)}
