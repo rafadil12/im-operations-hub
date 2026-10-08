@@ -185,7 +185,7 @@ export function LogsCenter() {
               <th className="px-3 py-2">{t.logsCenter.username}</th>
               <th className="px-3 py-2">{t.logsCenter.module}</th>
               <th className="px-3 py-2">{t.logsCenter.action}</th>
-              <th className="px-3 py-2">{t.logsCenter.summary}</th>
+              <th className="px-3 py-2">{t.logsCenter.remarks}</th>
             </tr>
           </thead>
           <tbody>
