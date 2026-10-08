@@ -57,16 +57,16 @@ export function ActivitiesTable({
         <table className="w-full min-w-[68rem] table-fixed border-collapse">
           <colgroup>
             <col style={{ width: "4%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "8%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "11%" }} />
             <col style={{ width: "9%" }} />
             <col style={{ width: "11%" }} />
             <col style={{ width: "11%" }} />
             <col style={{ width: "7%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "9.5%" }} />
-            <col style={{ width: "9.5%" }} />
-            <col style={{ width: "15%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "12%" }} />
           </colgroup>
           <thead className="border-b border-border-subtle bg-bg/40">
             <tr>
