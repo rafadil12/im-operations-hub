@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
         await recordLogsCenter({
           module: "auth",
           action: "login",
-          summary: "Login rejected: inactive account",
+          objectType: "session",
+          changes: [{ field: "result", to: "inactive" }],
           actorLabel: login.trim().slice(0, 255),
         });
         return NextResponse.json(
@@ -86,7 +87,8 @@ export async function POST(request: NextRequest) {
       await recordLogsCenter({
         module: "auth",
         action: "login",
-        summary: "Login failed",
+        objectType: "session",
+        changes: [{ field: "result", to: "failed" }],
         actorLabel: login.trim().slice(0, 255),
       });
       return NextResponse.json(
@@ -100,7 +102,8 @@ export async function POST(request: NextRequest) {
     await recordLogsCenter({
       module: "auth",
       action: "login",
-      summary: "Login succeeded",
+      objectType: "session",
+      changes: [{ field: "result", to: "signed_in" }],
       actorSystemUserId: account.systemUserId,
       actorUserId: account.id,
       actorLabel: account.displayName,

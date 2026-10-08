@@ -17,6 +17,13 @@ import {
   parseChangeRequestIssue,
 } from "@/lib/daily-operation/changeRequestIssueParse";
 import type { AuthAccountPublic } from "@/lib/auth/types";
+import {
+  activityDeletedRemark,
+  activityUpdatedRemark,
+  goodsIssueLink,
+  loadActivitySnapshot,
+} from "@/lib/logs-center/activityRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import { SparepartPostingError } from "@/lib/sparepart/posting";
 import type { MesData, MesDataInput } from "@/lib/types";
 
@@ -77,7 +84,8 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     }
 
     const existing = await loadLinkedIssue(recordId);
-    if (!existing) {
+    const before = await loadActivitySnapshot(recordId);
+    if (!existing || !before) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
 
@@ -85,34 +93,6 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     const linked = existing.sparepart_mat_doc_id != null;
     const typeId = linked ? existing.type_id : data.type_id;
     const issue = parseChangeRequestIssue(body);
-
-    const result = await execute(
-      `UPDATE daily_operation_record SET
-        user_id = ?, division_id = ?, category_id = ?, subcategory_id = ?,
-        description_cn = ?, description_en = ?, solution_cn = ?, solution_en = ?,
-        type_id = ?, status_id = ?, start_time = ?, end_time = ?
-       WHERE id = ? AND deleted_at IS NULL`,
-      [
-        data.user_id,
-        data.division_id,
-        data.category_id,
-        data.subcategory_id,
-        data.description_cn,
-        data.description_en,
-        data.solution_cn,
-        data.solution_en,
-        typeId,
-        data.status_id,
-        data.start_time,
-        data.end_time,
-        recordId,
-      ]
-    );
-
-    if (result.affectedRows === 0) {
-      return NextResponse.json({ error: "Not found." }, { status: 404 });
-    }
-
     if (!linked && issue.issue_material) {
       if (!(await isChangeRequestType(typeId))) {
         return NextResponse.json(
@@ -121,15 +101,67 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
         );
       }
       assertIssueComplete(issue);
-      const posted = await postChangeRequestIssue({
-        recordId,
-        data: { ...data, type_id: typeId },
-        issue,
-        createdBySystemUserId: gate.account?.systemUserId,
-        createdBy: creatorLabel(gate.account),
-      });
-      await saveIssueLink(recordId, issue, posted.id);
     }
+
+    const saved = await suppressLogsCenter(async () => {
+      const result = await execute(
+        `UPDATE daily_operation_record SET
+          user_id = ?, division_id = ?, category_id = ?, subcategory_id = ?,
+          description_cn = ?, description_en = ?, solution_cn = ?, solution_en = ?,
+          type_id = ?, status_id = ?, start_time = ?, end_time = ?
+         WHERE id = ? AND deleted_at IS NULL`,
+        [
+          data.user_id,
+          data.division_id,
+          data.category_id,
+          data.subcategory_id,
+          data.description_cn,
+          data.description_en,
+          data.solution_cn,
+          data.solution_en,
+          typeId,
+          data.status_id,
+          data.start_time,
+          data.end_time,
+          recordId,
+        ]
+      );
+      if (result.affectedRows === 0) return null;
+
+      let docNumber: string | null = null;
+      if (!linked && issue.issue_material) {
+        const posted = await postChangeRequestIssue({
+          recordId,
+          data: { ...data, type_id: typeId },
+          issue,
+          createdBySystemUserId: gate.account?.systemUserId,
+          createdBy: creatorLabel(gate.account),
+        });
+        await saveIssueLink(recordId, issue, posted.id);
+        docNumber = posted.doc_number;
+      }
+      return { docNumber };
+    });
+
+    if (!saved) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+
+    const links =
+      saved.docNumber && issue.sparepart_item_id && issue.sparepart_qty && issue.sparepart_storage_location_id
+        ? [
+            await goodsIssueLink({
+              ref: saved.docNumber,
+              qty: issue.sparepart_qty,
+              itemId: issue.sparepart_item_id,
+              locationId: issue.sparepart_storage_location_id,
+              recipient: issue.sparepart_recipient ?? "",
+            }),
+          ]
+        : [];
+    await recordLogsCenter(
+      await activityUpdatedRemark(recordId, before, { ...data, type_id: typeId }, links)
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -157,15 +189,18 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
         { status: 409 }
       );
     }
-    const result = await execute(
-      "UPDATE daily_operation_record SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
-      [Number(id)]
+    const result = await suppressLogsCenter(() =>
+      execute(
+        "UPDATE daily_operation_record SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
+        [Number(id)]
+      )
     );
 
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
 
+    await recordLogsCenter(activityDeletedRemark(Number(id)));
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /mes-record/[id] failed", error);

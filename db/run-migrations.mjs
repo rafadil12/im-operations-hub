@@ -1997,5 +1997,23 @@ await applySqlFile(
   "Ensured logs_center_events table.",
 );
 
+// ---------------------------------------------------------------------------
+// 052: structured remarks (event + field changes). Old summary rows stay.
+// ---------------------------------------------------------------------------
+if (await tableExists("logs_center_events")) {
+  const remarkColumns = [
+    ["object_type", "VARCHAR(64) NULL"],
+    ["object_ref", "VARCHAR(64) NULL"],
+    ["changes_json", "JSON NULL"],
+    ["links_json", "JSON NULL"],
+  ];
+  for (const [name, definition] of remarkColumns) {
+    if (!(await columnExists("logs_center_events", name))) {
+      await conn.query(`ALTER TABLE logs_center_events ADD COLUMN \`${name}\` ${definition}`);
+      console.log(`Added logs_center_events.${name}.`);
+    }
+  }
+}
+
 await conn.end();
 console.log("Migrations complete.");
