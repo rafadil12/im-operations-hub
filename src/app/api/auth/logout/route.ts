@@ -9,7 +9,8 @@ export async function POST() {
     await recordLogsCenter({
       module: "auth",
       action: "logout",
-      summary: "Logout",
+      objectType: "session",
+      changes: [{ field: "result", to: "signed_out" }],
       actorSystemUserId: session?.systemUserId ?? null,
       actorUserId: session?.userId ?? null,
       actorLabel: session?.roleName ?? null,

@@ -17,6 +17,8 @@ import {
   parseChangeRequestIssue,
 } from "@/lib/daily-operation/changeRequestIssueParse";
 import type { AuthAccountPublic } from "@/lib/auth/types";
+import { activityCreatedRemark, goodsIssueLink } from "@/lib/logs-center/activityRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import { SparepartPostingError } from "@/lib/sparepart/posting";
 import type { MesDataInput, MesDataRow } from "@/lib/types";
 import { notifyMesRecordCreated } from "@/lib/wecomNotification";
@@ -207,48 +209,65 @@ export async function POST(request: NextRequest) {
       assertIssueComplete(issue);
     }
 
-    const result = await execute(
-      `INSERT INTO daily_operation_record
-        (user_id, division_id, category_id, subcategory_id,
-         description_cn, description_en, solution_cn, solution_en,
-         type_id, status_id, start_time, end_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.user_id,
-        data.division_id,
-        data.category_id,
-        data.subcategory_id,
-        data.description_cn,
-        data.description_en,
-        data.solution_cn,
-        data.solution_en,
-        data.type_id,
-        data.status_id,
-        data.start_time,
-        data.end_time,
-      ]
-    );
+    const created = await suppressLogsCenter(async () => {
+      const result = await execute(
+        `INSERT INTO daily_operation_record
+          (user_id, division_id, category_id, subcategory_id,
+           description_cn, description_en, solution_cn, solution_en,
+           type_id, status_id, start_time, end_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          data.user_id,
+          data.division_id,
+          data.category_id,
+          data.subcategory_id,
+          data.description_cn,
+          data.description_en,
+          data.solution_cn,
+          data.solution_en,
+          data.type_id,
+          data.status_id,
+          data.start_time,
+          data.end_time,
+        ]
+      );
 
-    if (issue.issue_material) {
-      try {
-        const posted = await postChangeRequestIssue({
-          recordId: result.insertId,
-          data,
-          issue,
-          createdBySystemUserId: gate.account?.systemUserId,
-          createdBy: creatorLabel(gate.account),
-        });
-        await saveIssueLink(result.insertId, issue, posted.id);
-      } catch (issueError) {
-        await execute("DELETE FROM daily_operation_record WHERE id = ?", [result.insertId]);
-        const response = issueErrorResponse(issueError);
-        if (response) return response;
-        throw issueError;
+      let docNumber: string | null = null;
+      if (issue.issue_material) {
+        try {
+          const posted = await postChangeRequestIssue({
+            recordId: result.insertId,
+            data,
+            issue,
+            createdBySystemUserId: gate.account?.systemUserId,
+            createdBy: creatorLabel(gate.account),
+          });
+          await saveIssueLink(result.insertId, issue, posted.id);
+          docNumber = posted.doc_number;
+        } catch (issueError) {
+          await execute("DELETE FROM daily_operation_record WHERE id = ?", [result.insertId]);
+          throw issueError;
+        }
       }
-    }
+      return { id: result.insertId, docNumber };
+    });
+
+    const links =
+      created.docNumber && issue.sparepart_item_id && issue.sparepart_qty && issue.sparepart_storage_location_id
+        ? [
+            await goodsIssueLink({
+              ref: created.docNumber,
+              qty: issue.sparepart_qty,
+              itemId: issue.sparepart_item_id,
+              locationId: issue.sparepart_storage_location_id,
+              recipient: issue.sparepart_recipient ?? "",
+            }),
+          ]
+        : [];
+    await recordLogsCenter(activityCreatedRemark(created.id, links));
 
     try {
-      const rows = await query<MesDataRow[]>(RECORD_DETAIL_SQL, [result.insertId]);
+      const rows = await query<MesDataRow[]>(RECORD_DETAIL_SQL, [created.id]);
       const record = rows[0];
       if (record) {
         await notifyMesRecordCreated(record);
@@ -257,7 +276,7 @@ export async function POST(request: NextRequest) {
       console.error("Failed to send WeCom notification:", wecomError);
     }
 
-    return NextResponse.json({ id: result.insertId }, { status: 201 });
+    return NextResponse.json({ id: created.id }, { status: 201 });
   } catch (error) {
     const response = issueErrorResponse(error);
     if (response) return response;

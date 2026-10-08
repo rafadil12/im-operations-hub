@@ -6,6 +6,7 @@ import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/stockTa
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
+import { parseRemarkList, renderRemark, type RemarkChange, type RemarkLink } from "@/lib/logs-center/renderRemark";
 import { fillTemplate } from "@/lib/i18n/fillTemplate";
 
 type LogRow = {
@@ -13,7 +14,11 @@ type LogRow = {
   created_at: string;
   module: string;
   action: string;
+  object_type: string | null;
+  object_ref: string | null;
   summary: string;
+  changes_json: unknown;
+  links_json: unknown;
   actor_label: string | null;
   employee_no: string | null;
   actor_name: string | null;
@@ -59,7 +64,7 @@ const fieldCls =
 const labelCls = "mb-1 block text-[10px] uppercase text-text-dim";
 
 export function LogsCenter() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [moduleName, setModuleName] = useState("");
   const [action, setAction] = useState("");
   const [q, setQ] = useState("");
@@ -230,7 +235,19 @@ export function LogsCenter() {
                   </td>
                   <td className="px-3 py-2 break-words text-text">{row.module.toUpperCase()}</td>
                   <td className="px-3 py-2 break-words text-text">{row.action.toUpperCase()}</td>
-                  <td className="px-3 py-2 break-words text-text">{row.summary}</td>
+                  <td className="px-3 py-2 break-words text-text">
+                    {renderRemark(
+                      {
+                        action: row.action,
+                        summary: row.summary,
+                        objectType: row.object_type,
+                        objectRef: row.object_ref,
+                        changes: parseRemarkList<RemarkChange>(row.changes_json),
+                        links: parseRemarkList<RemarkLink>(row.links_json),
+                      },
+                      lang
+                    )}
+                  </td>
                   </tr>
                 );
               })
