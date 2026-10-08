@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     }
     if (q) {
       where.push(
-        `(e.summary LIKE ? ESCAPE '\\\\' OR e.actor_label LIKE ? ESCAPE '\\\\' OR su.employee_no LIKE ? ESCAPE '\\\\' OR u.name_en LIKE ? ESCAPE '\\\\' OR u.name_cn LIKE ? ESCAPE '\\\\')`
+        `(e.summary LIKE ? ESCAPE '\\\\' OR e.actor_label LIKE ? ESCAPE '\\\\' OR u.employee_no LIKE ? ESCAPE '\\\\' OR u.name_en LIKE ? ESCAPE '\\\\' OR u.name_cn LIKE ? ESCAPE '\\\\')`
       );
       const pattern = likePattern(q);
       values.push(pattern, pattern, pattern, pattern, pattern);
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     const fromSql = `
       FROM audit_events e
       LEFT JOIN system_users su ON su.id = e.actor_system_user_id
-      LEFT JOIN users u ON u.id = e.actor_user_id
+      LEFT JOIN users u ON u.id = COALESCE(e.actor_user_id, su.user_id)
       ${whereSql}
     `;
 
@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * pageSize;
     const rows = await query<AuditRow[]>(
       `SELECT e.id, e.created_at, e.module, e.action, e.summary, e.actor_label,
-              su.employee_no,
-              COALESCE(u.name_en, su.employee_no, e.actor_label) AS actor_name
+              u.employee_no,
+              COALESCE(u.name_en, u.employee_no, e.actor_label) AS actor_name
        ${fromSql}
        ORDER BY e.id DESC
        LIMIT ? OFFSET ?`,
