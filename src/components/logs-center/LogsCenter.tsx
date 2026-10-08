@@ -96,11 +96,11 @@ export function LogsCenter() {
   const pageSizeOptions = PAGE_SIZE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }));
   const moduleOptions = [
     { value: "", label: t.common.all },
-    ...MODULES.map((item) => ({ value: item, label: item })),
+    ...MODULES.map((item) => ({ value: item, label: item.toUpperCase() })),
   ];
   const actionOptions = [
     { value: "", label: t.common.all },
-    ...ACTIONS.map((item) => ({ value: item, label: item })),
+    ...ACTIONS.map((item) => ({ value: item, label: item.toUpperCase() })),
   ];
 
   return (
@@ -201,7 +201,7 @@ export function LogsCenter() {
                 return (
                   <tr key={row.id} className="border-b border-border-subtle/70 last:border-0">
                   <td className="whitespace-nowrap px-3 py-2">
-                    <span className="block font-semibold text-text">{created.date}</span>
+                    <span className="block font-medium text-text">{created.date}</span>
                     {created.time ? (
                       <span className="mt-0.5 block text-[10px] text-text-dim">{created.time}</span>
                     ) : null}
@@ -212,8 +212,8 @@ export function LogsCenter() {
                       <span className="mt-0.5 block text-[10px] text-text-dim">{row.employee_no}</span>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2 break-words text-text">{row.module}</td>
-                  <td className="px-3 py-2 break-words text-text">{row.action}</td>
+                  <td className="px-3 py-2 break-words text-text">{row.module.toUpperCase()}</td>
+                  <td className="px-3 py-2 break-words text-text">{row.action.toUpperCase()}</td>
                   <td className="px-3 py-2 break-words text-text">{row.summary}</td>
                   </tr>
                 );
