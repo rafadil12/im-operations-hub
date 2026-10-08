@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-08
+
+### Changed
+
+- Organization Overview: Schedule Variance lists the newest dates first,
+  in both the compact cards and the full list.
+
 ## [0.12.0] - 2026-10-07
 
 ### Added
