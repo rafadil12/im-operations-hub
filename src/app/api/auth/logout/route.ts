@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { recordAudit } from "@/lib/audit/record";
+import { recordLogsCenter } from "@/lib/logs-center/record";
 import { clearSessionCookie, readSession } from "@/lib/auth";
 
 export async function POST() {
   try {
     const session = await readSession();
     await clearSessionCookie();
-    await recordAudit({
+    await recordLogsCenter({
       module: "auth",
       action: "logout",
       summary: "Logout",

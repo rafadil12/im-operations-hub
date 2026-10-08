@@ -29,9 +29,9 @@ export function describeWrite(sql: string): SqlWrite | null {
   };
 }
 
-/** Skip the audit table itself and the login timestamp touch. */
+/** Skip the logs center table itself and the login timestamp touch. */
 export function shouldSkipWrite(sql: string, write: SqlWrite): boolean {
-  if (write.table === "audit_events") return true;
+  if (write.table === "logs_center_events") return true;
   if (
     write.table === "system_users" &&
     /\blast_login_at\b/i.test(sql) &&

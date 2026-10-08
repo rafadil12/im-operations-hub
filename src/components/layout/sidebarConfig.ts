@@ -224,8 +224,13 @@ export const navItems: NavItem[] = [
         labelKey: "settingsAccounts",
         href: "/settings/accounts",
       },
-      { id: "log-account", labelKey: "settingsLogAccount", href: "/settings/log-account" },
     ],
+  },
+  {
+    id: "logs-center",
+    labelKey: "logsCenter",
+    href: "/logs-center",
+    icon: "logs-center",
   },
 ];
 

@@ -1,6 +1,6 @@
 import { describeWrite, shouldSkipWrite, summarizeWrites, type SqlWrite } from "./describeWrite";
 
-export type AuditInput = {
+export type LogsCenterInput = {
   module: string;
   action: string;
   summary: string;
@@ -9,11 +9,11 @@ export type AuditInput = {
   actorLabel?: string | null;
 };
 
-export async function recordAudit(input: AuditInput): Promise<void> {
+export async function recordLogsCenter(input: LogsCenterInput): Promise<void> {
   try {
     const { pool } = await import("@/lib/db");
     await pool.query(
-      `INSERT INTO audit_events
+      `INSERT INTO logs_center_events
         (actor_system_user_id, actor_user_id, actor_label, module, action, summary)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -26,11 +26,13 @@ export async function recordAudit(input: AuditInput): Promise<void> {
       ]
     );
   } catch (error) {
-    console.error("audit log failed", error);
+    console.error("logs center write failed", error);
   }
 }
 
-async function actorFromRequest(): Promise<Pick<AuditInput, "actorSystemUserId" | "actorUserId" | "actorLabel">> {
+async function actorFromRequest(): Promise<
+  Pick<LogsCenterInput, "actorSystemUserId" | "actorUserId" | "actorLabel">
+> {
   try {
     const { readSession } = await import("@/lib/auth/session");
     const session = await readSession();
@@ -56,5 +58,5 @@ export async function persistSqlWrites(sqls: string[]): Promise<void> {
   if (writes.length === 0) return;
   const summary = summarizeWrites(writes);
   const actor = await actorFromRequest();
-  await recordAudit({ ...summary, ...actor });
+  await recordLogsCenter({ ...summary, ...actor });
 }

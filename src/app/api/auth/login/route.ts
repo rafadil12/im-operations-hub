@@ -5,7 +5,7 @@ import {
   MAX_AGE_SECONDS,
   setSessionCookie,
 } from "@/lib/auth";
-import { recordAudit } from "@/lib/audit/record";
+import { recordLogsCenter } from "@/lib/logs-center/record";
 import {
   clearLoginFailures,
   createLoginAttemptStore,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const result = await authenticateLogin(login, password);
     if (!result.ok) {
       if (result.code === "inactive") {
-        await recordAudit({
+        await recordLogsCenter({
           module: "auth",
           action: "login",
           summary: "Login rejected: inactive account",
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       }
       recordLoginFailure(loginAttempts, key);
       recordLoginFailure(loginAttempts, ipKey);
-      await recordAudit({
+      await recordLogsCenter({
         module: "auth",
         action: "login",
         summary: "Login failed",
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     const account = result.account;
     clearLoginFailures(loginAttempts, key);
-    await recordAudit({
+    await recordLogsCenter({
       module: "auth",
       action: "login",
       summary: "Login succeeded",

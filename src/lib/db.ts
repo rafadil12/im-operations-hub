@@ -1,6 +1,6 @@
 import mysql from "mysql2/promise";
-import { describeWrite, shouldSkipWrite } from "@/lib/audit/describeWrite";
-import { persistSqlWrites } from "@/lib/audit/record";
+import { describeWrite, shouldSkipWrite } from "@/lib/logs-center/describeWrite";
+import { persistSqlWrites } from "@/lib/logs-center/record";
 
 declare global {
   var __mesDbPool: mysql.Pool | undefined;

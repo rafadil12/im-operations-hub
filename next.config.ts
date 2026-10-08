@@ -42,13 +42,23 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/settings/audit",
-        destination: "/settings/log-account",
-        permanent: true,
+        destination: "/logs-center",
+        permanent: false,
+      },
+      {
+        source: "/settings/log-account",
+        destination: "/logs-center",
+        permanent: false,
       },
       {
         source: "/api/settings/audit",
-        destination: "/api/settings/log-account",
-        permanent: true,
+        destination: "/api/logs-center",
+        permanent: false,
+      },
+      {
+        source: "/api/settings/log-account",
+        destination: "/api/logs-center",
+        permanent: false,
       },
     ];
   },

@@ -34,11 +34,12 @@ describe("describeWrite", () => {
     expect(describeWrite("SELECT id FROM mes_record WHERE id = ?")).toBeNull();
   });
 
-  it("skips the audit table and last-login touch", () => {
-    const audit = describeWrite("INSERT INTO audit_events (summary) VALUES (?)");
-    expect(audit && shouldSkipWrite("INSERT INTO audit_events (summary) VALUES (?)", audit)).toBe(
-      true
-    );
+  it("skips the logs center table and last-login touch", () => {
+    const logsCenter = describeWrite("INSERT INTO logs_center_events (summary) VALUES (?)");
+    expect(
+      logsCenter &&
+        shouldSkipWrite("INSERT INTO logs_center_events (summary) VALUES (?)", logsCenter)
+    ).toBe(true);
     const login = describeWrite("UPDATE system_users SET last_login_at = NOW() WHERE id = ?");
     expect(
       login &&

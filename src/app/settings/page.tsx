@@ -7,7 +7,7 @@ import { SkeletonPage } from "@/components/ui/skeletons";
 
 export default function SettingsIndexPage() {
   const router = useRouter();
-  const { canManageRoles, canManageAccounts, canAccessSettings } = useRoleAccess();
+  const { canManageRoles, canManageAccounts } = useRoleAccess();
 
   useEffect(() => {
     if (canManageRoles) {
@@ -18,12 +18,8 @@ export default function SettingsIndexPage() {
       router.replace("/settings/accounts");
       return;
     }
-    if (canAccessSettings) {
-      router.replace("/settings/log-account");
-      return;
-    }
     router.replace("/");
-  }, [canAccessSettings, canManageAccounts, canManageRoles, router]);
+  }, [canManageAccounts, canManageRoles, router]);
 
   return <SkeletonPage />;
 }
