@@ -119,7 +119,7 @@ function ScrollColumn({
       ref={listRef}
       role="listbox"
       aria-label={label}
-      className="h-48 w-12 overflow-y-auto overscroll-contain rounded-md border border-border-subtle bg-bg/30"
+      className="h-full min-h-0 w-12 overflow-y-auto overscroll-contain rounded-md border border-border-subtle bg-bg/30"
     >
       {items.map((n) => {
         const active = n === selected;
@@ -397,7 +397,7 @@ export function DateTimePicker({
           id={panelId}
           role="dialog"
           aria-label={t.common.chooseDateTime}
-          className="absolute left-0 z-40 mt-1 flex w-max max-w-[min(100vw-2rem,420px)] overflow-hidden rounded-xl border border-border bg-surface shadow-[0_16px_40px_var(--shadow-color)]"
+          className="absolute left-0 z-40 mt-1 grid w-max max-w-[min(100vw-2rem,480px)] grid-cols-[auto_auto] items-stretch overflow-hidden rounded-xl border border-border bg-surface shadow-[0_16px_40px_var(--shadow-color)]"
         >
           <div className="border-r border-border-subtle p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -482,22 +482,29 @@ export function DateTimePicker({
             </div>
           </div>
 
-          <div className="flex gap-2 p-3">
-            <ScrollColumn items={HOURS} selected={hour} onSelect={pickHour} label="Hours (00–23)" />
-            <ScrollColumn
-              items={MINUTES}
-              selected={minute}
-              onSelect={pickMinute}
-              label="Minutes (00–59)"
-            />
-            {withSeconds ? (
+          <div
+            className={[
+              "relative min-h-0 self-stretch",
+              withSeconds ? "w-[11.5rem]" : "w-32",
+            ].join(" ")}
+          >
+            <div className="absolute inset-0 flex gap-2 p-3">
+              <ScrollColumn items={HOURS} selected={hour} onSelect={pickHour} label="Hours (00–23)" />
               <ScrollColumn
-                items={SECONDS}
-                selected={second}
-                onSelect={pickSecond}
-                label="Seconds (00–59)"
+                items={MINUTES}
+                selected={minute}
+                onSelect={pickMinute}
+                label="Minutes (00–59)"
               />
-            ) : null}
+              {withSeconds ? (
+                <ScrollColumn
+                  items={SECONDS}
+                  selected={second}
+                  onSelect={pickSecond}
+                  label="Seconds (00–59)"
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}
