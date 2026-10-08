@@ -40,7 +40,7 @@ const ACTIONS = ["login", "logout", "create", "update", "delete", "change"];
 const fieldCls =
   "w-full rounded-md border border-border bg-bg/40 px-3 py-2 text-sm text-text outline-none focus:border-accent";
 
-export function AuditLog() {
+export function LogAccount() {
   const { t } = useLang();
   const [moduleName, setModuleName] = useState("");
   const [action, setAction] = useState("");
@@ -64,14 +64,14 @@ export function AuditLog() {
     if (applied.to) params.set("to", applied.to);
     params.set("page", String(page));
     try {
-      const next = await apiGetAbs<AuditResponse>(`/api/settings/audit?${params.toString()}`);
+      const next = await apiGetAbs<AuditResponse>(`/api/settings/log-account?${params.toString()}`);
       setData(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.settings.auditLoadFailed);
+      setError(err instanceof Error ? err.message : t.settings.logAccountLoadFailed);
     } finally {
       setLoading(false);
     }
-  }, [applied, page, t.settings.auditLoadFailed]);
+  }, [applied, page, t.settings.logAccountLoadFailed]);
 
   useEffect(() => {
     void load();
@@ -84,8 +84,8 @@ export function AuditLog() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-text">{t.settings.auditTitle}</h1>
-        <p className="text-sm text-text-muted">{t.settings.auditDesc}</p>
+        <h1 className="text-lg font-semibold text-text">{t.settings.logAccountTitle}</h1>
+        <p className="text-sm text-text-muted">{t.settings.logAccountDesc}</p>
       </div>
 
       <form
@@ -105,7 +105,7 @@ export function AuditLog() {
           <input className={`${fieldCls} mt-1`} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
         <label className="text-xs text-text-muted">
-          {t.settings.auditModule}
+          {t.settings.logAccountModule}
           <select className={`${fieldCls} mt-1`} value={moduleName} onChange={(e) => setModuleName(e.target.value)}>
             <option value="">{t.common.all}</option>
             {MODULES.map((item) => (
@@ -116,7 +116,7 @@ export function AuditLog() {
           </select>
         </label>
         <label className="text-xs text-text-muted">
-          {t.settings.auditAction}
+          {t.settings.logAccountAction}
           <select className={`${fieldCls} mt-1`} value={action} onChange={(e) => setAction(e.target.value)}>
             <option value="">{t.common.all}</option>
             {ACTIONS.map((item) => (
@@ -131,7 +131,7 @@ export function AuditLog() {
           <input
             className={`${fieldCls} mt-1`}
             value={q}
-            placeholder={t.settings.auditSearch}
+            placeholder={t.settings.logAccountSearch}
             onChange={(e) => setQ(e.target.value)}
           />
         </label>
@@ -153,11 +153,11 @@ export function AuditLog() {
         <table className="min-w-full text-left text-xs">
           <thead className="border-b border-border-subtle text-[10px] uppercase tracking-wide text-text-dim">
             <tr>
-              <th className="px-3 py-2">{t.settings.auditWhen}</th>
-              <th className="px-3 py-2">{t.settings.auditActor}</th>
-              <th className="px-3 py-2">{t.settings.auditModule}</th>
-              <th className="px-3 py-2">{t.settings.auditAction}</th>
-              <th className="px-3 py-2">{t.settings.auditSummary}</th>
+              <th className="px-3 py-2">{t.settings.logAccountWhen}</th>
+              <th className="px-3 py-2">{t.settings.logAccountActor}</th>
+              <th className="px-3 py-2">{t.settings.logAccountModule}</th>
+              <th className="px-3 py-2">{t.settings.logAccountAction}</th>
+              <th className="px-3 py-2">{t.settings.logAccountSummary}</th>
             </tr>
           </thead>
           <tbody>
@@ -185,7 +185,7 @@ export function AuditLog() {
             ) : (
               <tr>
                 <td className="px-3 py-4 text-text-muted" colSpan={5}>
-                  {t.settings.auditEmpty}
+                  {t.settings.logAccountEmpty}
                 </td>
               </tr>
             )}

@@ -1,17 +1,17 @@
 import { pageMetadata } from "@/lib/seo";
 import { AdminGate } from "@/components/settings/AdminGate";
-import { AuditLog } from "@/components/settings/AuditLog";
+import { LogAccount } from "@/components/settings/LogAccount";
 
 export const metadata = pageMetadata({
-  title: "Audit · Settings",
+  title: "Log Account · Settings",
   description: "Permanent log of system changes and sign-ins.",
-  path: "/settings/audit",
+  path: "/settings/log-account",
 });
 
-export default function SettingsAuditPage() {
+export default function SettingsLogAccountPage() {
   return (
     <AdminGate>
-      <AuditLog />
+      <LogAccount />
     </AdminGate>
   );
 }

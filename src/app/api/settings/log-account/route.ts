@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ rows, total, page, pageSize });
   } catch (error) {
-    console.error("GET /api/settings/audit failed", error);
-    return NextResponse.json({ error: "Failed to load audit log." }, { status: 500 });
+    console.error("GET /api/settings/log-account failed", error);
+    return NextResponse.json({ error: "Failed to load Log Account." }, { status: 500 });
   }
 }

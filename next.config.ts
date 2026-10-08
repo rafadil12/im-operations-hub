@@ -40,6 +40,16 @@ const nextConfig: NextConfig = {
         destination: "/report/summary",
         permanent: true,
       },
+      {
+        source: "/settings/audit",
+        destination: "/settings/log-account",
+        permanent: true,
+      },
+      {
+        source: "/api/settings/audit",
+        destination: "/api/settings/log-account",
+        permanent: true,
+      },
     ];
   },
 };

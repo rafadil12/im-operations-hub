@@ -19,7 +19,7 @@ export default function SettingsIndexPage() {
       return;
     }
     if (canAccessSettings) {
-      router.replace("/settings/audit");
+      router.replace("/settings/log-account");
       return;
     }
     router.replace("/");
