@@ -48,7 +48,7 @@ function buildUomIdByCode(uoms: SparepartUom[]): Map<string, number> {
 }
 
 async function loadActiveUomIdByCode(): Promise<Map<string, number>> {
-  const rows = await query<SparepartUom[]>(`SELECT id, code FROM uoms WHERE is_active = 1`);
+  const rows = await query<SparepartUom[]>(`SELECT id, code FROM sparepart_uoms WHERE is_active = 1`);
   return buildUomIdByCode(rows);
 }
 

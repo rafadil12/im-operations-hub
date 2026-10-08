@@ -80,7 +80,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
       [docId]
     );
     const linkedActivity = await query<{ id: number }[]>(
-      `SELECT id FROM mes_record WHERE sparepart_mat_doc_id = ? LIMIT 1`,
+      `SELECT id FROM daily_operation_record WHERE sparepart_mat_doc_id = ? LIMIT 1`,
       [docId]
     );
 

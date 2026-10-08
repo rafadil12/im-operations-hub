@@ -24,7 +24,7 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     }
 
     const result = await execute(
-      "UPDATE subcategories SET category_id = ?, name_cn = ?, name_en = ? WHERE id = ?",
+      "UPDATE daily_operation_subcategories SET category_id = ?, name_cn = ?, name_en = ? WHERE id = ?",
       [category_id, name_cn, name_en, Number(id)]
     );
     if (result.affectedRows === 0) {
@@ -46,7 +46,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const numId = Number(id);
 
     const used = await query<CountRow[]>(
-      "SELECT COUNT(*) AS c FROM mes_record WHERE subcategory_id = ? AND deleted_at IS NULL",
+      "SELECT COUNT(*) AS c FROM daily_operation_record WHERE subcategory_id = ? AND deleted_at IS NULL",
       [numId]
     );
     if (Number(used[0]?.c ?? 0) > 0) {
@@ -56,7 +56,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
       );
     }
 
-    const result = await execute("DELETE FROM subcategories WHERE id = ?", [numId]);
+    const result = await execute("DELETE FROM daily_operation_subcategories WHERE id = ?", [numId]);
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }

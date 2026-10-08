@@ -31,7 +31,7 @@ export const ITEM_CATEGORY_SELECT = `
 export const ITEM_CATEGORY_FROM = `
   sparepart_items i
   JOIN sparepart_categories c ON c.id = i.category_id
-  JOIN uoms u ON u.id = i.uom_id
+  JOIN sparepart_uoms u ON u.id = i.uom_id
 `;
 
 export function isSparepartCategoryCode(value: string): value is SparepartCategoryCode {

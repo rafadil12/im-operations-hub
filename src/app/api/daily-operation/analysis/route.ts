@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       query<NamedRow[]>(
         `SELECT st.name_en, st.name_cn, COUNT(*) AS count
-         FROM mes_record m
-         LEFT JOIN mes_status st ON m.status_id = st.id
+         FROM daily_operation_record m
+         LEFT JOIN daily_operation_status st ON m.status_id = st.id
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY st.id, st.name_en, st.name_cn`,
@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
       ),
       query<NamedRow[]>(
         `SELECT c.name_en, c.name_cn, COUNT(*) AS count
-         FROM mes_record m
-         LEFT JOIN categories c ON m.category_id = c.id
+         FROM daily_operation_record m
+         LEFT JOIN daily_operation_categories c ON m.category_id = c.id
          LEFT JOIN divisions d ON m.division_id = d.id
          
          WHERE ${filter}
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
       ),
       query<NamedRow[]>(
         `SELECT s.name_en, s.name_cn, COUNT(*) AS count
-         FROM mes_record m
-         LEFT JOIN subcategories s ON m.subcategory_id = s.id
+         FROM daily_operation_record m
+         LEFT JOIN daily_operation_subcategories s ON m.subcategory_id = s.id
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY s.id, s.name_en, s.name_cn ORDER BY count DESC`,
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       ),
       query<NamedRow[]>(
         `SELECT d.name_en, d.name_cn, COUNT(*) AS count
-         FROM mes_record m
+         FROM daily_operation_record m
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY d.id, d.name_en, d.name_cn ORDER BY count DESC`,
@@ -83,8 +83,8 @@ export async function GET(request: NextRequest) {
       ),
       query<NamedRow[]>(
         `SELECT t.name_en, t.name_cn, COUNT(*) AS count
-         FROM mes_record m
-         LEFT JOIN mes_type t ON m.type_id = t.id
+         FROM daily_operation_record m
+         LEFT JOIN daily_operation_type t ON m.type_id = t.id
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY t.id, t.name_en, t.name_cn ORDER BY count DESC`,
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       ),
       query<TrendRow[]>(
         `SELECT DATE(m.start_time) AS date, COUNT(*) AS count
-         FROM mes_record m 
+         FROM daily_operation_record m 
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
          GROUP BY DATE(m.start_time) ORDER BY date ASC`,
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       ),
       query<CountRow[]>(
         `SELECT u.name_en AS label, COUNT(*) AS count
-         FROM mes_record m
+         FROM daily_operation_record m
          LEFT JOIN users u ON m.user_id = u.id
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter}
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       ),
       query<UserRow[]>(
         `SELECT u.name_en, u.name_cn, d.name_en AS division, COUNT(*) AS count
-         FROM mes_record m
+         FROM daily_operation_record m
          LEFT JOIN users u ON m.user_id = u.id
          LEFT JOIN divisions d ON u.division_id = d.id
          WHERE ${filter}
@@ -119,14 +119,14 @@ export async function GET(request: NextRequest) {
       query<DurationRow[]>(
         `SELECT d.name_en AS division,
                 TIMESTAMPDIFF(MINUTE, m.start_time, m.end_time) / 60 AS duration_hours
-         FROM mes_record m
+         FROM daily_operation_record m
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter} AND m.end_time IS NOT NULL`,
         params
       ),
       query<AvgRow[]>(
         `SELECT AVG(TIMESTAMPDIFF(MINUTE, m.start_time, m.end_time)) AS avg_minutes
-         FROM mes_record m 
+         FROM daily_operation_record m 
          LEFT JOIN divisions d ON m.division_id = d.id
          WHERE ${filter} AND m.end_time IS NOT NULL`,
         params

@@ -51,16 +51,15 @@ export function moduleForTable(table: string): string {
   if (table.startsWith("safety_")) return "safety";
   if (table.startsWith("training_")) return "training";
   if (table.startsWith("itsm_")) return "itsm";
-  if (
-    table.startsWith("mes_") ||
-    table === "categories" ||
-    table === "subcategories" ||
-    table === "divisions" ||
-    table === "users"
-  ) {
+  if (table.startsWith("daily_operation_") || table === "divisions" || table === "users") {
     return "daily-operation";
   }
-  if (table === "system_users" || table === "roles" || table === "role_permissions" || table === "permissions") {
+  if (
+    table === "system_users" ||
+    table === "access_roles" ||
+    table === "access_role_permissions" ||
+    table === "access_permissions"
+  ) {
     return "settings";
   }
   if (

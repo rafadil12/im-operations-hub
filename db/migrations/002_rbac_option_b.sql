@@ -1,111 +1,111 @@
--- Option B RBAC: one role per system_user + role_permissions junction.
+-- Option B RBAC: one role per system_user + access_role_permissions junction.
 -- Prefer running via: node --env-file=.env.local db/run-migrations.mjs
 -- Permission catalog is completed/migrated by 006_permissions_catalog_v2.sql
 
 -- Roles seed
-INSERT INTO `roles` (`name`, `description`)
+INSERT INTO `access_roles` (`name`, `description`)
 SELECT 'admin', 'Full system access including Settings'
-WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'admin');
+WHERE NOT EXISTS (SELECT 1 FROM `access_roles` WHERE `name` = 'admin');
 
 -- Permissions seed (19-code catalog)
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'overview.view', 'View Overview dashboard'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'overview.view');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'overview.view');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'settings.access', 'Access Settings module'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'settings.access');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'settings.access');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.record.read', 'View daily operation records'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.record.read');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.record.read');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.record.create', 'Create daily operation records'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.record.create');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.record.create');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.record.update', 'Update daily operation records'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.record.update');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.record.update');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.record.delete', 'Delete daily operation records'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.record.delete');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.record.delete');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.record.import', 'Import daily operation records'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.record.import');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.record.import');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.record.export', 'Export daily operation records'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.record.export');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.record.export');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.record.template', 'Download daily operation import template'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.record.template');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.record.template');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.analysis.view', 'View daily operation analysis'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.analysis.view');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.analysis.view');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'daily_operation.master.manage', 'Manage daily operation master data'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'daily_operation.master.manage');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'daily_operation.master.manage');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'itsm.overview.view', 'View ITSM overview'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'itsm.overview.view');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'itsm.overview.view');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'itsm.request.read', 'View ITSM requests list'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'itsm.request.read');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'itsm.request.read');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'itsm.request.import', 'Import ITSM requests'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'itsm.request.import');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'itsm.request.import');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'itsm.request.export', 'Export ITSM requests'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'itsm.request.export');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'itsm.request.export');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'itsm.request.template', 'Download ITSM import template'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'itsm.request.template');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'itsm.request.template');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'itsm.analysis.view', 'View ITSM analysis'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'itsm.analysis.view');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'itsm.analysis.view');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'admin.roles.manage', 'Manage roles and permissions'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'admin.roles.manage');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'admin.roles.manage');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'admin.accounts.manage', 'Manage login accounts and role assignment'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'admin.accounts.manage');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'admin.accounts.manage');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'sparepart.document.post', 'Post sparepart material documents'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'sparepart.document.post');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'sparepart.document.post');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'sparepart.document.reverse', 'Reverse sparepart material documents'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'sparepart.document.reverse');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'sparepart.document.reverse');
 
--- role_permissions: admin gets all
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+-- access_role_permissions: admin gets all
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
-FROM `roles` r
-CROSS JOIN `permissions` p
+FROM `access_roles` r
+CROSS JOIN `access_permissions` p
 WHERE r.name = 'admin'
   AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
+    SELECT 1 FROM `access_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
   );
 
 -- Assign admin role to user_id = 1 (bootstrap)
 UPDATE `system_users` su
-JOIN `roles` r ON r.name = 'admin'
+JOIN `access_roles` r ON r.name = 'admin'
 SET su.role_id = r.id
 WHERE su.user_id = 1;
 

@@ -1,7 +1,7 @@
 -- Unit of measure master for sparepart materials.
 -- Prefer running via: node --env-file=.env.local db/run-migrations.mjs
 
-CREATE TABLE IF NOT EXISTS `uoms` (
+CREATE TABLE IF NOT EXISTS `sparepart_uoms` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `code` VARCHAR(16) NOT NULL,
   `name_en` VARCHAR(64) NOT NULL,
@@ -11,6 +11,6 @@ CREATE TABLE IF NOT EXISTS `uoms` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_uoms_code` (`code`),
-  KEY `idx_uoms_sort` (`sort_order`)
+  UNIQUE KEY `uk_sparepart_uoms_code` (`code`),
+  KEY `idx_sparepart_uoms_sort` (`sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

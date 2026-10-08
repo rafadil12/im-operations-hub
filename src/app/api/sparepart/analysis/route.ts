@@ -147,7 +147,7 @@ export async function GET() {
          FROM sparepart_mat_doc_items li
          JOIN sparepart_mat_docs d ON d.id = li.doc_id
          JOIN sparepart_items i ON i.id = li.item_id
-         LEFT JOIN uoms u ON u.id = i.uom_id
+         LEFT JOIN sparepart_uoms u ON u.id = i.uom_id
          WHERE d.movement_type = '201'
            AND i.deleted_at IS NULL
          ORDER BY d.posting_date DESC, d.id DESC, li.line_no ASC

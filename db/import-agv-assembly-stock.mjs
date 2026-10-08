@@ -320,7 +320,7 @@ try {
   }
 
   const [uomRows] = await conn.query(
-    `SELECT id, code FROM uoms WHERE is_active = 1`,
+    `SELECT id, code FROM sparepart_uoms WHERE is_active = 1`,
   );
   const uomIdByCode = new Map(
     uomRows.map((row) => [String(row.code).toUpperCase(), Number(row.id)]),

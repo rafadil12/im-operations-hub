@@ -308,7 +308,7 @@ export async function fetchOverviewQueryBundle(args: {
            u.code AS uom_code, u.name_cn AS uom_name_cn,
            COALESCE(SUM(${OUT_QTY_SQL}), 0) AS qty
          ${moveJoin}
-         JOIN uoms u ON u.id = i.uom_id
+         JOIN sparepart_uoms u ON u.id = i.uom_id
          WHERE ${moveWhere}
          GROUP BY i.id, i.code, i.name_en, i.name_cn, c.code, c.name_en, c.name_cn, u.code, u.name_cn
          HAVING qty > 0

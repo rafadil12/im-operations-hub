@@ -136,37 +136,37 @@ WHERE NOT EXISTS (
   WHERE c.area_id = a.id AND c.code = v.code
 );
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.overview.view', 'View report overview dashboard'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.overview.view');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.overview.view');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.line.read', 'View weekly report lines'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.line.read');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.line.read');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.line.create', 'Create weekly report lines'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.line.create');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.line.create');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.line.update', 'Update weekly report lines'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.line.update');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.line.update');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.line.delete', 'Delete weekly report lines'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.line.delete');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.line.delete');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.submission.submit', 'Submit weekly report for an area'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.submission.submit');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.submission.submit');
 
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
-FROM `roles` r
-CROSS JOIN `permissions` p
+FROM `access_roles` r
+CROSS JOIN `access_permissions` p
 WHERE r.name IN ('admin', 'superadmin')
   AND p.code LIKE 'report.%'
   AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
+    SELECT 1 FROM `access_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
   );

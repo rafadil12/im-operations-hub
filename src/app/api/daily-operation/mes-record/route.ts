@@ -42,13 +42,13 @@ const LIST_SQL = `
          slvl.name_en AS sparepart_level_name_en, slvl.name_cn AS sparepart_level_name_cn,
          md.doc_number AS sparepart_doc_number,
          md.recipient AS sparepart_recipient
-  FROM mes_record m
+  FROM daily_operation_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id
-  LEFT JOIN categories c ON m.category_id = c.id
-  LEFT JOIN subcategories s ON m.subcategory_id = s.id
-  LEFT JOIN mes_type t ON m.type_id = t.id
-  LEFT JOIN mes_status st ON m.status_id = st.id
+  LEFT JOIN daily_operation_categories c ON m.category_id = c.id
+  LEFT JOIN daily_operation_subcategories s ON m.subcategory_id = s.id
+  LEFT JOIN daily_operation_type t ON m.type_id = t.id
+  LEFT JOIN daily_operation_status st ON m.status_id = st.id
   LEFT JOIN sparepart_items si ON si.id = m.sparepart_item_id
   LEFT JOIN sparepart_storage_locations sloc ON sloc.id = m.sparepart_storage_location_id
   LEFT JOIN sparepart_stock_levels slvl ON slvl.id = m.sparepart_level_id
@@ -150,13 +150,13 @@ const RECORD_DETAIL_SQL = `
     slvl.name_en AS sparepart_level_name_en, slvl.name_cn AS sparepart_level_name_cn,
     md.doc_number AS sparepart_doc_number,
     md.recipient AS sparepart_recipient
-  FROM mes_record m
+  FROM daily_operation_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id
-  LEFT JOIN categories c ON m.category_id = c.id
-  LEFT JOIN subcategories s ON m.subcategory_id = s.id
-  LEFT JOIN mes_type t ON m.type_id = t.id
-  LEFT JOIN mes_status st ON m.status_id = st.id
+  LEFT JOIN daily_operation_categories c ON m.category_id = c.id
+  LEFT JOIN daily_operation_subcategories s ON m.subcategory_id = s.id
+  LEFT JOIN daily_operation_type t ON m.type_id = t.id
+  LEFT JOIN daily_operation_status st ON m.status_id = st.id
   LEFT JOIN sparepart_items si ON si.id = m.sparepart_item_id
   LEFT JOIN sparepart_storage_locations sloc ON sloc.id = m.sparepart_storage_location_id
   LEFT JOIN sparepart_stock_levels slvl ON slvl.id = m.sparepart_level_id
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await execute(
-      `INSERT INTO mes_record
+      `INSERT INTO daily_operation_record
         (user_id, division_id, category_id, subcategory_id,
          description_cn, description_en, solution_cn, solution_en,
          type_id, status_id, start_time, end_time)
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
         });
         await saveIssueLink(result.insertId, issue, posted.id);
       } catch (issueError) {
-        await execute("DELETE FROM mes_record WHERE id = ?", [result.insertId]);
+        await execute("DELETE FROM daily_operation_record WHERE id = ?", [result.insertId]);
         const response = issueErrorResponse(issueError);
         if (response) return response;
         throw issueError;

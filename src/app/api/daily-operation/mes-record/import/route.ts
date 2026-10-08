@@ -14,7 +14,7 @@ import { notifyMesRecordsCreated } from "@/lib/wecomNotification";
 
 export const runtime = "nodejs";
 
-const INSERT_SQL = `INSERT INTO mes_record
+const INSERT_SQL = `INSERT INTO daily_operation_record
   (user_id, division_id, category_id, subcategory_id,
    description_cn, description_en, solution_cn, solution_en,
    type_id, status_id, start_time, end_time)
@@ -35,13 +35,13 @@ const RECORDS_BY_IDS_SQL = `
     t.name_cn AS type_cn,
     st.name_en AS status_en,
     st.name_cn AS status_cn
-  FROM mes_record m
+  FROM daily_operation_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id
-  LEFT JOIN categories c ON m.category_id = c.id
-  LEFT JOIN subcategories s ON m.subcategory_id = s.id
-  LEFT JOIN mes_type t ON m.type_id = t.id
-  LEFT JOIN mes_status st ON m.status_id = st.id
+  LEFT JOIN daily_operation_categories c ON m.category_id = c.id
+  LEFT JOIN daily_operation_subcategories s ON m.subcategory_id = s.id
+  LEFT JOIN daily_operation_type t ON m.type_id = t.id
+  LEFT JOIN daily_operation_status st ON m.status_id = st.id
   WHERE m.id IN (?)
   ORDER BY FIELD(m.id, ?)
 `;

@@ -24,9 +24,9 @@ export async function GET() {
   if (gate instanceof NextResponse) return gate;
 
   try {
-    const roles = await query<RoleRow[]>("SELECT id, name, description FROM roles ORDER BY id ASC");
+    const roles = await query<RoleRow[]>("SELECT id, name, description FROM access_roles ORDER BY id ASC");
     const links = await query<RowDataPacket[]>(
-      "SELECT role_id, permission_id FROM role_permissions"
+      "SELECT role_id, permission_id FROM access_role_permissions"
     );
     const byRole = new Map<number, number[]>();
     for (const link of links) {
@@ -80,13 +80,13 @@ export async function POST(request: NextRequest) {
     }
 
     const roleId = await withTransaction(async (conn) => {
-      const [result] = await conn.execute("INSERT INTO roles (name, description) VALUES (?, ?)", [
+      const [result] = await conn.execute("INSERT INTO access_roles (name, description) VALUES (?, ?)", [
         name,
         description,
       ]);
       const insertId = Number((result as { insertId: number }).insertId);
       for (const permissionId of permissionIds) {
-        await conn.execute("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)", [
+        await conn.execute("INSERT INTO access_role_permissions (role_id, permission_id) VALUES (?, ?)", [
           insertId,
           permissionId,
         ]);

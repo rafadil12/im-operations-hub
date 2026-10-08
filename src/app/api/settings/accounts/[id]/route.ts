@@ -18,7 +18,7 @@ import { execute, query, withTransaction } from "@/lib/db";
 type Ctx = { params: Promise<{ id: string }> };
 
 async function roleIsPrivileged(roleId: number): Promise<boolean> {
-  const roles = await query<RowDataPacket[]>("SELECT name FROM roles WHERE id = ? LIMIT 1", [
+  const roles = await query<RowDataPacket[]>("SELECT name FROM access_roles WHERE id = ? LIMIT 1", [
     roleId,
   ]);
   const name = roles[0]?.name;
@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     if (roleId !== null) {
-      const roles = await query<RowDataPacket[]>("SELECT id FROM roles WHERE id = ? LIMIT 1", [
+      const roles = await query<RowDataPacket[]>("SELECT id FROM access_roles WHERE id = ? LIMIT 1", [
         roleId,
       ]);
       if (!roles[0]) {
@@ -95,7 +95,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     const current = await query<RowDataPacket[]>(
       `SELECT su.id, su.role_id, r.name AS role_name, u.employee_no
        FROM system_users su
-       LEFT JOIN roles r ON r.id = su.role_id
+       LEFT JOIN access_roles r ON r.id = su.role_id
        LEFT JOIN users u ON u.id = su.user_id
        WHERE su.id = ?
        LIMIT 1`,
@@ -110,7 +110,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     const wasAdmin = current[0].role_name === "admin";
     let nextIsAdmin = wasAdmin;
     if (roleId !== null) {
-      const nextRole = await query<RowDataPacket[]>("SELECT name FROM roles WHERE id = ? LIMIT 1", [
+      const nextRole = await query<RowDataPacket[]>("SELECT name FROM access_roles WHERE id = ? LIMIT 1", [
         roleId,
       ]);
       nextIsAdmin = nextRole[0]?.name === "admin";
@@ -135,7 +135,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
 
       if (roleChanged && roleId !== null) {
         const assignedRole = await query<RowDataPacket[]>(
-          "SELECT name FROM roles WHERE id = ? LIMIT 1",
+          "SELECT name FROM access_roles WHERE id = ? LIMIT 1",
           [roleId]
         );
         if (isProtectedRoleName(assignedRole[0]?.name as string | undefined)) {
@@ -180,7 +180,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
       const adminCount = await query<RowDataPacket[]>(
         `SELECT COUNT(*) AS c
          FROM system_users su
-         INNER JOIN roles r ON r.id = su.role_id
+         INNER JOIN access_roles r ON r.id = su.role_id
          WHERE r.name = 'admin' AND su.is_active = 1`
       );
       if (Number(adminCount[0]?.c ?? 0) <= 1) {
@@ -195,7 +195,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
       const adminCount = await query<RowDataPacket[]>(
         `SELECT COUNT(*) AS c
          FROM system_users su
-         INNER JOIN roles r ON r.id = su.role_id
+         INNER JOIN access_roles r ON r.id = su.role_id
          WHERE r.name = 'admin' AND su.is_active = 1`
       );
       if (Number(adminCount[0]?.c ?? 0) <= 1) {
@@ -275,7 +275,7 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     const current = await query<RowDataPacket[]>(
       `SELECT su.id, su.user_id, su.is_active, r.name AS role_name, u.employee_no
        FROM system_users su
-       LEFT JOIN roles r ON r.id = su.role_id
+       LEFT JOIN access_roles r ON r.id = su.role_id
        LEFT JOIN users u ON u.id = su.user_id
        WHERE su.id = ?
        LIMIT 1`,
@@ -304,7 +304,7 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       const adminCount = await query<RowDataPacket[]>(
         `SELECT COUNT(*) AS c
          FROM system_users su
-         INNER JOIN roles r ON r.id = su.role_id
+         INNER JOIN access_roles r ON r.id = su.role_id
          WHERE r.name = 'admin' AND su.is_active = 1`
       );
       if (Number(adminCount[0]?.c ?? 0) <= 1) {
@@ -316,7 +316,7 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     }
 
     const mesRefs = await query<RowDataPacket[]>(
-      "SELECT COUNT(*) AS c FROM mes_record WHERE user_id = ?",
+      "SELECT COUNT(*) AS c FROM daily_operation_record WHERE user_id = ?",
       [userId]
     );
     if (Number(mesRefs[0]?.c ?? 0) > 0) {

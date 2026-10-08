@@ -9,7 +9,7 @@ export async function GET() {
 
   try {
     const rows = await query<Category[]>(
-      "SELECT id, name_cn, name_en, division_id FROM categories ORDER BY name_en"
+      "SELECT id, name_cn, name_en, division_id FROM daily_operation_categories ORDER BY name_en"
     );
     return NextResponse.json({ rows });
   } catch (error) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await execute(
-      "INSERT INTO categories (name_cn, name_en, division_id) VALUES (?, ?, ?)",
+      "INSERT INTO daily_operation_categories (name_cn, name_en, division_id) VALUES (?, ?, ?)",
       [name_cn, name_en, division_id]
     );
     return NextResponse.json({ id: result.insertId }, { status: 201 });

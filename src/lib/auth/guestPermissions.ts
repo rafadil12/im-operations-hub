@@ -24,9 +24,9 @@ export async function loadGuestPermissions(): Promise<string[]> {
     const { query } = await import("@/lib/db");
     const rows = await query<RowDataPacket[]>(
       `SELECT p.code
-       FROM roles r
-       INNER JOIN role_permissions rp ON rp.role_id = r.id
-       INNER JOIN permissions p ON p.id = rp.permission_id
+       FROM access_roles r
+       INNER JOIN access_role_permissions rp ON rp.role_id = r.id
+       INNER JOIN access_permissions p ON p.id = rp.permission_id
        WHERE r.name = ?
        ORDER BY p.code`,
       [GUEST_ROLE_NAME]
@@ -56,7 +56,7 @@ export async function validateGuestPermissionIds(
   const { query } = await import("@/lib/db");
   const placeholders = permissionIds.map(() => "?").join(", ");
   const rows = await query<RowDataPacket[]>(
-    `SELECT id, code FROM permissions WHERE id IN (${placeholders})`,
+    `SELECT id, code FROM access_permissions WHERE id IN (${placeholders})`,
     permissionIds
   );
 

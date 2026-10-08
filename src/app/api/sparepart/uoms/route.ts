@@ -18,7 +18,7 @@ export async function GET() {
   try {
     const rows = await query<SparepartUom[]>(
       `SELECT id, code, name_en, name_cn, sort_order, is_active, created_at, updated_at
-       FROM uoms
+       FROM sparepart_uoms
        WHERE is_active = 1
        ORDER BY sort_order ASC, code ASC`
     );
@@ -59,19 +59,19 @@ export async function POST(request: NextRequest) {
     }
 
     const maxRows = await query<{ max_sort: number | null }[]>(
-      `SELECT MAX(sort_order) AS max_sort FROM uoms`
+      `SELECT MAX(sort_order) AS max_sort FROM sparepart_uoms`
     );
     const sortOrder = Number(maxRows[0]?.max_sort ?? 0) + 1;
 
     try {
       const result = await execute(
-        `INSERT INTO uoms (code, name_en, name_cn, sort_order, is_active)
+        `INSERT INTO sparepart_uoms (code, name_en, name_cn, sort_order, is_active)
          VALUES (?, ?, ?, ?, 1)`,
         [code, name_en, name_cn, sortOrder]
       );
       const rows = await query<SparepartUom[]>(
         `SELECT id, code, name_en, name_cn, sort_order, is_active, created_at, updated_at
-         FROM uoms WHERE id = ? LIMIT 1`,
+         FROM sparepart_uoms WHERE id = ? LIMIT 1`,
         [result.insertId]
       );
       return NextResponse.json({ row: rows[0] }, { status: 201 });
