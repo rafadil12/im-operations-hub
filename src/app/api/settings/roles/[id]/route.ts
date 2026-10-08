@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     const existing = await query<RowDataPacket[]>(
-      "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
+      "SELECT id, name FROM access_roles WHERE id = ? LIMIT 1",
       [id]
     );
     if (!existing[0]) {
@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
 
     if (isProtectedRoleName(existing[0].name)) {
       const critical = await query<RowDataPacket[]>(
-        `SELECT id, code FROM permissions
+        `SELECT id, code FROM access_permissions
          WHERE code IN (?, ?)`,
         [PERMISSIONS.adminRolesManage, PERMISSIONS.adminAccountsManage]
       );
@@ -86,14 +86,14 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     await withTransaction(async (conn) => {
-      await conn.execute("UPDATE roles SET name = ?, description = ? WHERE id = ?", [
+      await conn.execute("UPDATE access_roles SET name = ?, description = ? WHERE id = ?", [
         name,
         description,
         id,
       ]);
-      await conn.execute("DELETE FROM role_permissions WHERE role_id = ?", [id]);
+      await conn.execute("DELETE FROM access_role_permissions WHERE role_id = ?", [id]);
       for (const permissionId of permissionIds) {
-        await conn.execute("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)", [
+        await conn.execute("INSERT INTO access_role_permissions (role_id, permission_id) VALUES (?, ?)", [
           id,
           permissionId,
         ]);
@@ -127,7 +127,7 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     }
 
     const existing = await query<RowDataPacket[]>(
-      "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
+      "SELECT id, name FROM access_roles WHERE id = ? LIMIT 1",
       [id]
     );
     if (!existing[0]) {
@@ -158,8 +158,8 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     }
 
     await withTransaction(async (conn) => {
-      await conn.execute("DELETE FROM role_permissions WHERE role_id = ?", [id]);
-      await conn.execute("DELETE FROM roles WHERE id = ?", [id]);
+      await conn.execute("DELETE FROM access_role_permissions WHERE role_id = ?", [id]);
+      await conn.execute("DELETE FROM access_roles WHERE id = ?", [id]);
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

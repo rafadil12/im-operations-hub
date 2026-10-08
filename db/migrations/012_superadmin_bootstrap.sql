@@ -1,18 +1,18 @@
 -- Bootstrap Super Admin role + HR user + login account (idempotent).
 -- Prefer running via: node --env-file=.env.local db/run-migrations.mjs
 
-INSERT INTO `roles` (`name`, `description`)
+INSERT INTO `access_roles` (`name`, `description`)
 SELECT 'superadmin', 'System super administrator (historical / bootstrap actor)'
-WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'superadmin');
+WHERE NOT EXISTS (SELECT 1 FROM `access_roles` WHERE `name` = 'superadmin');
 
 -- Mirror all permissions from admin (or every permission if admin missing)
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT r_sa.id, p.id
-FROM `roles` r_sa
-CROSS JOIN `permissions` p
+FROM `access_roles` r_sa
+CROSS JOIN `access_permissions` p
 WHERE r_sa.name = 'superadmin'
   AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
+    SELECT 1 FROM `access_role_permissions` rp
     WHERE rp.role_id = r_sa.id AND rp.permission_id = p.id
   );
 
@@ -29,7 +29,7 @@ SELECT u.id,
        r.id,
        1
 FROM `users` u
-JOIN `roles` r ON r.name = 'superadmin'
+JOIN `access_roles` r ON r.name = 'superadmin'
 WHERE u.employee_no = 'SUPERADMIN'
   AND NOT EXISTS (
     SELECT 1 FROM `system_users` su WHERE su.user_id = u.id
@@ -38,7 +38,7 @@ WHERE u.employee_no = 'SUPERADMIN'
 -- Keep role assignment in sync if account already existed
 UPDATE `system_users` su
 JOIN `users` u ON u.id = su.user_id
-JOIN `roles` r ON r.name = 'superadmin'
+JOIN `access_roles` r ON r.name = 'superadmin'
 SET su.role_id = r.id,
     su.is_active = 1
 WHERE u.employee_no = 'SUPERADMIN';

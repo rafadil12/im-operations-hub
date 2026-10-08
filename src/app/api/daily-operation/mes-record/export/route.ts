@@ -19,13 +19,13 @@ const LIST_SQL = `
          s.name_en AS subcategory_en, s.name_cn AS subcategory_cn,
          t.name_en AS type_en, t.name_cn AS type_cn,
          st.name_en AS status_en, st.name_cn AS status_cn
-  FROM mes_record m
+  FROM daily_operation_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id
-  LEFT JOIN categories c ON m.category_id = c.id
-  LEFT JOIN subcategories s ON m.subcategory_id = s.id
-  LEFT JOIN mes_type t ON m.type_id = t.id
-  LEFT JOIN mes_status st ON m.status_id = st.id
+  LEFT JOIN daily_operation_categories c ON m.category_id = c.id
+  LEFT JOIN daily_operation_subcategories s ON m.subcategory_id = s.id
+  LEFT JOIN daily_operation_type t ON m.type_id = t.id
+  LEFT JOIN daily_operation_status st ON m.status_id = st.id
   WHERE m.deleted_at IS NULL
     AND m.start_time BETWEEN ? AND ?
 `;

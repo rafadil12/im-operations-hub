@@ -22,7 +22,7 @@ async function categoryExists(id: number): Promise<boolean> {
 
 async function uomExists(id: number): Promise<boolean> {
   const rows = await query<{ id: number }[]>(
-    `SELECT id FROM uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
+    `SELECT id FROM sparepart_uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
     [id]
   );
   return Boolean(rows[0]);

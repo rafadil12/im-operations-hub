@@ -38,7 +38,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
     const rows = await query<MesData[]>(
-      "SELECT * FROM mes_record WHERE id = ? AND deleted_at IS NULL",
+      "SELECT * FROM daily_operation_record WHERE id = ? AND deleted_at IS NULL",
       [Number(id)]
     );
     if (!rows.length) {
@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     const issue = parseChangeRequestIssue(body);
 
     const result = await execute(
-      `UPDATE mes_record SET
+      `UPDATE daily_operation_record SET
         user_id = ?, division_id = ?, category_id = ?, subcategory_id = ?,
         description_cn = ?, description_en = ?, solution_cn = ?, solution_en = ?,
         type_id = ?, status_id = ?, start_time = ?, end_time = ?
@@ -158,7 +158,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
       );
     }
     const result = await execute(
-      "UPDATE mes_record SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
+      "UPDATE daily_operation_record SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
       [Number(id)]
     );
 

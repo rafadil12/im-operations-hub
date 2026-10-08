@@ -9,7 +9,7 @@ export async function GET() {
 
   try {
     const rows = await query<RowDataPacket[]>(
-      "SELECT id, code, description FROM permissions ORDER BY code"
+      "SELECT id, code, description FROM access_permissions ORDER BY code"
     );
     return NextResponse.json({
       rows: rows.map((r) => ({

@@ -9,9 +9,9 @@ import {
 
 describe("describeWrite", () => {
   it("reads insert, update, and delete targets", () => {
-    expect(describeWrite("INSERT INTO mes_record (user_id) VALUES (?)")).toMatchObject({
+    expect(describeWrite("INSERT INTO daily_operation_record (user_id) VALUES (?)")).toMatchObject({
       verb: "insert",
-      table: "mes_record",
+      table: "daily_operation_record",
       softDelete: false,
     });
     expect(describeWrite("UPDATE `sparepart_items` SET name_en = ? WHERE id = ?")).toMatchObject({
@@ -25,13 +25,13 @@ describe("describeWrite", () => {
   });
 
   it("treats deleted_at updates as a delete", () => {
-    const write = describeWrite("UPDATE mes_record SET deleted_at = NOW() WHERE id = ?");
+    const write = describeWrite("UPDATE daily_operation_record SET deleted_at = NOW() WHERE id = ?");
     expect(write?.softDelete).toBe(true);
     expect(write && actionForWrite(write)).toBe("delete");
   });
 
   it("ignores reads", () => {
-    expect(describeWrite("SELECT id FROM mes_record WHERE id = ?")).toBeNull();
+    expect(describeWrite("SELECT id FROM daily_operation_record WHERE id = ?")).toBeNull();
   });
 
   it("skips the logs center table and last-login touch", () => {
@@ -49,7 +49,12 @@ describe("describeWrite", () => {
 
   it("maps tables to modules and summarizes a batch", () => {
     expect(moduleForTable("sparepart_mat_docs")).toBe("sparepart");
-    expect(moduleForTable("roles")).toBe("settings");
+    expect(moduleForTable("sparepart_uoms")).toBe("sparepart");
+    expect(moduleForTable("daily_operation_record")).toBe("daily-operation");
+    expect(moduleForTable("daily_operation_categories")).toBe("daily-operation");
+    expect(moduleForTable("access_roles")).toBe("settings");
+    expect(moduleForTable("access_permissions")).toBe("settings");
+    expect(moduleForTable("users")).toBe("daily-operation");
     expect(
       summarizeWrites([
         { verb: "insert", table: "sparepart_mat_docs", softDelete: false },

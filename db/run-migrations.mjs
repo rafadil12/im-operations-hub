@@ -32,6 +32,113 @@ const { columnExists, columnType, columnLength, tableExists, indexExists, constr
 const { tryAddFk, tryAddConstraint, applySqlFile } = createMigrationHelpers(conn);
 
 // ---------------------------------------------------------------------------
+// 051: rename legacy table names. Runs first so later steps see the new names.
+// The left-hand names are the legacy tables; they must stay in this list only.
+// ---------------------------------------------------------------------------
+const LEGACY_TABLE_RENAMES = [
+  ["categories", "daily_operation_categories"],
+  ["subcategories", "daily_operation_subcategories"],
+  ["mes_record", "daily_operation_record"],
+  ["mes_status", "daily_operation_status"],
+  ["mes_type", "daily_operation_type"],
+  ["role_permissions", "access_role_permissions"],
+  ["permissions", "access_permissions"],
+  ["roles", "access_roles"],
+  ["uoms", "sparepart_uoms"],
+];
+
+for (const [from, to] of LEGACY_TABLE_RENAMES) {
+  const hasFrom = await tableExists(from);
+  const hasTo = await tableExists(to);
+  if (hasFrom && hasTo) {
+    throw new Error(`Both ${from} and ${to} exist. Refusing to rename.`);
+  }
+  if (hasFrom && !hasTo) {
+    await conn.query(`RENAME TABLE \`${from}\` TO \`${to}\``);
+    console.log(`Renamed ${from} to ${to}.`);
+  }
+}
+
+function nextIndexName(indexName) {
+  const rules = [
+    ["role_permissions", "access_role_permissions", ["access_"]],
+    ["mes_record", "daily_operation_record", []],
+    ["mes_status", "daily_operation_status", []],
+    ["mes_type", "daily_operation_type", []],
+    ["subcategories", "daily_operation_subcategories", ["daily_operation_"]],
+    ["permissions", "access_permissions", ["access_", "role_"]],
+    ["uoms", "sparepart_uoms", ["sparepart_"]],
+    ["roles", "access_roles", ["access_"]],
+    ["categories", "daily_operation_categories", ["sparepart_", "daily_operation_"]],
+  ];
+  let next = indexName;
+  for (const [from, to, skipPrefixes] of rules) {
+    next = next.replace(new RegExp(`(?<=^|_)${from}(?=_|$)`, "g"), (match, offset, full) => {
+      const before = full.slice(0, offset);
+      if (skipPrefixes.some((prefix) => before.endsWith(prefix))) return match;
+      return to;
+    });
+  }
+  return next;
+}
+
+const renamedTables = LEGACY_TABLE_RENAMES.map(([, to]) => to);
+const [indexRows] = await conn.query(
+  `SELECT DISTINCT TABLE_NAME AS tableName, INDEX_NAME AS indexName
+   FROM information_schema.STATISTICS
+   WHERE TABLE_SCHEMA = ? AND INDEX_NAME <> 'PRIMARY'`,
+  [process.env.DB_NAME],
+);
+for (const row of indexRows) {
+  if (!renamedTables.includes(row.tableName)) continue;
+  const next = nextIndexName(row.indexName);
+  if (next === row.indexName) continue;
+  if (next.length > 64) {
+    throw new Error(`Index name too long after rename: ${next}`);
+  }
+  await conn.query(
+    `ALTER TABLE \`${row.tableName}\` RENAME INDEX \`${row.indexName}\` TO \`${next}\``,
+  );
+  console.log(`Renamed index ${row.tableName}.${row.indexName} to ${next}.`);
+}
+
+const LEGACY_CONSTRAINT_RENAMES = [
+  [
+    "access_role_permissions",
+    "fk_role_permissions_role",
+    "fk_access_role_permissions_role",
+    "role_id",
+    "access_roles",
+  ],
+  [
+    "access_role_permissions",
+    "fk_role_permissions_permission",
+    "fk_access_role_permissions_permission",
+    "permission_id",
+    "access_permissions",
+  ],
+];
+for (const [table, from, to, column, referenced] of LEGACY_CONSTRAINT_RENAMES) {
+  if (!(await constraintExists(table, from))) continue;
+  const [rules] = await conn.query(
+    `SELECT DELETE_RULE AS deleteRule, UPDATE_RULE AS updateRule
+     FROM information_schema.REFERENTIAL_CONSTRAINTS
+     WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ?`,
+    [process.env.DB_NAME, table, from],
+  );
+  const deleteRule = rules[0]?.deleteRule ?? "RESTRICT";
+  const updateRule = rules[0]?.updateRule ?? "RESTRICT";
+  await conn.query(`ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${from}\``);
+  await conn.query(
+    `ALTER TABLE \`${table}\`
+     ADD CONSTRAINT \`${to}\`
+     FOREIGN KEY (\`${column}\`) REFERENCES \`${referenced}\` (\`id\`)
+     ON DELETE ${deleteRule} ON UPDATE ${updateRule}`,
+  );
+  console.log(`Renamed constraint ${table}.${from} to ${to}.`);
+}
+
+// ---------------------------------------------------------------------------
 // 001: mes_data.deleted_at
 // ---------------------------------------------------------------------------
 if (!(await tableExists("mes_data"))) {
@@ -65,28 +172,28 @@ if (!(await indexExists("system_users", "idx_system_users_role_id"))) {
 await tryAddConstraint(
   `ALTER TABLE \`system_users\`
    ADD CONSTRAINT \`fk_system_users_role\`
-   FOREIGN KEY (\`role_id\`) REFERENCES \`roles\` (\`id\`)
+   FOREIGN KEY (\`role_id\`) REFERENCES \`access_roles\` (\`id\`)
    ON DELETE RESTRICT ON UPDATE RESTRICT`,
   "fk_system_users_role",
 );
 
-if (!(await tableExists("role_permissions"))) {
+if (!(await tableExists("access_role_permissions"))) {
   await conn.query(`
-    CREATE TABLE \`role_permissions\` (
+    CREATE TABLE \`access_role_permissions\` (
       \`role_id\` INT NOT NULL,
       \`permission_id\` INT NOT NULL,
       PRIMARY KEY (\`role_id\`, \`permission_id\`),
-      CONSTRAINT \`fk_role_permissions_role\`
-        FOREIGN KEY (\`role_id\`) REFERENCES \`roles\` (\`id\`)
+      CONSTRAINT \`fk_access_role_permissions_role\`
+        FOREIGN KEY (\`role_id\`) REFERENCES \`access_roles\` (\`id\`)
         ON DELETE CASCADE ON UPDATE RESTRICT,
-      CONSTRAINT \`fk_role_permissions_permission\`
-        FOREIGN KEY (\`permission_id\`) REFERENCES \`permissions\` (\`id\`)
+      CONSTRAINT \`fk_access_role_permissions_permission\`
+        FOREIGN KEY (\`permission_id\`) REFERENCES \`access_permissions\` (\`id\`)
         ON DELETE CASCADE ON UPDATE RESTRICT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   `);
-  console.log("Created role_permissions.");
+  console.log("Created access_role_permissions.");
 } else {
-  console.log("role_permissions already exists.");
+  console.log("access_role_permissions already exists.");
 }
 
 if (!(await indexExists("users", "uk_users_employee_no"))) {
@@ -651,17 +758,17 @@ if (await tableExists("sparepart_items")) {
 }
 
 // ---------------------------------------------------------------------------
-// 016: uoms + sparepart_items.uom_id + AGV/ASSEMBLY racks
+// 016: sparepart_uoms + sparepart_items.uom_id + AGV/ASSEMBLY racks
 // ---------------------------------------------------------------------------
-if (!(await tableExists("uoms"))) {
-  await conn.query(readMigrationSql("016_uoms.sql"));
-  console.log("Created uoms.");
+if (!(await tableExists("sparepart_uoms"))) {
+  await conn.query(readMigrationSql("016_sparepart_uoms.sql"));
+  console.log("Created sparepart_uoms.");
 } else {
-  console.log("uoms already exists.");
+  console.log("sparepart_uoms already exists.");
 }
 
 await conn.query(
-  `INSERT INTO uoms (code, name_en, name_cn, sort_order, is_active)
+  `INSERT INTO sparepart_uoms (code, name_en, name_cn, sort_order, is_active)
    VALUES
      ('PCS', 'Pieces', '件', 1, 1),
      ('PACK', 'Pack', '包', 2, 1),
@@ -672,7 +779,7 @@ await conn.query(
      name_cn = VALUES(name_cn),
      sort_order = VALUES(sort_order)`,
 );
-console.log("Seeded uoms (PCS, PACK, ROLL, MTR).");
+console.log("Seeded sparepart_uoms (PCS, PACK, ROLL, MTR).");
 
 if (await tableExists("sparepart_items")) {
   if (!(await columnExists("sparepart_items", "uom_id"))) {
@@ -685,7 +792,7 @@ if (await tableExists("sparepart_items")) {
   }
 
   const [pcsRows] = await conn.query(
-    `SELECT id FROM uoms WHERE code = 'PCS' LIMIT 1`,
+    `SELECT id FROM sparepart_uoms WHERE code = 'PCS' LIMIT 1`,
   );
   const pcsId = pcsRows[0]?.id;
   if (pcsId) {
@@ -723,7 +830,7 @@ if (await tableExists("sparepart_items")) {
     await conn.query(
       `ALTER TABLE \`sparepart_items\`
        ADD CONSTRAINT \`fk_sparepart_items_uom\`
-       FOREIGN KEY (\`uom_id\`) REFERENCES \`uoms\` (\`id\`)
+       FOREIGN KEY (\`uom_id\`) REFERENCES \`sparepart_uoms\` (\`id\`)
        ON DELETE RESTRICT ON UPDATE CASCADE`,
     );
     console.log("Added fk_sparepart_items_uom.");
@@ -1361,9 +1468,9 @@ await applySqlFile(
 );
 
 await applySqlFile(
-  "033_mes_record_start_time_index.sql",
+  "033_daily_operation_record_start_time_index.sql",
   readMigrationSql,
-  "Indexed mes_record by deleted_at and start_time.",
+  "Indexed daily_operation_record by deleted_at and start_time.",
 );
 
 await applySqlFile(
@@ -1829,18 +1936,18 @@ await applySqlFile(
 );
 
 // ---------------------------------------------------------------------------
-// 048: mes_type Request → Access Request (EN label only)
+// 048: daily_operation_type Request → Access Request (EN label only)
 // ---------------------------------------------------------------------------
 await applySqlFile(
-  "048_mes_type_access_request.sql",
+  "048_daily_operation_type_access_request.sql",
   readMigrationSql,
-  "Renamed mes_type name_en Request → Access Request.",
+  "Renamed daily_operation_type name_en Request → Access Request.",
 );
 
 // ---------------------------------------------------------------------------
 // 049: Change Request activity → one goods issue (201)
 // ---------------------------------------------------------------------------
-if (await tableExists("mes_record")) {
+if (await tableExists("daily_operation_record")) {
   const issueColumns = [
     ["sparepart_item_id", "INT NULL"],
     ["sparepart_qty", "INT NULL"],
@@ -1849,19 +1956,19 @@ if (await tableExists("mes_record")) {
     ["sparepart_mat_doc_id", "INT NULL"],
   ];
   for (const [name, definition] of issueColumns) {
-    if (!(await columnExists("mes_record", name))) {
-      await conn.query(`ALTER TABLE mes_record ADD COLUMN \`${name}\` ${definition}`);
-      console.log(`Added mes_record.${name}.`);
+    if (!(await columnExists("daily_operation_record", name))) {
+      await conn.query(`ALTER TABLE daily_operation_record ADD COLUMN \`${name}\` ${definition}`);
+      console.log(`Added daily_operation_record.${name}.`);
     }
   }
-  if (!(await indexExists("mes_record", "uk_mes_record_sparepart_mat_doc"))) {
+  if (!(await indexExists("daily_operation_record", "uk_daily_operation_record_sparepart_mat_doc"))) {
     await conn.query(
-      "ALTER TABLE mes_record ADD UNIQUE KEY uk_mes_record_sparepart_mat_doc (sparepart_mat_doc_id)",
+      "ALTER TABLE daily_operation_record ADD UNIQUE KEY uk_daily_operation_record_sparepart_mat_doc (sparepart_mat_doc_id)",
     );
-    console.log("Added uk_mes_record_sparepart_mat_doc.");
+    console.log("Added uk_daily_operation_record_sparepart_mat_doc.");
   }
 } else {
-  console.log("mes_record missing; skipped 049 sparepart issue columns.");
+  console.log("daily_operation_record missing; skipped 049 sparepart issue columns.");
 }
 
 // ---------------------------------------------------------------------------

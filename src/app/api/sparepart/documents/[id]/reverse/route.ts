@@ -25,7 +25,7 @@ export async function POST(request: NextRequest, context: Ctx) {
       client_request_id?: string;
     };
     const linked = await query<{ id: number }[]>(
-      `SELECT id FROM mes_record WHERE sparepart_mat_doc_id = ? LIMIT 1`,
+      `SELECT id FROM daily_operation_record WHERE sparepart_mat_doc_id = ? LIMIT 1`,
       [docId]
     );
     if (linked[0]) {

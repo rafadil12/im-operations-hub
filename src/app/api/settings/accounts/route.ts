@@ -16,7 +16,7 @@ import {
 import { query, withTransaction } from "@/lib/db";
 
 async function roleIsPrivileged(roleId: number): Promise<boolean> {
-  const roles = await query<RowDataPacket[]>("SELECT name FROM roles WHERE id = ? LIMIT 1", [
+  const roles = await query<RowDataPacket[]>("SELECT name FROM access_roles WHERE id = ? LIMIT 1", [
     roleId,
   ]);
   const name = roles[0]?.name;
@@ -44,7 +44,7 @@ export async function GET() {
          r.name AS role_name
        FROM system_users su
        INNER JOIN users u ON u.id = su.user_id
-       LEFT JOIN roles r ON r.id = su.role_id
+       LEFT JOIN access_roles r ON r.id = su.role_id
        ORDER BY u.employee_no`
     );
 
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     if (roleId !== null) {
       const roles = await query<RowDataPacket[]>(
-        "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
+        "SELECT id, name FROM access_roles WHERE id = ? LIMIT 1",
         [roleId]
       );
       if (!roles[0]) {

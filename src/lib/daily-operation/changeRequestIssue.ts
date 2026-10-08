@@ -14,7 +14,7 @@ export type LinkedIssue = {
 
 export async function isChangeRequestType(typeId: number): Promise<boolean> {
   const rows = await query<{ name_en: string | null }[]>(
-    "SELECT name_en FROM mes_type WHERE id = ? LIMIT 1",
+    "SELECT name_en FROM daily_operation_type WHERE id = ? LIMIT 1",
     [typeId]
   );
   return rows[0]?.name_en === CHANGE_REQUEST_TYPE_EN;
@@ -23,7 +23,7 @@ export async function isChangeRequestType(typeId: number): Promise<boolean> {
 export async function loadLinkedIssue(recordId: number): Promise<LinkedIssue | null> {
   const rows = await query<LinkedIssue[]>(
     `SELECT sparepart_mat_doc_id, type_id
-     FROM mes_record
+     FROM daily_operation_record
      WHERE id = ? AND deleted_at IS NULL
      LIMIT 1`,
     [recordId]
@@ -70,7 +70,7 @@ export async function saveIssueLink(
   docId: number
 ): Promise<void> {
   await execute(
-    `UPDATE mes_record
+    `UPDATE daily_operation_record
      SET sparepart_item_id = ?,
          sparepart_qty = ?,
          sparepart_storage_location_id = ?,

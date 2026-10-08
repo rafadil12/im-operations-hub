@@ -95,8 +95,8 @@ export async function loadPermissionsForRole(roleId: number | null): Promise<str
   if (!roleId) return [];
   const rows = await query<RowDataPacket[]>(
     `SELECT p.code
-     FROM role_permissions rp
-     INNER JOIN permissions p ON p.id = rp.permission_id
+     FROM access_role_permissions rp
+     INNER JOIN access_permissions p ON p.id = rp.permission_id
      WHERE rp.role_id = ?
      ORDER BY p.code`,
     [roleId]
@@ -109,7 +109,7 @@ export async function findAccountByEmployeeNo(employeeNo: string): Promise<Accou
     `SELECT ${ACCOUNT_SELECT}
      FROM system_users su
      INNER JOIN users u ON u.id = su.user_id
-     LEFT JOIN roles r ON r.id = su.role_id
+     LEFT JOIN access_roles r ON r.id = su.role_id
      WHERE u.employee_no = ?
      LIMIT 1`,
     [employeeNo]
@@ -122,7 +122,7 @@ export async function findAccountBySystemUserId(systemUserId: number): Promise<A
     `SELECT ${ACCOUNT_SELECT}
      FROM system_users su
      INNER JOIN users u ON u.id = su.user_id
-     LEFT JOIN roles r ON r.id = su.role_id
+     LEFT JOIN access_roles r ON r.id = su.role_id
      WHERE su.id = ?
      LIMIT 1`,
     [systemUserId]

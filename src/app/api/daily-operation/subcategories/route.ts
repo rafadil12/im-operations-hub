@@ -9,7 +9,7 @@ export async function GET() {
 
   try {
     const rows = await query<Subcategory[]>(
-      "SELECT id, category_id, name_cn, name_en FROM subcategories ORDER BY name_en"
+      "SELECT id, category_id, name_cn, name_en FROM daily_operation_subcategories ORDER BY name_en"
     );
     return NextResponse.json({ rows });
   } catch (error) {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await execute(
-      "INSERT INTO subcategories (category_id, name_cn, name_en) VALUES (?, ?, ?)",
+      "INSERT INTO daily_operation_subcategories (category_id, name_cn, name_en) VALUES (?, ?, ?)",
       [category_id, name_cn, name_en]
     );
     return NextResponse.json({ id: result.insertId }, { status: 201 });

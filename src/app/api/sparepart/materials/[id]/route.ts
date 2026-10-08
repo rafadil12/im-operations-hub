@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Invalid category." }, { status: 400 });
     }
     const uomRows = await query<{ id: number }[]>(
-      `SELECT id FROM uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
+      `SELECT id FROM sparepart_uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
       [data.uom_id]
     );
     if (!uomRows[0]) {

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-08
+
+### Changed
+
+- Renamed database tables to a module prefix. Daily Operation records,
+  categories, subcategories, types, and statuses now start with
+  `daily_operation_`. Login roles and permissions start with `access_`.
+  Units of measure are `sparepart_uoms`.
+- Existing rows, ids, and foreign keys move with the rename. Queries use
+  the new names. `users`, `system_users`, and `sparepart_categories` are
+  unchanged.
+
 ## [0.14.0] - 2026-10-08
 
 ### Added
