@@ -16,6 +16,10 @@ type Props = {
   onChange: (value: string) => void;
   className?: string;
   disabled?: boolean;
+  /** Include seconds in the value and the clock column. */
+  withSeconds?: boolean;
+  /** Match compact filter fields (text-xs). */
+  compact?: boolean;
   id?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
@@ -24,6 +28,7 @@ type Props = {
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+const SECONDS = MINUTES;
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -35,9 +40,10 @@ function parseValue(value: string): {
   day: number;
   hour: number;
   minute: number;
+  second?: number;
 } | null {
   if (!value) return null;
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
   if (!match) return null;
   return {
     year: Number(match[1]),
@@ -45,6 +51,7 @@ function parseValue(value: string): {
     day: Number(match[3]),
     hour: Number(match[4]),
     minute: Number(match[5]),
+    second: match[6] == null ? undefined : Number(match[6]),
   };
 }
 
@@ -53,9 +60,12 @@ function formatValue(
   month: number,
   day: number,
   hour: number,
-  minute: number
+  minute: number,
+  second?: number
 ): string {
-  return `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}`;
+  const clock = `${pad(hour)}:${pad(minute)}`;
+  const time = second == null ? clock : `${clock}:${pad(second)}`;
+  return `${year}-${pad(month)}-${pad(day)}T${time}`;
 }
 
 function daysInMonth(year: number, month: number): number {
@@ -75,10 +85,12 @@ function monthLabel(year: number, month: number): string {
   });
 }
 
-function displayText(value: string): string {
+function displayText(value: string, withSeconds: boolean): string {
   const parsed = parseValue(value);
-  if (!parsed) return "dd/mm/yyyy --:--";
-  return `${pad(parsed.day)}/${pad(parsed.month)}/${parsed.year} ${pad(parsed.hour)}:${pad(parsed.minute)}`;
+  if (!parsed) return withSeconds ? "dd/mm/yyyy --:--:--" : "dd/mm/yyyy --:--";
+  const clock = `${pad(parsed.hour)}:${pad(parsed.minute)}`;
+  const time = withSeconds ? `${clock}:${pad(parsed.second ?? 0)}` : clock;
+  return `${pad(parsed.day)}/${pad(parsed.month)}/${parsed.year} ${time}`;
 }
 
 function ScrollColumn({
@@ -107,7 +119,7 @@ function ScrollColumn({
       ref={listRef}
       role="listbox"
       aria-label={label}
-      className="h-48 w-12 overflow-y-auto overscroll-contain rounded-md border border-border-subtle bg-bg/30"
+      className="h-full min-h-0 w-12 overflow-y-auto overscroll-contain rounded-md border border-border-subtle bg-bg/30"
     >
       {items.map((n) => {
         const active = n === selected;
@@ -142,6 +154,8 @@ export function DateTimePicker({
   onChange,
   className = "",
   disabled = false,
+  withSeconds = false,
+  compact = false,
   id,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
@@ -158,6 +172,7 @@ export function DateTimePicker({
   const [viewMonth, setViewMonth] = useState(() => parsed?.month ?? now.getMonth() + 1);
   const [hour, setHour] = useState(() => parsed?.hour ?? now.getHours());
   const [minute, setMinute] = useState(() => parsed?.minute ?? now.getMinutes());
+  const [second, setSecond] = useState(() => parsed?.second ?? now.getSeconds());
   const [selectedDay, setSelectedDay] = useState<{
     year: number;
     month: number;
@@ -173,11 +188,13 @@ export function DateTimePicker({
       day: d.getDate(),
       hour: d.getHours(),
       minute: d.getMinutes(),
+      second: d.getSeconds(),
     };
     setViewYear(base.year);
     setViewMonth(base.month);
     setHour(base.hour);
     setMinute(base.minute);
+    setSecond(base.second ?? 0);
     setSelectedDay(
       p
         ? { year: p.year, month: p.month, day: p.day }
@@ -203,12 +220,22 @@ export function DateTimePicker({
   }, [open]);
 
   const commit = useCallback(
-    (day: { year: number; month: number; day: number }, h: number, m: number) => {
+    (day: { year: number; month: number; day: number }, h: number, m: number, s: number) => {
       const clampedH = Math.min(23, Math.max(0, h));
       const clampedM = Math.min(59, Math.max(0, m));
-      onChange(formatValue(day.year, day.month, day.day, clampedH, clampedM));
+      const clampedS = Math.min(59, Math.max(0, s));
+      onChange(
+        formatValue(
+          day.year,
+          day.month,
+          day.day,
+          clampedH,
+          clampedM,
+          withSeconds ? clampedS : undefined
+        )
+      );
     },
-    [onChange]
+    [onChange, withSeconds]
   );
 
   const shiftMonth = (delta: number) => {
@@ -277,19 +304,25 @@ export function DateTimePicker({
       setViewYear(cell.year);
       setViewMonth(cell.month);
     }
-    commit(day, hour, minute);
+    commit(day, hour, minute, second);
   };
 
   const pickHour = (h: number) => {
     const clamped = Math.min(23, Math.max(0, h));
     setHour(clamped);
-    if (selectedDay) commit(selectedDay, clamped, minute);
+    if (selectedDay) commit(selectedDay, clamped, minute, second);
   };
 
   const pickMinute = (m: number) => {
     const clamped = Math.min(59, Math.max(0, m));
     setMinute(clamped);
-    if (selectedDay) commit(selectedDay, hour, clamped);
+    if (selectedDay) commit(selectedDay, hour, clamped, second);
+  };
+
+  const pickSecond = (s: number) => {
+    const clamped = Math.min(59, Math.max(0, s));
+    setSecond(clamped);
+    if (selectedDay) commit(selectedDay, hour, minute, clamped);
   };
 
   const clear = () => {
@@ -307,12 +340,14 @@ export function DateTimePicker({
     };
     const h = d.getHours();
     const m = d.getMinutes();
+    const s = d.getSeconds();
     setViewYear(day.year);
     setViewMonth(day.month);
     setSelectedDay(day);
     setHour(h);
     setMinute(m);
-    commit(day, h, m);
+    setSecond(s);
+    commit(day, h, m, s);
   };
 
   return (
@@ -328,7 +363,9 @@ export function DateTimePicker({
         aria-describedby={ariaDescribedBy}
         onClick={toggleOpen}
         className={[
-          "flex w-full items-center justify-between gap-2 rounded-md border border-border bg-bg/40 px-3 py-2 text-left text-sm outline-none focus:border-accent disabled:opacity-60",
+          compact
+            ? "flex w-full items-center justify-between gap-2 rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-left text-xs outline-none focus:border-accent disabled:opacity-60"
+            : "flex w-full items-center justify-between gap-2 rounded-md border border-border bg-bg/40 px-3 py-2 text-left text-sm outline-none focus:border-accent disabled:opacity-60",
           value ? "text-text" : "text-text-dim",
           ariaInvalid ? "border-danger" : "",
           className,
@@ -336,7 +373,7 @@ export function DateTimePicker({
           .filter(Boolean)
           .join(" ")}
       >
-        <span className="truncate tabular-nums">{displayText(value)}</span>
+        <span className="truncate tabular-nums">{displayText(value, withSeconds)}</span>
         <span className="shrink-0 text-text-muted" aria-hidden>
           <svg
             width="16"
@@ -360,7 +397,7 @@ export function DateTimePicker({
           id={panelId}
           role="dialog"
           aria-label={t.common.chooseDateTime}
-          className="absolute left-0 z-40 mt-1 flex w-max max-w-[min(100vw-2rem,420px)] overflow-hidden rounded-xl border border-border bg-surface shadow-[0_16px_40px_var(--shadow-color)]"
+          className="absolute left-0 z-40 mt-1 grid w-max max-w-[min(100vw-2rem,480px)] grid-cols-[auto_auto] items-stretch overflow-hidden rounded-xl border border-border bg-surface shadow-[0_16px_40px_var(--shadow-color)]"
         >
           <div className="border-r border-border-subtle p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -445,14 +482,29 @@ export function DateTimePicker({
             </div>
           </div>
 
-          <div className="flex gap-2 p-3">
-            <ScrollColumn items={HOURS} selected={hour} onSelect={pickHour} label="Hours (00–23)" />
-            <ScrollColumn
-              items={MINUTES}
-              selected={minute}
-              onSelect={pickMinute}
-              label="Minutes (00–59)"
-            />
+          <div
+            className={[
+              "relative min-h-0 self-stretch",
+              withSeconds ? "w-[11.5rem]" : "w-32",
+            ].join(" ")}
+          >
+            <div className="absolute inset-0 flex gap-2 p-3">
+              <ScrollColumn items={HOURS} selected={hour} onSelect={pickHour} label="Hours (00–23)" />
+              <ScrollColumn
+                items={MINUTES}
+                selected={minute}
+                onSelect={pickMinute}
+                label="Minutes (00–59)"
+              />
+              {withSeconds ? (
+                <ScrollColumn
+                  items={SECONDS}
+                  selected={second}
+                  onSelect={pickSecond}
+                  label="Seconds (00–59)"
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

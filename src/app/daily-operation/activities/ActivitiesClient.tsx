@@ -57,6 +57,7 @@ export default function ManagementPage() {
   const [templateDownloading, setTemplateDownloading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [editRow, setEditRow] = useState<MesDataRow | null>(null);
+  const [viewRow, setViewRow] = useState<MesDataRow | null>(null);
   const [deleteRow, setDeleteRow] = useState<MesDataRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -314,6 +315,7 @@ export default function ManagementPage() {
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={handlePageSizeChange}
+          onView={(row) => setViewRow(row)}
           onEdit={
             canUpdateDailyRecord
               ? (row) => {
@@ -325,6 +327,15 @@ export default function ManagementPage() {
           onDelete={canDeleteDailyRecord ? (row) => setDeleteRow(row) : undefined}
         />
       )}
+
+      {viewRow && masters ? (
+        <MesDataForm
+          masters={masters}
+          initial={viewRow}
+          readOnly
+          onClose={() => setViewRow(null)}
+        />
+      ) : null}
 
       {formOpen && masters ? (
         <MesDataForm

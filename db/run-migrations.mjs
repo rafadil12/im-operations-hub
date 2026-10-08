@@ -1864,5 +1864,31 @@ if (await tableExists("mes_record")) {
   console.log("mes_record missing; skipped 049 sparepart issue columns.");
 }
 
+// ---------------------------------------------------------------------------
+// 050: permanent Logs Center (no purge)
+// ---------------------------------------------------------------------------
+if ((await tableExists("audit_events")) && !(await tableExists("logs_center_events"))) {
+  await conn.query("RENAME TABLE audit_events TO logs_center_events");
+  console.log("Renamed audit_events to logs_center_events.");
+}
+if (await tableExists("logs_center_events")) {
+  const indexRenames = [
+    ["idx_audit_events_created", "idx_logs_center_events_created"],
+    ["idx_audit_events_module", "idx_logs_center_events_module"],
+    ["idx_audit_events_action", "idx_logs_center_events_action"],
+  ];
+  for (const [from, to] of indexRenames) {
+    if (await indexExists("logs_center_events", from)) {
+      await conn.query(`ALTER TABLE logs_center_events RENAME INDEX \`${from}\` TO \`${to}\``);
+      console.log(`Renamed ${from} to ${to}.`);
+    }
+  }
+}
+await applySqlFile(
+  "050_logs_center_events.sql",
+  readMigrationSql,
+  "Ensured logs_center_events table.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

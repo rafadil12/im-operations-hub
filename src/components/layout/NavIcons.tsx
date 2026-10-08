@@ -269,6 +269,39 @@ export function SettingsIcon({ active, className }: NavIconProps) {
   );
 }
 
+/** Log sheet — outline plus accent search mark */
+export function LogsCenterIcon({ active, className }: NavIconProps) {
+  return (
+    <DuotoneSvg active={active} className={className}>
+      {({ primary, accent, cutout }) => (
+        <>
+          <path
+            d="M7 3.5h7.4L18.5 7.7V19.5A2 2 0 0 1 16.5 21.5H7A2 2 0 0 1 5 19.5v-14A2 2 0 0 1 7 3.5Z"
+            stroke={primary}
+            strokeWidth="1.75"
+            strokeLinejoin="round"
+          />
+          <path d="M14.4 3.5V7.7H18.5" stroke={primary} strokeWidth="1.75" strokeLinejoin="round" />
+          <path
+            d="M8 11h6.2M8 14h4.4"
+            stroke={primary}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            opacity={0.55}
+          />
+          <circle cx="16.2" cy="16.6" r="3.05" fill={cutout} stroke={accent} strokeWidth="1.75" />
+          <path
+            d="M18.45 18.85 21.15 21.55"
+            stroke={accent}
+            strokeWidth="1.75"
+            strokeLinecap="round"
+          />
+        </>
+      )}
+    </DuotoneSvg>
+  );
+}
+
 export type NavIconId =
   | "dashboard"
   | "itsm"
@@ -278,7 +311,8 @@ export type NavIconId =
   | "organization"
   | "report"
   | "training"
-  | "settings";
+  | "settings"
+  | "logs-center";
 
 const iconMap: Record<NavIconId, (props: NavIconProps) => ReactElement> = {
   dashboard: OverviewIcon,
@@ -290,6 +324,7 @@ const iconMap: Record<NavIconId, (props: NavIconProps) => ReactElement> = {
   report: ReportIcon,
   training: TrainingIcon,
   settings: SettingsIcon,
+  "logs-center": LogsCenterIcon,
 };
 
 export function NavIcon({ id, active, className }: NavIconProps & { id: NavIconId }) {

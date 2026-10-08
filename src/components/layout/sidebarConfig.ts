@@ -226,6 +226,12 @@ export const navItems: NavItem[] = [
       },
     ],
   },
+  {
+    id: "logs-center",
+    labelKey: "logsCenter",
+    href: "/logs-center",
+    icon: "logs-center",
+  },
 ];
 
 export const settingsAdminOnly = true;

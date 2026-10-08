@@ -27,11 +27,12 @@ import { MesFormFields } from "./MesFormFields";
 type Props = {
   masters: Masters;
   initial?: MesDataRow | null;
+  readOnly?: boolean;
   onClose: () => void;
-  onSubmit: (input: MesDataInput) => Promise<void>;
+  onSubmit?: (input: MesDataInput) => Promise<void>;
 };
 
-export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
+export function MesDataForm({ masters, initial, readOnly = false, onClose, onSubmit }: Props) {
   const { lang, t } = useLang();
   const { account } = useAuth();
   const { error: toastError } = useToast();
@@ -142,8 +143,10 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
     root.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   };
 
+  const fieldsLocked = saving || readOnly;
+
   const submit = async () => {
-    if (savingRef.current) return;
+    if (readOnly || !onSubmit || savingRef.current) return;
     setError(null);
 
     const result = validateMesRecord({
@@ -241,37 +244,53 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
 
   return (
     <Modal
-      title={initial ? t.common.edit : t.common.add}
+      title={
+        readOnly && initial
+          ? `${t.common.view} ${initial.id}`
+          : initial
+            ? `${t.common.edit} ${initial.id}`
+            : t.common.add
+      }
       onClose={onClose}
       size="lg"
       closeDisabled={saving}
       footer={
-        <>
+        readOnly ? (
           <button
             type="button"
             onClick={onClose}
-            disabled={saving}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text disabled:pointer-events-none disabled:opacity-50"
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text"
           >
-            {t.common.cancel}
+            {t.common.close}
           </button>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={saving}
-            aria-busy={saving}
-            className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
-          >
-            {saving ? (
-              <>
-                <Spinner />
-                {t.common.loading}
-              </>
-            ) : (
-              t.common.save
-            )}
-          </button>
-        </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-surface-hover hover:text-text disabled:pointer-events-none disabled:opacity-50"
+            >
+              {t.common.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={saving}
+              aria-busy={saving}
+              className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+            >
+              {saving ? (
+                <>
+                  <Spinner />
+                  {t.common.loading}
+                </>
+              ) : (
+                t.common.save
+              )}
+            </button>
+          </>
+        )
       }
     >
       {error ? (
@@ -284,7 +303,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
         t={t}
         lang={lang}
         masters={masters}
-        saving={saving}
+        saving={fieldsLocked}
         lockIdentityFields={lockIdentityFields}
         lockType={materialLocked}
         divisionId={divisionId}
@@ -320,7 +339,7 @@ export function MesDataForm({ masters, initial, onClose, onSubmit }: Props) {
         afterStatus={
           isChangeRequest ? (
             <ChangeRequestMaterialFields
-              saving={saving}
+              saving={fieldsLocked}
               locked={materialLocked}
               initial={initial}
               issueMaterial={issueMaterial}

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-08
+
+### Added
+
+- Logs Center, placed directly under Settings and kept off the dashboard.
+  It keeps a permanent record of sign-in, sign-out, and data changes.
+- Logs Center filters for module, action, and a from/to time. The range
+  defaults to the current day, 00:00:00 through 23:59:59. Search matches
+  remarks, name, or employee ID.
+- Daily Operation activities show the record ID, search accepts that ID,
+  and View opens the saved entry read-only beside Edit and Delete.
+
+### Changed
+
+- Activity columns keep a fixed width so the action buttons stay visible
+  when a name or description is long.
+- Logs Center shows the date above the time, without milliseconds. Module
+  and action labels are uppercase.
+
 ## [0.13.0] - 2026-10-08
 
 ### Changed
