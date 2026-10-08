@@ -1864,5 +1864,14 @@ if (await tableExists("mes_record")) {
   console.log("mes_record missing; skipped 049 sparepart issue columns.");
 }
 
+// ---------------------------------------------------------------------------
+// 050: permanent audit log (no purge)
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "050_audit_events.sql",
+  readMigrationSql,
+  "Ensured audit_events table.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

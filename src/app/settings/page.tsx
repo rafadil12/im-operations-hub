@@ -19,8 +19,7 @@ export default function SettingsIndexPage() {
       return;
     }
     if (canAccessSettings) {
-      // settings.access alone (no roles/accounts manage) — nowhere useful to land.
-      router.replace("/");
+      router.replace("/settings/audit");
       return;
     }
     router.replace("/");

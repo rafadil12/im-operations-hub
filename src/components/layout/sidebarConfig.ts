@@ -224,6 +224,7 @@ export const navItems: NavItem[] = [
         labelKey: "settingsAccounts",
         href: "/settings/accounts",
       },
+      { id: "audit", labelKey: "settingsAudit", href: "/settings/audit" },
     ],
   },
 ];

@@ -5,6 +5,7 @@ import {
   MAX_AGE_SECONDS,
   setSessionCookie,
 } from "@/lib/auth";
+import { recordAudit } from "@/lib/audit/record";
 import {
   clearLoginFailures,
   createLoginAttemptStore,
@@ -66,6 +67,12 @@ export async function POST(request: NextRequest) {
     const result = await authenticateLogin(login, password);
     if (!result.ok) {
       if (result.code === "inactive") {
+        await recordAudit({
+          module: "auth",
+          action: "login",
+          summary: "Login rejected: inactive account",
+          actorLabel: login.trim().slice(0, 255),
+        });
         return NextResponse.json(
           {
             error: "This account is inactive. Contact an administrator.",
@@ -76,6 +83,12 @@ export async function POST(request: NextRequest) {
       }
       recordLoginFailure(loginAttempts, key);
       recordLoginFailure(loginAttempts, ipKey);
+      await recordAudit({
+        module: "auth",
+        action: "login",
+        summary: "Login failed",
+        actorLabel: login.trim().slice(0, 255),
+      });
       return NextResponse.json(
         { error: "Invalid employee ID or password.", code: "invalid_credentials" },
         { status: 401 }
@@ -84,6 +97,14 @@ export async function POST(request: NextRequest) {
 
     const account = result.account;
     clearLoginFailures(loginAttempts, key);
+    await recordAudit({
+      module: "auth",
+      action: "login",
+      summary: "Login succeeded",
+      actorSystemUserId: account.systemUserId,
+      actorUserId: account.id,
+      actorLabel: account.displayName,
+    });
 
     const maxAgeSeconds = remember ? MAX_AGE_SECONDS : 60 * 60 * 12;
     const token = createSessionToken({
