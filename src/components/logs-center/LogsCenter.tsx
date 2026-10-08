@@ -101,6 +101,7 @@ export function LogsCenter() {
   }, [applied, page, pageSize, t.logsCenter.loadFailed]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch the log when filters change
     void load();
   }, [load]);
 
