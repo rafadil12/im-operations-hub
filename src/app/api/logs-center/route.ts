@@ -32,9 +32,11 @@ function likePattern(value: string): string {
   return `%${value.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
-function dateOnly(value: string | null): string | null {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  return value;
+function dateTime(value: string | null): string | null {
+  if (!value) return null;
+  const normalized = value.trim().replace("T", " ");
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) return null;
+  return normalized;
 }
 
 export async function GET(request: NextRequest) {
@@ -50,8 +52,8 @@ export async function GET(request: NextRequest) {
     const moduleName = params.get("module") ?? "";
     const action = params.get("action") ?? "";
     const q = (params.get("q") ?? "").trim().slice(0, 100);
-    const from = dateOnly(params.get("from"));
-    const to = dateOnly(params.get("to"));
+    const from = dateTime(params.get("from"));
+    const to = dateTime(params.get("to"));
     const page = Math.max(1, Number(params.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(params.get("pageSize")) || 20));
 
@@ -67,10 +69,10 @@ export async function GET(request: NextRequest) {
     }
     if (from) {
       where.push("e.created_at >= ?");
-      values.push(`${from} 00:00:00`);
+      values.push(from);
     }
     if (to) {
-      where.push("e.created_at < DATE_ADD(?, INTERVAL 1 DAY)");
+      where.push("e.created_at < DATE_ADD(?, INTERVAL 1 SECOND)");
       values.push(to);
     }
     if (q) {

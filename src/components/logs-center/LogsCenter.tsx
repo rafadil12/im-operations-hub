@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/stockTableRows";
+import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
 import { fillTemplate } from "@/lib/i18n/fillTemplate";
@@ -40,6 +41,13 @@ const MODULES = [
 
 const ACTIONS = ["login", "logout", "create", "update", "delete", "change"];
 
+function currentDayBounds(): { from: string; to: string } {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return { from: `${date}T00:00:00`, to: `${date}T23:59:59` };
+}
+
 function splitCreatedAt(value: string): { date: string; time: string } {
   const match = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/.exec(value.trim());
   if (!match) return { date: value, time: "" };
@@ -55,9 +63,16 @@ export function LogsCenter() {
   const [moduleName, setModuleName] = useState("");
   const [action, setAction] = useState("");
   const [q, setQ] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [applied, setApplied] = useState({ moduleName: "", action: "", q: "", from: "", to: "" });
+  const [bounds] = useState(currentDayBounds);
+  const [from, setFrom] = useState(bounds.from);
+  const [to, setTo] = useState(bounds.to);
+  const [applied, setApplied] = useState({
+    moduleName: "",
+    action: "",
+    q: "",
+    from: bounds.from,
+    to: bounds.to,
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [data, setData] = useState<LogResponse | null>(null);
@@ -118,13 +133,13 @@ export function LogsCenter() {
           setPage(1);
         }}
       >
-        <div className="min-w-[140px]">
+        <div className="min-w-[11.75rem]">
           <label className={labelCls}>{t.fields.from}</label>
-          <input className={fieldCls} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DateTimePicker compact withSeconds value={from} onChange={setFrom} />
         </div>
-        <div className="min-w-[140px]">
+        <div className="min-w-[11.75rem]">
           <label className={labelCls}>{t.fields.to}</label>
-          <input className={fieldCls} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DateTimePicker compact withSeconds value={to} onChange={setTo} />
         </div>
         <div className="min-w-[140px]">
           <label className={labelCls}>{t.logsCenter.module}</label>
