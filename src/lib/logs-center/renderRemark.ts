@@ -53,6 +53,8 @@ const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "update
   end: { en: "end", cn: "结束时间", mode: "from-to" },
   solution: { en: "solution", cn: "解决方案", mode: "updated" },
   description: { en: "description", cn: "描述", mode: "updated" },
+  category: { en: "category", cn: "类别", mode: "from-to" },
+  subcategory: { en: "subcategory", cn: "子类别", mode: "from-to" },
 };
 
 function text(value: string | null | undefined, fallback: string): string {

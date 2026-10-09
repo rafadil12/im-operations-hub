@@ -22,17 +22,32 @@ describe("renderRemark", () => {
         {
           type: "goods_issue",
           ref: "MD202610080001",
-          detailEn: "2 PCS IT00004 to MES 1216 from Server Room",
+          detailEn: "2 PCS IT00004 issued to MES 1216 from Server Room",
           detailCn: "2 PCS IT00004 发给 MES 1216，从 Server Room",
         },
       ],
     };
     expect(renderRemark(event, "en")).toBe(
-      "Updated activity 1216: status from Pending to Completed, solution updated, and posted goods issue MD202610080001: 2 PCS IT00004 to MES 1216 from Server Room"
+      "Updated activity 1216: status from Pending to Completed, solution updated, and posted goods issue MD202610080001: 2 PCS IT00004 issued to MES 1216 from Server Room"
     );
     expect(renderRemark(event, "cn")).toBe(
       "已更新活动 1216：状态从待处理改为已完成，解决方案已更新，并过账发货 MD202610080001：2 PCS IT00004 发给 MES 1216，从 Server Room"
     );
+  });
+
+  it("names a category change", () => {
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "activity",
+          objectRef: "1216",
+          changes: [{ field: "category", from: "Assembly", to: "IT", fromCn: "流水线", toCn: "IT" }],
+        },
+        "en"
+      )
+    ).toBe("Updated activity 1216: category from Assembly to IT");
   });
 
   it("renders sign-in results without the stored English sentence", () => {

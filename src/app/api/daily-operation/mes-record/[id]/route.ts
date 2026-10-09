@@ -111,8 +111,8 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
           type_id = ?, status_id = ?, start_time = ?, end_time = ?
          WHERE id = ? AND deleted_at IS NULL`,
         [
-          data.user_id,
-          data.division_id,
+          before.user_id,
+          before.division_id,
           data.category_id,
           data.subcategory_id,
           data.description_cn,

@@ -2013,6 +2013,10 @@ if (await tableExists("logs_center_events")) {
       console.log(`Added logs_center_events.${name}.`);
     }
   }
+  if (!(await columnExists("logs_center_events", "summary_cn"))) {
+    await conn.query("ALTER TABLE logs_center_events ADD COLUMN `summary_cn` VARCHAR(500) NULL AFTER `summary`");
+    console.log("Added logs_center_events.summary_cn.");
+  }
 }
 
 await conn.end();

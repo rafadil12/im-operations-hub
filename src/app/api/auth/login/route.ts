@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   authenticateLogin,
   createSessionToken,
+  findAccountByEmployeeNo,
   MAX_AGE_SECONDS,
   setSessionCookie,
 } from "@/lib/auth";
@@ -18,11 +19,18 @@ import {
 
 const loginAttempts = createLoginAttemptStore();
 
-/**
- * Resolve client IP for rate limiting.
- * Only trust X-Forwarded-For / X-Real-IP when TRUST_PROXY=1 (behind a
- * reverse proxy that strips client-supplied forwarded headers).
- */
+async function actorForTypedLogin(login: string) {
+  const employeeNo = login.trim().slice(0, 255);
+  const row = await findAccountByEmployeeNo(employeeNo);
+  if (!row) return { actorLabel: employeeNo };
+  return {
+    actorSystemUserId: row.system_user_id,
+    actorUserId: row.user_id,
+    actorLabel: row.name_en || row.name_cn || employeeNo,
+  };
+}
+
+/** Client IP for rate limiting. Trust forwarded headers only when TRUST_PROXY=1. */
 function clientIp(request: NextRequest): string {
   if (process.env.TRUST_PROXY === "1") {
     const forwarded = request.headers.get("x-forwarded-for");
@@ -72,7 +80,7 @@ export async function POST(request: NextRequest) {
           action: "login",
           objectType: "session",
           changes: [{ field: "result", to: "inactive" }],
-          actorLabel: login.trim().slice(0, 255),
+          ...(await actorForTypedLogin(login)),
         });
         return NextResponse.json(
           {
@@ -89,7 +97,7 @@ export async function POST(request: NextRequest) {
         action: "login",
         objectType: "session",
         changes: [{ field: "result", to: "failed" }],
-        actorLabel: login.trim().slice(0, 255),
+        ...(await actorForTypedLogin(login)),
       });
       return NextResponse.json(
         { error: "Invalid employee ID or password.", code: "invalid_credentials" },

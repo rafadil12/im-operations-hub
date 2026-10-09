@@ -21,7 +21,8 @@ type LogRow = {
   links_json: unknown;
   actor_label: string | null;
   employee_no: string | null;
-  actor_name: string | null;
+  name_en: string | null;
+  name_cn: string | null;
 };
 
 type LogResponse = {
@@ -30,6 +31,13 @@ type LogResponse = {
   page: number;
   pageSize: number;
 };
+
+function actorName(row: LogRow, lang: "en" | "cn"): string {
+  const en = row.name_en?.trim() || "";
+  const cn = row.name_cn?.trim() || "";
+  const name = lang === "cn" ? cn || en : en || cn;
+  return name || row.actor_label?.trim() || "-";
+}
 
 const MODULES = [
   "auth",
@@ -228,7 +236,7 @@ export function LogsCenter() {
                     ) : null}
                   </td>
                   <td className="px-3 py-2 text-text">
-                    <span className="block break-words">{row.actor_name || row.actor_label || "-"}</span>
+                    <span className="block break-words">{actorName(row, lang)}</span>
                     {row.employee_no ? (
                       <span className="mt-0.5 block text-[10px] text-text-dim">{row.employee_no}</span>
                     ) : null}

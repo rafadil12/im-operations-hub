@@ -25,11 +25,13 @@ type LogRow = {
   object_type: string | null;
   object_ref: string | null;
   summary: string;
+  summary_cn: string | null;
   changes_json: unknown;
   links_json: unknown;
   actor_label: string | null;
   employee_no: string | null;
-  actor_name: string | null;
+  name_en: string | null;
+  name_cn: string | null;
 };
 
 function likePattern(value: string): string {
@@ -81,10 +83,10 @@ export async function GET(request: NextRequest) {
     }
     if (q) {
       where.push(
-        `(e.summary LIKE ? ESCAPE '\\\\' OR e.object_ref LIKE ? ESCAPE '\\\\' OR e.actor_label LIKE ? ESCAPE '\\\\' OR u.employee_no LIKE ? ESCAPE '\\\\' OR u.name_en LIKE ? ESCAPE '\\\\' OR u.name_cn LIKE ? ESCAPE '\\\\')`
+        `(e.summary LIKE ? ESCAPE '\\\\' OR e.summary_cn LIKE ? ESCAPE '\\\\' OR e.object_ref LIKE ? ESCAPE '\\\\' OR e.actor_label LIKE ? ESCAPE '\\\\' OR u.employee_no LIKE ? ESCAPE '\\\\' OR u.name_en LIKE ? ESCAPE '\\\\' OR u.name_cn LIKE ? ESCAPE '\\\\')`
       );
       const pattern = likePattern(q);
-      values.push(pattern, pattern, pattern, pattern, pattern, pattern);
+      values.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern);
     }
 
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -103,9 +105,8 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * pageSize;
     const rows = await query<LogRow[]>(
       `SELECT e.id, e.created_at, e.module, e.action, e.object_type, e.object_ref,
-              e.summary, e.changes_json, e.links_json, e.actor_label,
-              u.employee_no,
-              COALESCE(u.name_en, u.employee_no, e.actor_label) AS actor_name
+              e.summary, e.summary_cn, e.changes_json, e.links_json, e.actor_label,
+              u.employee_no, u.name_en, u.name_cn
        ${fromSql}
        ORDER BY e.id DESC
        LIMIT ? OFFSET ?`,
