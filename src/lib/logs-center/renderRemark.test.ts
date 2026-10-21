@@ -63,5 +63,16 @@ describe("renderRemark", () => {
         "en"
       )
     ).toBe("Sign-in failed");
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "Changed own password",
+          objectType: "session",
+          changes: [{ field: "result", to: "password_changed" }],
+        },
+        "cn"
+      )
+    ).toBe("已修改本人密码");
   });
 });

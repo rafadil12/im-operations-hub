@@ -5,6 +5,7 @@ import {
   MIN_PASSWORD_LENGTH,
   requireSession,
 } from "@/lib/auth";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 
 export async function POST(request: NextRequest) {
   const gate = await requireSession();
@@ -43,7 +44,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await changePassword(gate.session.systemUserId, currentPassword, newPassword);
+    const result = await suppressLogsCenter(() =>
+      changePassword(gate.session.systemUserId, currentPassword, newPassword)
+    );
 
     if (!result.ok) {
       if (result.code === "wrong_current") {
@@ -52,6 +55,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
+    await recordLogsCenter({
+      module: "auth",
+      action: "update",
+      objectType: "session",
+      changes: [{ field: "result", to: "password_changed" }],
+      actorSystemUserId: gate.account.systemUserId,
+      actorUserId: gate.account.id,
+      actorLabel: gate.account.displayName,
+    });
     await clearSessionCookie();
     return NextResponse.json({ ok: true, requireRelogin: true });
   } catch (error) {

@@ -95,6 +95,9 @@ function sessionSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
   if (result === "inactive") {
     return lang === "cn" ? "登录被拒绝：账号未激活" : "Sign-in rejected: account inactive";
   }
+  if (result === "password_changed") {
+    return lang === "cn" ? "已修改本人密码" : "Changed own password";
+  }
   if (result === "signed_in" || event.action === "login") {
     return lang === "cn" ? "已登录" : "Signed in";
   }
