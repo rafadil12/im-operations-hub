@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   changePassword,
   clearSessionCookie,
+  findAccountBySystemUserId,
   MIN_PASSWORD_LENGTH,
   requireSession,
 } from "@/lib/auth";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 
 export async function POST(request: NextRequest) {
   const gate = await requireSession();
@@ -43,7 +45,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await changePassword(gate.session.systemUserId, currentPassword, newPassword);
+    const account = await findAccountBySystemUserId(gate.session.systemUserId);
+    const result = await suppressLogsCenter(() =>
+      changePassword(gate.session.systemUserId, currentPassword, newPassword)
+    );
 
     if (!result.ok) {
       if (result.code === "wrong_current") {
@@ -52,6 +57,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
+    await recordLogsCenter({
+      module: "auth",
+      action: "update",
+      objectType: "account",
+      objectRef: account?.employee_no ?? gate.account.employeeId,
+      changes: [
+        {
+          field: "name",
+          to: account?.name_en ?? gate.account.displayName,
+          toCn: account?.name_cn ?? account?.name_en ?? gate.account.displayName,
+        },
+        { field: "change_password" },
+      ],
+    });
     await clearSessionCookie();
     return NextResponse.json({ ok: true, requireRelogin: true });
   } catch (error) {

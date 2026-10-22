@@ -103,6 +103,30 @@ describe("renderRemark", () => {
         "en"
       )
     ).toBe("Deleted account 62000970 GALUH");
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "account",
+          objectRef: "62000970",
+          changes: [identity, { field: "change_password" }],
+        },
+        "en"
+      )
+    ).toBe("Updated account 62000970 GALUH: Change Password");
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "account",
+          objectRef: "62000970",
+          changes: [identity, { field: "change_password" }],
+        },
+        "cn"
+      )
+    ).toBe("已更新账号 62000970 加鲁：修改密码");
   });
 
   it("names sparepart documents, materials, and imports", () => {
