@@ -14,6 +14,8 @@ import {
   resetPassword,
 } from "@/lib/auth";
 import { execute, query, withTransaction } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
+import type { RemarkChange } from "@/lib/logs-center/renderRemark";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -93,7 +95,8 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     const current = await query<RowDataPacket[]>(
-      `SELECT su.id, su.role_id, r.name AS role_name, u.employee_no
+      `SELECT su.id, su.role_id, su.is_active, r.name AS role_name,
+              u.employee_no, u.name_en, u.name_cn
        FROM system_users su
        LEFT JOIN access_roles r ON r.id = su.role_id
        LEFT JOIN users u ON u.id = su.user_id
@@ -213,43 +216,93 @@ export async function PUT(request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
     }
 
-    if (willUpdateRole && willUpdateActive) {
-      await execute(
-        `UPDATE system_users
-         SET role_id = ?, is_active = ?,
-             session_version = COALESCE(session_version, 1) + 1
-         WHERE id = ?`,
-        [roleId, isActive ? 1 : 0, id]
-      );
-    } else if (willUpdateRole) {
-      await execute(
-        `UPDATE system_users
-         SET role_id = ?,
-             session_version = COALESCE(session_version, 1) + 1
-         WHERE id = ?`,
-        [roleId, id]
-      );
-    } else if (willUpdateActive) {
-      await execute(
-        `UPDATE system_users
-         SET is_active = ?,
-             session_version = COALESCE(session_version, 1) + 1
-         WHERE id = ?`,
-        [isActive ? 1 : 0, id]
-      );
+    const beforeRole = (current[0].role_name as string | null)?.trim() || "";
+    let nextRoleName = beforeRole;
+    if (willUpdateRole) {
+      if (roleId === null) {
+        nextRoleName = "";
+      } else {
+        const named = await query<RowDataPacket[]>(
+          "SELECT name FROM access_roles WHERE id = ? LIMIT 1",
+          [roleId]
+        );
+        nextRoleName = String(named[0]?.name ?? "").trim();
+      }
     }
+    const beforeActive = Number(current[0].is_active) === 1;
+    const changes: RemarkChange[] = [
+      {
+        field: "name",
+        to: (current[0].name_en as string | null) ?? null,
+        toCn: (current[0].name_cn as string | null) ?? null,
+      },
+    ];
+    if (willUpdateRole && beforeRole !== nextRoleName) {
+      changes.push({
+        field: "role",
+        from: beforeRole || "none",
+        fromCn: beforeRole || "无",
+        to: nextRoleName || "none",
+        toCn: nextRoleName || "无",
+      });
+    }
+    if (willUpdateActive && isActive !== undefined && beforeActive !== isActive) {
+      changes.push({
+        field: "status",
+        from: beforeActive ? "Active" : "Inactive",
+        fromCn: beforeActive ? "启用" : "停用",
+        to: isActive ? "Active" : "Inactive",
+        toCn: isActive ? "启用" : "停用",
+      });
+    }
+    if (willResetPassword) changes.push({ field: "password" });
 
     let temporaryPassword: string | undefined;
-    if (willResetPassword) {
+    const saved = await suppressLogsCenter(async () => {
+      if (willUpdateRole && willUpdateActive) {
+        await execute(
+          `UPDATE system_users
+           SET role_id = ?, is_active = ?,
+               session_version = COALESCE(session_version, 1) + 1
+           WHERE id = ?`,
+          [roleId, isActive ? 1 : 0, id]
+        );
+      } else if (willUpdateRole) {
+        await execute(
+          `UPDATE system_users
+           SET role_id = ?,
+               session_version = COALESCE(session_version, 1) + 1
+           WHERE id = ?`,
+          [roleId, id]
+        );
+      } else if (willUpdateActive) {
+        await execute(
+          `UPDATE system_users
+           SET is_active = ?,
+               session_version = COALESCE(session_version, 1) + 1
+           WHERE id = ?`,
+          [isActive ? 1 : 0, id]
+        );
+      }
+
+      if (!willResetPassword) return { ok: true as const };
       const passwordToSet = generateTemp ? generateTemporaryPassword() : (newPassword as string);
       const ok = await resetPassword(id, passwordToSet);
-      if (!ok) {
-        return NextResponse.json({ error: "Account not found." }, { status: 404 });
-      }
-      if (generateTemp) {
-        temporaryPassword = passwordToSet;
-      }
+      if (!ok) return { ok: false as const };
+      return { ok: true as const, temporaryPassword: generateTemp ? passwordToSet : undefined };
+    });
+    if (!saved.ok) {
+      return NextResponse.json({ error: "Account not found." }, { status: 404 });
     }
+    temporaryPassword = "temporaryPassword" in saved ? saved.temporaryPassword : undefined;
+
+    await recordLogsCenter({
+      module: "settings",
+      action: "update",
+      objectType: "account",
+      objectRef: (current[0].employee_no as string | null) ?? String(id),
+      changes,
+    });
 
     return NextResponse.json(temporaryPassword ? { ok: true, temporaryPassword } : { ok: true });
   } catch (error) {
@@ -273,7 +326,8 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     }
 
     const current = await query<RowDataPacket[]>(
-      `SELECT su.id, su.user_id, su.is_active, r.name AS role_name, u.employee_no
+      `SELECT su.id, su.user_id, su.is_active, r.name AS role_name,
+              u.employee_no, u.name_en, u.name_cn
        FROM system_users su
        LEFT JOIN access_roles r ON r.id = su.role_id
        LEFT JOIN users u ON u.id = su.user_id
@@ -329,15 +383,31 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       );
     }
 
-    await withTransaction(async (conn) => {
-      await conn.execute(
-        `UPDATE sparepart_mat_docs
-         SET created_by_system_user_id = NULL
-         WHERE created_by_system_user_id = ?`,
-        [id]
-      );
-      await conn.execute("DELETE FROM system_users WHERE id = ?", [id]);
-      await conn.execute("DELETE FROM users WHERE id = ?", [userId]);
+    await suppressLogsCenter(() =>
+      withTransaction(async (conn) => {
+        await conn.execute(
+          `UPDATE sparepart_mat_docs
+           SET created_by_system_user_id = NULL
+           WHERE created_by_system_user_id = ?`,
+          [id]
+        );
+        await conn.execute("DELETE FROM system_users WHERE id = ?", [id]);
+        await conn.execute("DELETE FROM users WHERE id = ?", [userId]);
+      })
+    );
+
+    await recordLogsCenter({
+      module: "settings",
+      action: "delete",
+      objectType: "account",
+      objectRef: employeeNo ?? String(id),
+      changes: [
+        {
+          field: "name",
+          to: (current[0].name_en as string | null) ?? null,
+          toCn: (current[0].name_cn as string | null) ?? null,
+        },
+      ],
     });
 
     return NextResponse.json({ ok: true });
