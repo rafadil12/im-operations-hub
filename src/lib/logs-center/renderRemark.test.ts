@@ -50,6 +50,61 @@ describe("renderRemark", () => {
     ).toBe("Updated activity 1216: category from Assembly to IT");
   });
 
+  it("names the account on create, deactivate, password reset, and delete", () => {
+    const identity = { field: "name", to: "GALUH", toCn: "加鲁" };
+    expect(
+      renderRemark(
+        {
+          action: "create",
+          summary: "",
+          objectType: "account",
+          objectRef: "62000970",
+          changes: [identity, { field: "role", to: "Supervisor" }],
+        },
+        "en"
+      )
+    ).toBe("Created account 62000970 GALUH: role Supervisor");
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "account",
+          objectRef: "62000970",
+          changes: [
+            identity,
+            { field: "status", from: "Active", to: "Inactive", fromCn: "启用", toCn: "停用" },
+          ],
+        },
+        "cn"
+      )
+    ).toBe("已更新账号 62000970 加鲁：状态从启用改为停用");
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "account",
+          objectRef: "62000970",
+          changes: [identity, { field: "password" }],
+        },
+        "en"
+      )
+    ).toBe("Updated account 62000970 GALUH: password reset");
+    expect(
+      renderRemark(
+        {
+          action: "delete",
+          summary: "",
+          objectType: "account",
+          objectRef: "62000970",
+          changes: [identity],
+        },
+        "en"
+      )
+    ).toBe("Deleted account 62000970 GALUH");
+  });
+
   it("renders sign-in results without the stored English sentence", () => {
     expect(
       renderRemark(

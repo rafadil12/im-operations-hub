@@ -55,6 +55,7 @@ const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "update
   description: { en: "description", cn: "描述", mode: "updated" },
   category: { en: "category", cn: "类别", mode: "from-to" },
   subcategory: { en: "subcategory", cn: "子类别", mode: "from-to" },
+  role: { en: "role", cn: "角色", mode: "from-to" },
 };
 
 function text(value: string | null | undefined, fallback: string): string {
@@ -63,8 +64,16 @@ function text(value: string | null | undefined, fallback: string): string {
 }
 
 function changePhrase(change: RemarkChange, lang: "en" | "cn"): string | null {
+  if (change.field === "password") {
+    return lang === "cn" ? "密码已重置" : "password reset";
+  }
   const meta = FIELDS[change.field];
   if (!meta) return null;
+  if (change.field === "role") {
+    const roleTo = lang === "cn" ? text(change.toCn, text(change.to, "")) : text(change.to, "");
+    const roleFrom = lang === "cn" ? text(change.fromCn, text(change.from, "")) : text(change.from, "");
+    if (roleTo && !roleFrom) return lang === "cn" ? `角色 ${roleTo}` : `role ${roleTo}`;
+  }
   if (meta.mode === "updated") {
     return lang === "cn" ? `${meta.cn}已更新` : `${meta.en} updated`;
   }
@@ -123,8 +132,15 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   const noun = NOUNS[event.objectType]?.[lang] ?? event.objectType;
   const verb = VERBS[event.action]?.[lang] ?? VERBS.update[lang];
   const ref = event.objectRef?.trim();
+  const name = event.changes?.find((change) => change.field === "name");
+  const nameLabel = name
+    ? lang === "cn"
+      ? text(name.toCn, text(name.to, ""))
+      : text(name.to, text(name.toCn, ""))
+    : "";
+  const who = [ref, nameLabel].filter(Boolean).join(" ");
   const gap = lang === "cn" ? "" : " ";
-  let sentence = ref ? `${verb}${gap}${noun} ${ref}` : `${verb}${gap}${noun}`;
+  let sentence = who ? `${verb}${gap}${noun} ${who}` : `${verb}${gap}${noun}`;
 
   const changes = (event.changes ?? [])
     .map((change) => changePhrase(change, lang))
