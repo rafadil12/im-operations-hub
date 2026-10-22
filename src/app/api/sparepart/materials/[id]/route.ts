@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
+import {
+  hasRemarkDetail,
+  materialUpdateChanges,
+  type MaterialRemarkSnap,
+} from "@/lib/logs-center/sparepartRemark";
 import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepart/categories";
 import { parseSparepartItemBody } from "@/lib/sparepart/validation";
 import { STOCK_BALANCE_FROM, STOCK_BALANCE_SELECT } from "@/lib/sparepart/stockBalances";
@@ -67,15 +73,17 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     const data = parsed.data;
-    const categoryRows = await query<{ id: number }[]>(
-      `SELECT id FROM sparepart_categories WHERE id = ? AND is_active = 1 LIMIT 1`,
+    const categoryRows = await query<
+      { id: number; name_en: string | null; name_cn: string | null }[]
+    >(
+      `SELECT id, name_en, name_cn FROM sparepart_categories WHERE id = ? AND is_active = 1 LIMIT 1`,
       [data.category_id]
     );
     if (!categoryRows[0]) {
       return NextResponse.json({ error: "Invalid category." }, { status: 400 });
     }
-    const uomRows = await query<{ id: number }[]>(
-      `SELECT id FROM sparepart_uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
+    const uomRows = await query<{ id: number; code: string }[]>(
+      `SELECT id, code FROM sparepart_uoms WHERE id = ? AND is_active = 1 LIMIT 1`,
       [data.uom_id]
     );
     if (!uomRows[0]) {
@@ -83,10 +91,18 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
 
     const existing = await query<
-      Pick<SparepartItem, "id" | "code" | "image_url" | "stock_current">[]
+      (MaterialRemarkSnap & Pick<SparepartItem, "id" | "code" | "image_url" | "stock_current">)[]
     >(
-      `SELECT id, code, image_url, stock_current FROM sparepart_items
-       WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
+      `SELECT i.id, i.code, i.image_url, i.stock_current,
+              i.name_en, i.name_cn, i.brand_en, i.brand_cn, i.model, i.notes, i.erp_item_code,
+              i.min_stock, i.is_active,
+              c.name_en AS category_name_en, c.name_cn AS category_name_cn,
+              u.code AS uom_code
+       FROM sparepart_items i
+       JOIN sparepart_categories c ON c.id = i.category_id
+       JOIN sparepart_uoms u ON u.id = i.uom_id
+       WHERE i.id = ? AND i.deleted_at IS NULL
+       LIMIT 1`,
       [itemId]
     );
     if (!existing[0]) {
@@ -104,7 +120,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
     const nextImageUrl = existing[0].image_url;
 
     try {
-      const result = await execute(
+      const result = await suppressLogsCenter(() => execute(
         `UPDATE sparepart_items
          SET code = ?, erp_item_code = ?, name_en = ?, name_cn = ?, brand_en = ?, brand_cn = ?,
              model = ?, notes = ?, image_url = ?, min_stock = ?, is_active = ?,
@@ -126,9 +142,32 @@ export async function PUT(request: NextRequest, context: Ctx) {
           data.uom_id,
           itemId,
         ]
-      );
+      ));
       if (result.affectedRows === 0) {
         return NextResponse.json({ error: "Material not found." }, { status: 404 });
+      }
+      const changes = materialUpdateChanges(existing[0], {
+        name_en: data.name_en || null,
+        name_cn: data.name_cn || null,
+        brand_en: data.brand_en || null,
+        brand_cn: data.brand_cn || null,
+        model: data.model || null,
+        notes: data.notes || null,
+        erp_item_code: data.erp_item_code || null,
+        min_stock: data.min_stock,
+        is_active: data.is_active,
+        category_name_en: categoryRows[0].name_en,
+        category_name_cn: categoryRows[0].name_cn,
+        uom_code: uomRows[0].code,
+      });
+      if (hasRemarkDetail(changes)) {
+        await recordLogsCenter({
+          module: "sparepart",
+          action: "update",
+          objectType: "material",
+          objectRef: nextCode,
+          changes,
+        });
       }
       return NextResponse.json({ ok: true });
     } catch (err) {
@@ -154,8 +193,10 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
   try {
     const { id } = await context.params;
     const itemId = Number(id);
-    const existing = await query<{ stock_current: number }[]>(
-      `SELECT stock_current FROM sparepart_items
+    const existing = await query<
+      { stock_current: number; code: string; name_en: string | null; name_cn: string | null }[]
+    >(
+      `SELECT stock_current, code, name_en, name_cn FROM sparepart_items
        WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
       [itemId]
     );
@@ -168,14 +209,23 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
         { status: 400 }
       );
     }
-    const result = await execute(
-      `UPDATE sparepart_items SET deleted_at = NOW()
-       WHERE id = ? AND deleted_at IS NULL`,
-      [itemId]
+    const result = await suppressLogsCenter(() =>
+      execute(
+        `UPDATE sparepart_items SET deleted_at = NOW()
+         WHERE id = ? AND deleted_at IS NULL`,
+        [itemId]
+      )
     );
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Material not found." }, { status: 404 });
     }
+    await recordLogsCenter({
+      module: "sparepart",
+      action: "delete",
+      objectType: "material",
+      objectRef: existing[0].code,
+      changes: [{ field: "name", to: existing[0].name_en, toCn: existing[0].name_cn }],
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /sparepart/materials/[id] failed", error);

@@ -31,6 +31,10 @@ const NOUNS: Record<string, { en: string; cn: string }> = {
   role: { en: "role", cn: "角色" },
   account: { en: "account", cn: "账号" },
   "goods document": { en: "goods document", cn: "物料凭证" },
+  "goods receipt": { en: "goods receipt", cn: "收货" },
+  "goods issue": { en: "goods issue", cn: "发货" },
+  transfer: { en: "transfer", cn: "转储" },
+  materials: { en: "materials", cn: "物料" },
   "unit of measure": { en: "unit of measure", cn: "计量单位" },
   type: { en: "type", cn: "类型" },
   status: { en: "status", cn: "状态" },
@@ -44,6 +48,9 @@ const VERBS: Record<string, { en: string; cn: string }> = {
   create: { en: "Created", cn: "已创建" },
   update: { en: "Updated", cn: "已更新" },
   delete: { en: "Deleted", cn: "已删除" },
+  post: { en: "Posted", cn: "已过账" },
+  reverse: { en: "Reversed", cn: "已冲销" },
+  import: { en: "Imported", cn: "已导入" },
 };
 
 const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "updated" }> = {
@@ -56,6 +63,17 @@ const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "update
   category: { en: "category", cn: "类别", mode: "from-to" },
   subcategory: { en: "subcategory", cn: "子类别", mode: "from-to" },
   role: { en: "role", cn: "角色", mode: "from-to" },
+  min_stock: { en: "minimum stock", cn: "最小库存", mode: "from-to" },
+  name_en: { en: "English name", cn: "英文名称", mode: "from-to" },
+  name_cn: { en: "Chinese name", cn: "中文名称", mode: "from-to" },
+  uom: { en: "unit", cn: "单位", mode: "from-to" },
+  "item category": { en: "category", cn: "类别", mode: "from-to" },
+  code: { en: "code", cn: "编码", mode: "from-to" },
+  brand_en: { en: "English brand", cn: "英文品牌", mode: "from-to" },
+  brand_cn: { en: "Chinese brand", cn: "中文品牌", mode: "from-to" },
+  model: { en: "model", cn: "型号", mode: "from-to" },
+  erp_code: { en: "ERP code", cn: "ERP编码", mode: "from-to" },
+  notes: { en: "notes", cn: "备注", mode: "updated" },
 };
 
 function text(value: string | null | undefined, fallback: string): string {
@@ -66,6 +84,14 @@ function text(value: string | null | undefined, fallback: string): string {
 function changePhrase(change: RemarkChange, lang: "en" | "cn"): string | null {
   if (change.field === "password") {
     return lang === "cn" ? "密码已重置" : "password reset";
+  }
+  if (change.field === "lines") {
+    const detail = lang === "cn" ? text(change.toCn, text(change.to, "")) : text(change.to, "");
+    return detail || null;
+  }
+  if (change.field === "image") {
+    if (change.to === "removed") return lang === "cn" ? "图片已删除" : "image removed";
+    return lang === "cn" ? "图片已更新" : "image updated";
   }
   const meta = FIELDS[change.field];
   if (!meta) return null;
@@ -89,6 +115,9 @@ function linkPhrase(link: RemarkLink, lang: "en" | "cn"): string {
   if (link.type === "goods_issue") {
     const head = lang === "cn" ? `并过账发货 ${link.ref}` : `and posted goods issue ${link.ref}`;
     return detail ? `${head}${colon}${detail}` : head;
+  }
+  if (link.type === "reversal_of") {
+    return lang === "cn" ? `原凭证 ${link.ref}` : `of ${link.ref}`;
   }
   const head = lang === "cn" ? `并关联 ${link.ref}` : `and linked ${link.ref}`;
   return detail ? `${head}${colon}${detail}` : head;
@@ -127,6 +156,10 @@ export function parseRemarkList<T>(value: unknown): T[] | null {
 export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   const session = sessionSentence(event, lang);
   if (session) return session;
+  if (event.action === "import" && event.objectType === "materials") {
+    const count = event.objectRef?.trim() || "0";
+    return lang === "cn" ? `已导入 ${count} 个物料` : `Imported ${count} materials`;
+  }
   if (!event.objectType) return event.summary;
 
   const noun = NOUNS[event.objectType]?.[lang] ?? event.objectType;

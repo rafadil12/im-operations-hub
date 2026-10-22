@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import { isValidCnText } from "@/lib/daily-operation/mesRecordValidation";
 import type { SparepartUom } from "@/lib/types";
 
@@ -64,16 +65,25 @@ export async function POST(request: NextRequest) {
     const sortOrder = Number(maxRows[0]?.max_sort ?? 0) + 1;
 
     try {
-      const result = await execute(
-        `INSERT INTO sparepart_uoms (code, name_en, name_cn, sort_order, is_active)
-         VALUES (?, ?, ?, ?, 1)`,
-        [code, name_en, name_cn, sortOrder]
+      const result = await suppressLogsCenter(() =>
+        execute(
+          `INSERT INTO sparepart_uoms (code, name_en, name_cn, sort_order, is_active)
+           VALUES (?, ?, ?, ?, 1)`,
+          [code, name_en, name_cn, sortOrder]
+        )
       );
       const rows = await query<SparepartUom[]>(
         `SELECT id, code, name_en, name_cn, sort_order, is_active, created_at, updated_at
          FROM sparepart_uoms WHERE id = ? LIMIT 1`,
         [result.insertId]
       );
+      await recordLogsCenter({
+        module: "sparepart",
+        action: "create",
+        objectType: "unit of measure",
+        objectRef: code,
+        changes: [{ field: "name", to: name_en, toCn: name_cn }],
+      });
       return NextResponse.json({ row: rows[0] }, { status: 201 });
     } catch (err) {
       const dup = (err as { code?: string }).code;
