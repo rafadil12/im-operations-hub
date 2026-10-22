@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import {
   SparepartImageError,
   deleteMaterialImages,
@@ -50,10 +51,22 @@ export async function POST(request: NextRequest, context: Ctx) {
     }
 
     const { imageUrl } = await saveMaterialImage(item.code, file);
-    await execute(`UPDATE sparepart_items SET image_url = ? WHERE id = ? AND deleted_at IS NULL`, [
-      imageUrl,
-      itemId,
-    ]);
+    await suppressLogsCenter(() =>
+      execute(`UPDATE sparepart_items SET image_url = ? WHERE id = ? AND deleted_at IS NULL`, [
+        imageUrl,
+        itemId,
+      ])
+    );
+    await recordLogsCenter({
+      module: "sparepart",
+      action: "update",
+      objectType: "material",
+      objectRef: item.code,
+      changes: [
+        { field: "name", to: item.name_en, toCn: item.name_cn },
+        { field: "image", to: "updated" },
+      ],
+    });
 
     return NextResponse.json({ ok: true, image_url: imageUrl });
   } catch (error) {
@@ -82,10 +95,21 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
     }
 
     await deleteMaterialImages(item.code);
-    await execute(
-      `UPDATE sparepart_items SET image_url = NULL WHERE id = ? AND deleted_at IS NULL`,
-      [itemId]
+    await suppressLogsCenter(() =>
+      execute(`UPDATE sparepart_items SET image_url = NULL WHERE id = ? AND deleted_at IS NULL`, [
+        itemId,
+      ])
     );
+    await recordLogsCenter({
+      module: "sparepart",
+      action: "update",
+      objectType: "material",
+      objectRef: item.code,
+      changes: [
+        { field: "name", to: item.name_en, toCn: item.name_cn },
+        { field: "image", to: "removed" },
+      ],
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

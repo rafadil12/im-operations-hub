@@ -554,7 +554,7 @@ async function postReversalLines(
 
 export async function postGoodsMovement(
   input: SparepartGoodsMovementInput
-): Promise<{ id: number; doc_number: string }> {
+): Promise<{ id: number; doc_number: string; created: boolean }> {
   return withTransaction(async (conn) => {
     if (input.client_request_id) {
       const [existing] = await conn.query<RowDataPacket[]>(
@@ -567,6 +567,7 @@ export async function postGoodsMovement(
         return {
           id: Number(existing[0].id),
           doc_number: String(existing[0].doc_number),
+          created: false,
         };
       }
     }
@@ -611,7 +612,7 @@ export async function postGoodsMovement(
       await postForwardLines(conn, docId, input.movement_type, lines);
     }
 
-    return { id: docId, doc_number: docNumber };
+    return { id: docId, doc_number: docNumber, created: true };
   });
 }
 
@@ -623,7 +624,7 @@ export async function reverseMaterialDocument(
     created_by?: string;
     client_request_id?: string;
   }
-): Promise<{ id: number; doc_number: string }> {
+): Promise<{ id: number; doc_number: string; created: boolean }> {
   const { query } = await import("@/lib/db");
   const docs = await query<RowDataPacket[]>(
     `SELECT id, doc_number, movement_type FROM sparepart_mat_docs WHERE id = ? LIMIT 1`,

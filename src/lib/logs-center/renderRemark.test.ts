@@ -105,6 +105,104 @@ describe("renderRemark", () => {
     ).toBe("Deleted account 62000970 GALUH");
   });
 
+  it("names sparepart documents, materials, and imports", () => {
+    expect(
+      renderRemark(
+        {
+          action: "post",
+          summary: "",
+          objectType: "goods receipt",
+          objectRef: "MD202610080002",
+          changes: [{ field: "lines", to: "10 PCS IT00004 into Server Room / 1ST FLOOR" }],
+        },
+        "en"
+      )
+    ).toBe("Posted goods receipt MD202610080002: 10 PCS IT00004 into Server Room / 1ST FLOOR");
+    expect(
+      renderRemark(
+        {
+          action: "post",
+          summary: "",
+          objectType: "goods issue",
+          objectRef: "MD202610080001",
+          changes: [
+            {
+              field: "lines",
+              to: "2 PCS IT00004 issued to AULIA, from Server Room / 1ST FLOOR",
+              toCn: "2 PCS IT00004 发给 AULIA，从 服务器机房 / 一楼",
+            },
+          ],
+        },
+        "cn"
+      )
+    ).toBe("已过账发货 MD202610080001：2 PCS IT00004 发给 AULIA，从 服务器机房 / 一楼");
+    expect(
+      renderRemark(
+        {
+          action: "reverse",
+          summary: "",
+          objectType: "goods issue",
+          objectRef: "MD202610080004",
+          changes: [{ field: "lines", to: "2 PCS IT00004 issued to AULIA, from Server Room / 1ST FLOOR" }],
+          links: [{ type: "reversal_of", ref: "MD202610080001" }],
+        },
+        "en"
+      )
+    ).toBe(
+      "Reversed goods issue MD202610080004: 2 PCS IT00004 issued to AULIA, from Server Room / 1ST FLOOR, of MD202610080001"
+    );
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "material",
+          objectRef: "IT00004",
+          changes: [
+            { field: "name", to: "Network Cable", toCn: "网线" },
+            { field: "min_stock", from: "5", to: "10" },
+          ],
+        },
+        "en"
+      )
+    ).toBe("Updated material IT00004 Network Cable: minimum stock from 5 to 10");
+    expect(
+      renderRemark(
+        {
+          action: "import",
+          summary: "",
+          objectType: "materials",
+          objectRef: "40",
+        },
+        "cn"
+      )
+    ).toBe("已导入 40 个物料");
+    expect(
+      renderRemark(
+        {
+          action: "create",
+          summary: "",
+          objectType: "storage location",
+          objectRef: "LOC-01",
+          changes: [{ field: "name", to: "Server Room", toCn: "服务器机房" }],
+        },
+        "cn"
+      )
+    ).toBe("已创建库位 LOC-01 服务器机房");
+    expect(
+      renderRemark(
+        {
+          action: "create",
+          summary: "",
+          objectType: "unit of measure",
+          objectRef: "PACK",
+          changes: [{ field: "name", to: "Pack", toCn: "包" }],
+        },
+        "en"
+      )
+    ).toBe("Created unit of measure PACK Pack");
+  });
+
   it("renders sign-in results without the stored English sentence", () => {
     expect(
       renderRemark(

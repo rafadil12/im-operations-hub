@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import { execute, query } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import { ITEM_CATEGORY_FROM, ITEM_CATEGORY_SELECT } from "@/lib/sparepart/categories";
 import { nextMaterialCode } from "@/lib/sparepart/materialCode";
 import { parseSparepartItemBody } from "@/lib/sparepart/validation";
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     const generatedCode = await nextMaterialCode(data.category_id);
 
     try {
-      const result = await execute(
+      const result = await suppressLogsCenter(() => execute(
         `INSERT INTO sparepart_items
           (code, erp_item_code, name_en, name_cn, brand_en, brand_cn, model, notes,
            stock_current, min_stock, is_active, category_id, uom_id)
@@ -109,7 +110,14 @@ export async function POST(request: NextRequest) {
           data.category_id,
           data.uom_id,
         ]
-      );
+      ));
+      await recordLogsCenter({
+        module: "sparepart",
+        action: "create",
+        objectType: "material",
+        objectRef: generatedCode,
+        changes: [{ field: "name", to: data.name_en, toCn: data.name_cn }],
+      });
       return NextResponse.json({ id: result.insertId, code: generatedCode }, { status: 201 });
     } catch (err) {
       const code = (err as { code?: string }).code;
