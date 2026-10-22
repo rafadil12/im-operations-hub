@@ -85,6 +85,9 @@ function changePhrase(change: RemarkChange, lang: "en" | "cn"): string | null {
   if (change.field === "password") {
     return lang === "cn" ? "密码已重置" : "password reset";
   }
+  if (change.field === "change_password") {
+    return lang === "cn" ? "修改密码" : "Change Password";
+  }
   if (change.field === "lines") {
     const detail = lang === "cn" ? text(change.toCn, text(change.to, "")) : text(change.to, "");
     return detail || null;
