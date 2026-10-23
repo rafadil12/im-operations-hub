@@ -296,13 +296,15 @@ export async function PUT(request: NextRequest, context: Ctx) {
     }
     temporaryPassword = "temporaryPassword" in saved ? saved.temporaryPassword : undefined;
 
-    await recordLogsCenter({
-      module: "settings",
-      action: "update",
-      objectType: "account",
-      objectRef: (current[0].employee_no as string | null) ?? String(id),
-      changes,
-    });
+    if (changes.some((change) => change.field !== "name")) {
+      await recordLogsCenter({
+        module: "settings",
+        action: "update",
+        objectType: "account",
+        objectRef: (current[0].employee_no as string | null) ?? String(id),
+        changes,
+      });
+    }
 
     return NextResponse.json(temporaryPassword ? { ok: true, temporaryPassword } : { ok: true });
   } catch (error) {

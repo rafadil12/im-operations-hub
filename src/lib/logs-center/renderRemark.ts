@@ -74,6 +74,8 @@ const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "update
   model: { en: "model", cn: "型号", mode: "from-to" },
   erp_code: { en: "ERP code", cn: "ERP编码", mode: "from-to" },
   notes: { en: "notes", cn: "备注", mode: "updated" },
+  role_name: { en: "name", cn: "名称", mode: "from-to" },
+  role_description: { en: "description", cn: "描述", mode: "from-to" },
 };
 
 function text(value: string | null | undefined, fallback: string): string {
@@ -88,7 +90,7 @@ function changePhrase(change: RemarkChange, lang: "en" | "cn"): string | null {
   if (change.field === "change_password") {
     return lang === "cn" ? "修改密码" : "Change Password";
   }
-  if (change.field === "lines") {
+  if (change.field === "lines" || change.field === "permissions") {
     const detail = lang === "cn" ? text(change.toCn, text(change.to, "")) : text(change.to, "");
     return detail || null;
   }

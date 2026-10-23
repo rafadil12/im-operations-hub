@@ -8,12 +8,25 @@ import {
   requirePermission,
 } from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
+import { permissionListChange } from "@/lib/logs-center/roleRemark";
 
 type RoleRow = RowDataPacket & {
   id: number;
   name: string;
   description: string | null;
 };
+
+async function permissionLabels(ids: number[]): Promise<string[]> {
+  const unique = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
+  if (unique.length === 0) return [];
+  const placeholders = unique.map(() => "?").join(", ");
+  const rows = await query<RowDataPacket[]>(
+    `SELECT description, code FROM access_permissions WHERE id IN (${placeholders})`,
+    unique
+  );
+  return rows.map((row) => String(row.description ?? "").trim() || String(row.code));
+}
 
 export async function GET() {
   // Accounts UI needs role options for the assign dropdown.
@@ -79,7 +92,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const roleId = await withTransaction(async (conn) => {
+    const roleId = await suppressLogsCenter(() => withTransaction(async (conn) => {
       const [result] = await conn.execute("INSERT INTO access_roles (name, description) VALUES (?, ?)", [
         name,
         description,
@@ -92,6 +105,15 @@ export async function POST(request: NextRequest) {
         ]);
       }
       return insertId;
+    }));
+
+    const permissions = permissionListChange([], await permissionLabels(permissionIds));
+    await recordLogsCenter({
+      module: "settings",
+      action: "create",
+      objectType: "role",
+      objectRef: name,
+      changes: permissions ? [permissions] : [],
     });
 
     return NextResponse.json({ id: roleId }, { status: 201 });
