@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import type { PoolConnection, ResultSetHeader } from "mysql2/promise";
 import { query, withTransaction } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import {
   IMPORT_MAX_BYTES,
   IMPORT_MAX_ROWS,
@@ -137,13 +138,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const insertIds = await withTransaction(async (conn) => {
+    const insertIds = await suppressLogsCenter(() => withTransaction(async (conn) => {
       const ids: number[] = [];
       for (const row of parsed.rows) {
         ids.push(await insertRow(conn, row));
       }
       return ids;
-    });
+    }));
+
+    if (insertIds.length > 0) {
+      await recordLogsCenter({
+        module: "daily-operation",
+        action: "import",
+        objectType: "activities",
+        objectRef: String(insertIds.length),
+      });
+    }
 
     // Best-effort WeCom: after commit, one notification per activity.
     // Failures must not undo a successful import.

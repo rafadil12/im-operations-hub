@@ -63,6 +63,7 @@ const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "update
   category: { en: "category", cn: "类别", mode: "from-to" },
   subcategory: { en: "subcategory", cn: "子类别", mode: "from-to" },
   role: { en: "role", cn: "角色", mode: "from-to" },
+  division: { en: "division", cn: "部门", mode: "from-to" },
   min_stock: { en: "minimum stock", cn: "最小库存", mode: "from-to" },
   name_en: { en: "English name", cn: "英文名称", mode: "from-to" },
   name_cn: { en: "Chinese name", cn: "中文名称", mode: "from-to" },
@@ -98,12 +99,16 @@ function changePhrase(change: RemarkChange, lang: "en" | "cn"): string | null {
     if (change.to === "removed") return lang === "cn" ? "图片已删除" : "image removed";
     return lang === "cn" ? "图片已更新" : "image updated";
   }
+  if (change.field === "pic") {
+    return lang === "cn" ? "已取消 PIC 分配" : "unassigned as PIC";
+  }
   const meta = FIELDS[change.field];
   if (!meta) return null;
-  if (change.field === "role") {
-    const roleTo = lang === "cn" ? text(change.toCn, text(change.to, "")) : text(change.to, "");
-    const roleFrom = lang === "cn" ? text(change.fromCn, text(change.from, "")) : text(change.from, "");
-    if (roleTo && !roleFrom) return lang === "cn" ? `角色 ${roleTo}` : `role ${roleTo}`;
+  if (change.field === "role" || change.field === "division" || change.field === "category") {
+    const meta = FIELDS[change.field];
+    const valueTo = lang === "cn" ? text(change.toCn, text(change.to, "")) : text(change.to, "");
+    const valueFrom = lang === "cn" ? text(change.fromCn, text(change.from, "")) : text(change.from, "");
+    if (meta && valueTo && !valueFrom) return lang === "cn" ? `${meta.cn} ${valueTo}` : `${meta.en} ${valueTo}`;
   }
   if (meta.mode === "updated") {
     return lang === "cn" ? `${meta.cn}已更新` : `${meta.en} updated`;
@@ -161,8 +166,11 @@ export function parseRemarkList<T>(value: unknown): T[] | null {
 export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   const session = sessionSentence(event, lang);
   if (session) return session;
-  if (event.action === "import" && event.objectType === "materials") {
+  if (event.action === "import" && (event.objectType === "materials" || event.objectType === "activities")) {
     const count = event.objectRef?.trim() || "0";
+    if (event.objectType === "activities") {
+      return lang === "cn" ? `已导入 ${count} 个活动` : `Imported ${count} activities`;
+    }
     return lang === "cn" ? `已导入 ${count} 个物料` : `Imported ${count} materials`;
   }
   if (!event.objectType) return event.summary;
