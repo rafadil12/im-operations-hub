@@ -3,6 +3,8 @@ import { PERMISSIONS, requireAnyPermission, requirePermission } from "@/lib/auth
 import type { AuthAccountPublic } from "@/lib/auth/types";
 import { jsonError, parsePositiveInt } from "@/lib/report/apiHelpers";
 import { isAllowedReportFile, MAX_REPORT_WEEK_ATTACHMENTS } from "@/lib/report/attachmentAccept";
+import { recordReportAttachment } from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 import {
   insertProjectAttachment,
   loadProjectAttachments,
@@ -74,14 +76,21 @@ export async function POST(request: Request) {
     const account: AuthAccountPublic | undefined =
       "account" in gate ? (gate.account ?? undefined) : undefined;
 
-    const attachment = await insertProjectAttachment({
-      reportId,
-      originalName: uploaded.originalName,
-      storedName: uploaded.storedName,
-      fileUrl: uploaded.url,
-      mimeType: uploaded.mimeType,
-      size: uploaded.size,
-      uploadedBySystemUserId: account?.systemUserId ?? null,
+    const attachment = await suppressLogsCenter(() =>
+      insertProjectAttachment({
+        reportId,
+        originalName: uploaded.originalName,
+        storedName: uploaded.storedName,
+        fileUrl: uploaded.url,
+        mimeType: uploaded.mimeType,
+        size: uploaded.size,
+        uploadedBySystemUserId: account?.systemUserId ?? null,
+      })
+    );
+    await recordReportAttachment({
+      action: "create",
+      fileName: attachment.originalName,
+      parent: { type: "project", name: report.projectDepartment },
     });
 
     return NextResponse.json({ success: true, data: attachment });

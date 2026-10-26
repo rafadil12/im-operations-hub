@@ -164,7 +164,13 @@ export async function updateProjectReport(
   payload: ReportProjectPayload
 ): Promise<boolean> {
   return withTransaction(async (conn) => {
-    const [result] = await conn.query(
+    const [found] = await conn.query(
+      `SELECT id FROM report_project_reports WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    if (!Array.isArray(found) || found.length === 0) return false;
+
+    await conn.query(
       `
         UPDATE report_project_reports
         SET report_date = ?, project_department = ?, reporter_name = ?,
@@ -182,7 +188,6 @@ export async function updateProjectReport(
         id,
       ]
     );
-    if (Number((result as ResultSetHeader).affectedRows ?? 0) === 0) return false;
 
     await conn.query(`DELETE FROM report_project_lines WHERE report_id = ?`, [id]);
     await insertLines(conn, id, payload.lines);
