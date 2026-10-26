@@ -68,6 +68,8 @@ export function moduleForTable(table: string): string {
     table.startsWith("work_schedule") ||
     table.startsWith("organization_") ||
     table === "employees" ||
+    table === "employee_organization" ||
+    table === "personal_off_days" ||
     table === "positions"
   ) {
     return "organization";

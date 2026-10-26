@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import {
+  attendanceSyncEvent,
+  recordOrganization,
+} from "@/lib/logs-center/organizationRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const dynamic = "force-dynamic";
 
@@ -377,6 +382,7 @@ export async function POST(request: NextRequest) {
      */
     const CHUNK_SIZE = 500;
 
+    await suppressLogsCenter(async () => {
     for (
       let i = 0;
       i < values.length;
@@ -418,6 +424,12 @@ export async function POST(request: NextRequest) {
         flatValues,
       );
     }
+
+    });
+
+    await recordOrganization(
+      attendanceSyncEvent(year, month, inserted, updated),
+    );
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { recordOrganization, shiftAssignEvent } from "@/lib/logs-center/organizationRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const dynamic = "force-dynamic";
 
@@ -128,8 +130,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await execute(
+    const previousRows = await query<
+      {
+        shift_code: string | null;
+        is_excluded: number | null;
+        name_en: string | null;
+        name_cn: string | null;
+      }[]
+    >(
       `
+        SELECT
+          sa.shift_code,
+          sa.is_excluded,
+          u.name_en,
+          u.name_cn
+        FROM employee_organization eo
+        INNER JOIN users u
+          ON u.id = eo.user_id
+        LEFT JOIN shift_assignments sa
+          ON sa.employee_organization_id = eo.id
+        WHERE eo.id = ?
+        LIMIT 1
+      `,
+      [employeeOrganizationId],
+    );
+    const previous = previousRows[0];
+
+    await suppressLogsCenter(() =>
+      execute(
+        `
         INSERT INTO shift_assignments (
           employee_organization_id,
           shift_code,
@@ -141,7 +170,20 @@ export async function POST(request: NextRequest) {
           is_excluded = VALUES(is_excluded),
           updated_at = CURRENT_TIMESTAMP
       `,
-      [employeeOrganizationId, shift, excluded ? 1 : 0],
+        [employeeOrganizationId, shift, excluded ? 1 : 0],
+      ),
+    );
+
+    await recordOrganization(
+      shiftAssignEvent({
+        employeeNo,
+        nameEn: previous?.name_en,
+        nameCn: previous?.name_cn,
+        before: previous?.shift_code
+          ? { shift: previous.shift_code, excluded: Boolean(previous.is_excluded) }
+          : null,
+        after: { shift, excluded },
+      }),
     );
 
     const rows = await query<AssignmentRow[]>(
