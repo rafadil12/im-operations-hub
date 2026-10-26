@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import { withTransaction } from "@/lib/db";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
+import { recordTrainingSession, trainingCreateDetail } from "@/lib/logs-center/trainingRemark";
 import {
   hasTopicText,
   isValidDateString,
@@ -93,7 +95,7 @@ export async function POST(request: Request) {
       topicCn
     );
 
-    const sessionId = await withTransaction(async (conn) => {
+    const sessionId = await suppressLogsCenter(() => withTransaction(async (conn) => {
       const [insertResult] = await conn.query(
         `
           INSERT INTO training_sessions (
@@ -148,6 +150,21 @@ export async function POST(request: Request) {
       }
 
       return id;
+    }));
+
+    const divisions = await loadTrainingDivisions();
+    const division = divisions.find((item) => item.id === divisionId);
+    await recordTrainingSession({
+      action: "create",
+      topicEn: resolvedTopicEn,
+      topicCn: resolvedTopicCn,
+      detail: trainingCreateDetail({
+        sessionDate,
+        divisionEn: division?.nameEn ?? "",
+        divisionCn: division?.nameCn ?? "",
+        participants,
+        attachmentName: attachment?.originalName ?? null,
+      }),
     });
 
     const [data] = await loadTrainingSessions({ id: sessionId });

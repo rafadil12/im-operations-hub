@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission, requirePermission } from "@/lib/auth";
 import { execute } from "@/lib/db";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
+import {
+  recordTrainingSession,
+  trainingDeleteDetail,
+  trainingUpdateDetail,
+} from "@/lib/logs-center/trainingRemark";
 import {
   hasTopicText,
   isValidDateString,
@@ -12,6 +18,7 @@ import {
 import { saveTrainingUploadedFile } from "@/lib/training/upload";
 import {
   assertDivisionExists,
+  loadTrainingDivisions,
   loadTrainingSessions,
   replaceSessionParticipants,
 } from "@/lib/training/sessionStore";
@@ -104,8 +111,32 @@ export async function PATCH(request: Request, context: RouteContext) {
       topicCn
     );
 
-    await execute(
-      `
+    const divisions = await loadTrainingDivisions();
+    const division = divisions.find((item) => item.id === divisionId);
+    const detail = trainingUpdateDetail(
+      {
+        sessionDate: existing.sessionDate,
+        divisionEn: existing.divisionNameEn,
+        divisionCn: existing.divisionNameCn,
+        topicEn: existing.topicEn,
+        topicCn: existing.topicCn,
+        participants: existing.participants,
+        attachmentName: existing.attachment?.originalName ?? null,
+      },
+      {
+        sessionDate,
+        divisionEn: division?.nameEn ?? "",
+        divisionCn: division?.nameCn ?? "",
+        topicEn: resolvedTopicEn,
+        topicCn: resolvedTopicCn,
+        participants,
+        attachmentName: attachmentOriginal,
+      }
+    );
+
+    await suppressLogsCenter(async () => {
+      await execute(
+        `
         UPDATE training_sessions
         SET
           session_date = ?,
@@ -120,22 +151,32 @@ export async function PATCH(request: Request, context: RouteContext) {
           attachment_size = ?
         WHERE id = ?
       `,
-      [
-        sessionDate,
-        divisionId,
-        resolvedTopicEn,
-        resolvedTopicCn,
-        participants.length,
-        attachmentOriginal,
-        attachmentStored,
-        attachmentUrl,
-        attachmentMime,
-        attachmentSize,
-        id,
-      ]
-    );
+        [
+          sessionDate,
+          divisionId,
+          resolvedTopicEn,
+          resolvedTopicCn,
+          participants.length,
+          attachmentOriginal,
+          attachmentStored,
+          attachmentUrl,
+          attachmentMime,
+          attachmentSize,
+          id,
+        ]
+      );
 
-    await replaceSessionParticipants(id, participants);
+      await replaceSessionParticipants(id, participants);
+    });
+
+    if (detail) {
+      await recordTrainingSession({
+        action: "update",
+        topicEn: resolvedTopicEn,
+        topicCn: resolvedTopicCn,
+        detail,
+      });
+    }
 
     const [data] = await loadTrainingSessions({ id });
     return NextResponse.json({ success: true, data });
@@ -155,8 +196,23 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const id = Number(idRaw);
     if (!Number.isInteger(id) || id <= 0) return jsonError("Invalid session id.");
 
-    const result = await execute(`DELETE FROM training_sessions WHERE id = ?`, [id]);
+    const [existing] = await loadTrainingSessions({ id });
+    if (!existing) return jsonError("Session not found.", 404);
+
+    const result = await suppressLogsCenter(() =>
+      execute(`DELETE FROM training_sessions WHERE id = ?`, [id])
+    );
     if (!result.affectedRows) return jsonError("Session not found.", 404);
+
+    await recordTrainingSession({
+      action: "delete",
+      topicEn: existing.topicEn,
+      topicCn: existing.topicCn,
+      detail: trainingDeleteDetail({
+        sessionDate: existing.sessionDate,
+        participantCount: existing.participants.length || existing.participantCount,
+      }),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
