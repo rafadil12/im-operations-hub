@@ -66,7 +66,19 @@ export function DocumentDetailModal({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {canReverse &&
+            {detail.linked_activity &&
+            ["101", "201", "311"].includes(detail.movement_type) &&
+            !detail.reversal_of_doc_id &&
+            !detail.already_reversed ? (
+              <button
+                type="button"
+                disabled
+                title={t.sparepart.reverseLinkedLocked}
+                className="cursor-not-allowed rounded-md border border-border px-3 py-1.5 text-xs text-text-dim opacity-70"
+              >
+                {t.sparepart.reverseDocument}
+              </button>
+            ) : canReverse &&
             ["101", "201", "311"].includes(detail.movement_type) &&
             !detail.reversal_of_doc_id &&
             !detail.already_reversed ? (

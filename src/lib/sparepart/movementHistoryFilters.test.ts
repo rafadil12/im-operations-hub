@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMovementHistoryFilters,
+  calendarMonthRange,
   parseOptionalItemId,
 } from "./movementHistoryFilters";
 import { parseHistoryColumnVisibility } from "./movementHistoryColumns";
+
+describe("calendarMonthRange", () => {
+  it("returns first and last day of the given local month", () => {
+    expect(calendarMonthRange(new Date(2026, 9, 7))).toEqual({
+      start: "2026-10-01",
+      end: "2026-10-31",
+    });
+    expect(calendarMonthRange(new Date(2026, 1, 15))).toEqual({
+      start: "2026-02-01",
+      end: "2026-02-28",
+    });
+  });
+});
 
 describe("parseOptionalItemId", () => {
   it("treats empty as all materials", () => {

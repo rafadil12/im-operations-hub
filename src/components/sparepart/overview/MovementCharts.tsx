@@ -15,11 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { useLang } from "@/lib/i18n";
-import {
-  categoryColor,
-  localizedCategoryLabel,
-  type SparepartCategoryCode,
-} from "@/lib/sparepart/categories";
+import { categoryColor, localizedCategoryLabel } from "@/lib/sparepart/categories";
 import type {
   SparepartOverviewBarGrain,
   SparepartOverviewCategoryTab,
@@ -97,7 +93,7 @@ export function TrendLines({
   categories,
 }: {
   rows: SparepartOverviewTrendPoint[];
-  visible: SparepartCategoryCode[];
+  visible: string[];
   categories: SparepartOverviewCategoryTab[];
 }) {
   const { lang } = useLang();

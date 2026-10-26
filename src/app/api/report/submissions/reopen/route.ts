@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
+import { loadReportAreaNames, loadReportWeekById, recordReportWeek } from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 import { jsonError, parsePositiveInt, parseWeekNumber, parseYear } from "@/lib/report/apiHelpers";
 import {
   ensureReportWeek,
@@ -15,25 +17,30 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    let weekId = parsePositiveInt(String(body.weekId ?? ""));
     const areaId = parsePositiveInt(String(body.areaId ?? ""));
-
     if (!areaId) return jsonError("Area is required.");
 
-    if (!weekId) {
-      const year = parseYear(String(body.year ?? "")) ?? new Date().getFullYear();
-      const weekNumber = parseWeekNumber(String(body.weekNumber ?? body.week ?? ""));
-      if (!weekNumber) return jsonError("Week is required.");
-      weekId = await ensureReportWeek(year, weekNumber);
-    }
+    const requestedWeekId = parsePositiveInt(String(body.weekId ?? ""));
+    const requestedWeek = parseWeekNumber(String(body.weekNumber ?? body.week ?? ""));
+    const year = parseYear(String(body.year ?? "")) ?? new Date().getFullYear();
+    if (!requestedWeekId && !requestedWeek) return jsonError("Week is required.");
 
-    const reopened = await reopenReportArea(weekId, areaId);
-    if (!reopened) {
+    const reopened = await suppressLogsCenter(async () => {
+      const id = requestedWeekId ?? (await ensureReportWeek(year, requestedWeek!));
+      const ok = await reopenReportArea(id, areaId);
+      const weekNumber = requestedWeek ?? (await loadReportWeekById(id))?.weekNumber ?? null;
+      const submission = ok ? await getSubmissionStatus(id, areaId) : null;
+      return { ok, weekNumber, submission };
+    });
+    if (!reopened.ok) {
       return jsonError("No submitted report found for this week and area.", 404);
     }
+    if (reopened.weekNumber) {
+      const area = await loadReportAreaNames(areaId);
+      await recordReportWeek({ action: "reopen", weekNumber: reopened.weekNumber, area });
+    }
 
-    const submission = await getSubmissionStatus(weekId, areaId);
-    return NextResponse.json({ success: true, data: submission });
+    return NextResponse.json({ success: true, data: reopened.submission });
   } catch (error) {
     console.error("POST /api/report/submissions/reopen ERROR:", error);
     return jsonError("Failed to reopen report.", 500);

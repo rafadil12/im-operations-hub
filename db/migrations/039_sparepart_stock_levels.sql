@@ -1,5 +1,5 @@
 -- Stock levels L01–L04: qty is item × storage location × level.
--- Existing balances and mat-doc lines backfill to L01 (Lantai 1).
+-- Existing balances and mat-doc lines backfill to L01 (1ST FLOOR).
 -- Prefer: node --env-file=.env.development.local db/run-migrations.mjs
 
 CREATE TABLE IF NOT EXISTS `sparepart_stock_levels` (
@@ -17,10 +17,10 @@ CREATE TABLE IF NOT EXISTS `sparepart_stock_levels` (
 
 INSERT INTO `sparepart_stock_levels` (`code`, `name_en`, `name_cn`, `sort_order`, `is_active`)
 VALUES
-  ('L01', 'Lantai 1', '一楼', 1, 1),
-  ('L02', 'Lantai 2', '二楼', 2, 1),
-  ('L03', 'Lantai 3', '三楼', 3, 1),
-  ('L04', 'Lantai 4', '四楼', 4, 1)
+  ('L01', '1ST FLOOR', '一楼', 1, 1),
+  ('L02', '2ND FLOOR', '二楼', 2, 1),
+  ('L03', '3RD FLOOR', '三楼', 3, 1),
+  ('L04', '4TH FLOOR', '四楼', 4, 1)
 ON DUPLICATE KEY UPDATE
   `name_en` = VALUES(`name_en`),
   `name_cn` = VALUES(`name_cn`),

@@ -82,8 +82,8 @@ node --env-file=.env.local db/run-migrations.mjs
 
 This is idempotent. Among other things it:
 
-- Adds `system_users.role_id`, `session_version`, and `role_permissions`
-- Seeds system roles: `superadmin` (protected, `roles.id = 1`), `admin`, and `guest` (public browse — not assignable to login accounts)
+- Adds `system_users.role_id`, `session_version`, and `access_role_permissions`
+- Seeds system roles: `superadmin` (protected, `access_roles.id = 1`), `admin`, and `guest` (public browse — not assignable to login accounts)
 - Removes legacy seeded roles (`viewer`, `manager`, `operator`) when present
 - Seeds the permission catalog (overview, daily I/O, ITSM, safety, sparepart, organization, training, report, admin)
 - Bootstraps the **Super Admin** login (`employee_no=SUPERADMIN`)

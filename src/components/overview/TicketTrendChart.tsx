@@ -22,7 +22,7 @@ type TrendPoint = {
 
 type Props = {
   data: TrendPoint[];
-  height?: number;
+  height?: number | `${number}%`;
   compact?: boolean;
   legendLabels?: string[];
 };
@@ -44,8 +44,10 @@ export function TicketTrendChart({ data, height = 140, compact = false, legendLa
   const currentLegend = legendLabels?.[0] ?? (lang === "cn" ? "当前时间段" : "Current Period");
   const previousLegend = legendLabels?.[1] ?? (lang === "cn" ? "对比时间段" : "Previous Period");
 
-  return (
-    <ResponsiveContainer width="100%" height={height}>
+  const fillParent = typeof height === "string";
+
+  const chart = (
+    <ResponsiveContainer width="100%" height={fillParent ? "100%" : height}>
       <LineChart
         data={data}
         margin={{
@@ -259,4 +261,10 @@ export function TicketTrendChart({ data, height = 140, compact = false, legendLa
       </LineChart>
     </ResponsiveContainer>
   );
+
+  if (fillParent) {
+    return <div className="relative h-full min-h-0 w-full">{chart}</div>;
+  }
+
+  return chart;
 }

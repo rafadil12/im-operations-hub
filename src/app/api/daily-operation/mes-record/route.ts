@@ -6,6 +6,20 @@ import {
   parseAndValidateMesBody,
   type MesValidationErrorKey,
 } from "@/lib/daily-operation/mesRecordValidation";
+import {
+  isChangeRequestType,
+  postChangeRequestIssue,
+  saveIssueLink,
+} from "@/lib/daily-operation/changeRequestIssue";
+import {
+  ChangeRequestIssueError,
+  assertIssueComplete,
+  parseChangeRequestIssue,
+} from "@/lib/daily-operation/changeRequestIssueParse";
+import type { AuthAccountPublic } from "@/lib/auth/types";
+import { activityCreatedRemark, goodsIssueLink } from "@/lib/logs-center/activityRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
+import { SparepartPostingError } from "@/lib/sparepart/posting";
 import type { MesDataInput, MesDataRow } from "@/lib/types";
 import { notifyMesRecordCreated } from "@/lib/wecomNotification";
 
@@ -19,14 +33,28 @@ const LIST_SQL = `
          c.name_en AS category_en, c.name_cn AS category_cn,
          s.name_en AS subcategory_en, s.name_cn AS subcategory_cn,
          t.name_en AS type_en, t.name_cn AS type_cn,
-         st.name_en AS status_en, st.name_cn AS status_cn
-  FROM mes_record m
+         st.name_en AS status_en, st.name_cn AS status_cn,
+         m.sparepart_item_id, m.sparepart_qty, m.sparepart_storage_location_id,
+         m.sparepart_level_id, m.sparepart_mat_doc_id,
+         si.code AS sparepart_item_code,
+         si.name_en AS sparepart_item_name_en, si.name_cn AS sparepart_item_name_cn,
+         sloc.code AS sparepart_location_code,
+         sloc.name_en AS sparepart_location_name_en, sloc.name_cn AS sparepart_location_name_cn,
+         slvl.code AS sparepart_level_code,
+         slvl.name_en AS sparepart_level_name_en, slvl.name_cn AS sparepart_level_name_cn,
+         md.doc_number AS sparepart_doc_number,
+         md.recipient AS sparepart_recipient
+  FROM daily_operation_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id
-  LEFT JOIN categories c ON m.category_id = c.id
-  LEFT JOIN subcategories s ON m.subcategory_id = s.id
-  LEFT JOIN mes_type t ON m.type_id = t.id
-  LEFT JOIN mes_status st ON m.status_id = st.id
+  LEFT JOIN daily_operation_categories c ON m.category_id = c.id
+  LEFT JOIN daily_operation_subcategories s ON m.subcategory_id = s.id
+  LEFT JOIN daily_operation_type t ON m.type_id = t.id
+  LEFT JOIN daily_operation_status st ON m.status_id = st.id
+  LEFT JOIN sparepart_items si ON si.id = m.sparepart_item_id
+  LEFT JOIN sparepart_storage_locations sloc ON sloc.id = m.sparepart_storage_location_id
+  LEFT JOIN sparepart_stock_levels slvl ON slvl.id = m.sparepart_level_id
+  LEFT JOIN sparepart_mat_docs md ON md.id = m.sparepart_mat_doc_id
   WHERE m.deleted_at IS NULL
     AND m.start_time BETWEEN ? AND ?
 `;
@@ -71,11 +99,19 @@ export async function GET(request: NextRequest) {
 
     const q = sp.get("q");
     if (q) {
-      conditions.push(
-        "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
-      );
-      const like = `%${q}%`;
-      params.push(like, like, like, like);
+      const idText = q.trim().replace(/^#/, "");
+      const like = `%${q.trim()}%`;
+      if (/^\d+$/.test(idText)) {
+        conditions.push(
+          "(m.id = ? OR m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
+        );
+        params.push(Number(idText), like, like, like, like);
+      } else {
+        conditions.push(
+          "(m.description_cn LIKE ? OR m.description_en LIKE ? OR m.solution_cn LIKE ? OR m.solution_en LIKE ?)"
+        );
+        params.push(like, like, like, like);
+      }
     }
 
     const sql =
@@ -105,17 +141,43 @@ const RECORD_DETAIL_SQL = `
     t.name_en AS type_en,
     t.name_cn AS type_cn,
     st.name_en AS status_en,
-    st.name_cn AS status_cn
-  FROM mes_record m
+    st.name_cn AS status_cn,
+    m.sparepart_item_id, m.sparepart_qty, m.sparepart_storage_location_id,
+    m.sparepart_level_id, m.sparepart_mat_doc_id,
+    si.code AS sparepart_item_code,
+    si.name_en AS sparepart_item_name_en, si.name_cn AS sparepart_item_name_cn,
+    sloc.code AS sparepart_location_code,
+    sloc.name_en AS sparepart_location_name_en, sloc.name_cn AS sparepart_location_name_cn,
+    slvl.code AS sparepart_level_code,
+    slvl.name_en AS sparepart_level_name_en, slvl.name_cn AS sparepart_level_name_cn,
+    md.doc_number AS sparepart_doc_number,
+    md.recipient AS sparepart_recipient
+  FROM daily_operation_record m
   LEFT JOIN users u ON m.user_id = u.id
   LEFT JOIN divisions d ON m.division_id = d.id
-  LEFT JOIN categories c ON m.category_id = c.id
-  LEFT JOIN subcategories s ON m.subcategory_id = s.id
-  LEFT JOIN mes_type t ON m.type_id = t.id
-  LEFT JOIN mes_status st ON m.status_id = st.id
+  LEFT JOIN daily_operation_categories c ON m.category_id = c.id
+  LEFT JOIN daily_operation_subcategories s ON m.subcategory_id = s.id
+  LEFT JOIN daily_operation_type t ON m.type_id = t.id
+  LEFT JOIN daily_operation_status st ON m.status_id = st.id
+  LEFT JOIN sparepart_items si ON si.id = m.sparepart_item_id
+  LEFT JOIN sparepart_storage_locations sloc ON sloc.id = m.sparepart_storage_location_id
+  LEFT JOIN sparepart_stock_levels slvl ON slvl.id = m.sparepart_level_id
+  LEFT JOIN sparepart_mat_docs md ON md.id = m.sparepart_mat_doc_id
   WHERE m.id = ?
   LIMIT 1
 `;
+
+function creatorLabel(account: AuthAccountPublic | null): string | null {
+  if (!account) return null;
+  return account.employeeId ? `${account.employeeId} - ${account.displayName}` : account.displayName;
+}
+
+function issueErrorResponse(error: unknown): NextResponse | null {
+  if (error instanceof ChangeRequestIssueError || error instanceof SparepartPostingError) {
+    return NextResponse.json({ error: error.message }, { status: error.status });
+  }
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   const gate = await requirePermission(PERMISSIONS.dailyRecordCreate);
@@ -136,31 +198,76 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+    const issue = parseChangeRequestIssue(body);
+    if (issue.issue_material) {
+      if (!(await isChangeRequestType(data.type_id))) {
+        return NextResponse.json(
+          { error: "Material issue is only available for Change Request." },
+          { status: 400 }
+        );
+      }
+      assertIssueComplete(issue);
+    }
 
-    const result = await execute(
-      `INSERT INTO mes_record
-        (user_id, division_id, category_id, subcategory_id,
-         description_cn, description_en, solution_cn, solution_en,
-         type_id, status_id, start_time, end_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.user_id,
-        data.division_id,
-        data.category_id,
-        data.subcategory_id,
-        data.description_cn,
-        data.description_en,
-        data.solution_cn,
-        data.solution_en,
-        data.type_id,
-        data.status_id,
-        data.start_time,
-        data.end_time,
-      ]
-    );
+    const created = await suppressLogsCenter(async () => {
+      const result = await execute(
+        `INSERT INTO daily_operation_record
+          (user_id, division_id, category_id, subcategory_id,
+           description_cn, description_en, solution_cn, solution_en,
+           type_id, status_id, start_time, end_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          data.user_id,
+          data.division_id,
+          data.category_id,
+          data.subcategory_id,
+          data.description_cn,
+          data.description_en,
+          data.solution_cn,
+          data.solution_en,
+          data.type_id,
+          data.status_id,
+          data.start_time,
+          data.end_time,
+        ]
+      );
+
+      let docNumber: string | null = null;
+      if (issue.issue_material) {
+        try {
+          const posted = await postChangeRequestIssue({
+            recordId: result.insertId,
+            data,
+            issue,
+            createdBySystemUserId: gate.account?.systemUserId,
+            createdBy: creatorLabel(gate.account),
+          });
+          await saveIssueLink(result.insertId, issue, posted.id);
+          docNumber = posted.doc_number;
+        } catch (issueError) {
+          await execute("DELETE FROM daily_operation_record WHERE id = ?", [result.insertId]);
+          throw issueError;
+        }
+      }
+      return { id: result.insertId, docNumber };
+    });
+
+    const links =
+      created.docNumber && issue.sparepart_item_id && issue.sparepart_qty && issue.sparepart_storage_location_id
+        ? [
+            await goodsIssueLink({
+              ref: created.docNumber,
+              qty: issue.sparepart_qty,
+              itemId: issue.sparepart_item_id,
+              locationId: issue.sparepart_storage_location_id,
+              recipient: issue.sparepart_recipient ?? "",
+            }),
+          ]
+        : [];
+    await recordLogsCenter(activityCreatedRemark(created.id, links));
 
     try {
-      const rows = await query<MesDataRow[]>(RECORD_DETAIL_SQL, [result.insertId]);
+      const rows = await query<MesDataRow[]>(RECORD_DETAIL_SQL, [created.id]);
       const record = rows[0];
       if (record) {
         await notifyMesRecordCreated(record);
@@ -169,8 +276,10 @@ export async function POST(request: NextRequest) {
       console.error("Failed to send WeCom notification:", wecomError);
     }
 
-    return NextResponse.json({ id: result.insertId }, { status: 201 });
+    return NextResponse.json({ id: created.id }, { status: 201 });
   } catch (error) {
+    const response = issueErrorResponse(error);
+    if (response) return response;
     console.error("POST /mes-record failed", error);
     return NextResponse.json({ error: "Failed to create record." }, { status: 500 });
   }

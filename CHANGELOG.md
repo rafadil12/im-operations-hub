@@ -7,6 +7,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-26
+
+### Added
+
+- Logs Center writes one remark for each successful save. The sentence
+  names the object and what changed, in English and in Chinese.
+- The Chinese sentence is stored and included in search. The screen shows
+  the sentence for the selected language, and the actor line shows the
+  localized name with the employee number.
+- Named remarks cover password changes, accounts, roles, sparepart
+  movements and masters, daily operation imports and masters, weekly
+  reports, safety reports, training sessions, ITSM imports, and
+  organization employees, leave, attendance, and shifts.
+- Logs Center stores the Chinese sentence and the structured change on
+  `logs_center_events`. The migration runner adds those columns when they
+  are missing.
+
+### Changed
+
+- Changing your own password is recorded as an account update: Change
+  Password.
+- An unchanged save, a failed validation, and an import that changes
+  nothing write no remark.
+- An ITSM import remark counts new requests and updated requests
+  separately.
+- The action filter includes Save, Submit, Reopen, and Import.
+
+## [0.14.1] - 2026-10-08
+
+### Changed
+
+- Renamed database tables to a module prefix. Daily Operation records,
+  categories, subcategories, types, and statuses now start with
+  `daily_operation_`. Login roles and permissions start with `access_`.
+  Units of measure are `sparepart_uoms`.
+- Existing rows, ids, and foreign keys move with the rename. Queries use
+  the new names. `users`, `system_users`, and `sparepart_categories` are
+  unchanged.
+
+## [0.14.0] - 2026-10-08
+
+### Added
+
+- Logs Center, placed directly under Settings and kept off the dashboard.
+  It keeps a permanent record of sign-in, sign-out, and data changes.
+- Logs Center filters for module, action, and a from/to time. The range
+  defaults to the current day, 00:00:00 through 23:59:59. Search matches
+  remarks, name, or employee ID.
+- Daily Operation activities show the record ID, search accepts that ID,
+  and View opens the saved entry read-only beside Edit and Delete.
+
+### Changed
+
+- Activity columns keep a fixed width so the action buttons stay visible
+  when a name or description is long.
+- Logs Center shows the date above the time, without milliseconds. Module
+  and action labels are uppercase.
+
+## [0.13.0] - 2026-10-08
+
+### Changed
+
+- Organization Overview: Schedule Variance lists the newest dates first,
+  in both the compact cards and the full list.
+
+## [0.12.0] - 2026-10-07
+
+### Added
+
+- Change Request activities can post a sparepart goods issue (201) on save:
+  one material, quantity, Issued To, and a storage location limited to points
+  that have stock.
+- Issued To is entered on the activity. The transaction note records the
+  change request; the line note is left blank.
+- Required issue fields are marked, and validation names only the fields that
+  fail, including quantity above available stock.
+- A linked activity cannot be deleted, and Reverse stays disabled on a
+  sparepart document that an activity points to. After posting, the material
+  fields stay visible but read-only and the activity type stays locked.
+
+## [0.11.0] - 2026-10-07
+
+### Changed
+
+- Sparepart Stock detail: show Level Code and Level Name as separate columns
+  (no longer combined as `CODE — Name`).
+- Stock levels seed (`L01`–`L04`): English names are now `1ST FLOOR` …
+  `4TH FLOOR` (Chinese labels unchanged).
+
+## [0.10.0] - 2026-10-07
+
+### Changed
+
+- Sparepart Overview: restyle Top 5 Used as list cards (rank badge, code,
+  name, category chip, qty pill) with soft card shadow that is not clipped
+  on the last item.
+
+## [0.9.0] - 2026-10-07
+
+### Changed
+
+- Daily Operation: rename activity type `Request` to `Access Request`
+  (`mes_type.name_en`); Chinese label unchanged. Excel import still accepts
+  legacy `Request` as an alias.
+
+## [0.8.1] - 2026-10-07
+
+### Fixed
+
+- Insights User Ranking: compact view shows the top 10 people; expand opens
+  the full ranking only when more than 10 people are in range.
+- Insights User Ranking: hide the "showing top 10 · N total" hint and expand
+  affordance when the ranking has 10 or fewer people.
+
 ## [0.8.0] - 2026-09-22
 
 ### Changed

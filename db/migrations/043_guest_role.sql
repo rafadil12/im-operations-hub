@@ -1,19 +1,19 @@
 -- Restore protected `guest` role for configurable public browse (Guest Mode).
 -- Guest is not assignable to login accounts.
 
-INSERT INTO `roles` (`name`, `description`)
+INSERT INTO `access_roles` (`name`, `description`)
 SELECT 'guest', 'Public browse (not logged in)'
-WHERE NOT EXISTS (SELECT 1 FROM `roles` WHERE `name` = 'guest');
+WHERE NOT EXISTS (SELECT 1 FROM `access_roles` WHERE `name` = 'guest');
 
 UPDATE `system_users` su
-INNER JOIN `roles` r ON r.id = su.role_id
+INNER JOIN `access_roles` r ON r.id = su.role_id
 SET su.role_id = NULL
 WHERE r.name = 'guest';
 
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
-FROM `roles` r
-CROSS JOIN `permissions` p
+FROM `access_roles` r
+CROSS JOIN `access_permissions` p
 WHERE r.name = 'guest'
   AND p.code IN (
     'overview.view',
@@ -37,6 +37,6 @@ WHERE r.name = 'guest'
     'organization.attendance.read'
   )
   AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
+    SELECT 1 FROM `access_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
   );

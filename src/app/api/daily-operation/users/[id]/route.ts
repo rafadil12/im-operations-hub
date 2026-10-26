@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import { PERMISSIONS, PROTECTED_ACCOUNT_EMPLOYEE_NO, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { identityChange, loadDivision } from "@/lib/logs-center/dailyRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 
 type Ctx = { params: Promise<{ id: string }> };
 type CountRow = { c: number };
@@ -27,7 +29,7 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
     }
 
     const current = await query<RowDataPacket[]>(
-      `SELECT su.is_daily_operation_pic, u.employee_no
+      `SELECT su.is_daily_operation_pic, u.employee_no, u.name_en, u.name_cn, u.division_id
        FROM users u
        INNER JOIN system_users su ON su.user_id = u.id
        WHERE u.id = ?
@@ -44,21 +46,45 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
       );
     }
 
-    const divisions = await query<RowDataPacket[]>(
-      "SELECT id FROM divisions WHERE id = ? LIMIT 1",
-      [divisionId]
-    );
-    if (!divisions[0]) {
+    const beforeDivisionId =
+      current[0].division_id == null ? null : Number(current[0].division_id);
+    if (beforeDivisionId === divisionId) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const [beforeDivision, division] = await Promise.all([
+      loadDivision(beforeDivisionId),
+      loadDivision(divisionId),
+    ]);
+    if (!division) {
       return NextResponse.json({ error: "Division not found." }, { status: 404 });
     }
 
-    const result = await execute("UPDATE users SET division_id = ? WHERE id = ?", [
-      divisionId,
-      userId,
-    ]);
+    const result = await suppressLogsCenter(() =>
+      execute("UPDATE users SET division_id = ? WHERE id = ?", [divisionId, userId])
+    );
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
+    await recordLogsCenter({
+      module: "daily-operation",
+      action: "update",
+      objectType: "user",
+      objectRef: (current[0].employee_no as string | null) ?? String(userId),
+      changes: [
+        identityChange({
+          name_en: (current[0].name_en as string | null) ?? null,
+          name_cn: (current[0].name_cn as string | null) ?? null,
+        }),
+        {
+          field: "division",
+          from: beforeDivision?.name_en ?? "none",
+          fromCn: beforeDivision?.name_cn ?? beforeDivision?.name_en ?? "无",
+          to: division.name_en,
+          toCn: division.name_cn,
+        },
+      ],
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("PUT /users/[id] failed", error);
@@ -77,8 +103,20 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: "Invalid PIC id." }, { status: 400 });
     }
 
+    const current = await query<RowDataPacket[]>(
+      `SELECT u.employee_no, u.name_en, u.name_cn
+       FROM users u
+       INNER JOIN system_users su ON su.user_id = u.id
+       WHERE u.id = ? AND su.is_daily_operation_pic = 1
+       LIMIT 1`,
+      [userId]
+    );
+    if (!current[0]) {
+      return NextResponse.json({ error: "PIC not found." }, { status: 404 });
+    }
+
     const used = await query<CountRow[]>(
-      "SELECT COUNT(*) AS c FROM mes_record WHERE user_id = ? AND deleted_at IS NULL",
+      "SELECT COUNT(*) AS c FROM daily_operation_record WHERE user_id = ? AND deleted_at IS NULL",
       [userId]
     );
     if (Number(used[0]?.c ?? 0) > 0) {
@@ -88,13 +126,25 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
       );
     }
 
-    const result = await execute(
-      "UPDATE system_users SET is_daily_operation_pic = 0 WHERE user_id = ?",
-      [userId]
+    const result = await suppressLogsCenter(() =>
+      execute("UPDATE system_users SET is_daily_operation_pic = 0 WHERE user_id = ?", [userId])
     );
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
+    await recordLogsCenter({
+      module: "daily-operation",
+      action: "update",
+      objectType: "user",
+      objectRef: (current[0].employee_no as string | null) ?? String(userId),
+      changes: [
+        identityChange({
+          name_en: (current[0].name_en as string | null) ?? null,
+          name_cn: (current[0].name_cn as string | null) ?? null,
+        }),
+        { field: "pic" },
+      ],
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /users/[id] failed", error);

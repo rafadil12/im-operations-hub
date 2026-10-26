@@ -13,9 +13,9 @@ import type {
 export async function loadMasters(): Promise<Masters> {
   const [divisions, categories, subcategories, users, types, statuses] = await Promise.all([
     query<Division[]>("SELECT id, name_cn, name_en FROM divisions ORDER BY id"),
-    query<Category[]>("SELECT id, name_cn, name_en, division_id FROM categories ORDER BY name_en"),
+    query<Category[]>("SELECT id, name_cn, name_en, division_id FROM daily_operation_categories ORDER BY name_en"),
     query<Subcategory[]>(
-      "SELECT id, category_id, name_cn, name_en FROM subcategories ORDER BY name_en"
+      "SELECT id, category_id, name_cn, name_en FROM daily_operation_subcategories ORDER BY name_en"
     ),
     query<User[]>(
       `SELECT u.id, u.name_cn, u.name_en, u.division_id
@@ -27,8 +27,8 @@ export async function loadMasters(): Promise<Masters> {
          ORDER BY u.name_en`,
       [PROTECTED_ACCOUNT_EMPLOYEE_NO]
     ),
-    query<MesType[]>("SELECT id, name_cn, name_en FROM mes_type ORDER BY id"),
-    query<MesStatus[]>("SELECT id, name_cn, name_en FROM mes_status ORDER BY id"),
+    query<MesType[]>("SELECT id, name_cn, name_en FROM daily_operation_type ORDER BY id"),
+    query<MesStatus[]>("SELECT id, name_cn, name_en FROM daily_operation_status ORDER BY id"),
   ]);
 
   return {

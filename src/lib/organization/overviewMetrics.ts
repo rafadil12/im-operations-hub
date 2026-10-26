@@ -11,9 +11,43 @@ const DIVISION_ORDER = ["MES", "IT", "Intelligent Logistics"] as const;
 const PRESENT_VALUES = new Set(["10.5", "8", "4"]);
 const LEAVE_VALUES = new Set(["AL", "MC", "UPL"]);
 
-function displayName(row: OrganizationEmployeeRow): string {
-  const name = row.name_en?.trim() || row.name_cn?.trim() || row.employee_no;
-  return name.toUpperCase();
+function personNames(row: OrganizationEmployeeRow): {
+  nameEn: string;
+  nameCn: string;
+  isLead: boolean;
+} {
+  const nameEn = row.name_en?.trim() || row.name_cn?.trim() || row.employee_no;
+  const nameCn = row.name_cn?.trim() || row.name_en?.trim() || row.employee_no;
+  const flag = row.is_manager;
+  const isLead = flag === true || flag === 1 || flag === "1";
+  return { nameEn, nameCn, isLead };
+}
+
+function isGaluhName(nameEn: string, nameCn: string): boolean {
+  return `${nameEn} ${nameCn}`.toLowerCase().includes("galuh");
+}
+
+function orderDivisionPeople<T extends { nameEn: string; nameCn: string; isLead?: boolean }>(
+  people: T[],
+  division: string
+): T[] {
+  const sorted = [...people].sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+  const leadIndex = sorted.findIndex((person) => person.isLead);
+  const fallbackIndex =
+    leadIndex >= 0
+      ? leadIndex
+      : division === "Intelligent Logistics"
+        ? sorted.findIndex((person) => isGaluhName(person.nameEn, person.nameCn))
+        : -1;
+  const index = fallbackIndex >= 0 ? fallbackIndex : 0;
+  if (index <= 0) {
+    return sorted.map((person, i) => (i === 0 ? { ...person, isLead: true } : person));
+  }
+  const lead = { ...sorted[index], isLead: true };
+  return [
+    lead,
+    ...sorted.filter((_, i) => i !== index).map((person) => ({ ...person, isLead: false })),
+  ];
 }
 
 function normalizeDivisionName(name: string | null): string | null {
@@ -25,9 +59,14 @@ function normalizeDivisionName(name: string | null): string | null {
 
 function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart {
   const leaderRow = employees.find((row) => row.employee_no === GM_EMPLOYEE_NO);
-  const leader = leaderRow ? displayName(leaderRow) : "WANG CHUNLAI";
+  const leader = leaderRow
+    ? {
+        nameEn: leaderRow.name_en?.trim() || leaderRow.name_cn?.trim() || "WANG CHUNLAI",
+        nameCn: leaderRow.name_cn?.trim() || leaderRow.name_en?.trim() || "王春来",
+      }
+    : { nameEn: "WANG CHUNLAI", nameCn: "王春来" };
 
-  const countsByDivision = new Map<string, number>();
+  const peopleByDivision = new Map<string, { nameEn: string; nameCn: string; isLead: boolean }[]>();
 
   for (const row of employees) {
     if (!isDirectoryStaffRow(row)) continue;
@@ -35,13 +74,19 @@ function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart 
     const division = normalizeDivisionName(row.division_name_en);
     if (!division) continue;
 
-    countsByDivision.set(division, (countsByDivision.get(division) ?? 0) + 1);
+    const list = peopleByDivision.get(division) ?? [];
+    list.push(personNames(row));
+    peopleByDivision.set(division, list);
   }
 
-  const divisions = DIVISION_ORDER.map((name) => ({
-    name,
-    personnelCount: countsByDivision.get(name) ?? 0,
-  }));
+  const divisions = DIVISION_ORDER.map((name) => {
+    const people = orderDivisionPeople(peopleByDivision.get(name) ?? [], name);
+    return {
+      name,
+      personnelCount: people.length,
+      people,
+    };
+  });
 
   return {
     company: "Intelligent Manufacturing Department",
@@ -51,9 +96,7 @@ function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart 
 }
 
 function staffEmployeeNos(employees: OrganizationEmployeeRow[]): Set<string> {
-  return new Set(
-    employees.filter(isDirectoryStaffRow).map((row) => row.employee_no)
-  );
+  return new Set(employees.filter(isDirectoryStaffRow).map((row) => row.employee_no));
 }
 
 function countMonthlyAttendance(
@@ -87,8 +130,7 @@ function countMonthlyAttendance(
     }
   }
 
-  const attendanceRate =
-    scoredDays > 0 ? Math.round((presentCount / scoredDays) * 1000) / 10 : 0;
+  const attendanceRate = scoredDays > 0 ? Math.round((presentCount / scoredDays) * 1000) / 10 : 0;
 
   return { presentCount, absentCount, onLeaveCount, attendanceRate };
 }
@@ -116,10 +158,7 @@ function buildDepartmentPerformance(
     attendanceMap.set(`${row.employee_no}|${row.attendance_date}`, row.attendance_value);
   }
 
-  const map = new Map<
-    string,
-    Omit<OrganizationDepartmentSummary, "attendanceRate">
-  >();
+  const map = new Map<string, Omit<OrganizationDepartmentSummary, "attendanceRate">>();
 
   for (const employee of employees) {
     if (!isDirectoryStaffRow(employee)) continue;

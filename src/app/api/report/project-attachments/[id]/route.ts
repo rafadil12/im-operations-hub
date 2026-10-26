@@ -6,7 +6,10 @@ import {
   deleteProjectAttachment,
   getProjectAttachmentById,
 } from "@/lib/report/projectAttachmentStore";
+import { getProjectReportById } from "@/lib/report/projectStore";
 import { resolveReportStoredFilePath } from "@/lib/report/upload";
+import { recordReportAttachment } from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const runtime = "nodejs";
 
@@ -34,7 +37,13 @@ export async function DELETE(
       }
     }
 
-    await deleteProjectAttachment(id);
+    const project = await getProjectReportById(Number(row.report_id));
+    await suppressLogsCenter(() => deleteProjectAttachment(id));
+    await recordReportAttachment({
+      action: "delete",
+      fileName: row.original_name,
+      parent: { type: "project", name: project?.projectDepartment || "project" },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

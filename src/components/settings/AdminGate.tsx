@@ -10,7 +10,7 @@ import { useLang } from "@/lib/i18n";
 type Props = {
   children: React.ReactNode;
   /** Module / page capability gate. */
-  require?: "settings" | "configuration" | "roles" | "accounts";
+  require?: "settings" | "configuration" | "roles" | "accounts" | "logs-center";
 };
 
 export function AdminGate({ children, require = "settings" }: Props) {
@@ -61,7 +61,7 @@ export function AdminGate({ children, require = "settings" }: Props) {
   if (!account || !canEnter) {
     return (
       <div className="rounded-lg border border-border-subtle bg-surface p-8 text-center text-sm text-text-muted">
-        {t.settings.adminOnly}
+        {require === "logs-center" ? t.logsCenter.accessDenied : t.settings.adminOnly}
       </div>
     );
   }

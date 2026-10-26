@@ -20,7 +20,7 @@ export function buildOverviewSql(catMatch: CategoryMatch | null): OverviewSqlCon
   const itemCatJoin = `
       FROM sparepart_items i
       JOIN sparepart_categories c ON c.id = i.category_id
-      JOIN uoms u ON u.id = i.uom_id
+      JOIN sparepart_uoms u ON u.id = i.uom_id
     `;
   const itemWhere = ["i.deleted_at IS NULL", catMatch ? catMatch.sql : null]
     .filter(Boolean)

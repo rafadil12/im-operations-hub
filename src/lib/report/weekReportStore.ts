@@ -256,6 +256,20 @@ export async function saveReportWeekLines(
   return loadReportLines({ weekId, areaId });
 }
 
+export async function deleteReportWeekLines(weekId: number, areaId: number): Promise<number> {
+  return withTransaction(async (conn) => {
+    const locked = await lockSubmissionRow(conn, weekId, areaId);
+    if (locked?.status === "submitted") {
+      throw new Error("This week report is submitted and cannot be edited.");
+    }
+    const existing = await loadReportLines({ weekId, areaId }, conn);
+    for (const line of existing) {
+      await conn.query(`DELETE FROM report_lines WHERE id = ?`, [line.id]);
+    }
+    return existing.length;
+  });
+}
+
 export async function loadReportWeekBundle(
   year: number,
   weekNumber: number,

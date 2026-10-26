@@ -9,6 +9,13 @@ import {
   query,
   withTransaction,
 } from "@/lib/db";
+import {
+  employeeCreateEvent,
+  employeeDeleteEvent,
+  employeeUpdateEvent,
+  recordOrganization,
+  type EmployeeFields,
+} from "@/lib/logs-center/organizationRemark";
 
 type RouteContext = {
   params: Promise<{
@@ -387,6 +394,78 @@ export async function GET(
    UPDATE employee organization data.
 ========================================================= */
 
+type EmployeeRemarkRow = {
+  employee_no: string;
+  name_en: string | null;
+  name_cn: string | null;
+  division_en: string | null;
+  division_cn: string | null;
+  position_en: string | null;
+  position_cn: string | null;
+  employment_type: string | null;
+  employment_status: string | null;
+  join_date: string | null;
+  work_location: string | null;
+  team_name: string | null;
+  manager_no: string | null;
+  manager_en: string | null;
+  manager_cn: string | null;
+};
+
+async function readEmployeeRemark(userId: number) {
+  const rows = await query<EmployeeRemarkRow[]>(
+    `
+    SELECT
+      u.employee_no,
+      u.name_en,
+      u.name_cn,
+      d.name_en AS division_en,
+      d.name_cn AS division_cn,
+      p.name_en AS position_en,
+      p.name_cn AS position_cn,
+      eo.employment_type,
+      eo.employment_status,
+      eo.join_date,
+      eo.work_location,
+      eo.team_name,
+      manager.employee_no AS manager_no,
+      manager.name_en AS manager_en,
+      manager.name_cn AS manager_cn
+    FROM users u
+    LEFT JOIN employee_organization eo
+      ON eo.user_id = u.id
+    LEFT JOIN divisions d
+      ON d.id = u.division_id
+    LEFT JOIN positions p
+      ON p.id = eo.position_id
+    LEFT JOIN users manager
+      ON manager.id = eo.manager_id
+    WHERE u.id = ?
+    LIMIT 1
+    `,
+    [userId],
+  );
+
+  return rows[0] ?? null;
+}
+
+function remarkFields(row: EmployeeRemarkRow | null): EmployeeFields {
+  return {
+    positionEn: row?.position_en ?? "",
+    positionCn: row?.position_cn ?? "",
+    divisionEn: row?.division_en ?? "",
+    divisionCn: row?.division_cn ?? "",
+    status: row?.employment_status ?? "",
+    employmentType: row?.employment_type ?? "",
+    joinDate: row?.join_date ?? "",
+    location: row?.work_location ?? "",
+    team: row?.team_name ?? "",
+    managerNo: row?.manager_no ?? "",
+    managerEn: row?.manager_en ?? "",
+    managerCn: row?.manager_cn ?? "",
+  };
+}
+
 export async function PUT(
   request: NextRequest,
   context: RouteContext,
@@ -604,6 +683,70 @@ export async function PUT(
      * -------------------------------------------------------
      */
 
+    const beforeRow = await readEmployeeRemark(userId);
+
+    let nextPositionEn = "";
+    let nextPositionCn = "";
+    if (positionId) {
+      const positionRows = await query<
+        { name_en: string | null; name_cn: string | null }[]
+      >(
+        `
+        SELECT name_en, name_cn
+        FROM positions
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [positionId],
+      );
+      nextPositionEn = positionRows[0]?.name_en ?? "";
+      nextPositionCn = positionRows[0]?.name_cn ?? "";
+    }
+
+    let nextManagerNo = "";
+    let nextManagerEn = "";
+    let nextManagerCn = "";
+    if (managerId !== null) {
+      const managerRows = await query<
+        {
+          employee_no: string;
+          name_en: string | null;
+          name_cn: string | null;
+        }[]
+      >(
+        `
+        SELECT employee_no, name_en, name_cn
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [managerId],
+      );
+      nextManagerNo = managerRows[0]?.employee_no ?? "";
+      nextManagerEn = managerRows[0]?.name_en ?? "";
+      nextManagerCn = managerRows[0]?.name_cn ?? "";
+    }
+
+    const remarkIdentity = {
+      employeeNo: beforeRow?.employee_no ?? users[0].employee_no,
+      nameEn: beforeRow?.name_en ?? "",
+      nameCn: beforeRow?.name_cn ?? "",
+    };
+    const beforeFields = remarkFields(beforeRow);
+    const afterFields: EmployeeFields = {
+      ...beforeFields,
+      positionEn: nextPositionEn,
+      positionCn: nextPositionCn,
+      status: String(employmentStatus),
+      employmentType: String(employmentType),
+      joinDate: joinDate ?? "",
+      location: workLocation ?? "",
+      team: teamName ?? "",
+      managerNo: nextManagerNo,
+      managerEn: nextManagerEn,
+      managerCn: nextManagerCn,
+    };
+
     const existing =
       await query<
         {
@@ -656,6 +799,10 @@ export async function PUT(
             ],
           );
         },
+      );
+
+      await recordOrganization(
+        employeeUpdateEvent(remarkIdentity, beforeFields, afterFields),
       );
 
       return NextResponse.json({
@@ -716,6 +863,10 @@ export async function PUT(
           return insertResult;
         },
       );
+
+    await recordOrganization(
+      employeeCreateEvent(remarkIdentity, afterFields),
+    );
 
     return NextResponse.json(
       {
@@ -866,6 +1017,13 @@ export async function PATCH(
       );
     }
 
+    const beforeRow = await readEmployeeRemark(userId);
+    const beforeFields = remarkFields(beforeRow);
+    const afterFields: EmployeeFields = {
+      ...beforeFields,
+      status: employmentStatus,
+    };
+
     await withTransaction(
       async (conn) => {
         await conn.execute(
@@ -883,6 +1041,18 @@ export async function PATCH(
           ],
         );
       },
+    );
+
+    await recordOrganization(
+      employeeUpdateEvent(
+        {
+          employeeNo: beforeRow?.employee_no ?? "",
+          nameEn: beforeRow?.name_en ?? "",
+          nameCn: beforeRow?.name_cn ?? "",
+        },
+        beforeFields,
+        afterFields,
+      ),
     );
 
     return NextResponse.json({
@@ -975,6 +1145,8 @@ export async function DELETE(
       );
     }
 
+    const beforeRow = await readEmployeeRemark(userId);
+
     await withTransaction(
       async (conn) => {
         await conn.execute(
@@ -985,6 +1157,17 @@ export async function DELETE(
           [userId],
         );
       },
+    );
+
+    await recordOrganization(
+      employeeDeleteEvent(
+        {
+          employeeNo: beforeRow?.employee_no ?? "",
+          nameEn: beforeRow?.name_en ?? "",
+          nameCn: beforeRow?.name_cn ?? "",
+        },
+        remarkFields(beforeRow),
+      ),
     );
 
     return NextResponse.json({

@@ -16,11 +16,24 @@ type BarChartPlaceholderProps = {
   items: BarItem[];
   /** Reserve vertical space for at least this many rows when data is sparse or empty. */
   minRows?: number;
+  /**
+   * Stack rows from the top with fixed gap (for overflow-y scroll parents).
+   * Default mode stretches rows with justify-between to fill the panel.
+   */
+  scroll?: boolean;
+  /** Tighter row spacing/typography. Pairs well with `scroll` for dense lists. */
+  density?: "default" | "compact";
 };
 
-export function BarChartPlaceholder({ items, minRows = 3 }: BarChartPlaceholderProps) {
+export function BarChartPlaceholder({
+  items,
+  minRows = 3,
+  scroll = false,
+  density = "default",
+}: BarChartPlaceholderProps) {
   const { t } = useLang();
   const minHeight = barChartMinHeight(minRows);
+  const compact = density === "compact";
 
   if (items.length === 0) {
     return (
@@ -33,23 +46,45 @@ export function BarChartPlaceholder({ items, minRows = 3 }: BarChartPlaceholderP
     );
   }
 
+  // scroll: stack from top (parent handles overflow-y).
+  // default/compact: fill panel height so every row stays visible (no clip).
   return (
     <div
-      className="flex h-full flex-col justify-between gap-2.5"
-      style={{ minHeight: items.length < minRows ? minHeight : undefined }}
+      className={
+        scroll
+          ? ["flex flex-col justify-start", compact ? "gap-1" : "gap-2"].join(" ")
+          : [
+              "flex h-full min-h-0 flex-col justify-between",
+              compact ? "gap-3" : "gap-3",
+            ].join(" ")
+      }
+      style={scroll || items.length >= minRows ? undefined : { minHeight }}
     >
       {items.map((item, index) => {
         const width = Math.max(8, Math.round((item.value / item.max) * 100));
         return (
-          <div key={`${item.label}-${index}`}>
-            <div className="mb-0.5 flex items-start justify-between gap-2 text-[11px]">
+          <div
+            key={`${item.label}-${index}`}
+            className={scroll ? "shrink-0" : "min-h-0 shrink"}
+          >
+            <div
+              className={[
+                "flex items-start justify-between gap-2",
+                compact ? "mb-px text-[10px] leading-tight" : "mb-0.5 text-[11px]",
+              ].join(" ")}
+            >
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-text">{item.label}</p>
                 {item.sublabel ? <p className="truncate text-text-muted">{item.sublabel}</p> : null}
               </div>
               <span className="shrink-0 font-medium text-text">{item.value}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-border-subtle">
+            <div
+              className={[
+                "overflow-hidden rounded-full bg-border-subtle",
+                compact ? "h-1.5" : "h-2",
+              ].join(" ")}
+            >
               <div
                 className="h-full rounded-full transition-all"
                 style={{ width: `${width}%`, backgroundColor: item.color }}
@@ -85,7 +120,7 @@ export function VerticalBarChartPlaceholder({ items }: VerticalBarChartPlacehold
   const max = Math.max(...items.map((item) => item.max), 1);
 
   return (
-    <div className="flex h-full items-end gap-1.5 pt-4" style={{ minHeight }}>
+    <div className="flex h-full min-h-0 items-end gap-1.5 pt-4">
       {items.map((item, index) => {
         const height = Math.max(8, Math.round((item.value / max) * 100));
         return (

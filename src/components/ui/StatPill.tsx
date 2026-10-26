@@ -9,11 +9,16 @@ const toneClass: Record<NonNullable<StatItem["tone"]>, string> = {
 
 type StatPillProps = {
   stat: StatItem;
+  className?: string;
 };
 
-export function StatPill({ stat }: StatPillProps) {
+export function StatPill({ stat, className }: StatPillProps) {
   return (
-    <div className="min-w-0 rounded-md border border-border-subtle bg-bg/40 px-3 py-2">
+    <div
+      className={["min-w-0 rounded-md border border-border-subtle bg-bg/40 px-3 py-2", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <p
         className="truncate text-[8px] font-semibold uppercase tracking-wide text-text-dim"
         title={stat.label}

@@ -41,87 +41,87 @@ CREATE TABLE IF NOT EXISTS `report_project_lines` (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.project.read', 'View report projects'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.project.read');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.project.read');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.project.create', 'Create report projects'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.project.create');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.project.create');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.project.update', 'Update report projects'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.project.update');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.project.update');
 
-INSERT INTO `permissions` (`code`, `description`)
+INSERT INTO `access_permissions` (`code`, `description`)
 SELECT 'report.project.delete', 'Delete report projects'
-WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `code` = 'report.project.delete');
+WHERE NOT EXISTS (SELECT 1 FROM `access_permissions` WHERE `code` = 'report.project.delete');
 
 -- Roles that can read weekly report lines also get project read (continuity).
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT DISTINCT rp.role_id, p_new.id
-FROM `role_permissions` rp
-JOIN `permissions` p_old ON p_old.id = rp.permission_id
+FROM `access_role_permissions` rp
+JOIN `access_permissions` p_old ON p_old.id = rp.permission_id
   AND p_old.code = 'report.line.read'
-JOIN `permissions` p_new ON p_new.code = 'report.project.read'
+JOIN `access_permissions` p_new ON p_new.code = 'report.project.read'
 WHERE NOT EXISTS (
-  SELECT 1 FROM `role_permissions` x
+  SELECT 1 FROM `access_role_permissions` x
   WHERE x.role_id = rp.role_id AND x.permission_id = p_new.id
 );
 
 -- Roles with line create/update/delete get matching project write.
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT DISTINCT rp.role_id, p_new.id
-FROM `role_permissions` rp
-JOIN `permissions` p_old ON p_old.id = rp.permission_id
+FROM `access_role_permissions` rp
+JOIN `access_permissions` p_old ON p_old.id = rp.permission_id
   AND p_old.code = 'report.line.create'
-JOIN `permissions` p_new ON p_new.code = 'report.project.create'
+JOIN `access_permissions` p_new ON p_new.code = 'report.project.create'
 WHERE NOT EXISTS (
-  SELECT 1 FROM `role_permissions` x
+  SELECT 1 FROM `access_role_permissions` x
   WHERE x.role_id = rp.role_id AND x.permission_id = p_new.id
 );
 
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT DISTINCT rp.role_id, p_new.id
-FROM `role_permissions` rp
-JOIN `permissions` p_old ON p_old.id = rp.permission_id
+FROM `access_role_permissions` rp
+JOIN `access_permissions` p_old ON p_old.id = rp.permission_id
   AND p_old.code = 'report.line.update'
-JOIN `permissions` p_new ON p_new.code = 'report.project.update'
+JOIN `access_permissions` p_new ON p_new.code = 'report.project.update'
 WHERE NOT EXISTS (
-  SELECT 1 FROM `role_permissions` x
+  SELECT 1 FROM `access_role_permissions` x
   WHERE x.role_id = rp.role_id AND x.permission_id = p_new.id
 );
 
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT DISTINCT rp.role_id, p_new.id
-FROM `role_permissions` rp
-JOIN `permissions` p_old ON p_old.id = rp.permission_id
+FROM `access_role_permissions` rp
+JOIN `access_permissions` p_old ON p_old.id = rp.permission_id
   AND p_old.code = 'report.line.delete'
-JOIN `permissions` p_new ON p_new.code = 'report.project.delete'
+JOIN `access_permissions` p_new ON p_new.code = 'report.project.delete'
 WHERE NOT EXISTS (
-  SELECT 1 FROM `role_permissions` x
+  SELECT 1 FROM `access_role_permissions` x
   WHERE x.role_id = rp.role_id AND x.permission_id = p_new.id
 );
 
 -- Guest: project read only.
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
-FROM `roles` r
-CROSS JOIN `permissions` p
+FROM `access_roles` r
+CROSS JOIN `access_permissions` p
 WHERE r.name = 'guest'
   AND p.code = 'report.project.read'
   AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
+    SELECT 1 FROM `access_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
   );
 
 -- Admin / superadmin get every permission.
-INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+INSERT INTO `access_role_permissions` (`role_id`, `permission_id`)
 SELECT r.id, p.id
-FROM `roles` r
-CROSS JOIN `permissions` p
+FROM `access_roles` r
+CROSS JOIN `access_permissions` p
 WHERE r.name IN ('admin', 'superadmin')
   AND NOT EXISTS (
-    SELECT 1 FROM `role_permissions` rp
+    SELECT 1 FROM `access_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
   );

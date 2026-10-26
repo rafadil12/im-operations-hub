@@ -1,4 +1,6 @@
 import mysql from "mysql2/promise";
+import { describeWrite, shouldSkipWrite } from "@/lib/logs-center/describeWrite";
+import { persistSqlWrites } from "@/lib/logs-center/record";
 
 declare global {
   var __mesDbPool: mysql.Pool | undefined;
@@ -46,17 +48,46 @@ export async function query<T = mysql.RowDataPacket[]>(
 
 export async function execute(sql: string, params?: unknown[]): Promise<mysql.ResultSetHeader> {
   const [result] = await pool.query(sql, params);
-  return result as mysql.ResultSetHeader;
+  const header = result as mysql.ResultSetHeader;
+  const write = describeWrite(sql);
+  if (write && !shouldSkipWrite(sql, write)) {
+    await persistSqlWrites([sql]);
+  }
+  return header;
 }
 
 export async function withTransaction<T>(
   fn: (conn: mysql.PoolConnection) => Promise<T>
 ): Promise<T> {
   const conn = await pool.getConnection();
+  const writes: string[] = [];
+  const tracked = new Proxy(conn, {
+    get(target, prop, receiver) {
+      if (prop === "query") {
+        return (sql: unknown, ...rest: unknown[]) => {
+          const result = target.query(sql as string, ...(rest as []));
+          if (typeof sql === "string") {
+            const write = describeWrite(sql);
+            if (write && !shouldSkipWrite(sql, write) && isPromise(result)) {
+              return result.then((value) => {
+                writes.push(sql);
+                return value;
+              });
+            }
+          }
+          return result;
+        };
+      }
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as mysql.PoolConnection;
+
   try {
     await conn.beginTransaction();
-    const result = await fn(conn);
+    const result = await fn(tracked);
     await conn.commit();
+    if (writes.length > 0) await persistSqlWrites(writes);
     return result;
   } catch (error) {
     await conn.rollback();
@@ -64,4 +95,13 @@ export async function withTransaction<T>(
   } finally {
     conn.release();
   }
+}
+
+function isPromise(value: unknown): value is Promise<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof value.then === "function"
+  );
 }

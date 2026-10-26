@@ -81,7 +81,7 @@ export async function createReportSubItem(
   areaId: number,
   nameEn: string,
   nameCn: string
-): Promise<ReportSubItem> {
+): Promise<{ item: ReportSubItem; created: boolean }> {
   const en = nameEn.trim();
   const cn = nameCn.trim();
   if (!en) throw new Error("English name is required.");
@@ -100,11 +100,14 @@ export async function createReportSubItem(
   );
   if (existing[0]) {
     return {
-      id: Number(existing[0].id),
-      areaId: Number(existing[0].area_id),
-      nameEn: existing[0].name_en,
-      nameCn: existing[0].name_cn,
-      sortOrder: Number(existing[0].sort_order),
+      created: false,
+      item: {
+        id: Number(existing[0].id),
+        areaId: Number(existing[0].area_id),
+        nameEn: existing[0].name_en,
+        nameCn: existing[0].name_cn,
+        sortOrder: Number(existing[0].sort_order),
+      },
     };
   }
 
@@ -121,11 +124,14 @@ export async function createReportSubItem(
   );
 
   return {
-    id: Number(result.insertId),
-    areaId,
-    nameEn: en,
-    nameCn: cn,
-    sortOrder,
+    created: true,
+    item: {
+      id: Number(result.insertId),
+      areaId,
+      nameEn: en,
+      nameCn: cn,
+      sortOrder,
+    },
   };
 }
 

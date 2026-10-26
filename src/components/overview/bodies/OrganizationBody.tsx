@@ -1,15 +1,9 @@
 "use client";
 
 import type { ModuleCardData } from "@/data/overview";
+import { StatPill } from "@/components/ui/StatPill";
 import { getDict, useLang } from "@/lib/i18n";
-
-const DIVISION_STYLES = [
-  { bg: "#a855f7fc", text: "#ffffff" },
-  { bg: "#3b82f6fc", text: "#ffffff" },
-  { bg: "#f97316fc", text: "#ffffff" },
-] as const;
-
-const TREE_LINE = "rgba(100, 116, 139, 0.5)";
+import { OrgChartView } from "./OrgChartView";
 
 function DepartmentRateBar({
   label,
@@ -42,134 +36,98 @@ function DepartmentRateBar({
   );
 }
 
-function TreeLineVertical({ height = 20 }: { height?: number }) {
-  return (
-    <div
-      className="shrink-0"
-      style={{ width: 2, height, backgroundColor: TREE_LINE, borderRadius: 1 }}
-    />
-  );
-}
-
-function TreeLineHorizontal() {
-  return (
-    <div
-      className="absolute top-0"
-      style={{
-        left: "16.666%",
-        right: "16.666%",
-        height: 2,
-        backgroundColor: TREE_LINE,
-        borderRadius: 1,
-      }}
-    />
-  );
-}
-
-function OrgTreeSection({
-  chart,
-  personelLabel,
-  orgTreeTitle,
+export function OrganizationBody({
+  data,
+  expanded = false,
 }: {
-  chart: NonNullable<ModuleCardData["orgChart"]>;
-  personelLabel: string;
-  orgTreeTitle: string;
+  data: ModuleCardData;
+  expanded?: boolean;
 }) {
-  return (
-    <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-      <h4 className="mb-4 text-xs font-medium text-text-muted">{orgTreeTitle}</h4>
-
-      <div className="mx-auto max-w-full">
-        {/* Root */}
-        <div className="flex justify-center">
-          <span className="max-w-full rounded-md border-1 border-slate-400 bg-bg/50 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-text shadow-sm">
-            {chart.company}
-          </span>
-        </div>
-
-        <div className="flex justify-center">
-          <TreeLineVertical height={25} />
-        </div>
-
-        <div className="relative px-1 pt-0">
-          <TreeLineHorizontal />
-
-          <div className="grid grid-cols-3 gap-2">
-            {chart.divisions.map((division, index) => {
-              const style = DIVISION_STYLES[index] ?? DIVISION_STYLES[0];
-
-              return (
-                <div key={division.name} className="flex flex-col items-center">
-                  <TreeLineVertical height={25} />
-
-                  <span
-                    className="w-full truncate rounded-md border-2 px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide shadow-md"
-                    style={{
-                      backgroundColor: style.bg,
-                      borderColor: style.bg,
-                      color: style.text,
-                    }}
-                  >
-                    {division.name}
-                  </span>
-
-                  <TreeLineVertical height={12} />
-
-                  <span className="w-full rounded-md border-1 border-slate-400 bg-bg/60 px-2 py-1.5 text-center text-[9px] font-semibold uppercase tracking-wide text-text">
-                    {personelLabel} : {division.personnelCount}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export function OrganizationBody({ data }: { data: ModuleCardData }) {
   const { lang } = useLang();
   const t = getDict(lang);
   const chart = data.orgChart;
   const departments = data.departmentPerformance ?? [];
+  const stats = data.stats ?? [];
 
-  if (!chart && !departments.length) {
+  if (!chart && !departments.length && !stats.length) {
     return null;
   }
 
+  const showRightColumn = stats.length > 0 || departments.length > 0;
+
   return (
-    <div className="space-y-4">
+    <div
+      className={[
+        "grid min-h-0 flex-1 grid-cols-1 items-stretch gap-4",
+        showRightColumn ? "lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]" : "",
+      ].join(" ")}
+    >
       {chart ? (
-        <OrgTreeSection
-          chart={chart}
-          personelLabel={t.dashboard.personelLabel}
-          orgTreeTitle={t.dashboard.orgTree}
-        />
-      ) : null}
-
-      {departments.length ? (
-        <section className="rounded-lg border border-border-subtle bg-bg/30 p-3">
-          <div className="mb-3">
-            <h4 className="text-xs font-semibold text-text">
-              {t.dashboard.monthlyDepartmentPerformance}
-            </h4>
-            <p className="mt-0.5 text-[10px] text-text-muted">
-              {t.dashboard.monthlyDepartmentPerformanceDesc}
-            </p>
+        <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-border-subtle bg-bg/30 p-4">
+          <h4 className="mb-3 shrink-0 text-xs font-medium text-text-muted">{t.dashboard.orgTree}</h4>
+          <div className="mb-3 flex shrink-0 justify-center">
+            <div className="rounded-lg border border-border-subtle bg-bg/60 px-4 py-2 text-center">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-text">
+                {chart.company}
+              </div>
+            </div>
           </div>
-
-          <div className="space-y-3">
-            {departments.map((item, index) => (
-              <DepartmentRateBar
-                key={item.department}
-                label={item.department}
-                value={item.attendanceRate}
-                index={index}
-              />
-            ))}
+          <div className="min-h-0 flex-1">
+            <OrgChartView
+              chart={chart}
+              lang={lang}
+              fill={expanded}
+              labels={{
+                departmentManager: t.dashboard.orgDepartmentManager,
+                lead: t.dashboard.orgLead,
+                personel: t.dashboard.orgPersonelRole,
+              }}
+            />
           </div>
         </section>
+      ) : (
+        <div className="min-h-0" />
+      )}
+
+      {showRightColumn ? (
+        <div className="flex h-full min-h-0 flex-col gap-3">
+          {stats.length ? (
+            <div
+              className={[
+                "shrink-0 gap-2",
+                expanded ? "grid grid-cols-2" : "flex flex-col",
+              ].join(" ")}
+            >
+              {stats.map((stat) => (
+                <StatPill key={stat.label} stat={stat} />
+              ))}
+            </div>
+          ) : null}
+
+          {departments.length ? (
+            <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border-subtle bg-bg/30 p-3">
+              <div className="shrink-0">
+                <h4 className="text-xs font-semibold text-text">
+                  {t.dashboard.monthlyDepartmentPerformance}
+                </h4>
+                <p className="mt-0.5 text-[10px] text-text-muted">
+                  {t.dashboard.monthlyDepartmentPerformanceDesc}
+                </p>
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col justify-evenly">
+                {departments.map((item, index) => (
+                  <DepartmentRateBar
+                    key={item.department}
+                    label={item.department}
+                    value={item.attendanceRate}
+                    index={index}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

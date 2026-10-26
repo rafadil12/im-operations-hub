@@ -3,10 +3,7 @@ import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { computeOrganizationOverviewMetrics } from "@/lib/organization/overviewMetrics";
-import type {
-  OrganizationAttendanceRow,
-  OrganizationEmployeeRow,
-} from "@/lib/organization/types";
+import type { OrganizationAttendanceRow, OrganizationEmployeeRow } from "@/lib/organization/types";
 
 export const runtime = "nodejs";
 
@@ -47,7 +44,12 @@ export async function GET() {
           d.name_en AS division_name_en,
           eo.position_id,
           p.name_en AS position_name_en,
-          eo.employment_status
+          eo.employment_status,
+          EXISTS (
+            SELECT 1
+            FROM employee_organization child_eo
+            WHERE child_eo.manager_id = u.id
+          ) AS is_manager
         FROM users u
         LEFT JOIN employee_organization eo
           ON eo.user_id = u.id

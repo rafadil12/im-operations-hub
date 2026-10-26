@@ -10,21 +10,10 @@ import type { ReportTrendRow, ReportPeriodStatus } from "@/lib/report/types";
 import type { TrainingOverviewMetrics } from "@/lib/training/types";
 
 export type ModuleId =
-  | "itsm"
-  | "daily-operation"
-  | "safety"
-  | "sparepart"
-  | "organization"
-  | "report"
-  | "training";
+  "itsm" | "daily-operation" | "safety" | "sparepart" | "organization" | "report" | "training";
 
 export type ModuleLayout =
-  | "default"
-  | "safety"
-  | "sparepart"
-  | "organization"
-  | "report"
-  | "training";
+  "default" | "safety" | "sparepart" | "organization" | "report" | "training";
 
 export type StatItem = {
   label: string;
@@ -61,6 +50,18 @@ export type TrainingRow = {
   participants: number;
   completion: string;
   avgScore: string;
+};
+
+export type SparepartRecentUsedRow = {
+  date: string;
+  code: string;
+  nameEn: string;
+  nameCn: string;
+  qty: number;
+  uomCode: string;
+  uomNameCn: string;
+  docId: number;
+  lineNo: number;
 };
 
 export type ModuleCardData = {
@@ -110,10 +111,11 @@ export type ModuleCardData = {
   /** Organization hierarchy chart. */
   orgChart?: {
     company: string;
-    leader: string;
+    leader: { nameEn: string; nameCn: string };
     divisions: {
       name: string;
       personnelCount: number;
+      people?: { nameEn: string; nameCn: string; isLead?: boolean }[];
     }[];
   };
   /** Monthly department attendance breakdown. */
@@ -144,6 +146,8 @@ export type ModuleCardData = {
   };
   /** Training recent table. */
   recentRows?: TrainingRow[];
+  /** Sparepart recent goods-issue (201) lines. */
+  recentUsedRows?: SparepartRecentUsedRow[];
   /** Training division breakdown for expand-mode Recharts donut. */
   trainingByDivision?: TrainingOverviewMetrics["byDivision"];
   /** Set when live API data failed to load for this card. */
@@ -283,12 +287,13 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "organization",
-    number: 5,
+    number: 7,
     title: "ORGANIZATION DASHBOARD",
     icon: "organization",
     accentColor: "#38bdf8",
     href: "/organization/overview",
     layout: "organization",
+    colSpan: 3,
     stats: [
       { label: "Total Personel", value: EMPTY, tone: "accent" },
       { label: "Attendance Rate", value: EMPTY, tone: "success" },
@@ -302,22 +307,23 @@ export const dashboardModules: ModuleCardData[] = [
     },
     orgChart: {
       company: "Intelligent Manufacturing Department",
-      leader: "WANG CHUNLAI",
+      leader: { nameEn: "WANG CHUNLAI", nameCn: "王春来" },
       divisions: [
-        { name: "MES", personnelCount: 0 },
-        { name: "IT", personnelCount: 0 },
-        { name: "Intelligent Logistics", personnelCount: 0 },
+        { name: "MES", personnelCount: 0, people: [] },
+        { name: "IT", personnelCount: 0, people: [] },
+        { name: "Intelligent Logistics", personnelCount: 0, people: [] },
       ],
     },
   },
   {
     id: "training",
-    number: 6,
+    number: 5,
     title: "TRAINING DASHBOARD",
     icon: "training",
     accentColor: "#6366f1",
     href: "/training",
     layout: "training",
+    colSpan: 2,
     stats: [
       { label: "Total Training", value: "—", tone: "accent" },
       { label: "Participants", value: "—", tone: "accent" },
@@ -349,7 +355,7 @@ export const dashboardModules: ModuleCardData[] = [
   },
   {
     id: "report",
-    number: 7,
+    number: 6,
     title: "REPORT DASHBOARD",
     icon: "report",
     accentColor: "#eab308",

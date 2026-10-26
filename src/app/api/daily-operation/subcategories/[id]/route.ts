@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import {
+  hasDetail,
+  identityChange,
+  linkChange,
+  loadCategoryName,
+  nameChanges,
+} from "@/lib/logs-center/dailyRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 
 type Ctx = { params: Promise<{ id: string }> };
 type CountRow = { c: number };
@@ -23,13 +31,49 @@ export async function PUT(request: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: "Category is required." }, { status: 400 });
     }
 
-    const result = await execute(
-      "UPDATE subcategories SET category_id = ?, name_cn = ?, name_en = ? WHERE id = ?",
-      [category_id, name_cn, name_en, Number(id)]
+    const subcategoryId = Number(id);
+    const existing = await query<
+      { name_en: string | null; name_cn: string | null; category_id: number | null }[]
+    >(
+      "SELECT name_en, name_cn, category_id FROM daily_operation_subcategories WHERE id = ? LIMIT 1",
+      [subcategoryId]
+    );
+    if (!existing[0]) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+
+    const beforeCategoryId =
+      existing[0].category_id == null ? null : Number(existing[0].category_id);
+    const [beforeCategory, category] = await Promise.all([
+      loadCategoryName(beforeCategoryId),
+      loadCategoryName(category_id),
+    ]);
+    if (!category) {
+      return NextResponse.json({ error: "Category not found." }, { status: 404 });
+    }
+
+    const changes = nameChanges(existing[0], { name_en, name_cn });
+    const categoryChange = linkChange("category", beforeCategory, category);
+    if (categoryChange) changes.push(categoryChange);
+    if (!hasDetail(changes)) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const result = await suppressLogsCenter(() =>
+      execute(
+        "UPDATE daily_operation_subcategories SET category_id = ?, name_cn = ?, name_en = ? WHERE id = ?",
+        [category_id, name_cn, name_en, subcategoryId]
+      )
     );
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
+    await recordLogsCenter({
+      module: "daily-operation",
+      action: "update",
+      objectType: "subcategory",
+      changes,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("PUT /subcategories/[id] failed", error);
@@ -44,9 +88,18 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
     const numId = Number(id);
+    const existing = await query<
+      { name_en: string | null; name_cn: string | null; category_id: number | null }[]
+    >(
+      "SELECT name_en, name_cn, category_id FROM daily_operation_subcategories WHERE id = ? LIMIT 1",
+      [numId]
+    );
+    if (!existing[0]) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
 
     const used = await query<CountRow[]>(
-      "SELECT COUNT(*) AS c FROM mes_record WHERE subcategory_id = ? AND deleted_at IS NULL",
+      "SELECT COUNT(*) AS c FROM daily_operation_record WHERE subcategory_id = ? AND deleted_at IS NULL",
       [numId]
     );
     if (Number(used[0]?.c ?? 0) > 0) {
@@ -56,10 +109,25 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
       );
     }
 
-    const result = await execute("DELETE FROM subcategories WHERE id = ?", [numId]);
+    const category = await loadCategoryName(
+      existing[0].category_id == null ? null : Number(existing[0].category_id)
+    );
+    const categoryChange = linkChange("category", null, category);
+    const result = await suppressLogsCenter(() =>
+      execute("DELETE FROM daily_operation_subcategories WHERE id = ?", [numId])
+    );
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
+    await recordLogsCenter({
+      module: "daily-operation",
+      action: "delete",
+      objectType: "subcategory",
+      changes: [
+        identityChange(existing[0]),
+        ...(categoryChange ? [categoryChange] : []),
+      ],
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("DELETE /subcategories/[id] failed", error);

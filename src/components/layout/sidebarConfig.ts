@@ -129,6 +129,44 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    id: "training",
+    labelKey: "training",
+    icon: "training",
+    children: [
+      { id: "overview", labelKey: "overview", href: "/training" },
+      { id: "session", labelKey: "session", href: "/training/session" },
+    ],
+  },
+  {
+    id: "report",
+    labelKey: "report",
+    icon: "report",
+    children: [
+      { id: "overview", labelKey: "overview", href: "/report" },
+      {
+        id: "weekly-report",
+        labelKey: "reportWeeklyReport",
+        children: [
+          {
+            id: "summary",
+            labelKey: "reportSummary",
+            href: "/report/summary",
+          },
+          {
+            id: "reports",
+            labelKey: "reportReports",
+            href: "/report/reports",
+          },
+        ],
+      },
+      {
+        id: "projects",
+        labelKey: "reportProjects",
+        href: "/report/projects",
+      },
+    ],
+  },
+  {
     id: "organization",
     labelKey: "organization",
     icon: "organization",
@@ -176,44 +214,6 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    id: "training",
-    labelKey: "training",
-    icon: "training",
-    children: [
-      { id: "overview", labelKey: "overview", href: "/training" },
-      { id: "session", labelKey: "session", href: "/training/session" },
-    ],
-  },
-  {
-    id: "report",
-    labelKey: "report",
-    icon: "report",
-    children: [
-      { id: "overview", labelKey: "overview", href: "/report" },
-      {
-        id: "weekly-report",
-        labelKey: "reportWeeklyReport",
-        children: [
-          {
-            id: "summary",
-            labelKey: "reportSummary",
-            href: "/report/summary",
-          },
-          {
-            id: "reports",
-            labelKey: "reportReports",
-            href: "/report/reports",
-          },
-        ],
-      },
-      {
-        id: "projects",
-        labelKey: "reportProjects",
-        href: "/report/projects",
-      },
-    ],
-  },
-  {
     id: "settings",
     labelKey: "settings",
     icon: "settings",
@@ -225,6 +225,12 @@ export const navItems: NavItem[] = [
         href: "/settings/accounts",
       },
     ],
+  },
+  {
+    id: "logs-center",
+    labelKey: "logsCenter",
+    href: "/logs-center",
+    icon: "logs-center",
   },
 ];
 

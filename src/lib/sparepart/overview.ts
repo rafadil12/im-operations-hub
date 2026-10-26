@@ -74,12 +74,10 @@ export type SparepartOverviewTopUsedItem = {
   qty: number;
 };
 
+/** Trend row: date + one numeric series per category code (dynamic from DB). */
 export type SparepartOverviewTrendPoint = {
   date: string;
-  IT: number;
-  AGV: number;
-  ASSEMBLY: number;
-  MES: number;
+  [categoryCode: string]: string | number;
 };
 
 export type SparepartOverviewLocationStock = {

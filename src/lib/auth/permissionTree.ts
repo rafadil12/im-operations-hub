@@ -198,37 +198,6 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
     ],
   },
   {
-    id: "organization",
-    label: { source: "nav", key: "organization" },
-    children: [
-      {
-        id: "organization-overview",
-        label: { source: "nav", key: "overview" },
-        codes: [PERMISSIONS.organizationOverviewView],
-      },
-      {
-        id: "organization-employees",
-        label: { source: "nav", key: "moduleManagement" },
-        codes: [
-          PERMISSIONS.organizationEmployeeRead,
-          PERMISSIONS.organizationEmployeeCreate,
-          PERMISSIONS.organizationEmployeeUpdate,
-          PERMISSIONS.organizationEmployeeDelete,
-        ],
-      },
-      {
-        id: "organization-shift",
-        label: { source: "nav", key: "shift" },
-        codes: [PERMISSIONS.organizationShiftRead, PERMISSIONS.organizationShiftManage],
-      },
-      {
-        id: "organization-attendance",
-        label: { source: "nav", key: "attendance" },
-        codes: [PERMISSIONS.organizationAttendanceRead, PERMISSIONS.organizationAttendanceManage],
-      },
-    ],
-  },
-  {
     id: "training",
     label: { source: "nav", key: "training" },
     children: [
@@ -279,6 +248,37 @@ export const PERMISSION_TREE: PermissionTreeDef[] = [
           PERMISSIONS.reportProjectUpdate,
           PERMISSIONS.reportProjectDelete,
         ],
+      },
+    ],
+  },
+  {
+    id: "organization",
+    label: { source: "nav", key: "organization" },
+    children: [
+      {
+        id: "organization-overview",
+        label: { source: "nav", key: "overview" },
+        codes: [PERMISSIONS.organizationOverviewView],
+      },
+      {
+        id: "organization-employees",
+        label: { source: "nav", key: "moduleManagement" },
+        codes: [
+          PERMISSIONS.organizationEmployeeRead,
+          PERMISSIONS.organizationEmployeeCreate,
+          PERMISSIONS.organizationEmployeeUpdate,
+          PERMISSIONS.organizationEmployeeDelete,
+        ],
+      },
+      {
+        id: "organization-shift",
+        label: { source: "nav", key: "shift" },
+        codes: [PERMISSIONS.organizationShiftRead, PERMISSIONS.organizationShiftManage],
+      },
+      {
+        id: "organization-attendance",
+        label: { source: "nav", key: "attendance" },
+        codes: [PERMISSIONS.organizationAttendanceRead, PERMISSIONS.organizationAttendanceManage],
       },
     ],
   },

@@ -14,9 +14,11 @@ import {
   requirePermission,
 } from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
+import type { RemarkChange } from "@/lib/logs-center/renderRemark";
 
 async function roleIsPrivileged(roleId: number): Promise<boolean> {
-  const roles = await query<RowDataPacket[]>("SELECT name FROM roles WHERE id = ? LIMIT 1", [
+  const roles = await query<RowDataPacket[]>("SELECT name FROM access_roles WHERE id = ? LIMIT 1", [
     roleId,
   ]);
   const name = roles[0]?.name;
@@ -44,7 +46,7 @@ export async function GET() {
          r.name AS role_name
        FROM system_users su
        INNER JOIN users u ON u.id = su.user_id
-       LEFT JOIN roles r ON r.id = su.role_id
+       LEFT JOIN access_roles r ON r.id = su.role_id
        ORDER BY u.employee_no`
     );
 
@@ -157,15 +159,17 @@ export async function POST(request: NextRequest) {
       passwordToSet = newPassword;
     }
 
+    let assignedRoleName: string | null = null;
     if (roleId !== null) {
       const roles = await query<RowDataPacket[]>(
-        "SELECT id, name FROM roles WHERE id = ? LIMIT 1",
+        "SELECT id, name FROM access_roles WHERE id = ? LIMIT 1",
         [roleId]
       );
       if (!roles[0]) {
         return NextResponse.json({ error: "Role not found." }, { status: 404 });
       }
       const roleName = String(roles[0].name ?? "");
+      assignedRoleName = roleName;
       if (isProtectedRoleName(roleName)) {
         return NextResponse.json(
           { error: "The Super Admin role cannot be assigned." },
@@ -207,7 +211,8 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await hashPassword(passwordToSet);
-    const created = await withTransaction(async (conn) => {
+    const created = await suppressLogsCenter(() =>
+      withTransaction(async (conn) => {
       const [userResult] = await conn.execute(
         "INSERT INTO users (employee_no, name_cn, name_en, division_id) VALUES (?, ?, ?, ?)",
         [employeeNo, nameCn, nameEn, divisionId]
@@ -223,6 +228,17 @@ export async function POST(request: NextRequest) {
         id: Number((accountResult as { insertId: number }).insertId),
         userId,
       };
+    })
+    );
+
+    const changes: RemarkChange[] = [{ field: "name", to: nameEn, toCn: nameCn }];
+    if (assignedRoleName) changes.push({ field: "role", to: assignedRoleName });
+    await recordLogsCenter({
+      module: "settings",
+      action: "create",
+      objectType: "account",
+      objectRef: employeeNo,
+      changes,
     });
 
     return NextResponse.json(

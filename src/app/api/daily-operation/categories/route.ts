@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { identityChange, linkChange, loadDivision } from "@/lib/logs-center/dailyRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import type { Category } from "@/lib/types";
 
 export async function GET() {
@@ -9,7 +11,7 @@ export async function GET() {
 
   try {
     const rows = await query<Category[]>(
-      "SELECT id, name_cn, name_en, division_id FROM categories ORDER BY name_en"
+      "SELECT id, name_cn, name_en, division_id FROM daily_operation_categories ORDER BY name_en"
     );
     return NextResponse.json({ rows });
   } catch (error) {
@@ -32,10 +34,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name (EN or CN) is required." }, { status: 400 });
     }
 
-    const result = await execute(
-      "INSERT INTO categories (name_cn, name_en, division_id) VALUES (?, ?, ?)",
-      [name_cn, name_en, division_id]
+    const division = await loadDivision(division_id);
+    if (division_id && !division) {
+      return NextResponse.json({ error: "Division not found." }, { status: 404 });
+    }
+
+    const result = await suppressLogsCenter(() =>
+      execute(
+        "INSERT INTO daily_operation_categories (name_cn, name_en, division_id) VALUES (?, ?, ?)",
+        [name_cn, name_en, division_id]
+      )
     );
+    const divisionChange = linkChange("division", null, division);
+    await recordLogsCenter({
+      module: "daily-operation",
+      action: "create",
+      objectType: "category",
+      changes: [
+        identityChange({ name_en, name_cn }),
+        ...(divisionChange ? [divisionChange] : []),
+      ],
+    });
     return NextResponse.json({ id: result.insertId }, { status: 201 });
   } catch (error) {
     console.error("POST /categories failed", error);

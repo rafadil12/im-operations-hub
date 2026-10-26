@@ -9,6 +9,10 @@ import {
   query,
   withTransaction,
 } from "@/lib/db";
+import {
+  employeeCreateEvent,
+  recordOrganization,
+} from "@/lib/logs-center/organizationRemark";
 
 type EmployeeRow = {
   id: number;
@@ -554,6 +558,48 @@ export async function POST(
       );
     }
 
+    let positionEn = "";
+    let positionCn = "";
+    if (positionId) {
+      const positionRows = await query<
+        { name_en: string | null; name_cn: string | null }[]
+      >(
+        `
+        SELECT name_en, name_cn
+        FROM positions
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [positionId],
+      );
+      positionEn = positionRows[0]?.name_en ?? "";
+      positionCn = positionRows[0]?.name_cn ?? "";
+    }
+
+    let managerNo = "";
+    let managerEn = "";
+    let managerCn = "";
+    if (managerId) {
+      const managerRows = await query<
+        {
+          employee_no: string;
+          name_en: string | null;
+          name_cn: string | null;
+        }[]
+      >(
+        `
+        SELECT employee_no, name_en, name_cn
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [managerId],
+      );
+      managerNo = managerRows[0]?.employee_no ?? "";
+      managerEn = managerRows[0]?.name_en ?? "";
+      managerCn = managerRows[0]?.name_cn ?? "";
+    }
+
     const result = await withTransaction(async (conn) => {
       await conn.execute(
         `
@@ -595,6 +641,30 @@ export async function POST(
 
       return insertResult;
     });
+
+    await recordOrganization(
+      employeeCreateEvent(
+        {
+          employeeNo: employeeId,
+          nameEn: name,
+          nameCn: nameCn ?? "",
+        },
+        {
+          positionEn,
+          positionCn,
+          divisionEn: divisionRows[0].name_en,
+          divisionCn: divisionRows[0].name_cn ?? "",
+          status: String(employmentStatus),
+          employmentType: String(employmentType),
+          joinDate: joinDate ?? "",
+          location: workLocation ?? "",
+          team: teamName ?? "",
+          managerNo,
+          managerEn,
+          managerCn,
+        },
+      ),
+    );
 
     return NextResponse.json(
       {

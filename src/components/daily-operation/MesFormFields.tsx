@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { localizedName, type Dict } from "@/lib/i18n";
 import type { MesFieldKey } from "@/lib/daily-operation/mesRecordValidation";
@@ -19,6 +20,7 @@ type Props = {
   masters: Masters;
   saving: boolean;
   lockIdentityFields: boolean;
+  lockType?: boolean;
   divisionId: number | null;
   userId: number | null;
   categoryId: number | null;
@@ -49,6 +51,7 @@ type Props = {
   setDescriptionEn: (value: string) => void;
   setSolutionCn: (value: string) => void;
   setSolutionEn: (value: string) => void;
+  afterStatus?: ReactNode;
 };
 
 export function MesFormFields(props: Props) {
@@ -58,6 +61,7 @@ export function MesFormFields(props: Props) {
     masters,
     saving,
     lockIdentityFields,
+    lockType = false,
     divisionId,
     userId,
     categoryId,
@@ -88,6 +92,7 @@ export function MesFormFields(props: Props) {
     setDescriptionEn,
     setSolutionCn,
     setSolutionEn,
+    afterStatus,
   } = props;
 
   return (
@@ -208,7 +213,7 @@ export function MesFormFields(props: Props) {
           data-mes-field="type_id"
           className={`${inputCls} ${markInvalid("type_id") ? inputErrorCls : ""}`}
           value={typeId ?? ""}
-          disabled={saving}
+          disabled={saving || lockType}
           aria-invalid={markInvalid("type_id")}
           onChange={(e) => {
             clearFieldError("type_id");
@@ -253,6 +258,8 @@ export function MesFormFields(props: Props) {
           <p className="mt-1 text-[11px] text-danger">{errMsg("status_id")}</p>
         ) : null}
       </div>
+
+      {afterStatus ? <div className="md:col-span-2">{afterStatus}</div> : null}
 
       <div>
         <label className={labelCls}>

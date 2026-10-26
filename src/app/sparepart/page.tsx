@@ -9,7 +9,7 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { apiGetAbs, getApiErrorMessage } from "@/lib/apiClient";
 import { getCurrentMonth, toDateInput } from "@/lib/dateRange";
 import { useLang } from "@/lib/i18n";
-import { normalizeCategoryCode } from "@/lib/sparepart/categories";
+import { canonicalCategoryCode } from "@/lib/sparepart/categories";
 import { overviewMatchesFilters, type SparepartOverviewData } from "@/lib/sparepart/overview";
 import { SkeletonPage } from "@/components/ui/skeletons";
 
@@ -53,7 +53,7 @@ export default function SparepartIndexPage() {
       setCategory(null);
       return;
     }
-    setCategory(normalizeCategoryCode(code) ?? code.trim().toUpperCase());
+    setCategory(canonicalCategoryCode(code));
   };
 
   useEffect(() => {

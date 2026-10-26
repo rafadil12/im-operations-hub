@@ -63,7 +63,7 @@ export function Sidebar() {
     return navItems
       .filter((item) => {
         if (item.id === "dashboard") return canViewOverview;
-        if (item.id === "settings") {
+        if (item.id === "settings" || item.id === "logs-center") {
           return !settingsAdminOnly || canAccessSettings;
         }
         if (item.id === "itsm") {

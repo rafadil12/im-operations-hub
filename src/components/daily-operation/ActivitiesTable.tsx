@@ -16,6 +16,7 @@ type Props = {
   pageSize: PageSize;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: PageSize) => void;
+  onView?: (row: MesDataRow) => void;
   onEdit?: (row: MesDataRow) => void;
   onDelete?: (row: MesDataRow) => void;
 };
@@ -30,6 +31,7 @@ export function ActivitiesTable({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  onView,
   onEdit,
   onDelete,
 }: Props) {
@@ -52,9 +54,23 @@ export function ActivitiesTable({
   return (
     <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+        <table className="w-full min-w-[68rem] table-fixed border-collapse">
+          <colgroup>
+            <col style={{ width: "4%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "12%" }} />
+          </colgroup>
           <thead className="border-b border-border-subtle bg-bg/40">
             <tr>
+              <th className={th}>{t.fields.id}</th>
               <th className={th}>{t.fields.pic}</th>
               <th className={th}>{t.fields.division}</th>
               <th className={th}>{t.fields.category}</th>
@@ -73,32 +89,52 @@ export function ActivitiesTable({
                 key={row.id}
                 className="border-b border-border-subtle/60 last:border-0 hover:bg-surface-hover/50"
               >
-                <td className={`${td} whitespace-nowrap text-text`}>
-                  {localizedField(row.pic_en, row.pic_cn, lang)}
+                <td className={`${td} whitespace-nowrap font-medium tabular-nums text-text`}>
+                  {row.id}
                 </td>
-                <td className={`${td} whitespace-nowrap`}>
-                  {localizedField(row.division_en, row.division_cn, lang)}
+                <td className={`${td} text-text`}>
+                  <span className="block truncate" title={localizedField(row.pic_en, row.pic_cn, lang)}>
+                    {localizedField(row.pic_en, row.pic_cn, lang)}
+                  </span>
                 </td>
-                <td className={`${td} whitespace-nowrap`}>
-                  {localizedField(row.category_en, row.category_cn, lang)}
+                <td className={td}>
+                  <span
+                    className="block truncate"
+                    title={localizedField(row.division_en, row.division_cn, lang)}
+                  >
+                    {localizedField(row.division_en, row.division_cn, lang)}
+                  </span>
+                </td>
+                <td className={td}>
+                  <span
+                    className="block truncate"
+                    title={localizedField(row.category_en, row.category_cn, lang)}
+                  >
+                    {localizedField(row.category_en, row.category_cn, lang)}
+                  </span>
                   {row.subcategory_en || row.subcategory_cn ? (
-                    <span className="block text-[10px] text-text-dim">
+                    <span
+                      className="block truncate text-[10px] text-text-dim"
+                      title={localizedField(row.subcategory_en, row.subcategory_cn, lang)}
+                    >
                       {localizedField(row.subcategory_en, row.subcategory_cn, lang)}
                     </span>
                   ) : null}
                 </td>
-                <td className={`${td} max-w-xs`}>
+                <td className={td}>
                   <span className="line-clamp-2">
                     {localizedField(row.description_en, row.description_cn, lang)}
                   </span>
                 </td>
-                <td className={`${td} max-w-xs`}>
+                <td className={td}>
                   <span className="line-clamp-2">
                     {localizedField(row.solution_en, row.solution_cn, lang)}
                   </span>
                 </td>
-                <td className={`${td} whitespace-nowrap`}>
-                  {localizedField(row.type_en, row.type_cn, lang)}
+                <td className={td}>
+                  <span className="block truncate" title={localizedField(row.type_en, row.type_cn, lang)}>
+                    {localizedField(row.type_en, row.type_cn, lang)}
+                  </span>
                 </td>
                 <td className={td}>
                   <StatusBadge
@@ -109,13 +145,22 @@ export function ActivitiesTable({
                 <td className={`${td} whitespace-nowrap`}>{formatDisplay(row.start_time)}</td>
                 <td className={`${td} whitespace-nowrap`}>{formatDisplay(row.end_time)}</td>
                 <td className={`${td} whitespace-nowrap`}>
-                  {onEdit || onDelete ? (
-                    <div className="flex gap-1.5">
+                  {onView || onEdit || onDelete ? (
+                    <div className="flex gap-1">
+                      {onView ? (
+                        <button
+                          type="button"
+                          onClick={() => onView(row)}
+                          className="rounded border border-border px-1.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text"
+                        >
+                          {t.common.view}
+                        </button>
+                      ) : null}
                       {onEdit ? (
                         <button
                           type="button"
                           onClick={() => onEdit(row)}
-                          className="rounded border border-border px-2 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text"
+                          className="rounded border border-border px-1.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text"
                         >
                           {t.common.edit}
                         </button>
@@ -124,7 +169,7 @@ export function ActivitiesTable({
                         <button
                           type="button"
                           onClick={() => onDelete(row)}
-                          className="rounded border border-danger/40 px-2 py-1 text-[11px] text-danger hover:bg-danger/10"
+                          className="rounded border border-danger/40 px-1.5 py-1 text-[11px] text-danger hover:bg-danger/10"
                         >
                           {t.common.delete}
                         </button>

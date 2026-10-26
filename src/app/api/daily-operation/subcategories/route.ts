@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { identityChange, linkChange, loadCategoryName } from "@/lib/logs-center/dailyRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 import type { Subcategory } from "@/lib/types";
 
 export async function GET() {
@@ -9,7 +11,7 @@ export async function GET() {
 
   try {
     const rows = await query<Subcategory[]>(
-      "SELECT id, category_id, name_cn, name_en FROM subcategories ORDER BY name_en"
+      "SELECT id, category_id, name_cn, name_en FROM daily_operation_subcategories ORDER BY name_en"
     );
     return NextResponse.json({ rows });
   } catch (error) {
@@ -35,10 +37,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Category is required." }, { status: 400 });
     }
 
-    const result = await execute(
-      "INSERT INTO subcategories (category_id, name_cn, name_en) VALUES (?, ?, ?)",
-      [category_id, name_cn, name_en]
+    const category = await loadCategoryName(category_id);
+    if (!category) {
+      return NextResponse.json({ error: "Category not found." }, { status: 404 });
+    }
+
+    const result = await suppressLogsCenter(() =>
+      execute(
+        "INSERT INTO daily_operation_subcategories (category_id, name_cn, name_en) VALUES (?, ?, ?)",
+        [category_id, name_cn, name_en]
+      )
     );
+    const categoryChange = linkChange("category", null, category);
+    await recordLogsCenter({
+      module: "daily-operation",
+      action: "create",
+      objectType: "subcategory",
+      changes: [
+        identityChange({ name_en, name_cn }),
+        ...(categoryChange ? [categoryChange] : []),
+      ],
+    });
     return NextResponse.json({ id: result.insertId }, { status: 201 });
   } catch (error) {
     console.error("POST /subcategories failed", error);

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   authenticateLogin,
   createSessionToken,
+  findAccountByEmployeeNo,
   MAX_AGE_SECONDS,
   setSessionCookie,
 } from "@/lib/auth";
+import { recordLogsCenter } from "@/lib/logs-center/record";
 import {
   clearLoginFailures,
   createLoginAttemptStore,
@@ -17,11 +19,18 @@ import {
 
 const loginAttempts = createLoginAttemptStore();
 
-/**
- * Resolve client IP for rate limiting.
- * Only trust X-Forwarded-For / X-Real-IP when TRUST_PROXY=1 (behind a
- * reverse proxy that strips client-supplied forwarded headers).
- */
+async function actorForTypedLogin(login: string) {
+  const employeeNo = login.trim().slice(0, 255);
+  const row = await findAccountByEmployeeNo(employeeNo);
+  if (!row) return { actorLabel: employeeNo };
+  return {
+    actorSystemUserId: row.system_user_id,
+    actorUserId: row.user_id,
+    actorLabel: row.name_en || row.name_cn || employeeNo,
+  };
+}
+
+/** Client IP for rate limiting. Trust forwarded headers only when TRUST_PROXY=1. */
 function clientIp(request: NextRequest): string {
   if (process.env.TRUST_PROXY === "1") {
     const forwarded = request.headers.get("x-forwarded-for");
@@ -66,6 +75,13 @@ export async function POST(request: NextRequest) {
     const result = await authenticateLogin(login, password);
     if (!result.ok) {
       if (result.code === "inactive") {
+        await recordLogsCenter({
+          module: "auth",
+          action: "login",
+          objectType: "session",
+          changes: [{ field: "result", to: "inactive" }],
+          ...(await actorForTypedLogin(login)),
+        });
         return NextResponse.json(
           {
             error: "This account is inactive. Contact an administrator.",
@@ -76,6 +92,13 @@ export async function POST(request: NextRequest) {
       }
       recordLoginFailure(loginAttempts, key);
       recordLoginFailure(loginAttempts, ipKey);
+      await recordLogsCenter({
+        module: "auth",
+        action: "login",
+        objectType: "session",
+        changes: [{ field: "result", to: "failed" }],
+        ...(await actorForTypedLogin(login)),
+      });
       return NextResponse.json(
         { error: "Invalid employee ID or password.", code: "invalid_credentials" },
         { status: 401 }
@@ -84,6 +107,15 @@ export async function POST(request: NextRequest) {
 
     const account = result.account;
     clearLoginFailures(loginAttempts, key);
+    await recordLogsCenter({
+      module: "auth",
+      action: "login",
+      objectType: "session",
+      changes: [{ field: "result", to: "signed_in" }],
+      actorSystemUserId: account.systemUserId,
+      actorUserId: account.id,
+      actorLabel: account.displayName,
+    });
 
     const maxAgeSeconds = remember ? MAX_AGE_SECONDS : 60 * 60 * 12;
     const token = createSessionToken({
