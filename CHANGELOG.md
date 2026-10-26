@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-26
+
+### Added
+
+- Logs Center writes one remark for each successful save. The sentence
+  names the object and what changed, in English and in Chinese.
+- The Chinese sentence is stored and included in search. The screen shows
+  the sentence for the selected language, and the actor line shows the
+  localized name with the employee number.
+- Named remarks cover password changes, accounts, roles, sparepart
+  movements and masters, daily operation imports and masters, weekly
+  reports, safety reports, training sessions, ITSM imports, and
+  organization employees, leave, attendance, and shifts.
+- Logs Center stores the Chinese sentence and the structured change on
+  `logs_center_events`. The migration runner adds those columns when they
+  are missing.
+
+### Changed
+
+- Changing your own password is recorded as an account update: Change
+  Password.
+- An unchanged save, a failed validation, and an import that changes
+  nothing write no remark.
+- An ITSM import remark counts new requests and updated requests
+  separately.
+- The action filter includes Save, Submit, Reopen, and Import.
+
 ## [0.14.1] - 2026-10-08
 
 ### Changed
