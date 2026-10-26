@@ -25,6 +25,7 @@ const ACTIONS = new Set([
   "save",
   "submit",
   "reopen",
+  "import",
 ]);
 
 type LogRow = {
