@@ -4,6 +4,14 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { accountHasPermission, PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
+import {
+  recordSafetyReport,
+  safetyCreateDetail,
+  safetyUpdateDetail,
+  toSafetySnapshot,
+  type SafetySnapshot,
+} from "@/lib/logs-center/safetyRemark";
 import { getExtension, getSafetyUploadDir, sanitizeFileName } from "@/lib/safety/upload";
 import { jsonError, normalizeWeeklyActivityType } from "@/lib/safety/apiHelpers";
 import {
@@ -203,6 +211,14 @@ export async function POST(request: Request) {
     const existing = await query<
       Array<{
         id: number;
+        status: string | null;
+        submission_date: string | null;
+        pic: string | null;
+        pic_en: string | null;
+        pic_cn: string | null;
+        location: string | null;
+        description_en: string | null;
+        description_cn: string | null;
         file_name: string | null;
         file_url: string | null;
       }>
@@ -210,6 +226,14 @@ export async function POST(request: Request) {
       `
           SELECT
             id,
+            status,
+            submission_date,
+            pic,
+            pic_en,
+            pic_cn,
+            location,
+            description_en,
+            description_cn,
             file_name,
             file_url
           FROM safety_submissions
@@ -312,15 +336,31 @@ export async function POST(request: Request) {
     // langsung menjadi completed.
     // HSE tidak lagi memakai status checklist/not_submitted.
     const status = "completed";
+    const beforeRow = existing[0] ?? null;
+    const afterSnapshot: SafetySnapshot = {
+      status,
+      submissionDate,
+      picEn,
+      picCn,
+      location,
+      descriptionEn,
+      descriptionCn,
+    };
+    const detail = beforeRow
+      ? safetyUpdateDetail(toSafetySnapshot(beforeRow), afterSnapshot, savedFiles.length > 0)
+      : safetyCreateDetail({ fileCount: savedFiles.length });
 
-    if (existing.length > 0) {
+    submissionId = await suppressLogsCenter(async () => {
+      let id: number;
+
+      if (existing.length > 0) {
       /*
        * ============================
        * UPDATE DATA LAMA
        * ============================
        */
 
-      submissionId = Number(existing[0].id);
+      id = Number(existing[0].id);
 
       /*
        * Kalau tidak ada file baru,
@@ -362,7 +402,7 @@ export async function POST(request: Request) {
           descriptionCn,
           finalFileName,
           finalFileUrl,
-          submissionId,
+          id,
         ]
       );
 
@@ -378,7 +418,7 @@ export async function POST(request: Request) {
               safety_submission_files
             WHERE submission_id = ?
           `,
-          [submissionId]
+          [id]
         );
       }
     } else {
@@ -449,7 +489,7 @@ export async function POST(request: Request) {
         ]
       );
 
-      submissionId = Number(result.insertId);
+      id = Number(result.insertId);
     }
 
     /*
@@ -494,7 +534,7 @@ export async function POST(request: Request) {
           )
         `,
         [
-          submissionId,
+          id,
           file.originalName,
           file.storedName,
           file.url,
@@ -504,6 +544,21 @@ export async function POST(request: Request) {
           index,
         ]
       );
+    }
+
+    return id;
+    });
+
+    if (!beforeRow || detail) {
+      await recordSafetyReport({
+        action: beforeRow ? "update" : "submit",
+        kind: "weekly",
+        week,
+        year,
+        month,
+        activityType,
+        detail,
+      });
     }
 
     return NextResponse.json({
