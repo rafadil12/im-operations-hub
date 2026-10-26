@@ -232,6 +232,16 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
 
   const field =
     "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-accent";
+  const lockedField = `${field} pointer-events-none cursor-default bg-bg/60 text-text-muted`;
+  const categoryLabel = initial
+    ? localizedName(
+        categories.find((row) => row.id === initial.category_id) ?? {
+          name_en: initial.category_name_en ?? null,
+          name_cn: initial.category_name_cn ?? null,
+        },
+        lang
+      )
+    : "";
   const bilingualArea = `${field} min-h-0 resize-y`;
   const card =
     "flex size-24 shrink-0 flex-col items-center justify-center overflow-hidden rounded-md border bg-bg";
@@ -280,24 +290,35 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel required>{t.sparepart.category}</FieldLabel>
-                <SparepartDropdown
-                  className="w-full"
-                  value={categoryId}
-                  onChange={setCategoryId}
-                  options={categories.map((row) => ({
-                    value: String(row.id),
-                    label: localizedName(row, lang),
-                  }))}
-                  placeholder={t.sparepart.category}
-                  disabled={busy}
-                  onAdd={() => setCreateKind("category")}
-                  addLabel={`+ ${t.sparepart.addCategory}`}
-                />
+                {initial ? (
+                  <input
+                    className={lockedField}
+                    value={categoryLabel === "-" ? "" : categoryLabel}
+                    readOnly
+                    tabIndex={-1}
+                    aria-readonly="true"
+                    onFocus={(e) => e.currentTarget.blur()}
+                  />
+                ) : (
+                  <SparepartDropdown
+                    className="w-full"
+                    value={categoryId}
+                    onChange={setCategoryId}
+                    options={categories.map((row) => ({
+                      value: String(row.id),
+                      label: localizedName(row, lang),
+                    }))}
+                    placeholder={t.sparepart.category}
+                    disabled={busy}
+                    onAdd={() => setCreateKind("category")}
+                    addLabel={`+ ${t.sparepart.addCategory}`}
+                  />
+                )}
               </div>
               <div>
                 <FieldLabel>{t.sparepart.code}</FieldLabel>
                 <input
-                  className={`${field} pointer-events-none cursor-default bg-bg/60 text-text-muted`}
+                  className={lockedField}
                   value={code}
                   readOnly
                   tabIndex={-1}
@@ -466,7 +487,9 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
                       className={`${card} cursor-pointer border-dashed border-border text-text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-60`}
                     >
                       <span className="text-2xl leading-none">+</span>
-                      <span className="mt-1 text-[11px] font-medium">{t.sparepart.imageUpload}</span>
+                      <span className="mt-1 text-[11px] font-medium">
+                        {t.sparepart.imageUpload}
+                      </span>
                     </button>
                   )}
                   <input
@@ -516,9 +539,7 @@ export function ItemForm({ initial, onClose, onSubmit }: Props) {
       {createKind ? (
         <SparepartMasterCreateDialog
           title={createKind === "category" ? t.sparepart.addCategory : t.sparepart.addUom}
-          endpoint={
-            createKind === "category" ? "/api/sparepart/categories" : "/api/sparepart/uoms"
-          }
+          endpoint={createKind === "category" ? "/api/sparepart/categories" : "/api/sparepart/uoms"}
           onClose={() => setCreateKind(null)}
           onCreated={(row) => {
             if (createKind === "category") {
