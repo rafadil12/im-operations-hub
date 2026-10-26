@@ -200,6 +200,64 @@ function attachmentSentence(event: RemarkEvent, lang: "en" | "cn"): string | nul
   return null;
 }
 
+function safetySentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
+  const weekly = event.objectType === "weekly safety report";
+  const monthly = event.objectType === "monthly safety report";
+  if (!weekly && !monthly) return null;
+
+  const verb =
+    event.action === "delete"
+      ? lang === "cn"
+        ? "已删除"
+        : "Removed"
+      : event.action === "update"
+        ? lang === "cn"
+          ? "已更新"
+          : "Updated"
+        : lang === "cn"
+          ? "已提交"
+          : "Submitted";
+  const noun = weekly
+    ? lang === "cn"
+      ? "周安全报告"
+      : "weekly safety report"
+    : lang === "cn"
+      ? "月安全报告"
+      : "monthly safety report";
+  const activityChange = event.changes?.find((change) => change.field === "name");
+  const activity = activityChange
+    ? lang === "cn"
+      ? text(activityChange.toCn, text(activityChange.to, ""))
+      : text(activityChange.to, text(activityChange.toCn, ""))
+    : "";
+  const periodChange = event.changes?.find((change) => change.field === "period");
+  const period = periodChange
+    ? lang === "cn"
+      ? text(periodChange.toCn, text(periodChange.to, ""))
+      : text(periodChange.to, text(periodChange.toCn, ""))
+    : "";
+  const week = event.objectRef?.trim() || "";
+  const place =
+    weekly && week
+      ? lang === "cn"
+        ? `${period} 第${week}周`
+        : `week ${week} of ${period}`
+      : period;
+  const gap = lang === "cn" ? "" : " ";
+  let sentence = lang === "cn" ? `${verb}${noun}，${place}` : `${verb}${gap}${noun}, ${place}`;
+  const details = (event.changes ?? [])
+    .filter((change) => change.field !== "name" && change.field !== "period")
+    .map((change) => changePhrase(change, lang))
+    .filter((phrase): phrase is string => Boolean(phrase));
+  const tail = [activity, ...details].filter(Boolean);
+  if (tail.length) {
+    const colon = lang === "cn" ? "：" : ": ";
+    const comma = lang === "cn" ? "，" : ", ";
+    sentence += `${colon}${tail.join(comma)}`;
+  }
+  return sentence;
+}
+
 function sessionSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
   if (event.objectType !== "session") return null;
   const result = event.changes?.find((change) => change.field === "result")?.to;
@@ -234,6 +292,8 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   const session = sessionSentence(event, lang);
   if (session) return session;
   if (event.objectType === "week") return weekSentence(event, lang);
+  const safety = safetySentence(event, lang);
+  if (safety) return safety;
   if (event.objectType === "attachment") {
     const attachment = attachmentSentence(event, lang);
     if (attachment) return attachment;

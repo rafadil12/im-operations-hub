@@ -10,6 +10,12 @@ import {
 } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import {
+  recordSafetyReport,
+  safetyCreateDetail,
+  safetyUpdateDetail,
+  toSafetySnapshot,
+} from "@/lib/logs-center/safetyRemark";
+import {
   MONTHLY_ACTIVITIES,
   type MonthlyActivity,
   type MonthlyRow,
@@ -486,39 +492,53 @@ export async function POST(request: NextRequest) {
 
       let finalFileUrls = fileUrls;
 
+      const oldQuery = (await connection.execute(
+        `
+            SELECT
+              status,
+              submission_date,
+              pic,
+              pic_en,
+              pic_cn,
+              location,
+              description_en,
+              description_cn,
+              file_name,
+              file_url
+            FROM safety_submissions
+            WHERE id = ?
+            LIMIT 1
+          `,
+        [existingId]
+      )) as [
+        Array<{
+          status: string | null;
+          submission_date: string | null;
+          pic: string | null;
+          pic_en: string | null;
+          pic_cn: string | null;
+          location: string | null;
+          description_en: string | null;
+          description_cn: string | null;
+          file_name: string | null;
+          file_url: string | null;
+        }>,
+        FieldPacket[],
+      ];
+
+      const oldRow = oldQuery[0][0] ?? null;
+
       /*
        * Kalau tidak upload file baru,
        * gunakan file lama.
        */
 
-      if (uploadedFiles.length === 0) {
-        const oldQuery = (await connection.execute(
-          `
-              SELECT
-                file_name,
-                file_url
-              FROM safety_submissions
-              WHERE id = ?
-              LIMIT 1
-            `,
-          [existingId]
-        )) as [
-          Array<{
-            file_name: string | null;
-            file_url: string | null;
-          }>,
-          FieldPacket[],
-        ];
+      if (uploadedFiles.length === 0 && oldRow) {
+        const oldFiles = parseStoredFiles(oldRow.file_name, oldRow.file_url);
 
-        const oldRows = oldQuery[0];
+        finalFileNames = oldFiles.map((file) => file.name);
 
-        if (oldRows.length > 0) {
-          const oldFiles = parseStoredFiles(oldRows[0].file_name, oldRows[0].file_url);
-
-          finalFileNames = oldFiles.map((file) => file.name);
-
-          finalFileUrls = oldFiles.map((file) => file.url);
-        }
+        finalFileUrls = oldFiles.map((file) => file.url);
       }
 
       /* ===================================================
@@ -562,6 +582,43 @@ export async function POST(request: NextRequest) {
       );
 
       await connection.commit();
+
+      const detail = oldRow
+        ? safetyUpdateDetail(
+            toSafetySnapshot(oldRow),
+            {
+              status,
+              submissionDate,
+              picEn,
+              picCn,
+              location,
+              descriptionEn,
+              descriptionCn,
+            },
+            uploadedFiles.length > 0
+          )
+        : null;
+
+      if (detail) {
+        try {
+          const activityIndex =
+            activityType === "reward_finding"
+              ? await rewardFindingIndex(connection, year, month, existingId)
+              : undefined;
+          await recordSafetyReport({
+            action: "update",
+            kind: "monthly",
+            year,
+            month,
+            activityType,
+            activityIndex,
+            submissionDate: activityType === "reward_finding" ? submissionDate : null,
+            detail,
+          });
+        } catch (error) {
+          console.error("monthly safety remark failed", error);
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -649,6 +706,29 @@ export async function POST(request: NextRequest) {
 
     await connection.commit();
 
+    try {
+      const activityIndex =
+        activityType === "reward_finding"
+          ? await rewardFindingIndex(connection, year, month, insertResult.insertId)
+          : undefined;
+
+      await recordSafetyReport({
+        action: "submit",
+        kind: "monthly",
+        year,
+        month,
+        activityType,
+        activityIndex,
+        submissionDate: activityType === "reward_finding" ? submissionDate : null,
+        detail: safetyCreateDetail({
+          fileCount: fileNames.length,
+          status: activityType === "safety_case" ? status : null,
+        }),
+      });
+    } catch (error) {
+      console.error("monthly safety remark failed", error);
+    }
+
     return NextResponse.json({
       success: true,
       action: "created",
@@ -708,6 +788,10 @@ export async function DELETE(request: NextRequest) {
     const [rows] = (await pool.execute(
       `
           SELECT
+            year,
+            month,
+            activity_type,
+            submission_date,
             file_name,
             file_url
           FROM safety_submissions
@@ -718,6 +802,10 @@ export async function DELETE(request: NextRequest) {
       [id]
     )) as [
       Array<{
+        year: number;
+        month: number;
+        activity_type: string;
+        submission_date: string | null;
         file_name: string | null;
         file_url: string | null;
       }>,
@@ -728,7 +816,13 @@ export async function DELETE(request: NextRequest) {
       return jsonError("Data Monthly tidak ditemukan.", 404);
     }
 
-    const fileUrls = parseStoredFiles(rows[0].file_name, rows[0].file_url);
+    const removed = rows[0];
+    const activityIndex =
+      removed.activity_type === "reward_finding"
+        ? await rewardFindingIndex(pool, Number(removed.year), Number(removed.month), id)
+        : undefined;
+
+    const fileUrls = parseStoredFiles(removed.file_name, removed.file_url);
 
     const [deleteResult] = (await pool.execute(
       `
@@ -763,6 +857,19 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
+    if (deleteResult.affectedRows > 0) {
+      await recordSafetyReport({
+        action: "delete",
+        kind: "monthly",
+        year: Number(removed.year),
+        month: Number(removed.month),
+        activityType: removed.activity_type,
+        activityIndex,
+        submissionDate:
+          removed.activity_type === "reward_finding" ? removed.submission_date : null,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       id,
@@ -774,4 +881,27 @@ export async function DELETE(request: NextRequest) {
 
     return jsonError(error instanceof Error ? error.message : "Gagal menghapus Monthly.", 500);
   }
+}
+
+async function rewardFindingIndex(
+  executor: { execute: typeof pool.execute },
+  year: number,
+  month: number,
+  id: number
+): Promise<number | undefined> {
+  const [rows] = (await executor.execute(
+    `
+      SELECT COUNT(*) AS total
+      FROM safety_submissions
+      WHERE year = ?
+        AND month = ?
+        AND period_type = 'monthly'
+        AND activity_type = 'reward_finding'
+        AND status = 'completed'
+        AND id <= ?
+    `,
+    [year, month, id]
+  )) as [Array<{ total: number | string }>, FieldPacket[]];
+  const total = Number(rows[0]?.total ?? 0);
+  return total > 0 ? total : undefined;
 }
