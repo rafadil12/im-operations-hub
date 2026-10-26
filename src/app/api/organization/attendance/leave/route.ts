@@ -11,6 +11,8 @@ import {
   type LeaveSnapshot,
 } from "@/lib/logs-center/organizationRemark";
 import { suppressLogsCenter } from "@/lib/logs-center/record";
+import { renderAttendanceLeaveCard } from "@/lib/attendanceLeaveWeComImage";
+import { sendPermissionWeComImage } from "@/lib/wecomNotification";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,57 @@ type EmployeeOrganizationRow = {
   manager_name_cn: string | null;
   employment_status: string | null;
 };
+
+type LeaveWeComEvent = "submitted" | "approved";
+
+async function notifyLeaveRequest(event: LeaveWeComEvent, request: LeaveRequestRow) {
+  try {
+    const employeeRows = await query<{ name_en: string | null; name_cn: string | null }[]>(
+      `
+        SELECT name_en, name_cn
+        FROM users
+        WHERE employee_no = ?
+        LIMIT 1
+      `,
+      [request.employee_no],
+    );
+    const employee = employeeRows[0];
+    let approvedBy = request.approved_by;
+    if (request.approved_by) {
+      const approverRows = await query<{ name_en: string | null; name_cn: string | null }[]>(
+        `
+          SELECT name_en, name_cn
+          FROM users
+          WHERE employee_no = ?
+          LIMIT 1
+        `,
+        [request.approved_by],
+      );
+      const approver = approverRows[0];
+      const approverNames = [approver?.name_cn?.trim(), approver?.name_en?.trim()].filter(Boolean);
+      if (approverNames.length) {
+        approvedBy = `${approverNames.join(" / ")} (${request.approved_by})`;
+      }
+    }
+
+    const image = await renderAttendanceLeaveCard({
+      event,
+      employeeNo: request.employee_no,
+      employeeNameEn: employee?.name_en ?? null,
+      employeeNameCn: employee?.name_cn ?? null,
+      requestType: request.request_type,
+      requestDate: String(request.request_date).slice(0, 10),
+      startTime: request.start_time,
+      endTime: request.end_time,
+      noAttendanceType: request.no_attendance_type,
+      reason: request.reason,
+      approvedBy,
+    });
+    await sendPermissionWeComImage(image);
+  } catch (error) {
+    console.error(`Failed to send WeCom notification for leave request ${request.id}:`, error);
+  }
+}
 
 function isValidDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -809,6 +862,7 @@ export async function POST(request: NextRequest) {
 
     const names = await leaveNames(saved.employee_no);
     await recordOrganization(leaveSubmitEvent(leaveRemark(saved, names)));
+    await notifyLeaveRequest("submitted", saved);
 
     return NextResponse.json(
       {
@@ -1740,6 +1794,7 @@ export async function PATCH(request: NextRequest) {
     await recordOrganization(
       leaveStatusEvent(leaveRemark(saved, names), "Pending", "Approved"),
     );
+    await notifyLeaveRequest("approved", saved);
 
     return NextResponse.json({
       success: true,
