@@ -212,3 +212,37 @@ node --env-file=.env.local db/import-excel-movements.mjs --force
 - Locations for **101 and 201** come from sheet **IT Stock库存** column **Lokasi/地点** (same list per material code).
 - Multi-loc overrides are hardcoded in the script (IT00004 → Server Room only; IT00056/57/58 → Gudang Internal; IT00104 → split Server Room + Meja IT).
 - Documents are attributed to the seeded Super Admin (`employee_no=SUPERADMIN`).
+
+# Daily attendance notification to WeCom
+
+The protected endpoint `GET /api/cron/attendance-wecom` renders the current
+day's active employee roster as a bilingual PNG and sends it to a dedicated
+WeCom group robot as an image message. It reads `shift_schedules` and approved
+leave records and uses `Asia/Jakarta` by default.
+
+Configure these production environment variables:
+
+```env
+WECOM_ATTENDANCE_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
+ATTENDANCE_CRON_SECRET=replace-with-a-long-random-value
+ATTENDANCE_TIME_ZONE=Asia/Jakarta
+```
+
+The renderer looks for Microsoft YaHei on Windows and Noto Sans CJK on Linux.
+If the server uses a different CJK font, point it at the font files explicitly
+(`.ttf`, `.otf`, and the first face of a `.ttc` collection are supported):
+
+```env
+ATTENDANCE_FONT_PATH=/path/to/font-regular.ttf
+ATTENDANCE_FONT_BOLD_PATH=/path/to/font-bold.ttf
+```
+
+Configure the deployment scheduler to call the endpoint every day at 07:30
+WIB with the header `Authorization: Bearer <ATTENDANCE_CRON_SECRET>`. Example:
+
+```sh
+curl --fail --silent --show-error \
+  -H "Authorization: Bearer $ATTENDANCE_CRON_SECRET" \
+  https://your-app.example.com/api/cron/attendance-wecom
+```
+
