@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
+import { offDayEvent, recordOrganization } from "@/lib/logs-center/organizationRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const dynamic = "force-dynamic";
 
@@ -234,7 +236,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await withTransaction(async (connection) => {
+    await suppressLogsCenter(() => withTransaction(async (connection) => {
       for (const date of body.dates!) {
         await connection.query(
           `
@@ -261,7 +263,7 @@ export async function POST(request: NextRequest) {
           ],
         );
       }
-    });
+    }));
 
     const rows = await query(
       `
@@ -286,6 +288,23 @@ export async function POST(request: NextRequest) {
         ORDER BY pod.off_date ASC
       `,
       [employeeOrganizationId],
+    );
+
+    const savedPerson = (
+      rows as {
+        employee_no?: string;
+        name_en?: string | null;
+        name_cn?: string | null;
+      }[]
+    )[0];
+    await recordOrganization(
+      offDayEvent({
+        action: "create",
+        employeeNo: savedPerson?.employee_no ?? body.employeeNo ?? "",
+        nameEn: savedPerson?.name_en,
+        nameCn: savedPerson?.name_cn,
+        dates: body.dates ?? [],
+      }),
     );
 
     return NextResponse.json({
@@ -368,6 +387,27 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
+    const people = await query<
+      {
+        employee_no: string;
+        name_en: string | null;
+        name_cn: string | null;
+      }[]
+    >(
+      `
+        SELECT
+          u.employee_no,
+          u.name_en,
+          u.name_cn
+        FROM employee_organization eo
+        INNER JOIN users u
+          ON u.id = eo.user_id
+        WHERE eo.id = ?
+        LIMIT 1
+      `,
+      [employeeOrganizationId],
+    );
+
     for (const date of dates) {
       await query(
         `
@@ -378,6 +418,16 @@ export async function DELETE(request: NextRequest) {
         [employeeOrganizationId, date],
       );
     }
+
+    await recordOrganization(
+      offDayEvent({
+        action: "delete",
+        employeeNo: people[0]?.employee_no ?? body.employeeNo ?? "",
+        nameEn: people[0]?.name_en,
+        nameCn: people[0]?.name_cn,
+        dates,
+      }),
+    );
 
     return NextResponse.json({
       success: true,

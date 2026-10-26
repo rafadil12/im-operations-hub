@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { recordOrganization, scheduleEvent } from "@/lib/logs-center/organizationRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,22 @@ type ScheduleRow = {
   generated_at: string;
   updated_at: string;
 };
+
+async function scheduleNames(employeeNo: string) {
+  const rows = await query<{ name_en: string | null; name_cn: string | null }[]>(
+    `
+      SELECT name_en, name_cn
+      FROM users
+      WHERE employee_no = ?
+      LIMIT 1
+    `,
+    [employeeNo],
+  );
+  return {
+    nameEn: rows[0]?.name_en ?? "",
+    nameCn: rows[0]?.name_cn ?? "",
+  };
+}
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");
@@ -282,6 +300,8 @@ export async function POST(request: NextRequest) {
        ROW SUDAH ADA
        ------------------------------------------------------- */
 
+    const previousType = existingRows[0]?.schedule_type ?? null;
+
     if (existingRows.length > 0) {
       const existing = existingRows[0];
 
@@ -290,8 +310,9 @@ export async function POST(request: NextRequest) {
         existing,
       );
 
-      await execute(
-        `
+      await suppressLogsCenter(() =>
+        execute(
+          `
           UPDATE shift_schedules
           SET
             shift_code = NULL,
@@ -299,10 +320,11 @@ export async function POST(request: NextRequest) {
             rotation_rule_id = NULL
           WHERE id = ?
         `,
-        [
-          scheduleType,
-          existing.id,
-        ],
+          [
+            scheduleType,
+            existing.id,
+          ],
+        ),
       );
 
       console.log(
@@ -317,7 +339,8 @@ export async function POST(request: NextRequest) {
          ROW BELUM ADA
          ----------------------------------------------------- */
 
-      await execute(
+      await suppressLogsCenter(() =>
+        execute(
         `
           INSERT INTO shift_schedules (
             employee_no,
@@ -339,6 +362,7 @@ export async function POST(request: NextRequest) {
           date,
           scheduleType,
         ],
+        ),
       );
 
       console.log(
@@ -421,6 +445,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const names = await scheduleNames(employeeNo);
+    await recordOrganization(
+      scheduleEvent({
+        employeeNo,
+        nameEn: names.nameEn,
+        nameCn: names.nameCn,
+        date,
+        fromType: previousType,
+        toType: scheduleType,
+      }),
+    );
+
     return NextResponse.json({
       success: true,
       message:
@@ -500,18 +536,42 @@ export async function DELETE(
       );
     }
 
-    await execute(
+    const existingRows = await query<{ schedule_type: string }[]>(
       `
+        SELECT schedule_type
+        FROM shift_schedules
+        WHERE employee_no = ?
+          AND schedule_date = ?
+          AND schedule_type IN ('1', '4', 'OFF')
+        LIMIT 1
+      `,
+      [employeeNo, date],
+    );
+
+    await suppressLogsCenter(() =>
+      execute(
+        `
         DELETE FROM shift_schedules
         WHERE employee_no = ?
           AND schedule_date = ?
           AND schedule_type IN ('1', '4', 'OFF')
       `,
-      [
-        employeeNo,
-        date,
-      ],
+        [employeeNo, date],
+      ),
     );
+
+    if (existingRows[0]) {
+      const names = await scheduleNames(employeeNo);
+      await recordOrganization(
+        scheduleEvent({
+          employeeNo,
+          nameEn: names.nameEn,
+          nameCn: names.nameCn,
+          date,
+          fromType: existingRows[0].schedule_type,
+        }),
+      );
+    }
 
     console.log(
       "[Schedules DELETE]",

@@ -1,3 +1,5 @@
+import { organizationSentence } from "./organizationSentence";
+
 export type RemarkChange = {
   field: string;
   from?: string | null;
@@ -47,6 +49,7 @@ const NOUNS: Record<string, { en: string; cn: string }> = {
   "sub-item": { en: "sub-item", cn: "子项" },
   attachment: { en: "attachment", cn: "附件" },
   participant: { en: "participant", cn: "参与者" },
+  employee: { en: "employee", cn: "员工" },
 };
 
 const VERBS: Record<string, { en: string; cn: string }> = {
@@ -350,6 +353,8 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   if (safety) return safety;
   const training = trainingSentence(event, lang);
   if (training) return training;
+  const organization = organizationSentence(event, lang);
+  if (organization) return organization;
   if (event.objectType === "attachment") {
     const attachment = attachmentSentence(event, lang);
     if (attachment) return attachment;

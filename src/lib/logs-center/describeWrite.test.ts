@@ -55,6 +55,10 @@ describe("describeWrite", () => {
     expect(moduleForTable("access_roles")).toBe("settings");
     expect(moduleForTable("access_permissions")).toBe("settings");
     expect(moduleForTable("users")).toBe("daily-operation");
+    expect(moduleForTable("employee_organization")).toBe("organization");
+    expect(moduleForTable("personal_off_days")).toBe("organization");
+    expect(moduleForTable("shift_schedules")).toBe("organization");
+    expect(moduleForTable("attendance_daily")).toBe("organization");
     expect(
       summarizeWrites([
         { verb: "insert", table: "sparepart_mat_docs", softDelete: false },

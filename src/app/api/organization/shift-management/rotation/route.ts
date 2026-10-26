@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { recordOrganization, rotationEvent } from "@/lib/logs-center/organizationRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const dynamic = "force-dynamic";
 
@@ -601,6 +603,7 @@ const normalizedPairB: SavePairMember[] = [
        11. UPDATE RULE DAYS
        ===================================================== */
 
+    await suppressLogsCenter(async () => {
     await execute(
       `
         UPDATE shift_rotation_rules
@@ -662,6 +665,7 @@ const normalizedPairB: SavePairMember[] = [
         ],
       );
     }
+    });
 
     /* =====================================================
        14. VERIFY RESULT
@@ -745,6 +749,29 @@ const normalizedPairB: SavePairMember[] = [
 
     await execute("COMMIT");
     transactionStarted = false;
+
+    await recordOrganization(
+      rotationEvent([
+        {
+          group: "PAIR_A",
+          members: savedPairA.map((member) => ({
+            employeeNo: member.employee_no,
+            nameEn: member.name_en,
+            nameCn: member.name_cn,
+            shift: member.initial_shift,
+          })),
+        },
+        {
+          group: "PAIR_B",
+          members: savedPairB.map((member) => ({
+            employeeNo: member.employee_no,
+            nameEn: member.name_en,
+            nameCn: member.name_cn,
+            shift: member.initial_shift,
+          })),
+        },
+      ]),
+    );
 
     /* =====================================================
        16. RETURN SAVED DATA
