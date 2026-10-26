@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query, withTransaction } from "@/lib/db";
+import {
+  leaveCancelEvent,
+  leaveEditEvent,
+  leaveOaEvent,
+  leaveStatusEvent,
+  leaveSubmitEvent,
+  recordOrganization,
+  type LeaveSnapshot,
+} from "@/lib/logs-center/organizationRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const dynamic = "force-dynamic";
 
@@ -138,6 +148,44 @@ function isValidRequestTime(
   return startMinutes >= 18 * 60;
 }
 
+async function leaveNames(employeeNo: string) {
+  const rows = await query<{ name_en: string | null; name_cn: string | null }[]>(
+    `
+      SELECT name_en, name_cn
+      FROM users
+      WHERE employee_no = ?
+      LIMIT 1
+    `,
+    [employeeNo],
+  );
+  return {
+    nameEn: rows[0]?.name_en ?? "",
+    nameCn: rows[0]?.name_cn ?? "",
+  };
+}
+
+function leaveRemark(row: {
+  employee_no: string;
+  request_date: string | Date;
+  request_type: string;
+  start_time: string | null;
+  end_time: string | null;
+  no_attendance_type?: string | null;
+  reason?: string | null;
+}, names: { nameEn: string; nameCn: string }): LeaveSnapshot {
+  return {
+    employeeNo: row.employee_no,
+    nameEn: names.nameEn,
+    nameCn: names.nameCn,
+    date: String(row.request_date),
+    type: row.request_type,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    noAttendanceType: row.no_attendance_type,
+    reason: row.reason,
+  };
+}
+
 async function syncSingleAttendanceDaily(params: {
   employeeNo: string;
   attendanceDate: string;
@@ -157,8 +205,9 @@ async function syncSingleAttendanceDaily(params: {
     return;
   }
 
-  await execute(
-    `
+  await suppressLogsCenter(() =>
+    execute(
+      `
       INSERT INTO attendance_daily (
         employee_no,
         attendance_date,
@@ -175,7 +224,8 @@ async function syncSingleAttendanceDaily(params: {
         leave_request_id = VALUES(leave_request_id),
         updated_at = CURRENT_TIMESTAMP
     `,
-    [employeeNo, attendanceDate, leaveRequestId],
+      [employeeNo, attendanceDate, leaveRequestId],
+    ),
   );
 }
 
@@ -688,7 +738,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await execute(
+    await suppressLogsCenter(() =>
+      execute(
       `
         INSERT INTO attendance_leave_pending (
           employee_no,
@@ -714,6 +765,7 @@ export async function POST(request: NextRequest) {
         reason,
         createdBy || employeeNo,
       ],
+      ),
     );
 
     const savedRows = await query<LeaveRequestRow[]>(
@@ -754,6 +806,9 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    const names = await leaveNames(saved.employee_no);
+    await recordOrganization(leaveSubmitEvent(leaveRemark(saved, names)));
 
     return NextResponse.json(
       {
@@ -999,9 +1054,28 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      const existingPendingRows = await query<{ id: number }[]>(
+      const existingPendingRows = await query<
+        {
+          id: number;
+          employee_no: string;
+          request_date: string;
+          request_type: LeaveType;
+          start_time: string | null;
+          end_time: string | null;
+          reason: string | null;
+          no_attendance_type: NoAttendanceType | null;
+        }[]
+      >(
         `
-          SELECT id
+          SELECT
+            id,
+            employee_no,
+            request_date,
+            request_type,
+            start_time,
+            end_time,
+            reason,
+            no_attendance_type
           FROM attendance_leave_pending
           WHERE id = ?
           LIMIT 1
@@ -1018,6 +1092,8 @@ export async function PATCH(request: NextRequest) {
           { status: 404 },
         );
       }
+
+      const previousPending = existingPendingRows[0];
 
       const duplicateRows = await query<{ id: number }[]>(
         `
@@ -1042,8 +1118,9 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      await execute(
-        `
+      await suppressLogsCenter(() =>
+        execute(
+          `
           UPDATE attendance_leave_pending
           SET
             employee_no = ?,
@@ -1055,16 +1132,17 @@ export async function PATCH(request: NextRequest) {
             reason = ?
           WHERE id = ?
         `,
-        [
-          employeeNo,
-          date,
-          requestType,
-          requestType === "NO_ATTENDANCE" ? noAttendanceType : null,
-          requestType === "NO_ATTENDANCE" ? null : startTime,
-          requestType === "NO_ATTENDANCE" ? null : endTime,
-          reason,
-          id,
-        ],
+          [
+            employeeNo,
+            date,
+            requestType,
+            requestType === "NO_ATTENDANCE" ? noAttendanceType : null,
+            requestType === "NO_ATTENDANCE" ? null : startTime,
+            requestType === "NO_ATTENDANCE" ? null : endTime,
+            reason,
+            id,
+          ],
+        ),
       );
 
       const savedRows = await query<LeaveRequestRow[]>(
@@ -1104,6 +1182,22 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
+      const names = await leaveNames(saved.employee_no);
+      await recordOrganization(
+        leaveEditEvent(
+          {
+            employeeNo: previousPending.employee_no,
+            date: String(previousPending.request_date),
+            type: previousPending.request_type,
+            startTime: previousPending.start_time,
+            endTime: previousPending.end_time,
+            noAttendanceType: previousPending.no_attendance_type,
+            reason: previousPending.reason,
+          },
+          leaveRemark(saved, names),
+        ),
+      );
+
       return NextResponse.json({
         success: true,
         message: "Pending leave / permission request updated successfully.",
@@ -1138,9 +1232,30 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      const oaRows = await query<{ id: number; status: LeaveStatus }[]>(
+      const oaRows = await query<
+        {
+          id: number;
+          status: LeaveStatus;
+          employee_no: string;
+          request_date: string;
+          request_type: LeaveType;
+          start_time: string | null;
+          end_time: string | null;
+          no_attendance_type: NoAttendanceType | null;
+          oa_number: string | null;
+        }[]
+      >(
         `
-          SELECT id, status
+          SELECT
+            id,
+            status,
+            employee_no,
+            request_date,
+            request_type,
+            start_time,
+            end_time,
+            no_attendance_type,
+            oa_number
           FROM attendance_leave_requests
           WHERE id = ?
           LIMIT 1
@@ -1181,14 +1296,16 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      await execute(
-        `
+      await suppressLogsCenter(() =>
+        execute(
+          `
           UPDATE attendance_leave_requests
           SET oa_number = ?
           WHERE id = ?
             AND status = 'Approved'
         `,
-        [oaNumber || null, id],
+          [oaNumber || null, id],
+        ),
       );
 
       const savedOaRows = await query<LeaveRequestRow[]>(
@@ -1227,6 +1344,15 @@ export async function PATCH(request: NextRequest) {
           { status: 500 },
         );
       }
+
+      const names = await leaveNames(savedOa.employee_no);
+      await recordOrganization(
+        leaveOaEvent(
+          leaveRemark(savedOa, names),
+          existingOa.oa_number,
+          savedOa.oa_number,
+        ),
+      );
 
       return NextResponse.json({
         success: true,
@@ -1460,7 +1586,7 @@ export async function PATCH(request: NextRequest) {
      * from attendance_leave_pending.
      */
     if (status === "Rejected") {
-      await withTransaction(async (conn) => {
+      await suppressLogsCenter(() => withTransaction(async (conn) => {
         await conn.execute(
           `
             INSERT INTO attendance_leave_history (
@@ -1502,7 +1628,12 @@ export async function PATCH(request: NextRequest) {
           `,
           [id],
         );
-      });
+      }));
+
+      const names = await leaveNames(existing.employee_no);
+      await recordOrganization(
+        leaveStatusEvent(leaveRemark(existing, names), "Pending", "Rejected"),
+      );
 
       return NextResponse.json({
         success: true,
@@ -1515,7 +1646,7 @@ export async function PATCH(request: NextRequest) {
     }
 
 
-    await withTransaction(async (conn) => {
+    await suppressLogsCenter(() => withTransaction(async (conn) => {
       await conn.execute(
         `
           INSERT INTO attendance_leave_requests (
@@ -1555,7 +1686,7 @@ export async function PATCH(request: NextRequest) {
         `,
         [id],
       );
-    });
+    }));
 
     const savedRows = await query<LeaveRequestRow[]>(
       `
@@ -1604,6 +1735,11 @@ export async function PATCH(request: NextRequest) {
       leaveRequestId: saved.id,
       requestType: saved.request_type,
     });
+
+    const names = await leaveNames(saved.employee_no);
+    await recordOrganization(
+      leaveStatusEvent(leaveRemark(saved, names), "Pending", "Approved"),
+    );
 
     return NextResponse.json({
       success: true,
@@ -1668,9 +1804,28 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const existingRows = await query<{ id: number }[]>(
+    const existingRows = await query<
+      {
+        id: number;
+        employee_no: string;
+        request_date: string;
+        request_type: LeaveType;
+        start_time: string | null;
+        end_time: string | null;
+        reason: string | null;
+        no_attendance_type: NoAttendanceType | null;
+      }[]
+    >(
       `
-        SELECT id
+        SELECT
+          id,
+          employee_no,
+          request_date,
+          request_type,
+          start_time,
+          end_time,
+          reason,
+          no_attendance_type
         FROM attendance_leave_pending
         WHERE id = ?
         LIMIT 1
@@ -1690,13 +1845,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await execute(
-      `
+    await suppressLogsCenter(() =>
+      execute(
+        `
         DELETE FROM attendance_leave_pending
         WHERE id = ?
       `,
-      [id],
+        [id],
+      ),
     );
+
+    const names = await leaveNames(existing.employee_no);
+    await recordOrganization(leaveCancelEvent(leaveRemark(existing, names)));
 
     return NextResponse.json({
       success: true,

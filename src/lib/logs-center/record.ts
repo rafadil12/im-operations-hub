@@ -47,35 +47,43 @@ const OBJECT_NOUN: Record<string, string> = {
 
 export async function recordLogsCenter(input: LogsCenterInput): Promise<void> {
   try {
-    const summary = (
-      input.summary ??
-      renderRemark(
-        {
-          action: input.action,
-          summary: "",
-          objectType: input.objectType,
-          objectRef: input.objectRef,
-          changes: input.changes,
-          links: input.links,
-        },
-        "en"
-      )
-    ).slice(0, 500);
+    let actorSystemUserId = input.actorSystemUserId ?? null;
+    let actorUserId = input.actorUserId ?? null;
+    let actorLabel = input.actorLabel ?? null;
+    if (actorSystemUserId == null && actorUserId == null) {
+      const actor = await actorFromRequest();
+      if (actor.actorSystemUserId != null || actor.actorUserId != null) {
+        actorSystemUserId = actor.actorSystemUserId ?? null;
+        actorUserId = actor.actorUserId ?? null;
+        actorLabel = actorLabel ?? actor.actorLabel ?? null;
+      }
+    }
+    const event = {
+      action: input.action,
+      summary: input.summary ?? "",
+      objectType: input.objectType,
+      objectRef: input.objectRef,
+      changes: input.changes,
+      links: input.links,
+    };
+    const summary = (input.summary ?? renderRemark({ ...event, summary: "" }, "en")).slice(0, 500);
+    const summaryCn = renderRemark(event, "cn").slice(0, 500);
     const { pool } = await import("@/lib/db");
     await pool.query(
       `INSERT INTO logs_center_events
         (actor_system_user_id, actor_user_id, actor_label, module, action,
-         object_type, object_ref, summary, changes_json, links_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         object_type, object_ref, summary, summary_cn, changes_json, links_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        input.actorSystemUserId ?? null,
-        input.actorUserId ?? null,
-        input.actorLabel?.slice(0, 255) ?? null,
+        actorSystemUserId,
+        actorUserId,
+        actorLabel?.slice(0, 255) ?? null,
         input.module.slice(0, 64),
         input.action.slice(0, 32),
         input.objectType?.slice(0, 64) ?? null,
         input.objectRef?.slice(0, 64) ?? null,
         summary,
+        summaryCn,
         input.changes?.length ? JSON.stringify(input.changes) : null,
         input.links?.length ? JSON.stringify(input.links) : null,
       ]

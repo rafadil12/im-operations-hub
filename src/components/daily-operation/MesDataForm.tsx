@@ -41,8 +41,8 @@ export function MesDataForm({ masters, initial, readOnly = false, onClose, onSub
   const me = !initial && account ? masters.users.find((u) => u.id === account.id) : undefined;
   const defaultDivisionId = initial?.division_id ?? me?.division_id ?? null;
   const defaultUserId = initial?.user_id ?? (me ? account!.id : null);
-  /** Add mode: Division/PIC come from auth and must not be changed. */
-  const lockIdentityFields = Boolean(me);
+  /** Division and PIC come from the saved row or the signed-in user. */
+  const lockIdentityFields = Boolean(initial) || Boolean(me);
 
   const [divisionId, setDivisionId] = useState<number | null>(defaultDivisionId);
   const [categoryId, setCategoryId] = useState<number | null>(initial?.category_id ?? null);

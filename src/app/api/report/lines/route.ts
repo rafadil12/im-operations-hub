@@ -9,6 +9,13 @@ import {
 } from "@/lib/report/apiHelpers";
 import { loadReportAttachmentsByYear } from "@/lib/report/attachmentStore";
 import {
+  addedLineDetail,
+  loadReportAreaNames,
+  loadSubItemNames,
+  recordReportWeek,
+} from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
+import {
   ensureDraftSubmission,
   ensureReportWeek,
   insertReportLine,
@@ -83,21 +90,30 @@ export async function POST(request: Request) {
       return jsonError("Summary (EN or CN) is required.");
     }
 
-    const weekId = await ensureReportWeek(year, weekNumber);
-    await ensureDraftSubmission(weekId, areaId);
-
-    const id = await insertReportLine({
-      weekId,
-      areaId,
-      subItemId,
-      workTargetEn: workTargetEn || workTargetCn,
-      workTargetCn: workTargetCn || workTargetEn,
-      weeklyCompletionRate: rate,
-      summaryEn: summaryEn || summaryCn,
-      summaryCn: summaryCn || summaryEn,
-      planEn: planEn || planCn,
-      planCn: planCn || planEn,
-      sortOrder: Number(body.sortOrder ?? 0),
+    const subItem = await loadSubItemNames(subItemId);
+    const id = await suppressLogsCenter(async () => {
+      const weekId = await ensureReportWeek(year, weekNumber);
+      await ensureDraftSubmission(weekId, areaId);
+      return insertReportLine({
+        weekId,
+        areaId,
+        subItemId,
+        workTargetEn: workTargetEn || workTargetCn,
+        workTargetCn: workTargetCn || workTargetEn,
+        weeklyCompletionRate: rate,
+        summaryEn: summaryEn || summaryCn,
+        summaryCn: summaryCn || summaryEn,
+        planEn: planEn || planCn,
+        planCn: planCn || planEn,
+        sortOrder: Number(body.sortOrder ?? 0),
+      });
+    });
+    const area = await loadReportAreaNames(areaId);
+    await recordReportWeek({
+      action: "save",
+      weekNumber,
+      area,
+      detail: addedLineDetail(subItem?.name_en ?? null, subItem?.name_cn ?? null),
     });
 
     return NextResponse.json({ success: true, id });

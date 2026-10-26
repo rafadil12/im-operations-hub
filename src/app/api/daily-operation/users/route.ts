@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import { PERMISSIONS, PROTECTED_ACCOUNT_EMPLOYEE_NO, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { identityChange, loadDivision } from "@/lib/logs-center/dailyRemark";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 
 const PIC_SELECT = `
   u.id,
@@ -80,7 +82,8 @@ export async function POST(request: NextRequest) {
     }
 
     const account = await query<RowDataPacket[]>(
-      `SELECT su.id, su.is_active, su.is_daily_operation_pic, u.employee_no
+      `SELECT su.id, su.is_active, su.is_daily_operation_pic,
+              u.employee_no, u.name_en, u.name_cn
        FROM system_users su
        INNER JOIN users u ON u.id = su.user_id
        WHERE u.id = ?
@@ -106,16 +109,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "This account is already a PIC." }, { status: 409 });
     }
 
-    const divisions = await query<RowDataPacket[]>(
-      "SELECT id FROM divisions WHERE id = ? LIMIT 1",
-      [divisionId]
-    );
-    if (!divisions[0]) {
+    const division = await loadDivision(divisionId);
+    if (!division) {
       return NextResponse.json({ error: "Division not found." }, { status: 404 });
     }
 
-    await execute("UPDATE users SET division_id = ? WHERE id = ?", [divisionId, userId]);
-    await execute("UPDATE system_users SET is_daily_operation_pic = 1 WHERE user_id = ?", [userId]);
+    await suppressLogsCenter(async () => {
+      await execute("UPDATE users SET division_id = ? WHERE id = ?", [divisionId, userId]);
+      await execute("UPDATE system_users SET is_daily_operation_pic = 1 WHERE user_id = ?", [userId]);
+    });
+
+    await recordLogsCenter({
+      module: "daily-operation",
+      action: "create",
+      objectType: "user",
+      objectRef: (account[0].employee_no as string | null) ?? String(userId),
+      changes: [
+        identityChange({
+          name_en: (account[0].name_en as string | null) ?? null,
+          name_cn: (account[0].name_cn as string | null) ?? null,
+        }),
+        { field: "division", to: division.name_en, toCn: division.name_cn },
+      ],
+    });
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {

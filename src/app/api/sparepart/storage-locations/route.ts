@@ -3,6 +3,8 @@ import { requireAnyPermission, requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/auth/access";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { query, withTransaction } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
+import { hasRemarkDetail, locationUpdateChanges } from "@/lib/logs-center/sparepartRemark";
 import { nextLocationCode } from "@/lib/sparepart/locations";
 import type { SparepartStorageLocation } from "@/lib/types";
 
@@ -85,6 +87,13 @@ export async function POST(request: NextRequest) {
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
       [result.insertId]
     );
+    await recordLogsCenter({
+      module: "sparepart",
+      action: "create",
+      objectType: "storage location",
+      objectRef: code,
+      changes: [{ field: "name", to: names.name_en, toCn: names.name_cn }],
+    });
     return NextResponse.json({ location: rows[0] }, { status: 201 });
   } catch (error) {
     const errno = (error as { errno?: number }).errno;
@@ -175,6 +184,21 @@ export async function PUT(request: NextRequest) {
        FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
       [id]
     );
+    const changes = locationUpdateChanges(existing[0], {
+      code,
+      name_en: nameEn,
+      name_cn: nameCn,
+      is_active: nextActive,
+    });
+    if (hasRemarkDetail(changes)) {
+      await recordLogsCenter({
+        module: "sparepart",
+        action: "update",
+        objectType: "storage location",
+        objectRef: code,
+        changes,
+      });
+    }
     return NextResponse.json({ location: rows[0] });
   } catch (error) {
     const errno = (error as { errno?: number }).errno;
@@ -197,9 +221,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "id is required." }, { status: 400 });
     }
 
-    return await withTransaction(async (conn) => {
+    const removed: { current: { code: string; name_en: string | null; name_cn: string | null } | null } = {
+      current: null,
+    };
+    const response = await suppressLogsCenter(() =>
+      withTransaction(async (conn) => {
       const [existingRows] = await conn.query<RowDataPacket[]>(
-        `SELECT id, is_active FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
+        `SELECT id, code, name_en, name_cn, is_active FROM sparepart_storage_locations WHERE id = ? LIMIT 1`,
         [id]
       );
       const existing = existingRows[0];
@@ -245,8 +273,24 @@ export async function DELETE(request: NextRequest) {
 
       await conn.query(`DELETE FROM sparepart_stock_balances WHERE storage_location_id = ?`, [id]);
       await conn.query(`DELETE FROM sparepart_storage_locations WHERE id = ?`, [id]);
+      removed.current = {
+        code: String(existing.code),
+        name_en: existing.name_en == null ? null : String(existing.name_en),
+        name_cn: existing.name_cn == null ? null : String(existing.name_cn),
+      };
       return NextResponse.json({ ok: true });
-    });
+    })
+    );
+    if (removed.current) {
+      await recordLogsCenter({
+        module: "sparepart",
+        action: "delete",
+        objectType: "storage location",
+        objectRef: removed.current.code,
+        changes: [{ field: "name", to: removed.current.name_en, toCn: removed.current.name_cn }],
+      });
+    }
+    return response;
   } catch (error) {
     console.error("DELETE /sparepart/storage-locations failed", error);
     return NextResponse.json({ error: "Failed to delete storage location." }, { status: 500 });

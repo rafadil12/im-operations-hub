@@ -13,6 +13,7 @@ import { DEFAULT_SPAREPART_CATEGORY_CODE, normalizeCategoryCode } from "@/lib/sp
 import { DEFAULT_UOM_CODE, normalizeUomCode } from "@/lib/sparepart/uoms";
 import type { SparepartCategory, SparepartUom } from "@/lib/types";
 import { query } from "@/lib/db";
+import { recordLogsCenter, suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const runtime = "nodejs";
 
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const imported = await withTransaction(async (conn) => {
+    const imported = await suppressLogsCenter(() => withTransaction(async (conn) => {
       let count = 0;
 
       for (const item of parsed.items) {
@@ -254,7 +255,16 @@ export async function POST(request: NextRequest) {
       }
 
       return count;
-    });
+    }));
+
+    if (imported > 0) {
+      await recordLogsCenter({
+        module: "sparepart",
+        action: "import",
+        objectType: "materials",
+        objectRef: String(imported),
+      });
+    }
 
     return NextResponse.json({ imported });
   } catch (error) {

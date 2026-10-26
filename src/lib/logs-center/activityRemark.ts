@@ -6,8 +6,12 @@ import { renderRemark, type RemarkChange, type RemarkLink } from "./renderRemark
 type Named = { name_en: string | null; name_cn: string | null };
 
 type Snapshot = {
+  user_id: number;
+  division_id: number;
   status_id: number;
   type_id: number;
+  category_id: number;
+  subcategory_id: number;
   description_en: string | null;
   description_cn: string | null;
   solution_en: string | null;
@@ -18,6 +22,10 @@ type Snapshot = {
   status_cn: string | null;
   type_en: string | null;
   type_cn: string | null;
+  category_en: string | null;
+  category_cn: string | null;
+  subcategory_en: string | null;
+  subcategory_cn: string | null;
 };
 
 function sameText(left: string | null | undefined, right: string | null | undefined): boolean {
@@ -36,15 +44,36 @@ async function named(table: "daily_operation_status" | "daily_operation_type", i
   return rows[0] ?? { name_en: null, name_cn: null };
 }
 
+async function namedCategory(id: number): Promise<Named> {
+  const rows = await query<Named[]>(
+    `SELECT name_en, name_cn FROM daily_operation_categories WHERE id = ? LIMIT 1`,
+    [id]
+  );
+  return rows[0] ?? { name_en: null, name_cn: null };
+}
+
+async function namedSubcategory(id: number): Promise<Named> {
+  const rows = await query<Named[]>(
+    `SELECT name_en, name_cn FROM daily_operation_subcategories WHERE id = ? LIMIT 1`,
+    [id]
+  );
+  return rows[0] ?? { name_en: null, name_cn: null };
+}
+
 export async function loadActivitySnapshot(id: number): Promise<Snapshot | null> {
   const rows = await query<Snapshot[]>(
-    `SELECT r.status_id, r.type_id, r.description_en, r.description_cn, r.solution_en, r.solution_cn,
+    `SELECT r.user_id, r.division_id, r.status_id, r.type_id, r.category_id, r.subcategory_id,
+            r.description_en, r.description_cn, r.solution_en, r.solution_cn,
             r.start_time, r.end_time,
             st.name_en AS status_en, st.name_cn AS status_cn,
-            ty.name_en AS type_en, ty.name_cn AS type_cn
+            ty.name_en AS type_en, ty.name_cn AS type_cn,
+            c.name_en AS category_en, c.name_cn AS category_cn,
+            sc.name_en AS subcategory_en, sc.name_cn AS subcategory_cn
      FROM daily_operation_record r
      LEFT JOIN daily_operation_status st ON st.id = r.status_id
      LEFT JOIN daily_operation_type ty ON ty.id = r.type_id
+     LEFT JOIN daily_operation_categories c ON c.id = r.category_id
+     LEFT JOIN daily_operation_subcategories sc ON sc.id = r.subcategory_id
      WHERE r.id = ? AND r.deleted_at IS NULL
      LIMIT 1`,
     [id]
@@ -76,7 +105,7 @@ export async function goodsIssueLink(input: {
   return {
     type: "goods_issue",
     ref: input.ref,
-    detailEn: `${qty} to ${to} from ${locEn}`,
+    detailEn: `${qty} issued to ${to} from ${locEn}`,
     detailCn: `${qty} 发给 ${to}，从 ${locCn}`,
   };
 }
@@ -132,6 +161,26 @@ export async function activityUpdatedRemark(
       field: "type",
       from: before.type_en,
       fromCn: before.type_cn,
+      to: next.name_en,
+      toCn: next.name_cn,
+    });
+  }
+  if (before.category_id !== after.category_id) {
+    const next = await namedCategory(after.category_id);
+    changes.push({
+      field: "category",
+      from: before.category_en,
+      fromCn: before.category_cn,
+      to: next.name_en,
+      toCn: next.name_cn,
+    });
+  }
+  if (before.subcategory_id !== after.subcategory_id) {
+    const next = await namedSubcategory(after.subcategory_id);
+    changes.push({
+      field: "subcategory",
+      from: before.subcategory_en,
+      fromCn: before.subcategory_cn,
       to: next.name_en,
       toCn: next.name_cn,
     });

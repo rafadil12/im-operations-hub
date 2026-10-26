@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
+import { loadReportAreaNames, loadReportWeekById, recordReportWeek } from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 import { jsonError, parsePositiveInt, parseWeekNumber, parseYear } from "@/lib/report/apiHelpers";
 import {
   ensureReportWeek,
@@ -37,17 +39,13 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    let weekId = parsePositiveInt(String(body.weekId ?? ""));
     const areaId = parsePositiveInt(String(body.areaId ?? ""));
-
     if (!areaId) return jsonError("Area is required.");
 
-    if (!weekId) {
-      const year = parseYear(String(body.year ?? "")) ?? new Date().getFullYear();
-      const weekNumber = parseWeekNumber(String(body.weekNumber ?? body.week ?? ""));
-      if (!weekNumber) return jsonError("Week is required.");
-      weekId = await ensureReportWeek(year, weekNumber);
-    }
+    const requestedWeekId = parsePositiveInt(String(body.weekId ?? ""));
+    const requestedWeek = parseWeekNumber(String(body.weekNumber ?? body.week ?? ""));
+    const year = parseYear(String(body.year ?? "")) ?? new Date().getFullYear();
+    if (!requestedWeekId && !requestedWeek) return jsonError("Week is required.");
 
     const account = "account" in gate ? gate.account : undefined;
     const systemUserId = account?.systemUserId ?? null;
@@ -57,9 +55,23 @@ export async function POST(request: Request) {
         : account.displayName
       : null;
 
-    await submitReportArea(weekId, areaId, systemUserId, submitterLabel);
-    const submission = await getSubmissionStatus(weekId, areaId);
-    return NextResponse.json({ success: true, data: submission });
+    const submitted = await suppressLogsCenter(async () => {
+      const id = requestedWeekId ?? (await ensureReportWeek(year, requestedWeek!));
+      const current = await getSubmissionStatus(id, areaId);
+      if (current?.status === "submitted") {
+        return { already: true as const, submission: current };
+      }
+      const weekNumber = requestedWeek ?? (await loadReportWeekById(id))?.weekNumber ?? null;
+      await submitReportArea(id, areaId, systemUserId, submitterLabel);
+      const submission = await getSubmissionStatus(id, areaId);
+      return { already: false as const, weekNumber, submission };
+    });
+
+    if (!submitted.already && submitted.weekNumber) {
+      const area = await loadReportAreaNames(areaId);
+      await recordReportWeek({ action: "submit", weekNumber: submitted.weekNumber, area });
+    }
+    return NextResponse.json({ success: true, data: submitted.submission });
   } catch (error) {
     console.error("POST /api/report/submissions ERROR:", error);
     return jsonError("Failed to submit report.", 500);

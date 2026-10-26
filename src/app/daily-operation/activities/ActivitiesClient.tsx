@@ -153,7 +153,8 @@ export default function ManagementPage() {
       setDeleteRow(null);
       await loadRows(filters);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete.");
+      setDeleteRow(null);
+      toastError(e instanceof Error ? e.message : "Failed to delete.");
     } finally {
       setDeleting(false);
     }

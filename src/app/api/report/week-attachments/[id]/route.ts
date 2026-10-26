@@ -8,6 +8,8 @@ import {
 import { jsonError, parsePositiveInt } from "@/lib/report/apiHelpers";
 import { getSubmissionStatus } from "@/lib/report/lineStore";
 import { resolveReportStoredFilePath } from "@/lib/report/upload";
+import { loadWeekArea, recordReportAttachment } from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const runtime = "nodejs";
 
@@ -43,7 +45,13 @@ export async function DELETE(
       }
     }
 
-    await deleteReportWeekAttachment(id);
+    await suppressLogsCenter(() => deleteReportWeekAttachment(id));
+    const place = await loadWeekArea(Number(row.week_id), Number(row.area_id));
+    await recordReportAttachment({
+      action: "delete",
+      fileName: row.original_name,
+      parent: { type: "week", weekNumber: place?.weekNumber ?? 0, area: place?.area ?? null },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

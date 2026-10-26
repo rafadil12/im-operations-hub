@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import { jsonError, parsePositiveInt } from "@/lib/report/apiHelpers";
 import { createReportSubItem } from "@/lib/report/lineStore";
+import { loadReportAreaNames, recordReportSubItem } from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const runtime = "nodejs";
 
@@ -22,8 +24,15 @@ export async function POST(request: Request) {
     if (!nameEn) return jsonError("English name is required.");
     if (!nameCn) return jsonError("Chinese name is required.");
 
-    const created = await createReportSubItem(areaId, nameEn, nameCn);
-    return NextResponse.json({ success: true, data: created });
+    const area = await loadReportAreaNames(areaId);
+    const created = await suppressLogsCenter(() => createReportSubItem(areaId, nameEn, nameCn));
+    if (created.created) {
+      await recordReportSubItem(
+        { name_en: created.item.nameEn, name_cn: created.item.nameCn },
+        area
+      );
+    }
+    return NextResponse.json({ success: true, data: created.item });
   } catch (error) {
     console.error("POST /api/report/sub-items ERROR:", error);
     const message = error instanceof Error ? error.message : "Failed to create sub-item.";

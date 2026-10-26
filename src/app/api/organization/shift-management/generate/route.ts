@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
 import { execute, query } from "@/lib/db";
+import { recordOrganization, shiftRosterEvent } from "@/lib/logs-center/organizationRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const dynamic = "force-dynamic";
 
@@ -1417,6 +1419,7 @@ export async function POST(request: NextRequest) {
       // Do NOT delete shift_schedules. Existing rows must be overwritten
       // so their primary key/id remains stable across repeated generation.
 
+    await suppressLogsCenter(async () => {
       await execute(
         `
           DELETE FROM shift_schedule_changes
@@ -1576,6 +1579,9 @@ export async function POST(request: NextRequest) {
           ],
         );
       }
+    });
+
+    await recordOrganization(shiftRosterEvent(year, month));
 
     return NextResponse.json({
       success: true,
