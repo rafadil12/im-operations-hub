@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, requirePermission } from "@/lib/auth";
-import type { ResultSetHeader } from "mysql2/promise";
+import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { withTransaction } from "@/lib/db";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
+import { itsmImportCounts, recordItsmImport } from "@/lib/logs-center/itsmRemark";
 import {
   ITSM_IMPORT_MAX_BYTES,
   ITSM_IMPORT_MAX_ROWS,
@@ -125,24 +127,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await withTransaction(async (conn) => {
-      let imported = 0;
-      let updated = 0;
+    const result = await suppressLogsCenter(() =>
+      withTransaction(async (conn) => {
+        const existing = new Set<number>();
+        const ids = parsed.rows.map((row) => row.request_id);
+        for (let i = 0; i < ids.length; i += UPSERT_BATCH_SIZE) {
+          const slice = ids.slice(i, i + UPSERT_BATCH_SIZE);
+          const [found] = await conn.query<RowDataPacket[]>(
+            `SELECT request_id FROM itsm_requests WHERE request_id IN (${slice.map(() => "?").join(",")})`,
+            slice
+          );
+          for (const row of found) existing.add(Number(row.request_id));
+        }
 
-      for (let i = 0; i < parsed.rows.length; i += UPSERT_BATCH_SIZE) {
-        const batch = parsed.rows.slice(i, i + UPSERT_BATCH_SIZE);
-        const values = batch.map((row) => rowValues(row));
-        const [queryResult] = await conn.query<ResultSetHeader>(UPSERT_SQL, [values]);
+        let affected = 0;
+        for (let i = 0; i < parsed.rows.length; i += UPSERT_BATCH_SIZE) {
+          const batch = parsed.rows.slice(i, i + UPSERT_BATCH_SIZE);
+          const values = batch.map((row) => rowValues(row));
+          const [queryResult] = await conn.query<ResultSetHeader>(UPSERT_SQL, [values]);
+          affected += Number(queryResult.affectedRows ?? 0);
+        }
 
-        const affected = Number(queryResult.affectedRows ?? 0);
-        const batchSize = batch.length;
-        const batchUpdated = Math.max(0, affected - batchSize);
-        updated += batchUpdated;
-        imported += batchSize - batchUpdated;
-      }
+        return itsmImportCounts(parsed.rows.length, existing.size, affected);
+      })
+    );
 
-      return { imported, updated };
-    });
+    if (result.imported > 0 || result.updated > 0) {
+      await recordItsmImport(result.imported, result.updated);
+    }
 
     return NextResponse.json({
       success: true,

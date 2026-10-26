@@ -52,7 +52,7 @@ const MODULES = [
   "system",
 ];
 
-const ACTIONS = ["login", "logout", "create", "update", "delete", "change", "save", "submit", "reopen"];
+const ACTIONS = ["login", "logout", "create", "update", "delete", "change", "save", "submit", "reopen", "import"];
 
 function currentDayBounds(): { from: string; to: string } {
   const now = new Date();

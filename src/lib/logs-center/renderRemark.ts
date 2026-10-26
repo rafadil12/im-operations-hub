@@ -283,6 +283,35 @@ function trainingSentence(event: RemarkEvent, lang: "en" | "cn"): string | null 
   return sentence;
 }
 
+function requestCountPhrase(count: number, lang: "en" | "cn"): string {
+  if (lang === "cn") return `${count} 个请求`;
+  return count === 1 ? "1 request" : `${count} requests`;
+}
+
+function requestImportSentence(event: RemarkEvent, lang: "en" | "cn"): string {
+  const imported = Number(event.objectRef?.trim() || "0");
+  const updatedRaw = event.changes?.find((change) => change.field === "updated")?.to;
+  const updated = Number(updatedRaw ?? "0");
+  const newCount = Number.isFinite(imported) && imported > 0 ? imported : 0;
+  const updatedCount = Number.isFinite(updated) && updated > 0 ? updated : 0;
+  const importedPhrase =
+    newCount > 0
+      ? lang === "cn"
+        ? `已导入 ${requestCountPhrase(newCount, lang)}`
+        : `Imported ${requestCountPhrase(newCount, lang)}`
+      : "";
+  const updatedPhrase =
+    updatedCount > 0
+      ? lang === "cn"
+        ? `已更新 ${requestCountPhrase(updatedCount, lang)}`
+        : `Updated ${requestCountPhrase(updatedCount, lang)}`
+      : "";
+  if (importedPhrase && updatedPhrase) {
+    return lang === "cn" ? `${importedPhrase}，${updatedPhrase}` : `${importedPhrase}, ${updatedPhrase.toLowerCase()}`;
+  }
+  return importedPhrase || updatedPhrase;
+}
+
 function sessionSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
   if (event.objectType !== "session") return null;
   const result = event.changes?.find((change) => change.field === "result")?.to;
@@ -325,7 +354,11 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
     const attachment = attachmentSentence(event, lang);
     if (attachment) return attachment;
   }
-  if (event.action === "import" && (event.objectType === "materials" || event.objectType === "activities")) {
+  if (
+    event.action === "import" &&
+    (event.objectType === "materials" || event.objectType === "activities" || event.objectType === "requests")
+  ) {
+    if (event.objectType === "requests") return requestImportSentence(event, lang);
     const count = event.objectRef?.trim() || "0";
     if (event.objectType === "activities") {
       return lang === "cn" ? `已导入 ${count} 个活动` : `Imported ${count} activities`;
