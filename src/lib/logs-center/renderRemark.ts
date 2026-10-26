@@ -46,6 +46,7 @@ const NOUNS: Record<string, { en: string; cn: string }> = {
   project: { en: "project", cn: "项目" },
   "sub-item": { en: "sub-item", cn: "子项" },
   attachment: { en: "attachment", cn: "附件" },
+  participant: { en: "participant", cn: "参与者" },
 };
 
 const VERBS: Record<string, { en: string; cn: string }> = {
@@ -258,6 +259,30 @@ function safetySentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
   return sentence;
 }
 
+function trainingSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
+  if (event.objectType !== "training session") return null;
+  const verb = VERBS[event.action]?.[lang] ?? VERBS.update[lang];
+  const name = event.changes?.find((change) => change.field === "name");
+  const topic = name
+    ? lang === "cn"
+      ? text(name.toCn, text(name.to, ""))
+      : text(name.to, text(name.toCn, ""))
+    : "";
+  const gap = lang === "cn" ? "" : " ";
+  const noun = lang === "cn" ? "培训" : "session";
+  let sentence = topic ? `${verb}${gap}${noun} ${topic}` : `${verb}${gap}${noun}`;
+  const details = (event.changes ?? [])
+    .filter((change) => change.field !== "name")
+    .map((change) => changePhrase(change, lang))
+    .filter((phrase): phrase is string => Boolean(phrase));
+  if (details.length) {
+    const colon = lang === "cn" ? "：" : ": ";
+    const comma = lang === "cn" ? "，" : ", ";
+    sentence += `${colon}${details.join(comma)}`;
+  }
+  return sentence;
+}
+
 function sessionSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
   if (event.objectType !== "session") return null;
   const result = event.changes?.find((change) => change.field === "result")?.to;
@@ -294,6 +319,8 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   if (event.objectType === "week") return weekSentence(event, lang);
   const safety = safetySentence(event, lang);
   if (safety) return safety;
+  const training = trainingSentence(event, lang);
+  if (training) return training;
   if (event.objectType === "attachment") {
     const attachment = attachmentSentence(event, lang);
     if (attachment) return attachment;
