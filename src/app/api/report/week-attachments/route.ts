@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import type { AuthAccountPublic } from "@/lib/auth/types";
+import { loadReportAreaNames, recordReportAttachment } from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 import {
   insertReportWeekAttachment,
   loadReportWeekAttachments,
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
       return jsonError("year, week, and areaId are required.");
     }
 
-    const weekId = await ensureReportWeek(year, weekNumber);
+    const weekId = await suppressLogsCenter(() => ensureReportWeek(year, weekNumber));
     const attachments = await loadReportWeekAttachments(weekId, areaId);
 
     return NextResponse.json({ success: true, data: attachments });
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
       return jsonError("Unsupported file type. Allowed: PPT, Excel, PDF, PNG, JPEG.");
     }
 
-    const weekId = await ensureReportWeek(year, weekNumber);
+    const weekId = await suppressLogsCenter(() => ensureReportWeek(year, weekNumber));
     const submission = await getSubmissionStatus(weekId, areaId);
     if (submission?.status === "submitted") {
       return jsonError("This week report is submitted and cannot be edited.");
@@ -80,15 +82,23 @@ export async function POST(request: Request) {
     const account: AuthAccountPublic | undefined =
       "account" in gate ? (gate.account ?? undefined) : undefined;
 
-    const attachment = await insertReportWeekAttachment({
-      weekId,
-      areaId,
-      originalName: uploaded.originalName,
-      storedName: uploaded.storedName,
-      fileUrl: uploaded.url,
-      mimeType: uploaded.mimeType,
-      size: uploaded.size,
-      uploadedBySystemUserId: account?.systemUserId ?? null,
+    const attachment = await suppressLogsCenter(() =>
+      insertReportWeekAttachment({
+        weekId,
+        areaId,
+        originalName: uploaded.originalName,
+        storedName: uploaded.storedName,
+        fileUrl: uploaded.url,
+        mimeType: uploaded.mimeType,
+        size: uploaded.size,
+        uploadedBySystemUserId: account?.systemUserId ?? null,
+      })
+    );
+    const area = await loadReportAreaNames(areaId);
+    await recordReportAttachment({
+      action: "create",
+      fileName: attachment.originalName,
+      parent: { type: "week", weekNumber, area },
     });
 
     return NextResponse.json({ success: true, data: attachment });

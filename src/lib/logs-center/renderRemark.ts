@@ -42,6 +42,10 @@ const NOUNS: Record<string, { en: string; cn: string }> = {
   "storage location": { en: "storage location", cn: "库位" },
   user: { en: "user", cn: "用户" },
   record: { en: "record", cn: "记录" },
+  week: { en: "week", cn: "周" },
+  project: { en: "project", cn: "项目" },
+  "sub-item": { en: "sub-item", cn: "子项" },
+  attachment: { en: "attachment", cn: "附件" },
 };
 
 const VERBS: Record<string, { en: string; cn: string }> = {
@@ -51,6 +55,9 @@ const VERBS: Record<string, { en: string; cn: string }> = {
   post: { en: "Posted", cn: "已过账" },
   reverse: { en: "Reversed", cn: "已冲销" },
   import: { en: "Imported", cn: "已导入" },
+  save: { en: "Saved", cn: "已保存" },
+  submit: { en: "Submitted", cn: "已提交" },
+  reopen: { en: "Reopened", cn: "已重新打开" },
 };
 
 const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "updated" }> = {
@@ -77,6 +84,13 @@ const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "update
   notes: { en: "notes", cn: "备注", mode: "updated" },
   role_name: { en: "name", cn: "名称", mode: "from-to" },
   role_description: { en: "description", cn: "描述", mode: "from-to" },
+  area: { en: "area", cn: "区域", mode: "from-to" },
+  project_name: { en: "name", cn: "名称", mode: "from-to" },
+  reporter: { en: "reporter", cn: "汇报人", mode: "from-to" },
+  report_date: { en: "report date", cn: "日期", mode: "from-to" },
+  cycle: { en: "cycle", cn: "周期", mode: "from-to" },
+  week: { en: "week", cn: "周次", mode: "from-to" },
+  year: { en: "year", cn: "年份", mode: "from-to" },
 };
 
 function text(value: string | null | undefined, fallback: string): string {
@@ -104,7 +118,12 @@ function changePhrase(change: RemarkChange, lang: "en" | "cn"): string | null {
   }
   const meta = FIELDS[change.field];
   if (!meta) return null;
-  if (change.field === "role" || change.field === "division" || change.field === "category") {
+  if (
+    change.field === "role" ||
+    change.field === "division" ||
+    change.field === "category" ||
+    change.field === "area"
+  ) {
     const meta = FIELDS[change.field];
     const valueTo = lang === "cn" ? text(change.toCn, text(change.to, "")) : text(change.to, "");
     const valueFrom = lang === "cn" ? text(change.fromCn, text(change.from, "")) : text(change.from, "");
@@ -131,6 +150,54 @@ function linkPhrase(link: RemarkLink, lang: "en" | "cn"): string {
   }
   const head = lang === "cn" ? `并关联 ${link.ref}` : `and linked ${link.ref}`;
   return detail ? `${head}${colon}${detail}` : head;
+}
+
+function weekSentence(event: RemarkEvent, lang: "en" | "cn"): string {
+  const week = event.objectRef?.trim() || "";
+  const areaChange = event.changes?.find((change) => change.field === "name");
+  const area = areaChange
+    ? lang === "cn"
+      ? text(areaChange.toCn, text(areaChange.to, ""))
+      : text(areaChange.to, text(areaChange.toCn, ""))
+    : "";
+  const verb = VERBS[event.action]?.[lang] ?? VERBS.update[lang];
+  const place = lang === "cn" ? `第${week}周${area ? ` ${area}` : ""}` : `week ${week}${area ? ` ${area}` : ""}`;
+  const gap = lang === "cn" ? "" : " ";
+  let sentence = `${verb}${gap}${place}`;
+  const details = (event.changes ?? [])
+    .filter((change) => change.field !== "name")
+    .map((change) => changePhrase(change, lang))
+    .filter((phrase): phrase is string => Boolean(phrase));
+  if (details.length) {
+    const colon = lang === "cn" ? "：" : ": ";
+    const comma = lang === "cn" ? "，" : ", ";
+    sentence += `${colon}${details.join(comma)}`;
+  }
+  return sentence;
+}
+
+function attachmentSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
+  const file = event.objectRef?.trim();
+  const parent = event.links?.[0];
+  if (!file || !parent) return null;
+  if (parent.type === "week") {
+    const week = parent.ref.trim();
+    const area = lang === "cn" ? text(parent.detailCn, text(parent.detailEn, "")) : text(parent.detailEn, text(parent.detailCn, ""));
+    const place = lang === "cn" ? `第${week}周${area ? ` ${area}` : ""}` : `week ${week}${area ? ` ${area}` : ""}`;
+    if (event.action === "delete") {
+      return lang === "cn" ? `已删除附件 ${file}，${place}` : `Removed attachment ${file} from ${place}`;
+    }
+    return lang === "cn" ? `已添加附件 ${file} 到${place}` : `Added attachment ${file} to ${place}`;
+  }
+  if (parent.type === "project") {
+    const name = parent.ref.trim();
+    if (!name) return null;
+    if (event.action === "delete") {
+      return lang === "cn" ? `已删除附件 ${file}，项目 ${name}` : `Removed attachment ${file} from project ${name}`;
+    }
+    return lang === "cn" ? `已添加附件 ${file} 到项目 ${name}` : `Added attachment ${file} to project ${name}`;
+  }
+  return null;
 }
 
 function sessionSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
@@ -166,6 +233,11 @@ export function parseRemarkList<T>(value: unknown): T[] | null {
 export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   const session = sessionSentence(event, lang);
   if (session) return session;
+  if (event.objectType === "week") return weekSentence(event, lang);
+  if (event.objectType === "attachment") {
+    const attachment = attachmentSentence(event, lang);
+    if (attachment) return attachment;
+  }
   if (event.action === "import" && (event.objectType === "materials" || event.objectType === "activities")) {
     const count = event.objectRef?.trim() || "0";
     if (event.objectType === "activities") {

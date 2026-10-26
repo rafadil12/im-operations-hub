@@ -8,12 +8,23 @@ import {
   parseYear,
 } from "@/lib/report/apiHelpers";
 import {
+  countWeekLineChanges,
+  loadReportAreaNames,
+  loadReportWeekByNumber,
+  recordReportWeek,
+  weekDeleteDetail,
+  weekLineDetail,
+} from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
+import {
   loadReportAreas,
+  loadReportLines,
   loadReportSubItems,
   loadReportWeeks,
   submitReportArea,
 } from "@/lib/report/lineStore";
 import {
+  deleteReportWeekLines,
   loadReportWeekBundle,
   saveReportWeekLines,
   type ReportWeekLinePayload,
@@ -91,7 +102,7 @@ export async function GET(request: Request) {
       return jsonError("year, week, and areaId are required.");
     }
 
-    const bundle = await loadReportWeekBundle(year, weekNumber, areaId);
+    const bundle = await suppressLogsCenter(() => loadReportWeekBundle(year, weekNumber, areaId));
     const [areas, subItems, weeks, attachments] = await Promise.all([
       loadReportAreas(),
       loadReportSubItems(areaId),
@@ -146,15 +157,20 @@ export async function PUT(request: Request) {
     }
 
     const create = body.mode === "create";
+    const existingWeek = await loadReportWeekByNumber(year, weekNumber);
+    const before = existingWeek ? await loadReportLines({ weekId: existingWeek.id, areaId }) : [];
+    const detail = weekLineDetail(countWeekLineChanges(before, lines));
+    if (!detail && lines.length > 0) {
+      return NextResponse.json({ success: true, data: before });
+    }
     const account = "account" in gate ? (gate.account ?? undefined) : undefined;
-    const saved = await saveReportWeekLines(
-      year,
-      weekNumber,
-      areaId,
-      lines,
-      auditFromAccount(account),
-      { create }
+    const saved = await suppressLogsCenter(() =>
+      saveReportWeekLines(year, weekNumber, areaId, lines, auditFromAccount(account), { create })
     );
+    if (detail) {
+      const area = await loadReportAreaNames(areaId);
+      await recordReportWeek({ action: "save", weekNumber, area, detail });
+    }
 
     return NextResponse.json({ success: true, data: saved });
   } catch (error) {
@@ -177,7 +193,7 @@ export async function POST(request: Request) {
 
     if (!weekNumber || !areaId) return jsonError("Week and area are required.");
 
-    const bundle = await loadReportWeekBundle(year, weekNumber, areaId);
+    const bundle = await suppressLogsCenter(() => loadReportWeekBundle(year, weekNumber, areaId));
     if (!bundle.lines.length) {
       return jsonError("Cannot submit an empty week report.");
     }
@@ -187,11 +203,48 @@ export async function POST(request: Request) {
 
     const account = "account" in gate ? (gate.account ?? undefined) : undefined;
     const { systemUserId, label } = submitterFromAccount(account);
-    await submitReportArea(bundle.weekId, areaId, systemUserId, label);
+    await suppressLogsCenter(() => submitReportArea(bundle.weekId, areaId, systemUserId, label));
+    const area = await loadReportAreaNames(areaId);
+    await recordReportWeek({ action: "submit", weekNumber, area });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("POST /api/report/week-lines ERROR:", error);
     return jsonError("Failed to submit week report.", 500);
+  }
+}
+
+export async function DELETE(request: Request) {
+  const gate = await requireAnyPermission([PERMISSIONS.reportLineDelete]);
+  if (gate instanceof NextResponse) return gate;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const year = parseYear(searchParams.get("year"));
+    const weekNumber = parseWeekNumber(searchParams.get("week") ?? searchParams.get("weekNumber"));
+    const areaId = parsePositiveInt(searchParams.get("areaId"));
+    if (!year || !weekNumber || !areaId) {
+      return jsonError("Year, week, and area are required.");
+    }
+
+    const week = await loadReportWeekByNumber(year, weekNumber);
+    if (!week) return jsonError("Week report not found.", 404);
+    const lines = await loadReportLines({ weekId: week.id, areaId });
+    if (!lines.length) return jsonError("Week report not found.", 404);
+
+    await suppressLogsCenter(() => deleteReportWeekLines(week.id, areaId));
+    const area = await loadReportAreaNames(areaId);
+    await recordReportWeek({
+      action: "delete",
+      weekNumber,
+      area,
+      detail: weekDeleteDetail(lines.length),
+    });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/report/week-lines ERROR:", error);
+    const message = error instanceof Error ? error.message : "Failed to delete week report.";
+    const status = message === "This week report is submitted and cannot be edited." ? 400 : 500;
+    return jsonError(message, status);
   }
 }

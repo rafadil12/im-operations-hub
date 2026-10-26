@@ -3,6 +3,14 @@ import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
 import { hasTextPair, jsonError, parsePositiveInt } from "@/lib/report/apiHelpers";
 import { deleteReportLine, getReportLineById, updateReportLine } from "@/lib/report/lineStore";
 import { parseCompletionRate } from "@/lib/report/weekCalendar";
+import {
+  loadSubItemNames,
+  loadWeekArea,
+  recordReportWeek,
+  removedLineDetail,
+  weekLineEditDetail,
+} from "@/lib/logs-center/reportRemark";
+import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const runtime = "nodejs";
 
@@ -50,26 +58,71 @@ export async function PUT(request: Request, context: RouteContext) {
           : null
         : undefined;
 
-    await updateReportLine(id, {
-      subItemId,
+    const nextSubItemId = subItemId !== undefined ? subItemId : existing.subItemId;
+    let nextSubItemNameEn = existing.subItemNameEn;
+    let nextSubItemNameCn = existing.subItemNameCn;
+    if (nextSubItemId !== existing.subItemId && nextSubItemId) {
+      const names = await loadSubItemNames(nextSubItemId);
+      nextSubItemNameEn = names?.name_en ?? null;
+      nextSubItemNameCn = names?.name_cn ?? null;
+    }
+    const next = {
+      subItemId: nextSubItemId,
+      subItemNameEn: nextSubItemNameEn,
+      subItemNameCn: nextSubItemNameCn,
       workTargetEn:
-        workTargetEn !== undefined ? workTargetEn || workTargetCn || existing.workTargetCn : undefined,
+        workTargetEn !== undefined
+          ? workTargetEn || workTargetCn || existing.workTargetCn
+          : existing.workTargetEn,
       workTargetCn:
-        workTargetCn !== undefined ? workTargetCn || workTargetEn || existing.workTargetEn : undefined,
+        workTargetCn !== undefined
+          ? workTargetCn || workTargetEn || existing.workTargetEn
+          : existing.workTargetCn,
       weeklyCompletionRate:
         body.weeklyCompletionRate !== undefined
           ? parseCompletionRate(body.weeklyCompletionRate)
-          : undefined,
+          : existing.weeklyCompletionRate,
       summaryEn:
-        summaryEn !== undefined ? summaryEn || summaryCn || existing.summaryCn : undefined,
+        summaryEn !== undefined ? summaryEn || summaryCn || existing.summaryCn : existing.summaryEn,
       summaryCn:
-        summaryCn !== undefined ? summaryCn || summaryEn || existing.summaryEn : undefined,
-      planEn:
-        body.planEn !== undefined ? String(body.planEn).trim() || null : undefined,
-      planCn:
-        body.planCn !== undefined ? String(body.planCn).trim() || null : undefined,
-      sortOrder: body.sortOrder !== undefined ? Number(body.sortOrder) : undefined,
-    });
+        summaryCn !== undefined ? summaryCn || summaryEn || existing.summaryEn : existing.summaryCn,
+      planEn: body.planEn !== undefined ? String(body.planEn).trim() || null : existing.planEn,
+      planCn: body.planCn !== undefined ? String(body.planCn).trim() || null : existing.planCn,
+    };
+    const detail = weekLineEditDetail(existing, next);
+    const sortChanged =
+      body.sortOrder !== undefined && Number(body.sortOrder) !== existing.sortOrder;
+    const change = sortChanged
+      ? {
+          field: "lines",
+          to: detail?.to ? `${detail.to}, sort order updated` : "sort order updated",
+          toCn: detail?.toCn ? `${detail.toCn}，排序已更新` : "排序已更新",
+        }
+      : detail;
+    if (!change) return NextResponse.json({ success: true });
+
+    await suppressLogsCenter(() =>
+      updateReportLine(id, {
+        subItemId: next.subItemId,
+        workTargetEn: next.workTargetEn,
+        workTargetCn: next.workTargetCn,
+        weeklyCompletionRate: next.weeklyCompletionRate,
+        summaryEn: next.summaryEn,
+        summaryCn: next.summaryCn,
+        planEn: next.planEn,
+        planCn: next.planCn,
+        sortOrder: body.sortOrder !== undefined ? Number(body.sortOrder) : undefined,
+      })
+    );
+    const place = await loadWeekArea(existing.weekId, existing.areaId);
+    if (place) {
+      await recordReportWeek({
+        action: "update",
+        weekNumber: place.weekNumber,
+        area: place.area,
+        detail: change,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -90,7 +143,16 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const existing = await getReportLineById(id);
     if (!existing) return jsonError("Report line not found.", 404);
 
-    await deleteReportLine(id);
+    const place = await loadWeekArea(existing.weekId, existing.areaId);
+    await suppressLogsCenter(() => deleteReportLine(id));
+    if (place) {
+      await recordReportWeek({
+        action: "delete",
+        weekNumber: place.weekNumber,
+        area: place.area,
+        detail: removedLineDetail(existing.subItemNameEn, existing.subItemNameCn),
+      });
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/report/lines/[id] ERROR:", error);

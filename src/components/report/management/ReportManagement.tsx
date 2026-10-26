@@ -360,14 +360,15 @@ export function ReportManagement({ mode }: { mode: ReportManagementMode }) {
   };
 
   const deleteWeekReport = async () => {
-    if (!deleteWeekRow) return;
+    if (!deleteWeekRow || areaId == null) return;
     setDeleting(true);
     try {
-      for (const line of deleteWeekRow.lines) {
-        const res = await fetch(`/api/report/lines/${line.id}`, { method: "DELETE" });
-        const json = await res.json();
-        if (!res.ok || !json.success) throw new Error(json.error ?? "Delete failed");
-      }
+      const res = await fetch(
+        `/api/report/week-lines?year=${deleteWeekRow.year}&week=${deleteWeekRow.weekNumber}&areaId=${areaId}`,
+        { method: "DELETE" }
+      );
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Delete failed");
       toastSuccess(reportText("deleteSuccess", language));
       setDeleteWeekRow(null);
       await loadLines();

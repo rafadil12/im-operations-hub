@@ -15,7 +15,17 @@ const MODULES = new Set([
   "system",
 ]);
 
-const ACTIONS = new Set(["login", "logout", "create", "update", "delete", "change"]);
+const ACTIONS = new Set([
+  "login",
+  "logout",
+  "create",
+  "update",
+  "delete",
+  "change",
+  "save",
+  "submit",
+  "reopen",
+]);
 
 type LogRow = {
   id: number;
