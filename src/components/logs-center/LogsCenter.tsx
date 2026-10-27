@@ -4,10 +4,25 @@ import { useCallback, useEffect, useState } from "react";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/stockTableRows";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
+import { Drawer } from "@/components/ui/Drawer";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useLang } from "@/lib/i18n";
-import { parseRemarkList, renderRemark, type RemarkChange, type RemarkLink } from "@/lib/logs-center/renderRemark";
 import { fillTemplate } from "@/lib/i18n/fillTemplate";
+import {
+  actionBadgeClass,
+  actionBadgeTone,
+  formatChangeLines,
+  formatLogDevice,
+  formatLogEventId,
+  formatLogIp,
+  formatLogTarget,
+} from "@/lib/logs-center/logDetail";
+import {
+  parseRemarkList,
+  renderRemark,
+  type RemarkChange,
+  type RemarkLink,
+} from "@/lib/logs-center/renderRemark";
 
 type LogRow = {
   id: number;
@@ -17,8 +32,11 @@ type LogRow = {
   object_type: string | null;
   object_ref: string | null;
   summary: string;
+  summary_cn?: string | null;
   changes_json: unknown;
   links_json: unknown;
+  ip_address: string | null;
+  user_agent: string | null;
   actor_label: string | null;
   employee_no: string | null;
   name_en: string | null;
@@ -32,11 +50,30 @@ type LogResponse = {
   pageSize: number;
 };
 
+type AppliedFilters = {
+  moduleName: string;
+  action: string;
+  q: string;
+  from: string;
+  to: string;
+};
+
 function actorName(row: LogRow, lang: "en" | "cn"): string {
   const en = row.name_en?.trim() || "";
   const cn = row.name_cn?.trim() || "";
   const name = lang === "cn" ? cn || en : en || cn;
   return name || row.actor_label?.trim() || "-";
+}
+
+function ActionBadge({ action }: { action: string }) {
+  const tone = actionBadgeTone(action);
+  return (
+    <span
+      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${actionBadgeClass(tone)}`}
+    >
+      {action.toUpperCase()}
+    </span>
+  );
 }
 
 const MODULES = [
@@ -52,7 +89,18 @@ const MODULES = [
   "system",
 ];
 
-const ACTIONS = ["login", "logout", "create", "update", "delete", "change", "save", "submit", "reopen", "import"];
+const ACTIONS = [
+  "login",
+  "logout",
+  "create",
+  "update",
+  "delete",
+  "change",
+  "save",
+  "submit",
+  "reopen",
+  "import",
+];
 
 function currentDayBounds(): { from: string; to: string } {
   const now = new Date();
@@ -67,6 +115,11 @@ function splitCreatedAt(value: string): { date: string; time: string } {
   return { date: match[1], time: match[2] };
 }
 
+function fullTimestamp(value: string): string {
+  const created = splitCreatedAt(value);
+  return created.time ? `${created.date} ${created.time}` : created.date;
+}
+
 const fieldCls =
   "w-full rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 const labelCls = "mb-1 block text-[10px] uppercase text-text-dim";
@@ -79,7 +132,7 @@ export function LogsCenter() {
   const [bounds] = useState(currentDayBounds);
   const [from, setFrom] = useState(bounds.from);
   const [to, setTo] = useState(bounds.to);
-  const [applied, setApplied] = useState({
+  const [applied, setApplied] = useState<AppliedFilters>({
     moduleName: "",
     action: "",
     q: "",
@@ -91,6 +144,7 @@ export function LogsCenter() {
   const [data, setData] = useState<LogResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,6 +185,44 @@ export function LogsCenter() {
     { value: "", label: t.common.all },
     ...ACTIONS.map((item) => ({ value: item, label: item.toUpperCase() })),
   ];
+  const selected = data?.rows.find((row) => row.id === selectedId) ?? null;
+  const selectedChanges = selected ? parseRemarkList<RemarkChange>(selected.changes_json) : null;
+  const selectedLinks = selected ? parseRemarkList<RemarkLink>(selected.links_json) : null;
+  const changeLines = formatChangeLines(selectedChanges, lang);
+  const activeChips: { key: string; label: string }[] = [];
+  if (applied.from || applied.to) {
+    activeChips.push({
+      key: "range",
+      label: `${applied.from.replace("T", " ")} → ${applied.to.replace("T", " ")}`,
+    });
+  }
+  if (applied.moduleName) {
+    activeChips.push({ key: "module", label: applied.moduleName.toUpperCase() });
+  }
+  if (applied.action) {
+    activeChips.push({ key: "action", label: applied.action.toUpperCase() });
+  }
+  if (applied.q.trim()) {
+    activeChips.push({ key: "q", label: applied.q.trim() });
+  }
+
+  const resetFilters = () => {
+    const next = currentDayBounds();
+    setModuleName("");
+    setAction("");
+    setQ("");
+    setFrom(next.from);
+    setTo(next.to);
+    setApplied({
+      moduleName: "",
+      action: "",
+      q: "",
+      from: next.from,
+      to: next.to,
+    });
+    setPage(1);
+    setSelectedId(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -140,134 +232,188 @@ export function LogsCenter() {
       </div>
 
       <form
-        className="flex flex-wrap items-end gap-2 rounded-lg border border-border-subtle bg-surface p-3"
+        className="space-y-3 rounded-lg border border-border-subtle bg-surface p-3"
         onSubmit={(event) => {
           event.preventDefault();
           setApplied({ moduleName, action, q, from, to });
           setPage(1);
+          setSelectedId(null);
         }}
       >
-        <div className="min-w-[11.75rem]">
-          <label className={labelCls}>{t.fields.from}</label>
-          <DateTimePicker compact withSeconds value={from} onChange={setFrom} />
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[11.75rem]">
+            <label className={labelCls}>{t.fields.from}</label>
+            <DateTimePicker compact withSeconds value={from} onChange={setFrom} />
+          </div>
+          <div className="min-w-[11.75rem]">
+            <label className={labelCls}>{t.fields.to}</label>
+            <DateTimePicker compact withSeconds value={to} onChange={setTo} />
+          </div>
+          <div className="min-w-[140px]">
+            <label className={labelCls}>{t.logsCenter.module}</label>
+            <SparepartDropdown
+              compact
+              className="w-full"
+              value={moduleName}
+              onChange={setModuleName}
+              options={moduleOptions}
+              placeholder={t.common.all}
+            />
+          </div>
+          <div className="min-w-[120px]">
+            <label className={labelCls}>{t.logsCenter.action}</label>
+            <SparepartDropdown
+              compact
+              className="w-full"
+              value={action}
+              onChange={setAction}
+              options={actionOptions}
+              placeholder={t.common.all}
+            />
+          </div>
+          <div className="min-w-[180px] flex-1">
+            <label className={labelCls}>{t.common.search}</label>
+            <input
+              className={fieldCls}
+              value={q}
+              placeholder={t.logsCenter.search}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-muted hover:bg-surface-hover hover:text-text"
+          >
+            {t.logsCenter.resetFilters}
+          </button>
+          <button
+            type="submit"
+            className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          >
+            {t.logsCenter.applyFilters}
+          </button>
         </div>
-        <div className="min-w-[11.75rem]">
-          <label className={labelCls}>{t.fields.to}</label>
-          <DateTimePicker compact withSeconds value={to} onChange={setTo} />
-        </div>
-        <div className="min-w-[140px]">
-          <label className={labelCls}>{t.logsCenter.module}</label>
-          <SparepartDropdown
-            compact
-            className="w-full"
-            value={moduleName}
-            onChange={setModuleName}
-            options={moduleOptions}
-            placeholder={t.common.all}
-          />
-        </div>
-        <div className="min-w-[120px]">
-          <label className={labelCls}>{t.logsCenter.action}</label>
-          <SparepartDropdown
-            compact
-            className="w-full"
-            value={action}
-            onChange={setAction}
-            options={actionOptions}
-            placeholder={t.common.all}
-          />
-        </div>
-        <div className="min-w-[180px] flex-1">
-          <label className={labelCls}>{t.common.search}</label>
-          <input
-            className={fieldCls}
-            value={q}
-            placeholder={t.logsCenter.search}
-            onChange={(e) => setQ(e.target.value)}
-          />
-        </div>
-        <button
-          type="submit"
-          className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-        >
-          {t.common.apply}
-        </button>
+        {activeChips.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wide text-text-dim">
+              {t.logsCenter.activeFilters}
+            </span>
+            {activeChips.map((chip) => (
+              <span
+                key={chip.key}
+                className="rounded-full border border-border-subtle bg-bg/50 px-2.5 py-0.5 text-[11px] text-text-muted"
+              >
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </form>
 
       {error ? (
-        <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>
+        <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+          {error}
+        </p>
       ) : null}
 
       <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
         <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse text-left text-xs">
-          <colgroup>
-            <col style={{ width: "12.5%" }} />
-            <col style={{ width: "12.5%" }} />
-            <col style={{ width: "12.5%" }} />
-            <col style={{ width: "12.5%" }} />
-            <col style={{ width: "50%" }} />
-          </colgroup>
-          <thead className="border-b border-border-subtle text-[10px] uppercase tracking-wide text-text-dim">
-            <tr>
-              <th className="px-3 py-2">{t.logsCenter.date}</th>
-              <th className="px-3 py-2">{t.logsCenter.username}</th>
-              <th className="px-3 py-2">{t.logsCenter.module}</th>
-              <th className="px-3 py-2">{t.logsCenter.action}</th>
-              <th className="px-3 py-2">{t.logsCenter.remarks}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+          <table className="w-full table-fixed border-collapse text-left text-xs">
+            <colgroup>
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "40%" }} />
+              <col style={{ width: "12%" }} />
+            </colgroup>
+            <thead className="border-b border-border-subtle text-[10px] uppercase tracking-wide text-text-dim">
               <tr>
-                <td className="px-3 py-4 text-text-muted" colSpan={5}>
-                  {t.common.loading}
-                </td>
+                <th className="px-3 py-2">{t.logsCenter.time}</th>
+                <th className="px-3 py-2">{t.logsCenter.userEmployeeId}</th>
+                <th className="px-3 py-2">{t.logsCenter.module}</th>
+                <th className="px-3 py-2">{t.logsCenter.action}</th>
+                <th className="px-3 py-2">{t.logsCenter.remarks}</th>
+                <th className="px-3 py-2">{t.logsCenter.details}</th>
               </tr>
-            ) : data && data.rows.length > 0 ? (
-              data.rows.map((row) => {
-                const created = splitCreatedAt(row.created_at);
-                return (
-                  <tr key={row.id} className="border-b border-border-subtle/70 last:border-0">
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <span className="block font-medium text-text">{created.date}</span>
-                    {created.time ? (
-                      <span className="mt-0.5 block text-[10px] text-text-dim">{created.time}</span>
-                    ) : null}
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td className="px-3 py-4 text-text-muted" colSpan={6}>
+                    {t.common.loading}
                   </td>
-                  <td className="px-3 py-2 text-text">
-                    <span className="block break-words">{actorName(row, lang)}</span>
-                    {row.employee_no ? (
-                      <span className="mt-0.5 block text-[10px] text-text-dim">{row.employee_no}</span>
-                    ) : null}
+                </tr>
+              ) : data && data.rows.length > 0 ? (
+                data.rows.map((row) => {
+                  const created = splitCreatedAt(row.created_at);
+                  const selectedRow = selectedId === row.id;
+                  return (
+                    <tr
+                      key={row.id}
+                      className={[
+                        "border-b border-border-subtle/70 last:border-0",
+                        selectedRow ? "bg-accent/5" : "",
+                      ].join(" ")}
+                    >
+                      <td className="whitespace-nowrap px-3 py-2">
+                        <span className="block font-medium text-text">{created.date}</span>
+                        {created.time ? (
+                          <span className="mt-0.5 block text-[10px] text-text-dim">
+                            {created.time}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-text">
+                        <span className="block break-words">{actorName(row, lang)}</span>
+                        {row.employee_no ? (
+                          <span className="mt-0.5 block text-[10px] text-text-dim">
+                            {row.employee_no}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="break-words px-3 py-2 text-text">
+                        {row.module.toUpperCase()}
+                      </td>
+                      <td className="px-3 py-2">
+                        <ActionBadge action={row.action} />
+                      </td>
+                      <td className="break-words px-3 py-2 text-text">
+                        {renderRemark(
+                          {
+                            action: row.action,
+                            summary: row.summary,
+                            objectType: row.object_type,
+                            objectRef: row.object_ref,
+                            changes: parseRemarkList<RemarkChange>(row.changes_json),
+                            links: parseRemarkList<RemarkLink>(row.links_json),
+                          },
+                          lang
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(row.id)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-muted hover:bg-surface-hover hover:text-text"
+                        >
+                          {t.logsCenter.view}
+                          <span aria-hidden>›</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td className="px-3 py-4 text-text-muted" colSpan={6}>
+                    {t.logsCenter.empty}
                   </td>
-                  <td className="px-3 py-2 break-words text-text">{row.module.toUpperCase()}</td>
-                  <td className="px-3 py-2 break-words text-text">{row.action.toUpperCase()}</td>
-                  <td className="px-3 py-2 break-words text-text">
-                    {renderRemark(
-                      {
-                        action: row.action,
-                        summary: row.summary,
-                        objectType: row.object_type,
-                        objectRef: row.object_ref,
-                        changes: parseRemarkList<RemarkChange>(row.changes_json),
-                        links: parseRemarkList<RemarkLink>(row.links_json),
-                      },
-                      lang
-                    )}
-                  </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td className="px-3 py-4 text-text-muted" colSpan={5}>
-                  {t.logsCenter.empty}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-3 py-2.5">
@@ -286,6 +432,7 @@ export function LogsCenter() {
                   onChange={(next) => {
                     setPageSize(Number(next) as PageSize);
                     setPage(1);
+                    setSelectedId(null);
                   }}
                   options={pageSizeOptions}
                 />
@@ -294,7 +441,10 @@ export function LogsCenter() {
             <button
               type="button"
               disabled={page <= 1 || loading}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              onClick={() => {
+                setPage((current) => Math.max(1, current - 1));
+                setSelectedId(null);
+              }}
               className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t.common.previous}
@@ -305,7 +455,10 @@ export function LogsCenter() {
             <button
               type="button"
               disabled={page >= pageCount || loading}
-              onClick={() => setPage((current) => current + 1)}
+              onClick={() => {
+                setPage((current) => current + 1);
+                setSelectedId(null);
+              }}
               className="rounded border border-border px-2.5 py-1 text-[11px] text-text-muted hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t.common.next}
@@ -313,6 +466,124 @@ export function LogsCenter() {
           </div>
         </div>
       </div>
+
+      {selected ? (
+        <Drawer
+          title={t.logsCenter.logDetails}
+          width="detail"
+          onClose={() => setSelectedId(null)}
+          subtitle={
+            <div className="flex flex-wrap items-center gap-2">
+              <ActionBadge action={selected.action} />
+              <span className="text-text-muted">{fullTimestamp(selected.created_at)}</span>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-xs">
+            <dl className="space-y-3">
+              <div>
+                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
+                  {t.logsCenter.username}
+                </dt>
+                <dd className="mt-1 text-sm text-text">
+                  {actorName(selected, lang)}
+                  {selected.employee_no ? (
+                    <span className="mt-0.5 block text-[11px] text-text-dim">
+                      {selected.employee_no}
+                    </span>
+                  ) : null}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
+                  {t.logsCenter.module}
+                </dt>
+                <dd className="mt-1 text-sm text-text">{selected.module.toUpperCase()}</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
+                  {t.logsCenter.action}
+                </dt>
+                <dd className="mt-1">
+                  <ActionBadge action={selected.action} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
+                  {t.logsCenter.target}
+                </dt>
+                <dd className="mt-1 break-words text-sm text-text">
+                  {formatLogTarget(selected.object_type, selected.object_ref, lang)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
+                  {t.logsCenter.remarks}
+                </dt>
+                <dd className="mt-1 break-words text-sm text-text">
+                  {renderRemark(
+                    {
+                      action: selected.action,
+                      summary: selected.summary,
+                      objectType: selected.object_type,
+                      objectRef: selected.object_ref,
+                      changes: selectedChanges,
+                      links: selectedLinks,
+                    },
+                    lang
+                  )}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="rounded-lg border border-border-subtle bg-bg/40 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-text-dim">
+                {t.logsCenter.additionalInfo}
+              </p>
+              <dl className="mt-3 space-y-2">
+                <div className="flex gap-3">
+                  <dt className="w-28 shrink-0 text-text-dim">{t.logsCenter.eventId}</dt>
+                  <dd className="break-all text-text">
+                    {formatLogEventId(selected.id, selected.created_at)}
+                  </dd>
+                </div>
+                <div className="flex gap-3">
+                  <dt className="w-28 shrink-0 text-text-dim">{t.logsCenter.ipAddress}</dt>
+                  <dd className="break-all text-text">{formatLogIp(selected.ip_address)}</dd>
+                </div>
+                <div className="flex gap-3">
+                  <dt className="w-28 shrink-0 text-text-dim">{t.logsCenter.device}</dt>
+                  <dd className="break-words text-text">{formatLogDevice(selected.user_agent)}</dd>
+                </div>
+                <div className="flex gap-3">
+                  <dt className="w-28 shrink-0 text-text-dim">{t.logsCenter.beforeValue}</dt>
+                  <dd className="break-words text-text">
+                    {changeLines.before.map((line) => (
+                      <span key={`before-${line}`} className="block">
+                        {line}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+                <div className="flex gap-3">
+                  <dt className="w-28 shrink-0 text-text-dim">{t.logsCenter.afterValue}</dt>
+                  <dd className="break-words text-text">
+                    {changeLines.after.map((line) => (
+                      <span key={`after-${line}`} className="block">
+                        {line}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <p className="rounded-md border border-accent/20 bg-accent/5 px-3 py-2 text-[11px] text-accent">
+              {t.logsCenter.permanentNote}
+            </p>
+          </div>
+        </Drawer>
+      ) : null}
     </div>
   );
 }

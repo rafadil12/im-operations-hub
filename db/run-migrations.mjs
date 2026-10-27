@@ -2019,5 +2019,23 @@ if (await tableExists("logs_center_events")) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 053: client IP and user-agent for Log Details
+// ---------------------------------------------------------------------------
+if (await tableExists("logs_center_events")) {
+  if (!(await columnExists("logs_center_events", "ip_address"))) {
+    await conn.query(
+      "ALTER TABLE logs_center_events ADD COLUMN `ip_address` VARCHAR(45) NULL AFTER `links_json`",
+    );
+    console.log("Added logs_center_events.ip_address.");
+  }
+  if (!(await columnExists("logs_center_events", "user_agent"))) {
+    await conn.query(
+      "ALTER TABLE logs_center_events ADD COLUMN `user_agent` VARCHAR(255) NULL AFTER `ip_address`",
+    );
+    console.log("Added logs_center_events.user_agent.");
+  }
+}
+
 await conn.end();
 console.log("Migrations complete.");
