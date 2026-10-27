@@ -14,8 +14,9 @@ describe("formatLogEventId", () => {
 });
 
 describe("formatLogTarget", () => {
-  it("joins the localized noun and object ref", () => {
-    expect(formatLogTarget("material", "DTR00001", "en")).toBe("material DTR00001");
+  it("joins the localized noun and object ref in title case", () => {
+    expect(formatLogTarget("material", "DTR00001", "en")).toBe("Material DTR00001");
+    expect(formatLogTarget("weekly safety report", "1", "en")).toBe("Weekly Safety Report 1");
     expect(formatLogTarget("material", "DTR00001", "cn")).toBe("物料 DTR00001");
   });
 

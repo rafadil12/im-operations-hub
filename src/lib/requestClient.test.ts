@@ -17,11 +17,11 @@ describe("clientIp", () => {
     else process.env.TRUST_PROXY = previous;
   });
 
-  it("returns null when TRUST_PROXY is off", () => {
+  it("stores 127.0.0.1 when TRUST_PROXY is off", () => {
     delete process.env.TRUST_PROXY;
     expect(
       clientIp(headers({ "x-forwarded-for": "203.0.113.10", "x-real-ip": "198.51.100.7" }))
-    ).toBeNull();
+    ).toBe("127.0.0.1");
   });
 
   it("reads the first x-forwarded-for hop when TRUST_PROXY=1", () => {

@@ -110,7 +110,7 @@ export function actionBadgeClass(tone: ActionBadgeTone): string {
     case "blue":
       return "bg-accent/15 text-accent";
     case "purple":
-      return "bg-violet-500/15 text-violet-600 dark:text-violet-300";
+      return "bg-violet-500/15 text-violet-500";
     case "gray":
     default:
       return "bg-surface-hover text-text-muted";
@@ -123,6 +123,19 @@ export function formatLogEventId(id: number, createdAt: string): string {
   return `LOG-${date}-${String(id).padStart(6, "0")}`;
 }
 
+/** Capitalize each word. Existing codes such as DTR00001 stay unchanged. */
+function toTitleCase(value: string): string {
+  return value.replace(/[A-Za-z]+(?:-[A-Za-z]+)*/g, (word) =>
+    word
+      .split("-")
+      .map((part) => {
+        if (part.length > 1 && part === part.toUpperCase()) return part;
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      })
+      .join("-")
+  );
+}
+
 export function formatLogTarget(
   objectType: string | null | undefined,
   objectRef: string | null | undefined,
@@ -132,8 +145,9 @@ export function formatLogTarget(
   const ref = objectRef?.trim() || "";
   if (!type && !ref) return "-";
   const noun = type ? (NOUNS[type]?.[lang] ?? type) : "";
-  if (noun && ref) return `${noun} ${ref}`;
-  return noun || ref || "-";
+  const text = noun && ref ? `${noun} ${ref}` : noun || ref || "-";
+  if (text === "-" || lang === "cn") return text;
+  return toTitleCase(text);
 }
 
 function fieldLabel(field: string, lang: "en" | "cn"): string {

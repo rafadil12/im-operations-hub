@@ -2,15 +2,17 @@ type HeaderSource = {
   get(name: string): string | null;
 };
 
-/** Client IP from trusted proxy headers only when TRUST_PROXY=1. */
+/** Local dev stores 127.0.0.1. Behind a proxy, TRUST_PROXY=1 reads the real client IP. */
 export function clientIp(headers: HeaderSource): string | null {
-  if (process.env.TRUST_PROXY !== "1") return null;
-  const forwarded = headers.get("x-forwarded-for");
-  const first = forwarded?.split(",")[0]?.trim();
-  if (first) return first.slice(0, 45);
-  const realIp = headers.get("x-real-ip")?.trim();
-  if (realIp) return realIp.slice(0, 45);
-  return null;
+  if (process.env.TRUST_PROXY === "1") {
+    const forwarded = headers.get("x-forwarded-for");
+    const first = forwarded?.split(",")[0]?.trim();
+    if (first) return first.slice(0, 45);
+    const realIp = headers.get("x-real-ip")?.trim();
+    if (realIp) return realIp.slice(0, 45);
+    return null;
+  }
+  return "127.0.0.1";
 }
 
 function browserName(userAgent: string): string {

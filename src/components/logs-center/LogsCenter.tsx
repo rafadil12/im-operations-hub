@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { FilePlus, LayoutGrid, NotepadText, RotateCcwClock, User } from "lucide-react";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/stockTableRows";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
@@ -123,6 +124,28 @@ function fullTimestamp(value: string): string {
 const fieldCls =
   "w-full rounded-md border border-border bg-bg/40 px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent";
 const labelCls = "mb-1 block text-[10px] uppercase text-text-dim";
+
+const detailIconCls = "mt-0.5 size-6 shrink-0 text-text-dim";
+
+function DetailField({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-5">
+      {icon}
+      <div className="min-w-0 flex-1">
+        <dt className="text-[10px] uppercase tracking-wide text-text-dim">{label}</dt>
+        <dd className="mt-1 break-words text-sm text-text">{children}</dd>
+      </div>
+    </div>
+  );
+}
 
 export function LogsCenter() {
   const { t, lang } = useLang();
@@ -338,8 +361,8 @@ export function LogsCenter() {
                 <th className="px-3 py-2">{t.logsCenter.details}</th>
               </tr>
             </thead>
-            <tbody>
-              {loading ? (
+            <tbody className={loading && data ? "opacity-60" : undefined}>
+              {loading && !data ? (
                 <tr>
                   <td className="px-3 py-4 text-text-muted" colSpan={6}>
                     {t.common.loading}
@@ -379,18 +402,20 @@ export function LogsCenter() {
                       <td className="px-3 py-2">
                         <ActionBadge action={row.action} />
                       </td>
-                      <td className="break-words px-3 py-2 text-text">
-                        {renderRemark(
-                          {
-                            action: row.action,
-                            summary: row.summary,
-                            objectType: row.object_type,
-                            objectRef: row.object_ref,
-                            changes: parseRemarkList<RemarkChange>(row.changes_json),
-                            links: parseRemarkList<RemarkLink>(row.links_json),
-                          },
-                          lang
-                        )}
+                      <td className="px-3 py-2 text-text">
+                        <span className="line-clamp-2 break-words">
+                          {renderRemark(
+                            {
+                              action: row.action,
+                              summary: row.summary,
+                              objectType: row.object_type,
+                              objectRef: row.object_ref,
+                              changes: parseRemarkList<RemarkChange>(row.changes_json),
+                              links: parseRemarkList<RemarkLink>(row.links_json),
+                            },
+                            lang
+                          )}
+                        </span>
                       </td>
                       <td className="px-3 py-2">
                         <button
@@ -469,7 +494,16 @@ export function LogsCenter() {
 
       {selected ? (
         <Drawer
-          title={t.logsCenter.logDetails}
+          title={
+            <span className="flex min-w-0 items-center gap-2">
+              <RotateCcwClock
+                className="size-4 shrink-0 text-text-muted"
+                strokeWidth={2}
+                aria-hidden
+              />
+              <span className="truncate">{t.logsCenter.logDetails}</span>
+            </span>
+          }
           width="detail"
           onClose={() => setSelectedId(null)}
           subtitle={
@@ -480,60 +514,46 @@ export function LogsCenter() {
           }
         >
           <div className="space-y-4 text-xs">
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
-                  {t.logsCenter.username}
-                </dt>
-                <dd className="mt-1 text-sm text-text">
-                  {actorName(selected, lang)}
-                  {selected.employee_no ? (
-                    <span className="mt-0.5 block text-[11px] text-text-dim">
-                      {selected.employee_no}
-                    </span>
-                  ) : null}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
-                  {t.logsCenter.module}
-                </dt>
-                <dd className="mt-1 text-sm text-text">{selected.module.toUpperCase()}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
-                  {t.logsCenter.action}
-                </dt>
-                <dd className="mt-1">
-                  <ActionBadge action={selected.action} />
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
-                  {t.logsCenter.target}
-                </dt>
-                <dd className="mt-1 break-words text-sm text-text">
-                  {formatLogTarget(selected.object_type, selected.object_ref, lang)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] uppercase tracking-wide text-text-dim">
-                  {t.logsCenter.remarks}
-                </dt>
-                <dd className="mt-1 break-words text-sm text-text">
-                  {renderRemark(
-                    {
-                      action: selected.action,
-                      summary: selected.summary,
-                      objectType: selected.object_type,
-                      objectRef: selected.object_ref,
-                      changes: selectedChanges,
-                      links: selectedLinks,
-                    },
-                    lang
-                  )}
-                </dd>
-              </div>
+            <dl className="space-y-4">
+              <DetailField
+                icon={<User className={detailIconCls} strokeWidth={2} aria-hidden />}
+                label={t.logsCenter.username}
+              >
+                {actorName(selected, lang)}
+                {selected.employee_no ? (
+                  <span className="mt-0.5 block text-[11px] font-normal text-text-dim">
+                    {selected.employee_no}
+                  </span>
+                ) : null}
+              </DetailField>
+              <DetailField
+                icon={<LayoutGrid className={detailIconCls} strokeWidth={2} aria-hidden />}
+                label={t.logsCenter.module}
+              >
+                {selected.module.toUpperCase()}
+              </DetailField>
+              <DetailField
+                icon={<FilePlus className={detailIconCls} strokeWidth={2} aria-hidden />}
+                label={t.logsCenter.target}
+              >
+                {formatLogTarget(selected.object_type, selected.object_ref, lang)}
+              </DetailField>
+              <DetailField
+                icon={<NotepadText className={detailIconCls} strokeWidth={2} aria-hidden />}
+                label={t.logsCenter.remarks}
+              >
+                {renderRemark(
+                  {
+                    action: selected.action,
+                    summary: selected.summary,
+                    objectType: selected.object_type,
+                    objectRef: selected.object_ref,
+                    changes: selectedChanges,
+                    links: selectedLinks,
+                  },
+                  lang
+                )}
+              </DetailField>
             </dl>
 
             <div className="rounded-lg border border-border-subtle bg-bg/40 p-3">
