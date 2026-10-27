@@ -39,6 +39,8 @@ type LogRow = {
   summary_cn: string | null;
   changes_json: unknown;
   links_json: unknown;
+  ip_address: string | null;
+  user_agent: string | null;
   actor_label: string | null;
   employee_no: string | null;
   name_en: string | null;
@@ -108,15 +110,13 @@ export async function GET(request: NextRequest) {
       ${whereSql}
     `;
 
-    const totals = await query<{ total: number }[]>(
-      `SELECT COUNT(*) AS total ${fromSql}`,
-      values
-    );
+    const totals = await query<{ total: number }[]>(`SELECT COUNT(*) AS total ${fromSql}`, values);
     const total = Number(totals[0]?.total ?? 0);
     const offset = (page - 1) * pageSize;
     const rows = await query<LogRow[]>(
       `SELECT e.id, e.created_at, e.module, e.action, e.object_type, e.object_ref,
-              e.summary, e.summary_cn, e.changes_json, e.links_json, e.actor_label,
+              e.summary, e.summary_cn, e.changes_json, e.links_json,
+              e.ip_address, e.user_agent, e.actor_label,
               u.employee_no, u.name_en, u.name_cn
        ${fromSql}
        ORDER BY e.id DESC
