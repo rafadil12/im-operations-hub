@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-28
+
+### Added
+
+- Logs Center opens a detail drawer with the event id, target, before and
+  after values, device, and client IP. The migration runner stores
+  `ip_address` and `user_agent` on `logs_center_events`.
+- The organization chart places a Supervisor between the department
+  manager and the division leads. Migration seeds the Supervisor position.
+- Daily attendance and leave can post a WeCom notice, including a
+  generated image.
+
+### Changed
+
+- Organization chart zoom stays within the fitted frame, and person cards
+  use a light blue tint.
+- A browser that opens the app directly is logged by its connection
+  address. `TRUST_PROXY=1` is only for a reverse proxy that sends
+  `X-Forwarded-For` or `X-Real-IP`.
+- Safety overview cards use shorter labels.
+
+### Fixed
+
+- Leave remarks and WeCom notices stay with the leave record.
+- An ALPA leave day is shown as A on the daily attendance list.
+- Shift generation treats a supervisor by user id, matching Organization
+  Management.
+
 ## [0.15.0] - 2026-10-26
 
 ### Added
