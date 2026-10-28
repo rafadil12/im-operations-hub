@@ -176,7 +176,7 @@ function nodeHtml(data: FlatOrgNode): string {
 
   return `
     <div style="${shell}">
-      <div style="display:flex;width:100%;height:100%;align-items:center;gap:8px;border:1px solid var(--border-subtle, #e2e8f0);border-radius:8px;background:color-mix(in srgb,rgb(255, 255, 255) 40%, var(--surface, #ffffff));padding:0 10px 0 8px;box-sizing:border-box;overflow:hidden;">
+      <div style="display:flex;width:100%;height:100%;align-items:center;gap:8px;border:1px solid var(--border-subtle, #e2e8f0);border-radius:8px;background:color-mix(in srgb,rgb(169, 205, 255) 40%, var(--surface, #ffffff));padding:0 10px 0 8px;box-sizing:border-box;overflow:hidden;">
         <span style="display:inline-flex;width:24px;height:24px;flex:0 0 auto;align-items:center;justify-content:center;border-radius:999px;background:${accent};color:#fff;font-size:10px;font-weight:600;line-height:1;">${initial}</span>
         <div style="min-width:0;flex:1 1 0%;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:1px;overflow:hidden;">
           <div title="${name}" style="width:100%;font-size:10px;font-weight:600;line-height:1.2;color:var(--text, #0f172a);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
