@@ -179,6 +179,145 @@ type OrgChartViewProps = {
   fill?: boolean;
 };
 
+type LayoutNode = { x: number; y: number; width: number; height: number };
+
+type ZoomTransform = {
+  k: number;
+  x: number;
+  y: number;
+  invertX(value: number): number;
+  invertY(value: number): number;
+  translate(x: number, y: number): ZoomTransform;
+  scale(k: number): ZoomTransform;
+};
+
+type ViewportExtent = [[number, number], [number, number]];
+
+type OrgChartZoom = {
+  scaleExtent(extent: [number, number]): OrgChartZoom;
+  constrain(
+    constrain: (
+      transform: ZoomTransform,
+      extent: ViewportExtent,
+      translateExtent: ViewportExtent
+    ) => ZoomTransform
+  ): OrgChartZoom;
+};
+
+type OrgChartRuntime = {
+  getChartState(): {
+    root?: { descendants(): LayoutNode[] };
+    layout: string;
+    layoutBindings: Record<
+      string,
+      {
+        nodeLeftX(node: LayoutNode): number;
+        nodeRightX(node: LayoutNode): number;
+        nodeTopY(node: LayoutNode): number;
+        nodeBottomY(node: LayoutNode): number;
+      }
+    >;
+    svgWidth: number;
+    svgHeight: number;
+    zoomBehavior: OrgChartZoom | null;
+  };
+};
+
+/** Hard cap so a small tree in a large card cannot be magnified into a single glyph. */
+const ORG_CHART_MAX_ZOOM = 2.5;
+/**
+ * At maximum zoom the svg still shows this fraction of the tree on each axis,
+ * so a pan lands on a section of the chart rather than an empty gap.
+ */
+const ORG_CHART_MIN_VIEW_FRACTION = 0.45;
+/** Padding `.fit()` adds around the tree before choosing the resting scale. */
+const ORG_CHART_FIT_PADDING = 50;
+
+function moveZoomTo(transform: ZoomTransform, k: number, x: number, y: number): ZoomTransform {
+  const shifted = transform.translate((x - transform.x) / transform.k, (y - transform.y) / transform.k);
+  const scaleBy = k / shifted.k;
+  return scaleBy === 1 ? shifted : shifted.scale(scaleBy);
+}
+
+/**
+ * Keep the viewport inside the tree rectangle. Same rule d3-zoom uses for
+ * `translateExtent`: pan recenters when the tree is smaller than the svg,
+ * and stops at the tree edge once zoomed in.
+ */
+function constrainToTree(
+  transform: ZoomTransform,
+  extent: ViewportExtent,
+  tree: { minX: number; minY: number; maxX: number; maxY: number }
+): ZoomTransform {
+  const dx0 = transform.invertX(extent[0][0]) - tree.minX;
+  const dx1 = transform.invertX(extent[1][0]) - tree.maxX;
+  const dy0 = transform.invertY(extent[0][1]) - tree.minY;
+  const dy1 = transform.invertY(extent[1][1]) - tree.maxY;
+  return transform.translate(
+    dx1 > dx0 ? (dx0 + dx1) / 2 : Math.min(0, dx0) || Math.max(0, dx1),
+    dy1 > dy0 ? (dy0 + dy1) / 2 : Math.min(0, dy0) || Math.max(0, dy1)
+  );
+}
+
+/**
+ * Zoom-out and drag stop at the fitted frame. The resting scale matches
+ * `.fit()`, and at that scale the tree cannot move. Zoom-in can pan only
+ * inside the tree, so the chart cannot be dragged off the card.
+ */
+function limitOrgChartNavigation(instance: OrgChart): void {
+  const state = (instance as unknown as OrgChartRuntime).getChartState();
+  const { root, layout, layoutBindings, svgWidth, svgHeight, zoomBehavior } = state;
+  const nodes = root?.descendants() ?? [];
+  const box = layoutBindings[layout];
+  if (!zoomBehavior || !box || svgWidth <= 0 || svgHeight <= 0 || nodes.length === 0) return;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const node of nodes) {
+    const x0 = node.x + box.nodeLeftX(node);
+    const x1 = node.x + box.nodeRightX(node);
+    const y0 = node.y + box.nodeTopY(node);
+    const y1 = node.y + box.nodeBottomY(node);
+    if (![x0, x1, y0, y1].every(Number.isFinite) || x1 <= x0 || y1 <= y0) continue;
+    minX = Math.min(minX, x0);
+    maxX = Math.max(maxX, x1);
+    minY = Math.min(minY, y0);
+    maxY = Math.max(maxY, y1);
+  }
+  if (![minX, maxX, minY, maxY].every(Number.isFinite) || maxX <= minX || maxY <= minY) return;
+
+  const paddedWidth = maxX - minX + ORG_CHART_FIT_PADDING * 2;
+  const paddedHeight = maxY - minY + ORG_CHART_FIT_PADDING * 2;
+  const fittedScale = Math.min(
+    ORG_CHART_MAX_ZOOM,
+    0.9 / Math.max(paddedWidth / svgWidth, paddedHeight / svgHeight)
+  );
+  if (!Number.isFinite(fittedScale) || fittedScale <= 0) return;
+
+  const fitX = svgWidth / 2 - fittedScale * ((minX + maxX) / 2);
+  const fitY = svgHeight / 2 - fittedScale * ((minY + maxY) / 2);
+  const tree = { minX, minY, maxX, maxY };
+  const maxZoom = Math.max(
+    fittedScale,
+    Math.min(
+      ORG_CHART_MAX_ZOOM,
+      svgWidth / ((maxX - minX) * ORG_CHART_MIN_VIEW_FRACTION),
+      svgHeight / ((maxY - minY) * ORG_CHART_MIN_VIEW_FRACTION)
+    )
+  );
+
+  zoomBehavior.scaleExtent([fittedScale, maxZoom]).constrain(
+    (transform, extent) => {
+      if (transform.k <= fittedScale * 1.001) {
+        return moveZoomTo(transform, fittedScale, fitX, fitY);
+      }
+      return constrainToTree(transform, extent, tree);
+    }
+  );
+}
+
 export function OrgChartView({ chart, labels, lang, fill = false }: OrgChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<InstanceType<typeof OrgChart> | null>(null);
@@ -227,8 +366,12 @@ export function OrgChartView({ chart, labels, lang, fill = false }: OrgChartView
           this.setAttribute("fill", "none");
         })
         .render()
-        .expandAll()
-        .fit();
+        .expandAll();
+
+      // Floor zoom and pan on the fitted frame so the tree cannot be
+      // minimized or dragged out of the card. Recomputed on each resize.
+      limitOrgChartNavigation(instance);
+      instance.fit();
     };
 
     // Wait one frame so flex parent has a real size.
