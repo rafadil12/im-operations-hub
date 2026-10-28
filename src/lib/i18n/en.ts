@@ -808,6 +808,7 @@ const en = {
     intelligentLogistics: "Intelligent Logistics",
     orgTree: "Organization Tree",
     orgDepartmentManager: "Department Manager",
+    orgSupervisor: "Supervisor",
     orgLead: "Lead",
     orgPersonelRole: "Personel",
     monthlyDepartmentPerformance: "Monthly Department Performance",

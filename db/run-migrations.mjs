@@ -2037,5 +2037,14 @@ if (await tableExists("logs_center_events")) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 054: Supervisor position above the division leads
+// ---------------------------------------------------------------------------
+await applySqlFile(
+  "054_organization_supervisor_position.sql",
+  readMigrationSql,
+  "Seeded organization Supervisor position.",
+);
+
 await conn.end();
 console.log("Migrations complete.");

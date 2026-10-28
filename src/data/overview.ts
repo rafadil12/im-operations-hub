@@ -112,6 +112,7 @@ export type ModuleCardData = {
   orgChart?: {
     company: string;
     leader: { nameEn: string; nameCn: string };
+    supervisor?: { nameEn: string; nameCn: string } | null;
     divisions: {
       name: string;
       personnelCount: number;
