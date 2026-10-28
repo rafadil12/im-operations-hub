@@ -1,18 +1,23 @@
+import { CONNECTION_IP_HEADER, normalizeClientIp } from "./connectionIp";
+
 type HeaderSource = {
   get(name: string): string | null;
 };
 
-/** Local dev stores 127.0.0.1. Behind a proxy, TRUST_PROXY=1 reads the real client IP. */
+/**
+ * Direct connections use the socket address recorded at the server.
+ * TRUST_PROXY=1 reads the proxy's X-Forwarded-For or X-Real-IP instead.
+ */
 export function clientIp(headers: HeaderSource): string | null {
   if (process.env.TRUST_PROXY === "1") {
     const forwarded = headers.get("x-forwarded-for");
     const first = forwarded?.split(",")[0]?.trim();
-    if (first) return first.slice(0, 45);
+    if (first) return normalizeClientIp(first);
     const realIp = headers.get("x-real-ip")?.trim();
-    if (realIp) return realIp.slice(0, 45);
+    if (realIp) return normalizeClientIp(realIp);
     return null;
   }
-  return "127.0.0.1";
+  return normalizeClientIp(headers.get(CONNECTION_IP_HEADER));
 }
 
 function browserName(userAgent: string): string {

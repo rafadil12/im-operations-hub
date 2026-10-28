@@ -1,4 +1,11 @@
+import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  CONNECTION_IP_HEADER,
+  installConnectionIpCapture,
+  normalizeClientIp,
+  stampConnectionIp,
+} from "./connectionIp";
 import { clientIp, deviceLabel } from "./requestClient";
 
 function headers(map: Record<string, string>) {
@@ -17,23 +24,95 @@ describe("clientIp", () => {
     else process.env.TRUST_PROXY = previous;
   });
 
-  it("stores 127.0.0.1 when TRUST_PROXY is off", () => {
+  it("ignores proxy headers when TRUST_PROXY is off", () => {
+    delete process.env.TRUST_PROXY;
+    expect(
+      clientIp(
+        headers({
+          "x-forwarded-for": "203.0.113.10",
+          "x-real-ip": "198.51.100.7",
+          [CONNECTION_IP_HEADER]: "::ffff:172.19.8.50",
+        })
+      )
+    ).toBe("172.19.8.50");
+  });
+
+  it("returns null when the socket address is missing", () => {
     delete process.env.TRUST_PROXY;
     expect(
       clientIp(headers({ "x-forwarded-for": "203.0.113.10", "x-real-ip": "198.51.100.7" }))
-    ).toBe("127.0.0.1");
+    ).toBeNull();
+  });
+
+  it("shows localhost for IPv6 loopback", () => {
+    delete process.env.TRUST_PROXY;
+    expect(clientIp(headers({ [CONNECTION_IP_HEADER]: "::1" }))).toBe("127.0.0.1");
+    expect(clientIp(headers({ [CONNECTION_IP_HEADER]: "::ffff:127.0.0.1" }))).toBe("127.0.0.1");
   });
 
   it("reads the first x-forwarded-for hop when TRUST_PROXY=1", () => {
     process.env.TRUST_PROXY = "1";
-    expect(clientIp(headers({ "x-forwarded-for": "203.0.113.10, 198.51.100.7" }))).toBe(
-      "203.0.113.10"
-    );
+    expect(
+      clientIp(
+        headers({
+          "x-forwarded-for": "::ffff:203.0.113.10, 198.51.100.7",
+          [CONNECTION_IP_HEADER]: "10.0.0.8",
+        })
+      )
+    ).toBe("203.0.113.10");
   });
 
   it("falls back to x-real-ip when TRUST_PROXY=1", () => {
     process.env.TRUST_PROXY = "1";
     expect(clientIp(headers({ "x-real-ip": "198.51.100.7" }))).toBe("198.51.100.7");
+  });
+
+  it("returns null when TRUST_PROXY=1 and no proxy header is present", () => {
+    process.env.TRUST_PROXY = "1";
+    expect(clientIp(headers({ [CONNECTION_IP_HEADER]: "172.19.8.50" }))).toBeNull();
+  });
+});
+
+describe("connection address", () => {
+  it("replaces a client-supplied connection header with the socket address", () => {
+    const request = {
+      socket: { remoteAddress: "::ffff:172.19.8.40" },
+      headers: { [CONNECTION_IP_HEADER]: "203.0.113.10" },
+    };
+    stampConnectionIp(request);
+    expect(request.headers[CONNECTION_IP_HEADER]).toBe("::ffff:172.19.8.40");
+    expect(normalizeClientIp(request.headers[CONNECTION_IP_HEADER])).toBe("172.19.8.40");
+  });
+
+  it("drops a spoofed header when the socket has no address", () => {
+    const request = {
+      socket: { remoteAddress: undefined },
+      headers: { [CONNECTION_IP_HEADER]: "203.0.113.10" },
+    };
+    stampConnectionIp(request);
+    expect(request.headers[CONNECTION_IP_HEADER]).toBeUndefined();
+  });
+
+  it("stamps the real socket on an HTTP request", async () => {
+    const restore = installConnectionIpCapture();
+    const server = createServer((req, res) => {
+      const raw = req.headers[CONNECTION_IP_HEADER];
+      res.end(typeof raw === "string" ? raw : "");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const address = server.address();
+      const port = address && typeof address === "object" ? address.port : 0;
+      const response = await fetch(`http://127.0.0.1:${port}/`, {
+        headers: { [CONNECTION_IP_HEADER]: "203.0.113.10" },
+      });
+      expect(normalizeClientIp(await response.text())).toBe("127.0.0.1");
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve()))
+      );
+      restore();
+    }
   });
 });
 
