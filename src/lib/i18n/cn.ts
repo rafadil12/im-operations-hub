@@ -748,6 +748,10 @@ const cn: Dict = {
     overallCompletion: "总体完成率",
     findingClosure: "问题关闭率",
     trainingCompletion: "培训完成情况",
+    safetyCompletionShort: "完成率",
+    safetyClosureShort: "关闭率",
+    safetyTrainingShort: "培训",
+    safetyScoreShort: "评分",
 
     totalItems: "物料总数",
     zeroStock: "零库存",

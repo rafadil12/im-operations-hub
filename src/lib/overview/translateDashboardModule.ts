@@ -99,10 +99,10 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
       (module.bars?.items.length ?? 0) === 0;
 
     const performanceStatLabels = [
-      t.dashboard.overallCompletion,
-      t.dashboard.findingClosure,
-      t.dashboard.trainingCompletion,
-      t.dashboard.safetyScore,
+      t.dashboard.safetyCompletionShort,
+      t.dashboard.safetyClosureShort,
+      t.dashboard.safetyTrainingShort,
+      t.dashboard.safetyScoreShort,
     ];
     const findingStatLabels = [
       t.dashboard.todaysFinding,

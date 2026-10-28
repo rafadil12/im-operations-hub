@@ -101,9 +101,9 @@ async function getCurrentEmployee(request: NextRequest) {
 }
 
 async function isCurrentUserSupervisor(employeeNo: string) {
-  const rows = await query<{ employee_organization_id: number }[]>(
+  const rows = await query<{ user_id: number }[]>(
     `
-      SELECT eo.id AS employee_organization_id
+      SELECT u.id AS user_id
       FROM employee_organization eo
       INNER JOIN users u
         ON u.id = eo.user_id
@@ -118,7 +118,9 @@ async function isCurrentUserSupervisor(employeeNo: string) {
     return false;
   }
 
-  const managerId = rows[0].employee_organization_id;
+  // employee_organization.manager_id references users.id. Keep this aligned
+  // with Organization Management and the supervisor check on the Shift UI.
+  const managerId = rows[0].user_id;
 
   const subordinateRows = await query<{ count: number }[]>(
     `

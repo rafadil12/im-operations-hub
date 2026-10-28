@@ -763,6 +763,10 @@ const en = {
     overallCompletion: "Overall Completion",
     findingClosure: "Finding Closure",
     trainingCompletion: "Training Completion",
+    safetyCompletionShort: "Completion",
+    safetyClosureShort: "Closure",
+    safetyTrainingShort: "Training",
+    safetyScoreShort: "Score",
 
     totalItems: "Total Items",
     zeroStock: "Zero Stock",
