@@ -793,6 +793,7 @@ const cn: Dict = {
     intelligentLogistics: "智能物流",
     orgTree: "组织架构",
     orgDepartmentManager: "部门经理",
+    orgSupervisor: "导师",
     orgLead: "负责人",
     orgPersonelRole: "人员",
     monthlyDepartmentPerformance: "部门月度表现",

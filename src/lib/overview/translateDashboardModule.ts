@@ -198,6 +198,7 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
         ? {
             company: t.dashboard.intelligentManufacturingDepartment,
             leader: module.orgChart.leader,
+            supervisor: module.orgChart.supervisor,
             divisions: module.orgChart.divisions.map((division) => ({
               ...division,
               name: translateOrganizationDivisionName(division.name, t),

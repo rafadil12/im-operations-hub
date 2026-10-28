@@ -41,6 +41,8 @@ export type OrganizationChartDivision = {
 export type OrganizationChart = {
   company: string;
   leader: { nameEn: string; nameCn: string };
+  /** Sits between the department manager and the division leads. */
+  supervisor?: { nameEn: string; nameCn: string } | null;
   divisions: OrganizationChartDivision[];
 };
 

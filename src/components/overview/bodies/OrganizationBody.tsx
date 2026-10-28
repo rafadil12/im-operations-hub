@@ -79,6 +79,7 @@ export function OrganizationBody({
               fill={expanded}
               labels={{
                 departmentManager: t.dashboard.orgDepartmentManager,
+                supervisor: t.dashboard.orgSupervisor,
                 lead: t.dashboard.orgLead,
                 personel: t.dashboard.orgPersonelRole,
               }}

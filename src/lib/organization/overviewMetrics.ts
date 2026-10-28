@@ -27,6 +27,18 @@ function isGaluhName(nameEn: string, nameCn: string): boolean {
   return `${nameEn} ${nameCn}`.toLowerCase().includes("galuh");
 }
 
+function isAntoniLau(nameEn: string, nameCn: string): boolean {
+  return /antoni\s+lau/i.test(`${nameEn} ${nameCn}`);
+}
+
+function isJonatan(nameEn: string, nameCn: string): boolean {
+  return /jonatan/i.test(`${nameEn} ${nameCn}`);
+}
+
+function isSupervisorPosition(positionName: string | null | undefined): boolean {
+  return positionName?.trim().toLowerCase() === "supervisor";
+}
+
 function orderDivisionPeople<T extends { nameEn: string; nameCn: string; isLead?: boolean }>(
   people: T[],
   division: string
@@ -57,6 +69,23 @@ function normalizeDivisionName(name: string | null): string | null {
   return trimmed;
 }
 
+function placeDivisionLead<T extends { nameEn: string; nameCn: string; isLead?: boolean }>(
+  people: T[],
+  division: string
+): T[] {
+  const ordered = orderDivisionPeople(people, division);
+  if (division !== "IT") return ordered;
+
+  const jonatanIndex = ordered.findIndex((person) => isJonatan(person.nameEn, person.nameCn));
+  if (jonatanIndex < 0) return ordered;
+
+  const jonatan = { ...ordered[jonatanIndex], isLead: true };
+  return [
+    jonatan,
+    ...ordered.filter((_, index) => index !== jonatanIndex).map((person) => ({ ...person, isLead: false })),
+  ];
+}
+
 function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart {
   const leaderRow = employees.find((row) => row.employee_no === GM_EMPLOYEE_NO);
   const leader = leaderRow
@@ -67,20 +96,32 @@ function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart 
     : { nameEn: "WANG CHUNLAI", nameCn: "王春来" };
 
   const peopleByDivision = new Map<string, { nameEn: string; nameCn: string; isLead: boolean }[]>();
+  let namedSupervisor: { nameEn: string; nameCn: string } | null = null;
+  let positionSupervisor: { nameEn: string; nameCn: string } | null = null;
 
   for (const row of employees) {
     if (!isDirectoryStaffRow(row)) continue;
+
+    const names = personNames(row);
+    if (isAntoniLau(names.nameEn, names.nameCn)) {
+      namedSupervisor = { nameEn: names.nameEn, nameCn: names.nameCn };
+      continue;
+    }
+    if (isSupervisorPosition(row.position_name_en)) {
+      positionSupervisor ??= { nameEn: names.nameEn, nameCn: names.nameCn };
+      continue;
+    }
 
     const division = normalizeDivisionName(row.division_name_en);
     if (!division) continue;
 
     const list = peopleByDivision.get(division) ?? [];
-    list.push(personNames(row));
+    list.push(names);
     peopleByDivision.set(division, list);
   }
 
   const divisions = DIVISION_ORDER.map((name) => {
-    const people = orderDivisionPeople(peopleByDivision.get(name) ?? [], name);
+    const people = placeDivisionLead(peopleByDivision.get(name) ?? [], name);
     return {
       name,
       personnelCount: people.length,
@@ -91,6 +132,7 @@ function buildOrgChart(employees: OrganizationEmployeeRow[]): OrganizationChart 
   return {
     company: "Intelligent Manufacturing Department",
     leader,
+    supervisor: namedSupervisor ?? positionSupervisor,
     divisions,
   };
 }
