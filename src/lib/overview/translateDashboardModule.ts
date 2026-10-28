@@ -99,10 +99,10 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
       (module.bars?.items.length ?? 0) === 0;
 
     const performanceStatLabels = [
-      t.dashboard.overallCompletion,
-      t.dashboard.findingClosure,
-      t.dashboard.trainingCompletion,
-      t.dashboard.safetyScore,
+      t.dashboard.safetyCompletionShort,
+      t.dashboard.safetyClosureShort,
+      t.dashboard.safetyTrainingShort,
+      t.dashboard.safetyScoreShort,
     ];
     const findingStatLabels = [
       t.dashboard.todaysFinding,
@@ -198,6 +198,7 @@ export function translateDashboardModule(module: ModuleCardData, t: Dict): Modul
         ? {
             company: t.dashboard.intelligentManufacturingDepartment,
             leader: module.orgChart.leader,
+            supervisor: module.orgChart.supervisor,
             divisions: module.orgChart.divisions.map((division) => ({
               ...division,
               name: translateOrganizationDivisionName(division.name, t),

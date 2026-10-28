@@ -85,6 +85,9 @@ function parseDate(
    General Manager
    └── No Manager
 
+   Supervisor
+   └── Wang Chunlai
+
    IT Staff
    └── Wang Chunlai
 
@@ -174,6 +177,7 @@ async function resolveAutomaticManagerId(
    * di bawah Wang Chunlai.
    */
   if (
+    positionName === "supervisor" ||
     positionName.endsWith("staff")
   ) {
     const wangRows =

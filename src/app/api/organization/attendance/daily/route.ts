@@ -88,6 +88,8 @@ export async function GET(request: NextRequest) {
             ad.attendance_date,
 
             CASE
+              WHEN ad.source = 'LEAVE' AND lr.request_type = 'ALPA'
+                THEN 'A'
               WHEN ad.source = 'LEAVE'
                 THEN lr.request_type
               ELSE ad.attendance_value

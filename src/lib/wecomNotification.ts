@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { MesDataRow } from "@/lib/types";
 
 const WECOM_TIMEOUT_MS = 8_000;
@@ -45,14 +47,7 @@ export function formatMesRecordWeComMessage(record: MesDataRow): string {
   ].join("\n");
 }
 
-/** Send a markdown message to the WeCom webhook. Throws on HTTP / API errors. */
-export async function sendWeComNotification(content: string): Promise<void> {
-  const webhookUrl = process.env.WECOM_WEBHOOK_URL;
-  if (!webhookUrl) {
-    console.warn("WECOM_WEBHOOK_URL is not configured.");
-    return;
-  }
-
+async function sendMarkdownToWeCom(webhookUrl: string, content: string): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), WECOM_TIMEOUT_MS);
 
@@ -80,6 +75,55 @@ export async function sendWeComNotification(content: string): Promise<void> {
       errmsg?: string;
     };
 
+    if (result.errcode !== 0) {
+      throw new Error(`WeCom error: ${result.errmsg ?? result.errcode}`);
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Send a markdown message to the general WeCom webhook. */
+export async function sendWeComNotification(content: string): Promise<void> {
+  const webhookUrl = process.env.WECOM_WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.warn("WECOM_WEBHOOK_URL is not configured.");
+    return;
+  }
+
+  await sendMarkdownToWeCom(webhookUrl, content);
+}
+
+/** Send an image card to the dedicated Leave / Permission webhook. */
+export async function sendPermissionWeComImage(image: Buffer): Promise<void> {
+  const webhookUrl = process.env.WECOM_PERMISSION_WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.warn("WECOM_PERMISSION_WEBHOOK_URL is not configured.");
+    return;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), WECOM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        msgtype: "image",
+        image: {
+          base64: image.toString("base64"),
+          md5: createHash("md5").update(image).digest("hex"),
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`WeCom HTTP error: ${response.status}`);
+    }
+
+    const result = (await response.json()) as { errcode?: number; errmsg?: string };
     if (result.errcode !== 0) {
       throw new Error(`WeCom error: ${result.errmsg ?? result.errcode}`);
     }

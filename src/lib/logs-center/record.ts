@@ -45,6 +45,24 @@ const OBJECT_NOUN: Record<string, string> = {
   users: "user",
 };
 
+async function clientMetaFromRequest(): Promise<{
+  ipAddress: string | null;
+  userAgent: string | null;
+}> {
+  try {
+    const { headers } = await import("next/headers");
+    const { clientIp } = await import("@/lib/requestClient");
+    const headerList = await headers();
+    const userAgent = headerList.get("user-agent")?.trim().slice(0, 255) || null;
+    return {
+      ipAddress: clientIp(headerList),
+      userAgent,
+    };
+  } catch {
+    return { ipAddress: null, userAgent: null };
+  }
+}
+
 export async function recordLogsCenter(input: LogsCenterInput): Promise<void> {
   try {
     let actorSystemUserId = input.actorSystemUserId ?? null;
@@ -68,12 +86,14 @@ export async function recordLogsCenter(input: LogsCenterInput): Promise<void> {
     };
     const summary = (input.summary ?? renderRemark({ ...event, summary: "" }, "en")).slice(0, 500);
     const summaryCn = renderRemark(event, "cn").slice(0, 500);
+    const client = await clientMetaFromRequest();
     const { pool } = await import("@/lib/db");
     await pool.query(
       `INSERT INTO logs_center_events
         (actor_system_user_id, actor_user_id, actor_label, module, action,
-         object_type, object_ref, summary, summary_cn, changes_json, links_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         object_type, object_ref, summary, summary_cn, changes_json, links_json,
+         ip_address, user_agent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         actorSystemUserId,
         actorUserId,
@@ -86,6 +106,8 @@ export async function recordLogsCenter(input: LogsCenterInput): Promise<void> {
         summaryCn,
         input.changes?.length ? JSON.stringify(input.changes) : null,
         input.links?.length ? JSON.stringify(input.links) : null,
+        client.ipAddress,
+        client.userAgent,
       ]
     );
   } catch (error) {
@@ -138,7 +160,12 @@ export async function persistSqlWrites(sqls: string[]): Promise<void> {
   }
   const parts = writes.map((write) => {
     const friendly = friendlyWrite(write);
-    const verb = friendly.action === "create" ? "Created" : friendly.action === "delete" ? "Deleted" : "Updated";
+    const verb =
+      friendly.action === "create"
+        ? "Created"
+        : friendly.action === "delete"
+          ? "Deleted"
+          : "Updated";
     return `${verb} ${friendly.noun}`;
   });
   await recordLogsCenter({

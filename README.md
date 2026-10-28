@@ -46,7 +46,7 @@ npm run build
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Yes | MySQL connection. |
 | `AUTH_SECRET` | Yes | Session signing secret (at least 16 characters). Required for login cookies. |
 | `COOKIE_SECURE` | No | Set to `true` or `1` to mark the session cookie `Secure` (HTTPS only). Leave unset or `false` for HTTP LAN deploys so browsers can store `im_ops_session`. |
-| `TRUST_PROXY` | No | Set to `1` behind a reverse proxy so login rate limiting uses the real client IP from `X-Forwarded-For` / `X-Real-IP` (ensure the proxy strips client-supplied forwarded headers). |
+| `TRUST_PROXY` | No | Leave unset when browsers open the app directly. Logs then store the connection address (`127.0.0.1` on localhost, the visitor PC on a LAN). Set to `1` only behind a reverse proxy that strips client-supplied `X-Forwarded-For` / `X-Real-IP`. |
 | `DB_POOL_SIZE` | No | MySQL pool size. Defaults to `10`. |
 | `NEXT_PUBLIC_SITE_URL` | No | Absolute base URL of the deployment (for example `https://im-one.example.com`). Used as `metadataBase` for canonical and Open Graph URLs. Falls back to `http://localhost:3000`. |
 | `SPAREPART_UPLOAD_DIR` | For sparepart images | Directory for material photos (JPG/PNG, max 1 MB, filename = material code). |
@@ -212,3 +212,37 @@ node --env-file=.env.local db/import-excel-movements.mjs --force
 - Locations for **101 and 201** come from sheet **IT Stock库存** column **Lokasi/地点** (same list per material code).
 - Multi-loc overrides are hardcoded in the script (IT00004 → Server Room only; IT00056/57/58 → Gudang Internal; IT00104 → split Server Room + Meja IT).
 - Documents are attributed to the seeded Super Admin (`employee_no=SUPERADMIN`).
+
+# Daily attendance notification to WeCom
+
+The protected endpoint `GET /api/cron/attendance-wecom` renders the current
+day's active employee roster as a bilingual PNG and sends it to a dedicated
+WeCom group robot as an image message. It reads `shift_schedules` and approved
+leave records and uses `Asia/Jakarta` by default.
+
+Configure these production environment variables:
+
+```env
+WECOM_ATTENDANCE_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
+ATTENDANCE_CRON_SECRET=replace-with-a-long-random-value
+ATTENDANCE_TIME_ZONE=Asia/Jakarta
+```
+
+The renderer looks for Microsoft YaHei on Windows and Noto Sans CJK on Linux.
+If the server uses a different CJK font, point it at the font files explicitly
+(`.ttf`, `.otf`, and the first face of a `.ttc` collection are supported):
+
+```env
+ATTENDANCE_FONT_PATH=/path/to/font-regular.ttf
+ATTENDANCE_FONT_BOLD_PATH=/path/to/font-bold.ttf
+```
+
+Configure the deployment scheduler to call the endpoint every day at 07:30
+WIB with the header `Authorization: Bearer <ATTENDANCE_CRON_SECRET>`. Example:
+
+```sh
+curl --fail --silent --show-error \
+  -H "Authorization: Bearer $ATTENDANCE_CRON_SECRET" \
+  https://your-app.example.com/api/cron/attendance-wecom
+```
+

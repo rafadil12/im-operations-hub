@@ -16,6 +16,7 @@ import {
   loginIpKey,
   recordLoginFailure,
 } from "@/lib/auth/loginRateLimit";
+import { clientIp } from "@/lib/requestClient";
 
 const loginAttempts = createLoginAttemptStore();
 
@@ -30,16 +31,8 @@ async function actorForTypedLogin(login: string) {
   };
 }
 
-/** Client IP for rate limiting. Trust forwarded headers only when TRUST_PROXY=1. */
-function clientIp(request: NextRequest): string {
-  if (process.env.TRUST_PROXY === "1") {
-    const forwarded = request.headers.get("x-forwarded-for");
-    const first = forwarded?.split(",")[0]?.trim();
-    if (first) return first;
-    const realIp = request.headers.get("x-real-ip")?.trim();
-    if (realIp) return realIp;
-  }
-  return "direct";
+function loginClientIp(request: NextRequest): string {
+  return clientIp(request.headers) ?? "direct";
 }
 
 export async function POST(request: NextRequest) {
@@ -56,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ip = clientIp(request);
+    const ip = loginClientIp(request);
     const key = loginClientKey(ip, login);
     const ipKey = loginIpKey(ip);
 
