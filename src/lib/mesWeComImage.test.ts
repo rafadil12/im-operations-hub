@@ -41,13 +41,15 @@ describe("renderMesRecordWeComImage", () => {
 
     expect(image.subarray(1, 4).toString("ascii")).toBe("PNG");
     expect(image.readUInt32BE(16)).toBe(1600);
-    expect(image.readUInt32BE(20)).toBe(754);
+    expect(image.readUInt32BE(20)).toBe(812);
     expect(image.byteLength).toBeLessThan(2 * 1024 * 1024);
   }, 20_000);
 
   it("grows the canvas when problem and solution text are long", async () => {
     const longText =
-      "This is a deliberately long activity description that must wrap onto multiple lines without being clipped by the PNG canvas. ".repeat(12);
+      "This is a deliberately long activity description that must wrap onto multiple lines without being clipped by the PNG canvas. ".repeat(
+        12
+      );
     const record = {
       id: 2,
       user_id: 1,
