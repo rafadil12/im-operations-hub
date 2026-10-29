@@ -15,18 +15,10 @@ const MODULES = new Set([
   "system",
 ]);
 
-const ACTIONS = new Set([
-  "login",
-  "logout",
-  "create",
-  "update",
-  "delete",
-  "change",
-  "save",
-  "submit",
-  "reopen",
-  "import",
-]);
+const ACTIONS = new Set(["login", "logout", "create", "update", "delete"]);
+
+/** Older rows still store save/submit/import/etc.; treat them as update. */
+const UPDATE_ACTIONS = ["update", "change", "save", "submit", "reopen", "import"];
 
 type LogRow = {
   id: number;
@@ -83,8 +75,13 @@ export async function GET(request: NextRequest) {
       values.push(moduleName);
     }
     if (ACTIONS.has(action)) {
-      where.push("e.action = ?");
-      values.push(action);
+      if (action === "update") {
+        where.push(`e.action IN (${UPDATE_ACTIONS.map(() => "?").join(", ")})`);
+        values.push(...UPDATE_ACTIONS);
+      } else {
+        where.push("e.action = ?");
+        values.push(action);
+      }
     }
     if (from) {
       where.push("e.created_at >= ?");

@@ -12,6 +12,7 @@ import { fillTemplate } from "@/lib/i18n/fillTemplate";
 import {
   actionBadgeClass,
   actionBadgeTone,
+  displayLogAction,
   formatChangeLines,
   formatLogDevice,
   formatLogEventId,
@@ -67,12 +68,13 @@ function actorName(row: LogRow, lang: "en" | "cn"): string {
 }
 
 function ActionBadge({ action }: { action: string }) {
-  const tone = actionBadgeTone(action);
+  const label = displayLogAction(action);
+  const tone = actionBadgeTone(label);
   return (
     <span
       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${actionBadgeClass(tone)}`}
     >
-      {action.toUpperCase()}
+      {label.toUpperCase()}
     </span>
   );
 }
@@ -90,18 +92,7 @@ const MODULES = [
   "system",
 ];
 
-const ACTIONS = [
-  "login",
-  "logout",
-  "create",
-  "update",
-  "delete",
-  "change",
-  "save",
-  "submit",
-  "reopen",
-  "import",
-];
+const ACTIONS = ["login", "logout", "create", "update", "delete"];
 
 function currentDayBounds(): { from: string; to: string } {
   const now = new Date();

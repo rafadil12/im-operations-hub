@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actionBadgeTone,
+  displayLogAction,
   formatChangeLines,
   formatLogEventId,
   formatLogIp,
@@ -68,13 +69,24 @@ describe("formatChangeLines", () => {
   });
 });
 
+describe("displayLogAction", () => {
+  it("shows older detail actions as update", () => {
+    expect(displayLogAction("save")).toBe("update");
+    expect(displayLogAction("submit")).toBe("update");
+    expect(displayLogAction("reopen")).toBe("update");
+    expect(displayLogAction("import")).toBe("update");
+    expect(displayLogAction("change")).toBe("update");
+    expect(displayLogAction("create")).toBe("create");
+  });
+});
+
 describe("actionBadgeTone", () => {
   it("maps known actions", () => {
     expect(actionBadgeTone("create")).toBe("green");
     expect(actionBadgeTone("update")).toBe("orange");
     expect(actionBadgeTone("delete")).toBe("red");
-    expect(actionBadgeTone("import")).toBe("blue");
-    expect(actionBadgeTone("reopen")).toBe("purple");
+    expect(actionBadgeTone("import")).toBe("orange");
+    expect(actionBadgeTone("reopen")).toBe("orange");
     expect(actionBadgeTone("logout")).toBe("gray");
   });
 });

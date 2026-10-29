@@ -64,6 +64,53 @@ const VERBS: Record<string, { en: string; cn: string }> = {
   reopen: { en: "Reopened", cn: "已重新打开" },
 };
 
+/** Stored as action=update; remarks still say Saved / Submitted / etc. */
+const DETAIL_ACTION_RESULTS: Record<string, string> = {
+  save: "saved",
+  submit: "submitted",
+  reopen: "reopened",
+  import: "imported",
+};
+
+const RESULT_TO_VERB: Record<string, string> = {
+  saved: "save",
+  submitted: "submit",
+  reopened: "reopen",
+  imported: "import",
+};
+
+/**
+ * Collapse save/submit/reopen/import/change into update, and keep the
+ * specific verb on changes.result so remarks stay clear.
+ */
+export function normalizeLogsCenterAction(
+  action: string,
+  changes?: RemarkChange[] | null
+): { action: string; changes: RemarkChange[] | null | undefined } {
+  const key = action.trim().toLowerCase();
+  if (key === "change") {
+    return { action: "update", changes };
+  }
+  const result = DETAIL_ACTION_RESULTS[key];
+  if (!result) {
+    return { action: key || action, changes };
+  }
+  const list = [...(changes ?? [])];
+  if (!list.some((change) => change.field === "result")) {
+    list.unshift({ field: "result", to: result });
+  }
+  return { action: "update", changes: list };
+}
+
+/** Verb used in remarks: prefers changes.result, then legacy action values. */
+export function remarkVerb(event: RemarkEvent): string {
+  const result = event.changes?.find((change) => change.field === "result")?.to?.trim().toLowerCase();
+  if (result && RESULT_TO_VERB[result]) return RESULT_TO_VERB[result];
+  const action = event.action.trim().toLowerCase();
+  if (action === "change") return "update";
+  return action || "update";
+}
+
 const FIELDS: Record<string, { en: string; cn: string; mode: "from-to" | "updated" }> = {
   status: { en: "status", cn: "状态", mode: "from-to" },
   type: { en: "type", cn: "类型", mode: "from-to" },
@@ -164,12 +211,13 @@ function weekSentence(event: RemarkEvent, lang: "en" | "cn"): string {
       ? text(areaChange.toCn, text(areaChange.to, ""))
       : text(areaChange.to, text(areaChange.toCn, ""))
     : "";
-  const verb = VERBS[event.action]?.[lang] ?? VERBS.update[lang];
+  const verbKey = remarkVerb(event);
+  const verb = VERBS[verbKey]?.[lang] ?? VERBS.update[lang];
   const place = lang === "cn" ? `第${week}周${area ? ` ${area}` : ""}` : `week ${week}${area ? ` ${area}` : ""}`;
   const gap = lang === "cn" ? "" : " ";
   let sentence = `${verb}${gap}${place}`;
   const details = (event.changes ?? [])
-    .filter((change) => change.field !== "name")
+    .filter((change) => change.field !== "name" && change.field !== "result")
     .map((change) => changePhrase(change, lang))
     .filter((phrase): phrase is string => Boolean(phrase));
   if (details.length) {
@@ -209,18 +257,19 @@ function safetySentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
   const monthly = event.objectType === "monthly safety report";
   if (!weekly && !monthly) return null;
 
+  const verbKey = remarkVerb(event);
   const verb =
-    event.action === "delete"
+    verbKey === "delete"
       ? lang === "cn"
         ? "已删除"
         : "Removed"
-      : event.action === "update"
+      : verbKey === "submit"
         ? lang === "cn"
-          ? "已更新"
-          : "Updated"
-        : lang === "cn"
           ? "已提交"
-          : "Submitted";
+          : "Submitted"
+        : lang === "cn"
+          ? "已更新"
+          : "Updated";
   const noun = weekly
     ? lang === "cn"
       ? "周安全报告"
@@ -250,7 +299,7 @@ function safetySentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
   const gap = lang === "cn" ? "" : " ";
   let sentence = lang === "cn" ? `${verb}${noun}，${place}` : `${verb}${gap}${noun}, ${place}`;
   const details = (event.changes ?? [])
-    .filter((change) => change.field !== "name" && change.field !== "period")
+    .filter((change) => change.field !== "name" && change.field !== "period" && change.field !== "result")
     .map((change) => changePhrase(change, lang))
     .filter((phrase): phrase is string => Boolean(phrase));
   const tail = [activity, ...details].filter(Boolean);
@@ -360,7 +409,7 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
     if (attachment) return attachment;
   }
   if (
-    event.action === "import" &&
+    remarkVerb(event) === "import" &&
     (event.objectType === "materials" || event.objectType === "activities" || event.objectType === "requests")
   ) {
     if (event.objectType === "requests") return requestImportSentence(event, lang);
@@ -373,7 +422,7 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   if (!event.objectType) return event.summary;
 
   const noun = NOUNS[event.objectType]?.[lang] ?? event.objectType;
-  const verb = VERBS[event.action]?.[lang] ?? VERBS.update[lang];
+  const verb = VERBS[remarkVerb(event)]?.[lang] ?? VERBS.update[lang];
   const ref = event.objectRef?.trim();
   const name = event.changes?.find((change) => change.field === "name");
   const nameLabel = name
@@ -386,6 +435,7 @@ export function renderRemark(event: RemarkEvent, lang: "en" | "cn"): string {
   let sentence = who ? `${verb}${gap}${noun} ${who}` : `${verb}${gap}${noun}`;
 
   const changes = (event.changes ?? [])
+    .filter((change) => change.field !== "result")
     .map((change) => changePhrase(change, lang))
     .filter((phrase): phrase is string => Boolean(phrase));
   const links = (event.links ?? []).map((link) => linkPhrase(link, lang));
