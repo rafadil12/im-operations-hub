@@ -4,9 +4,15 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FilePlus, LayoutGrid, NotepadText, RotateCcwClock, User } from "lucide-react";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { PAGE_SIZE_OPTIONS, type PageSize } from "@/components/sparepart/stockTableRows";
+import { ExportIcon } from "@/components/ui/ActionIcons";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { Drawer } from "@/components/ui/Drawer";
+import { useToast } from "@/components/ui/ToastProvider";
 import { apiGetAbs } from "@/lib/apiClient";
+import {
+  exportFilename,
+  parseContentDispositionFilename,
+} from "@/lib/exportFilenames";
 import { useLang } from "@/lib/i18n";
 import { fillTemplate } from "@/lib/i18n/fillTemplate";
 import {
@@ -140,6 +146,7 @@ function DetailField({
 
 export function LogsCenter() {
   const { t, lang } = useLang();
+  const { error: toastError } = useToast();
   const [moduleName, setModuleName] = useState("");
   const [action, setAction] = useState("");
   const [q, setQ] = useState("");
@@ -158,6 +165,7 @@ export function LogsCenter() {
   const [data, setData] = useState<LogResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -202,7 +210,7 @@ export function LogsCenter() {
   const selected = data?.rows.find((row) => row.id === selectedId) ?? null;
   const selectedChanges = selected ? parseRemarkList<RemarkChange>(selected.changes_json) : null;
   const selectedLinks = selected ? parseRemarkList<RemarkLink>(selected.links_json) : null;
-  const changeLines = formatChangeLines(selectedChanges, lang);
+  const changeLines = formatChangeLines(selectedChanges, lang, selected?.action);
   const activeChips: { key: string; label: string }[] = [];
   if (applied.from || applied.to) {
     activeChips.push({
@@ -238,11 +246,57 @@ export function LogsCenter() {
     setSelectedId(null);
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("lang", lang);
+      if (applied.moduleName) params.set("module", applied.moduleName);
+      if (applied.action) params.set("action", applied.action);
+      if (applied.q.trim()) params.set("q", applied.q.trim());
+      if (applied.from) params.set("from", applied.from);
+      if (applied.to) params.set("to", applied.to);
+      const res = await fetch(`/api/logs-center/export?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(t.toast.exportFailed);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        parseContentDispositionFilename(res.headers.get("Content-Disposition")) ||
+        exportFilename("logsCenter", lang, {
+          start: applied.from.slice(0, 10),
+          end: applied.to.slice(0, 10),
+        });
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : t.toast.exportFailed);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-text">{t.logsCenter.title}</h1>
-        <p className="text-sm text-text-muted">{t.logsCenter.desc}</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-text">{t.logsCenter.title}</h1>
+          <p className="text-sm text-text-muted">{t.logsCenter.desc}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleExport()}
+          disabled={exporting || loading}
+          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+        >
+          <ExportIcon className="size-3.5" />
+          {exporting ? t.common.exporting : t.common.export}
+        </button>
       </div>
 
       <form
