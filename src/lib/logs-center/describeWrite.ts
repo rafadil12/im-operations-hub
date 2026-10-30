@@ -93,7 +93,7 @@ export function summarizeWrites(writes: SqlWrite[]): {
   const actions = [...new Set(writes.map((write) => actionForWrite(write)))];
   return {
     module: modules.length === 1 ? modules[0] : "system",
-    action: actions.length === 1 ? actions[0] : "change",
+    action: actions.length === 1 ? actions[0] : "update",
     summary: parts.join(", ").slice(0, 500),
   };
 }

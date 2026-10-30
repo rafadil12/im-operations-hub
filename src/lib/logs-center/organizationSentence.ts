@@ -1,4 +1,4 @@
-import type { RemarkEvent } from "./renderRemark";
+import { remarkVerb, type RemarkEvent } from "./renderRemark";
 
 function text(value: string | null | undefined, fallback: string): string {
   const trimmed = value?.trim();
@@ -81,12 +81,13 @@ function leaveSentence(event: RemarkEvent, lang: "en" | "cn"): string | null {
       : text(note.to, "")
     : "";
   const person = who(event, lang);
+  const verbKey = remarkVerb(event);
   const verb =
-    event.action === "submit"
+    verbKey === "submit"
       ? lang === "cn"
         ? "已提交"
         : "Submitted"
-      : event.action === "delete"
+      : verbKey === "delete"
         ? lang === "cn"
           ? "已取消"
           : "Cancelled"
