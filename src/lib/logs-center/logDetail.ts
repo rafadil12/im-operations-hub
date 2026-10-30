@@ -165,11 +165,13 @@ function changeValue(change: RemarkChange, side: "from" | "to", lang: "en" | "cn
 
 export function formatChangeLines(
   changes: RemarkChange[] | null | undefined,
-  lang: "en" | "cn"
+  lang: "en" | "cn",
+  action?: string | null
 ): { before: string[]; after: string[] } {
   if (!changes?.length) {
     return { before: ["-"], after: ["-"] };
   }
+  const isDelete = displayLogAction(action ?? "") === "delete";
   const before: string[] = [];
   const after: string[] = [];
   for (const change of changes) {
@@ -178,6 +180,15 @@ export function formatChangeLines(
       continue;
     }
     const label = fieldLabel(change.field, lang);
+    if (isDelete) {
+      // Delete remarks store the removed value in `to` for the sentence;
+      // show that snapshot as Before, and leave After empty.
+      const from = changeValue(change, "from", lang);
+      const to = changeValue(change, "to", lang);
+      before.push(`${label}: ${from !== "-" ? from : to}`);
+      after.push(`${label}: -`);
+      continue;
+    }
     before.push(`${label}: ${changeValue(change, "from", lang)}`);
     after.push(`${label}: ${changeValue(change, "to", lang)}`);
   }

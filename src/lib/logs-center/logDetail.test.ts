@@ -67,6 +67,21 @@ describe("formatChangeLines", () => {
       after: ["状态: 已完成"],
     });
   });
+
+  it("puts the deleted snapshot in Before and clears After", () => {
+    expect(
+      formatChangeLines([{ field: "name", to: "tes123", toCn: "tes123" }], "en", "delete")
+    ).toEqual({
+      before: ["name: tes123"],
+      after: ["name: -"],
+    });
+    expect(
+      formatChangeLines([{ field: "name", to: "tes123", toCn: "测试" }], "cn", "delete")
+    ).toEqual({
+      before: ["name: 测试"],
+      after: ["name: -"],
+    });
+  });
 });
 
 describe("displayLogAction", () => {
