@@ -413,6 +413,10 @@ function Detail({
 export async function renderMesRecordWeComImage(record: MesDataRow): Promise<Buffer> {
   const fonts = await loadAttendanceFont();
   const theme = reportTheme(record.type_en);
+  const normalizedType = String(record.type_en ?? "")
+    .trim()
+    .toLowerCase();
+  const titleFontSize = normalizedType === "change request" ? 39 : 47;
   const completed = String(record.status_en ?? "").toLowerCase() === "completed";
   const statusColor = completed ? "#078b3c" : "#c47700";
   const recordDate = String(record.end_time || record.start_time).slice(0, 10);
@@ -496,9 +500,10 @@ export async function renderMesRecordWeComImage(record: MesDataRow): Promise<Buf
             style={{
               display: "flex",
               color: theme.primary,
-              fontSize: 47,
+              fontSize: titleFontSize,
               lineHeight: 1,
               fontWeight: 700,
+              whiteSpace: "nowrap",
             }}
           >
             {value(record.type_cn)} / {value(record.type_en)}
@@ -588,7 +593,8 @@ export async function renderMesRecordWeComImage(record: MesDataRow): Promise<Buf
           width={285}
           icon="building"
           label="部门 / Division"
-          primary={`${value(record.division_cn)} (${value(record.division_en)})`}
+          primary={value(record.division_cn)}
+          secondary={value(record.division_en)}
           color="#6941c6"
           background="#f0eaff"
         />
