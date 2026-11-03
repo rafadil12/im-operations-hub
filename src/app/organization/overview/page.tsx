@@ -70,6 +70,8 @@ type ScheduleException = {
   scheduleType: ScheduleApiRow["schedule_type"];
   attendanceValue: AttendanceValue | null;
   status: ScheduleExceptionStatus;
+  timeRange?: string;
+  uplHours?: number | null;
 };
 
 type DailyScheduleComparison = {
@@ -274,6 +276,12 @@ function valueLabel(
   return labels[value] ?? value;
 }
 
+function scheduleVarianceValueClass(value: AttendanceValue | null) {
+  return value === "MC"
+    ? "rounded-md bg-bg px-2 py-1 text-purple-400"
+    : "rounded-md bg-bg px-2 py-1 text-text-muted";
+}
+
 function requestTypeStyle(requestType: LeaveType) {
   const styles: Record<
     LeaveType,
@@ -357,6 +365,66 @@ function scheduleLabel(
   return attendanceT.off;
 }
 
+function varianceScheduleLabel(
+  scheduleType: ScheduleApiRow["schedule_type"],
+  uplHours: number | null | undefined,
+  attendanceT: Record<string, string>,
+) {
+  if (uplHours == null) return scheduleLabel(scheduleType, attendanceT);
+  return `${Number.isInteger(uplHours) ? uplHours.toFixed(0) : uplHours.toFixed(1)}h`;
+}
+
+function scheduleTimeRange(
+  scheduleType: ScheduleApiRow["schedule_type"],
+  startTime?: string | null,
+  endTime?: string | null,
+) {
+  if (startTime && endTime) {
+    const start = String(startTime).slice(0, 5);
+    const end = String(endTime).slice(0, 5);
+    if (/^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)) {
+      return `${start}–${end}`;
+    }
+  }
+
+  switch (scheduleType) {
+    case "D":
+    case "D/S":
+      return "08:00–20:00";
+    case "N":
+    case "N/S":
+      return "20:00–08:00";
+    case "1":
+      return "08:00–17:00";
+    case "4":
+      return "08:00–12:00";
+    case "OFF":
+      return "OFF";
+    default:
+      return "—";
+  }
+}
+
+function uplWorkHours(startTime?: string | null, endTime?: string | null) {
+  if (!startTime || !endTime) return null;
+  const toMinutes = (value: string) => {
+    const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  const start = toMinutes(startTime);
+  let end = toMinutes(endTime);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (end < start) end += 24 * 60;
+
+  const regularMinutes = Math.max(
+    0,
+    Math.min(end, 17 * 60) - Math.max(start, 8 * 60) -
+      Math.max(0, Math.min(end, 13 * 60) - Math.max(start, 12 * 60)),
+  );
+  const overtimeMinutes = Math.max(0, end - Math.max(start, 17 * 60 + 45));
+  return regularMinutes / 60 + Math.ceil(overtimeMinutes / 30) / 2;
+}
+
 /* =========================================================
    CARD
 ========================================================= */
@@ -416,6 +484,7 @@ function KpiCard({
   subtitle,
   icon,
   tone,
+  compact = false,
 }: {
   title: string;
   value: string;
@@ -427,6 +496,7 @@ function KpiCard({
     | "warning"
     | "danger"
     | "info";
+  compact?: boolean;
 }) {
   const iconClass = {
     accent: "bg-cyan-500/10",
@@ -437,24 +507,24 @@ function KpiCard({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 transition-all duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_34px_rgba(8,47,73,0.10)]">
+    <div className={`rounded-xl border border-border bg-surface ${compact ? "p-3" : "p-4"} transition-all duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_34px_rgba(8,47,73,0.10)]`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] uppercase tracking-wide text-text-dim">
+        <p className={`${compact ? "text-[9px]" : "text-[10px]"} uppercase tracking-wide text-text-dim`}>
           {title}
         </p>
 
         <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-md text-sm ${iconClass[tone]}`}
+          className={`flex ${compact ? "size-7 text-xs" : "size-8 text-sm"} shrink-0 items-center justify-center rounded-md ${iconClass[tone]}`}
         >
           {icon}
         </div>
       </div>
 
-      <p className="mt-2 text-2xl font-semibold text-text">
+      <p className={`${compact ? "mt-1.5 text-xl" : "mt-2 text-2xl"} font-semibold text-text`}>
         {value}
       </p>
 
-      <p className="mt-1 text-[11px] text-text-muted">
+      <p className={`${compact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"} text-text-muted`}>
         {subtitle}
       </p>
     </div>
@@ -1553,16 +1623,16 @@ function EmployeeLeaveChart({
           <span className="size-2 rounded-full bg-blue-500" />
           {ao.annualLeave}
         </span>
-        <span className="flex items-center gap-1 font-semibold text-rose-400">
-          <span className="size-2 rounded-full bg-rose-500" />
+        <span className="flex items-center gap-1 font-semibold text-purple-400">
+          <span className="size-2 rounded-full bg-purple-500" />
           {ao.sickLeave}
         </span>
         <span className="flex items-center gap-1 font-semibold text-amber-400">
           <span className="size-2 rounded-full bg-amber-500" />
           {ao.permission}
         </span>
-        <span className="flex items-center gap-1 font-semibold text-fuchsia-400">
-          <span className="size-2 rounded-full bg-fuchsia-500" />
+        <span className="flex items-center gap-1 font-semibold text-rose-400">
+          <span className="size-2 rounded-full bg-rose-500" />
           {ao.alpa}
         </span>
       </div>
@@ -2365,14 +2435,36 @@ export default function AttendanceOverviewPage() {
   const allScheduleVarianceExceptions = useMemo(() => {
     return dailyScheduleComparison
       .flatMap((day) =>
-        day.exceptions.map((item) => ({
-          ...item,
-          day: day.day,
-          weekday: day.weekday,
-        })),
+        day.exceptions.map((item) => {
+          const request = leaveRows
+            .filter(
+              (row) =>
+                row.status === "Approved" &&
+                row.employee_no === item.employee.employee_no &&
+                String(row.request_date).slice(0, 10) === day.date &&
+                ["AL", "MC", "UPL", "ALPA", "OT"].includes(row.request_type) &&
+                row.start_time &&
+                row.end_time,
+            )
+            .sort((a, b) => b.id - a.id)[0];
+
+          return {
+            ...item,
+            day: day.day,
+            weekday: day.weekday,
+            timeRange: scheduleTimeRange(
+              item.scheduleType,
+              request?.start_time,
+              request?.end_time,
+            ),
+            uplHours: request?.request_type === "UPL"
+              ? uplWorkHours(request.start_time, request.end_time)
+              : null,
+          };
+        }),
       )
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [dailyScheduleComparison]);
+  }, [dailyScheduleComparison, leaveRows]);
 
   const employeeScheduleSummary = useMemo(() => {
     const map = new Map<string, {
@@ -3910,10 +4002,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
-                          {scheduleLabel(item.scheduleType, ao)}
+                        <span className="rounded-md bg-cyan-500/10 px-2 py-1 font-semibold text-cyan-600 dark:text-cyan-300">
+                          {item.timeRange}
                         </span>
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                          {varianceScheduleLabel(item.scheduleType, item.uplHours, ao)}
+                        </span>
+                        <span className={scheduleVarianceValueClass(item.attendanceValue)}>
                           {item.attendanceValue
                             ? valueLabel(item.attendanceValue, language, ao)
                             : ao.noAttendance}
@@ -3973,7 +4068,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{scheduleLabel(item.scheduleType, ao)}</span>
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{item.attendanceValue ? valueLabel(item.attendanceValue, language, ao) : (ao.noAttendance)}</span>
+                        <span className={scheduleVarianceValueClass(item.attendanceValue)}>{item.attendanceValue ? valueLabel(item.attendanceValue, language, ao) : (ao.noAttendance)}</span>
                         <span className={[
                           "rounded-md px-2 py-1 font-semibold",
                           item.status === "LEAVE"
@@ -4051,10 +4146,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
-                          {scheduleLabel(item.scheduleType, ao)}
+                        <span className="rounded-md bg-cyan-500/10 px-2 py-1 font-semibold text-cyan-600 dark:text-cyan-300">
+                          {item.timeRange}
                         </span>
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                          {varianceScheduleLabel(item.scheduleType, item.uplHours, ao)}
+                        </span>
+                        <span className={scheduleVarianceValueClass(item.attendanceValue)}>
                           {item.attendanceValue
                             ? valueLabel(item.attendanceValue, language, ao)
                             : ao.noAttendance}
@@ -4839,7 +4937,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
         ) : null}
 
 
-        <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
             <SectionHeader
               title={
@@ -4995,7 +5093,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
               }
             />
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-2">
               <KpiCard
                 title={
                   ao.requestCount
@@ -5008,6 +5106,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 }
                 icon="📄"
                 tone="warning"
+                compact
               />
 
               <KpiCard
@@ -5020,6 +5119,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 subtitle="OT"
                 icon="⏱"
                 tone="accent"
+                compact
               />
 
               <KpiCard
@@ -5032,6 +5132,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 subtitle="OT"
                 icon="!"
                 tone="warning"
+                compact
               />
 
               <KpiCard
@@ -5044,15 +5145,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 subtitle="OT"
                 icon="✓"
                 tone="success"
+                compact
               />
             </div>
 
-            <div className="mt-5 rounded-lg border border-border-subtle bg-bg/30 p-4">
+            <div className="mt-3 rounded-lg border border-border-subtle bg-bg/30 p-3">
               <p className="text-[10px] uppercase tracking-wide text-text-dim">
                 {ao.note}
               </p>
 
-              <p className="mt-1.5 text-[10px] leading-5 text-text-muted">
+              <p className="mt-1 text-[10px] leading-4 text-text-muted">
                 {ao.overtimeNote}
               </p>
             </div>

@@ -1352,6 +1352,22 @@ export default function LeavePermissionPage() {
                       {item.startTime && item.endTime
                         ? `${item.startTime} – ${item.endTime}`
                         : item.startTime || item.endTime || "—"}
+                      {item.type === "OT" && item.startTime && item.endTime ? (
+                        <span className="ml-1 font-medium text-text-muted">
+                          ({(() => {
+                            const toMinutes = (value: string) => {
+                              const [hours, minutes] = value.split(":").map(Number);
+                              return hours * 60 + minutes;
+                            };
+                            const originalStart = toMinutes(item.startTime);
+                            const start = Math.max(originalStart, 17 * 60 + 45);
+                            let end = toMinutes(item.endTime);
+                            if (end < originalStart) end += 24 * 60;
+                            const roundedHours = Math.ceil(Math.max(0, end - start) / 30) / 2;
+                            return `${roundedHours.toFixed(roundedHours % 1 ? 1 : 0)}h`;
+                          })()})
+                        </span>
+                      ) : null}
                     </td>
 
                     <td className="max-w-[260px] px-2 py-2 text-[10px] font-medium text-text">

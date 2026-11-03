@@ -40,6 +40,8 @@ type AttendanceDailyRow = {
     | "UPL"
     | "A";
   planned_hours: number | string;
+  offday_regular_hours?: number | string;
+  overtime_hours?: number | string;
 };
 
 const API_EMPLOYEES = "/api/organization/employees?limit=100";
@@ -303,6 +305,7 @@ export default function AttendanceOverviewPage() {
 
       let result: AttendanceStatus = "ABSENT";
       let hours = 0;
+      const overtimeHours = Number(daily?.overtime_hours ?? 0);
 
       if (daily) {
         switch (daily.attendance_value) {
@@ -326,7 +329,10 @@ export default function AttendanceOverviewPage() {
             break;
         }
 
-        hours = Number(daily.planned_hours) || 0;
+        hours =
+          (Number(daily.planned_hours) || 0) +
+          (Number(daily.offday_regular_hours) || 0) +
+          overtimeHours;
       } else if (schedule?.schedule_type === "OFF") {
         result = "OFF";
       } else if (schedule) {
@@ -339,6 +345,7 @@ export default function AttendanceOverviewPage() {
         schedule: schedule?.schedule_type ?? "—",
         result,
         hours,
+        overtimeHours,
       };
     });
   }, [
@@ -693,7 +700,14 @@ export default function AttendanceOverviewPage() {
                         </td>
 
                         <td className="px-4 py-3">
-                          <Badge status={row.result} language={language} />
+                          <div className="flex items-center gap-2">
+                            <Badge status={row.result} language={language} />
+                            {row.overtimeHours > 0 ? (
+                              <span className="inline-flex rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                                OT {row.overtimeHours.toFixed(row.overtimeHours % 1 ? 1 : 0)}h
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
 
                         <td className="px-4 py-3 text-xs font-bold text-text">

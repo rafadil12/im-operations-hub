@@ -8,7 +8,10 @@ export type AttendanceRosterRow = {
   division_name_cn: string | null;
   schedule_type: AttendanceShift;
   leave_type: string | null;
+  request_start_time: string | null;
+  request_end_time: string | null;
   is_rolling: number;
+  work_hours: number;
 };
 
 export type AttendanceRoster = {
@@ -69,6 +72,25 @@ export function dateInTimeZone(
 
 export async function loadAttendanceRoster(date: string): Promise<AttendanceRoster> {
   const { query } = await import("@/lib/db");
+  const uplHoursSql = `CASE
+    WHEN lr.start_time IS NULL OR lr.end_time IS NULL THEN 0
+    WHEN lr.start_time < '17:00:00' THEN
+      GREATEST(0,
+        (LEAST(TIME_TO_SEC(lr.end_time), 17 * 3600) -
+         GREATEST(TIME_TO_SEC(lr.start_time), 8 * 3600)) / 3600
+        - GREATEST(0,
+          (LEAST(TIME_TO_SEC(lr.end_time), 13 * 3600) -
+           GREATEST(TIME_TO_SEC(lr.start_time), 12 * 3600)) / 3600
+        )
+      ) + CEIL(GREATEST(0,
+        (TIME_TO_SEC(lr.end_time) -
+         TIME_TO_SEC(GREATEST(lr.start_time, '17:45:00'))) / 60
+      ) / 30) / 2
+    ELSE CEIL(GREATEST(0,
+      (TIME_TO_SEC(lr.end_time) -
+       TIME_TO_SEC(GREATEST(lr.start_time, '17:45:00'))) / 60
+    ) / 30) / 2
+  END`;
   const rows = await query<AttendanceRosterRow[]>(
     `
       SELECT
@@ -89,7 +111,38 @@ export async function loadAttendanceRoster(date: string): Promise<AttendanceRost
           WHEN lr.request_type = 'ALPA' THEN 'A'
           ELSE lr.request_type
         END AS leave_type
-      FROM shift_schedules ss
+        ,lr.start_time AS request_start_time
+        ,lr.end_time AS request_end_time
+        ,CASE
+          WHEN ss.schedule_type = 'OFF' THEN
+            COALESCE(ot.offday_regular_hours, 0) + COALESCE(ot.overtime_hours, 0)
+          WHEN lr.request_type IN ('AL', 'MC', 'A', 'ALPA') THEN
+            COALESCE(ot.overtime_hours, 0)
+          ELSE GREATEST(0,
+            CASE
+              WHEN ss.schedule_type IN ('D', 'N') THEN 10.5
+              WHEN ss.schedule_type = '1' THEN 8
+              WHEN ss.schedule_type = '4' THEN 4
+              ELSE 0
+            END - CASE WHEN lr.request_type = 'UPL' THEN (${uplHoursSql}) ELSE 0 END
+          ) + COALESCE(ot.overtime_hours, 0)
+        END AS work_hours
+      FROM (
+        SELECT employee_no, schedule_date, schedule_type, MAX(rotation_rule_id) AS rotation_rule_id
+        FROM shift_schedules
+        WHERE schedule_date = ?
+        GROUP BY employee_no, schedule_date, schedule_type
+        UNION
+        SELECT employee_no, request_date AS schedule_date, 'OFF' AS schedule_type, NULL AS rotation_rule_id
+        FROM attendance_leave_requests
+        WHERE request_date = ? AND status = 'Approved'
+          AND request_type IN ('AL', 'MC', 'UPL', 'A', 'ALPA')
+          AND NOT EXISTS (
+            SELECT 1 FROM shift_schedules scheduled
+            WHERE scheduled.employee_no = attendance_leave_requests.employee_no
+              AND scheduled.schedule_date = attendance_leave_requests.request_date
+          )
+      ) ss
       INNER JOIN users u
         ON u.employee_no = ss.employee_no
       INNER JOIN employee_organization eo
@@ -108,6 +161,30 @@ export async function loadAttendanceRoster(date: string): Promise<AttendanceRost
           ORDER BY latest_lr.id DESC
           LIMIT 1
         )
+      LEFT JOIN (
+        SELECT employee_no, request_date,
+          SUM(CASE WHEN EXISTS (
+            SELECT 1 FROM shift_schedules off_shift
+            WHERE off_shift.employee_no = ot_request.employee_no
+              AND off_shift.schedule_date = ot_request.request_date
+              AND off_shift.schedule_type = 'OFF'
+          ) THEN GREATEST(0,
+            (LEAST(TIME_TO_SEC(end_time), 17 * 3600) -
+             GREATEST(TIME_TO_SEC(start_time), 8 * 3600)) / 3600
+            - GREATEST(0,
+              (LEAST(TIME_TO_SEC(end_time), 13 * 3600) -
+               GREATEST(TIME_TO_SEC(start_time), 12 * 3600)) / 3600
+            )
+          ) ELSE 0 END) AS offday_regular_hours,
+          SUM(CEIL(GREATEST(0,
+            (TIME_TO_SEC(end_time) -
+             TIME_TO_SEC(GREATEST(start_time, '17:45:00'))) / 60
+          ) / 30) / 2) AS overtime_hours
+        FROM attendance_leave_requests ot_request
+        WHERE status = 'Approved' AND request_type = 'OT'
+          AND start_time IS NOT NULL AND end_time IS NOT NULL
+        GROUP BY employee_no, request_date
+      ) ot ON ot.employee_no = ss.employee_no AND ot.request_date = ss.schedule_date
       WHERE ss.schedule_date = ?
         AND u.employee_no <> 'SUPERADMIN'
       ORDER BY
@@ -115,13 +192,13 @@ export async function loadAttendanceRoster(date: string): Promise<AttendanceRost
         COALESCE(d.name_en, d.name_cn, ''),
         COALESCE(u.name_en, u.name_cn, u.employee_no)
     `,
-    [date]
+    [date, date, date]
   );
 
   const scheduled = rows.filter((row) => row.schedule_type !== "OFF");
-  const leave = scheduled.filter((row) => Boolean(row.leave_type));
+  const leave = rows.filter((row) => Boolean(row.leave_type));
   const working = scheduled.filter((row) => !row.leave_type);
-  const off = rows.filter((row) => row.schedule_type === "OFF");
+  const off = rows.filter((row) => row.schedule_type === "OFF" && !row.leave_type);
 
   return { date, scheduled, working, leave, off };
 }

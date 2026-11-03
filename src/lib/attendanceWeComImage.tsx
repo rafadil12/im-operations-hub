@@ -146,6 +146,30 @@ function divisionName(row: AttendanceRosterRow) {
   return chinese || english || "-";
 }
 
+function requestTimeRange(row: AttendanceRosterRow) {
+  const formatTime = (value: string | null) => {
+    if (!value) return null;
+    const match = value.match(/(?:T|\s)?(\d{2}:\d{2})/);
+    return match?.[1] ?? value.slice(0, 5);
+  };
+  const start = formatTime(row.request_start_time);
+  const end = formatTime(row.request_end_time);
+  if (start && end) return `${start}–${end}`;
+
+  switch (row.schedule_type) {
+    case "D":
+      return "08:00–20:00";
+    case "N":
+      return "20:00–08:00";
+    case "1":
+      return "08:00–17:00";
+    case "4":
+      return "08:00–12:00";
+    default:
+      return "OFF";
+  }
+}
+
 function departmentColors(row: AttendanceRosterRow) {
   const division = `${row.division_name_en ?? ""} ${row.division_name_cn ?? ""}`.toLowerCase();
   if (
@@ -419,6 +443,8 @@ function RosterCard({
   icon,
   compact = false,
   emptyIcon = false,
+  cardHeight,
+  rowHeight,
 }: {
   title: string;
   rows: AttendanceRosterRow[];
@@ -427,16 +453,18 @@ function RosterCard({
   icon: IconName;
   compact?: boolean;
   emptyIcon?: boolean;
+  cardHeight?: number;
+  rowHeight?: number;
 }) {
   const visible = rows;
-  const dense = !compact && rows.length > 5;
+  const dense = (!compact && rows.length > 5) || (rowHeight !== undefined && rowHeight < 46);
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         flex: 1,
-        height: compact ? 218 : 452,
+        height: cardHeight ?? (compact ? 218 : 452),
         border: `2px solid ${palette.border}`,
         borderRadius: 18,
         overflow: "hidden",
@@ -505,7 +533,7 @@ function RosterCard({
         }}
       >
         <span style={{ display: "flex", width: 34 }}>#</span>
-        <span style={{ display: "flex", flex: 1 }}>员工 / Staff</span>
+        <span style={{ display: "flex", flex: 1 }}>Staff / Work hours</span>
         <span
           style={{
             display: "flex",
@@ -526,7 +554,7 @@ function RosterCard({
               alignItems: "center",
               justifyContent: "flex-start",
               paddingTop: compact ? 18 : 68,
-              height: compact ? 112 : 332,
+              height: cardHeight ? cardHeight - 106 : compact ? 112 : 332,
               color: palette.muted,
               fontSize: 18,
               textAlign: "center",
@@ -546,7 +574,7 @@ function RosterCard({
               style={{
                 display: "flex",
                 alignItems: "center",
-                height: dense ? 46 : 56,
+                height: rowHeight ?? (dense ? 46 : 56),
                 padding: "0 8px",
                 margin: "0 -8px",
                 background: index % 2 === 0 ? "#ffffff" : "#f5faff",
@@ -570,17 +598,23 @@ function RosterCard({
                 <div
                   style={{
                     display: "flex",
+                    flexDirection: "column",
                     color: palette.navy,
                     flex: 1,
-                    fontSize: dense ? 13 : compact ? 14.5 : 15,
+                    minWidth: 0,
+                    fontSize: dense ? 12 : compact ? 14.5 : 15,
                     lineHeight: 1.15,
                     fontWeight: 700,
-                    whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {employeeName(row)}
+                  <span style={{ display: "flex", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {employeeName(row)}
+                  </span>
+                  <span style={{ display: "flex", marginTop: dense ? 1 : 3, color: palette.muted, fontSize: dense ? 9 : 11, fontWeight: 500 }}>
+                    {row.leave_type ? `${row.leave_type} · ` : ""}{requestTimeRange(row)}
+                  </span>
                 </div>
                 <span
                   style={{
@@ -634,6 +668,20 @@ export async function renderAttendanceRosterImage(roster: AttendanceRoster): Pro
   const presentWithoutShift = roster.working.filter(
     (row) => !shiftEmployeeNumbers.has(row.employee_no)
   );
+  const offCardRows = Math.max(1, roster.off.length);
+  const leaveCardRows = Math.max(1, roster.leave.length);
+  const compactRowsTotal = offCardRows + leaveCardRows;
+  const compressedSideCards =
+    roster.off.length > 2 || roster.leave.length > 2 || compactRowsTotal > 4;
+  const compactRowHeight = compressedSideCards
+    ? Math.floor(224 / compactRowsTotal)
+    : 56;
+  const offCardHeight = compressedSideCards
+    ? 106 + offCardRows * compactRowHeight
+    : 218;
+  const leaveCardHeight = compressedSideCards
+    ? 106 + leaveCardRows * compactRowHeight
+    : 218;
 
   const response = new ImageResponse(
     <div
@@ -782,14 +830,28 @@ export async function renderAttendanceRosterImage(roster: AttendanceRoster): Pro
             compact
           />
         </div>
-        <RosterCard
-          title="休息 / Off Today"
-          rows={roster.off}
-          color={palette.orange}
-          emptyText="暂无休息人员 / No staff off"
-          icon="bed"
-          emptyIcon
-        />
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 16 }}>
+          <RosterCard
+            title="Off Today"
+            rows={roster.off}
+            color={palette.orange}
+            emptyText="No staff off"
+            icon="bed"
+            compact
+            cardHeight={offCardHeight}
+            rowHeight={compactRowHeight}
+          />
+          <RosterCard
+            title="Leave & Permission"
+            rows={roster.leave}
+            color={palette.red}
+            emptyText="No staff on leave"
+            icon="alert"
+            compact
+            cardHeight={leaveCardHeight}
+            rowHeight={compactRowHeight}
+          />
+        </div>
       </div>
 
       <div

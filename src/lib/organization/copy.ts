@@ -122,7 +122,7 @@ export const ORGANIZATION_TEXT = {
   a: ["A", "旷工"] as TextPair,
   off: ["OFF", "休息"] as TextPair,
   noAttendanceDataFound: ["No attendance data found", "没有找到考勤数据"] as TextPair,
-  dailyAttendanceIsStoredInAttendanceDailyAlMcUpl: ["Daily Attendance is stored in attendance_daily. AL / MC / UPL / A immediately override the corresponding date; OT does not affect Daily Attendance; future dates remain blank.", "每日考勤数据保存于 attendance_daily；AL / MC / UPL / A 直接覆盖对应日期，OT 不影响每日考勤，未来日期保持空白。"] as TextPair,
+  dailyAttendanceIsStoredInAttendanceDailyAlMcUpl: ["Daily Attendance is stored in attendance_daily. AL / MC / UPL / A immediately override the corresponding date; approved OT adds to total hours without changing the attendance status; future dates remain blank.", "每日考勤数据保存于 attendance_daily；AL / MC / UPL / A 立即覆盖对应日期；已批准的 OT 会计入总工时，但不改变考勤状态；未来日期保持空白。"] as TextPair,
   p: ["P", "出勤"] as TextPair,
   a2: ["A", "缺勤"] as TextPair,
   noEmployeeAttendanceData: ["No employee attendance data", "没有员工考勤数据"] as TextPair,

@@ -252,11 +252,51 @@ async function syncSingleAttendanceDaily(params: {
     requestType,
   } = params;
 
-  // Keep the same behavior as the monthly daily sync:
   // OT and NO_ATTENDANCE do not overwrite attendance_daily.
   if (requestType === "OT" || requestType === "NO_ATTENDANCE") {
     return;
   }
+
+  const [requestRows, scheduleRows] = await Promise.all([
+    query<{ request_type: string; start_time: string | null; end_time: string | null }[]>(
+      `SELECT request_type, start_time, end_time FROM attendance_leave_requests WHERE id = ? LIMIT 1`,
+      [leaveRequestId],
+    ),
+    query<{ schedule_type: string }[]>(
+      `SELECT schedule_type FROM shift_schedules WHERE employee_no = ? AND schedule_date = ? ORDER BY id DESC LIMIT 1`,
+      [employeeNo, attendanceDate],
+    ),
+  ]);
+  const scheduleType = scheduleRows[0]?.schedule_type;
+  const shiftHours = scheduleType === "D" || scheduleType === "N" ? 10.5
+    : scheduleType === "1" ? 8
+      : scheduleType === "4" ? 4 : 0;
+  const timeMinutes = (value: string | null) => {
+    if (!value) return null;
+    const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
+    return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null;
+  };
+  const start = timeMinutes(requestRows[0]?.start_time ?? null);
+  let end = timeMinutes(requestRows[0]?.end_time ?? null);
+  if (start != null && end != null && end < start) end += 24 * 60;
+  const lunchOverlap = start != null && end != null
+    ? Math.max(0, Math.min(end, 13 * 60) - Math.max(start, 12 * 60))
+    : 0;
+  const normalMinutes = start != null && end != null
+    ? Math.max(0, Math.min(end, 17 * 60) - Math.max(start, 8 * 60) - lunchOverlap)
+    : 0;
+  const overtimeMinutes = start != null && end != null
+    ? Math.max(0, end - Math.max(start, 17 * 60 + 45))
+    : 0;
+  const leaveHours = requestRows[0]?.request_type === "UPL"
+    ? normalMinutes / 60 + Math.ceil(overtimeMinutes / 30) / 2
+    : start != null && end != null
+      ? Math.max(0, end - start - lunchOverlap) / 60
+      : 0;
+  const plannedHours = Math.max(0, shiftHours - leaveHours);
+  const attendanceValue = plannedHours > 0
+    ? (shiftHours === 10.5 ? "10.5" : shiftHours === 8 ? "8" : shiftHours === 4 ? "4" : "OFF")
+    : "OFF";
 
   await suppressLogsCenter(() =>
     execute(
@@ -269,15 +309,15 @@ async function syncSingleAttendanceDaily(params: {
         source,
         leave_request_id
       )
-      VALUES (?, ?, 'OFF', 0, 'LEAVE', ?)
+      VALUES (?, ?, ?, ?, 'LEAVE', ?)
       ON DUPLICATE KEY UPDATE
-        attendance_value = 'OFF',
-        planned_hours = 0,
+        attendance_value = VALUES(attendance_value),
+        planned_hours = VALUES(planned_hours),
         source = 'LEAVE',
         leave_request_id = VALUES(leave_request_id),
         updated_at = CURRENT_TIMESTAMP
     `,
-      [employeeNo, attendanceDate, leaveRequestId],
+      [employeeNo, attendanceDate, attendanceValue, plannedHours, leaveRequestId],
     ),
   );
 }
