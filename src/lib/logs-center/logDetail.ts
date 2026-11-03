@@ -74,25 +74,27 @@ const FIELD_LABELS: Record<string, { en: string; cn: string }> = {
   permissions: { en: "permissions", cn: "权限" },
 };
 
+/** Badge/filter label: older save/submit/import rows show as UPDATE. */
+export function displayLogAction(action: string): string {
+  const key = action.trim().toLowerCase();
+  if (key === "change" || key === "save" || key === "submit" || key === "reopen" || key === "import") {
+    return "update";
+  }
+  return key || action;
+}
+
 export function actionBadgeTone(action: string): ActionBadgeTone {
-  switch (action.trim().toLowerCase()) {
+  switch (displayLogAction(action)) {
     case "create":
     case "login":
       return "green";
     case "update":
-    case "change":
-    case "save":
       return "orange";
     case "delete":
-      return "red";
-    case "submit":
-    case "import":
-    case "post":
-      return "blue";
-    case "reopen":
-      return "purple";
     case "reverse":
       return "red";
+    case "post":
+      return "blue";
     case "logout":
     default:
       return "gray";
@@ -163,15 +165,30 @@ function changeValue(change: RemarkChange, side: "from" | "to", lang: "en" | "cn
 
 export function formatChangeLines(
   changes: RemarkChange[] | null | undefined,
-  lang: "en" | "cn"
+  lang: "en" | "cn",
+  action?: string | null
 ): { before: string[]; after: string[] } {
   if (!changes?.length) {
     return { before: ["-"], after: ["-"] };
   }
+  const isDelete = displayLogAction(action ?? "") === "delete";
   const before: string[] = [];
   const after: string[] = [];
   for (const change of changes) {
+    const result = change.field === "result" ? change.to?.trim().toLowerCase() : "";
+    if (result === "saved" || result === "submitted" || result === "reopened" || result === "imported") {
+      continue;
+    }
     const label = fieldLabel(change.field, lang);
+    if (isDelete) {
+      // Delete remarks store the removed value in `to` for the sentence;
+      // show that snapshot as Before, and leave After empty.
+      const from = changeValue(change, "from", lang);
+      const to = changeValue(change, "to", lang);
+      before.push(`${label}: ${from !== "-" ? from : to}`);
+      after.push(`${label}: -`);
+      continue;
+    }
     before.push(`${label}: ${changeValue(change, "from", lang)}`);
     after.push(`${label}: ${changeValue(change, "to", lang)}`);
   }

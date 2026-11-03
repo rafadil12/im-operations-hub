@@ -66,7 +66,7 @@ describe("describeWrite", () => {
       ])
     ).toEqual({
       module: "sparepart",
-      action: "change",
+      action: "update",
       summary: "create sparepart_mat_docs, update sparepart_stock_balances",
     });
   });

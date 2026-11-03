@@ -226,7 +226,13 @@ Configure these production environment variables:
 WECOM_ATTENDANCE_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
 ATTENDANCE_CRON_SECRET=replace-with-a-long-random-value
 ATTENDANCE_TIME_ZONE=Asia/Jakarta
+ATTENDANCE_WECOM_HOUR=8
 ```
+
+When the Node.js server stays running, its internal scheduler sends the same
+report automatically at 08:00 in `ATTENDANCE_TIME_ZONE`. Set
+`ATTENDANCE_WECOM_AUTO_SEND=0` to disable the internal scheduler. The protected
+endpoint remains available for deployments that use an external scheduler.
 
 The renderer looks for Microsoft YaHei on Windows and Noto Sans CJK on Linux.
 If the server uses a different CJK font, point it at the font files explicitly

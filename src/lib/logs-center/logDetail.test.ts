@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actionBadgeTone,
+  displayLogAction,
   formatChangeLines,
   formatLogEventId,
   formatLogIp,
@@ -66,6 +67,32 @@ describe("formatChangeLines", () => {
       after: ["状态: 已完成"],
     });
   });
+
+  it("puts the deleted snapshot in Before and clears After", () => {
+    expect(
+      formatChangeLines([{ field: "name", to: "tes123", toCn: "tes123" }], "en", "delete")
+    ).toEqual({
+      before: ["name: tes123"],
+      after: ["name: -"],
+    });
+    expect(
+      formatChangeLines([{ field: "name", to: "tes123", toCn: "测试" }], "cn", "delete")
+    ).toEqual({
+      before: ["name: 测试"],
+      after: ["name: -"],
+    });
+  });
+});
+
+describe("displayLogAction", () => {
+  it("shows older detail actions as update", () => {
+    expect(displayLogAction("save")).toBe("update");
+    expect(displayLogAction("submit")).toBe("update");
+    expect(displayLogAction("reopen")).toBe("update");
+    expect(displayLogAction("import")).toBe("update");
+    expect(displayLogAction("change")).toBe("update");
+    expect(displayLogAction("create")).toBe("create");
+  });
 });
 
 describe("actionBadgeTone", () => {
@@ -73,8 +100,8 @@ describe("actionBadgeTone", () => {
     expect(actionBadgeTone("create")).toBe("green");
     expect(actionBadgeTone("update")).toBe("orange");
     expect(actionBadgeTone("delete")).toBe("red");
-    expect(actionBadgeTone("import")).toBe("blue");
-    expect(actionBadgeTone("reopen")).toBe("purple");
+    expect(actionBadgeTone("import")).toBe("orange");
+    expect(actionBadgeTone("reopen")).toBe("orange");
     expect(actionBadgeTone("logout")).toBe("gray");
   });
 });

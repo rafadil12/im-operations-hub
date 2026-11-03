@@ -14,13 +14,20 @@ describe("exportFilenames", () => {
     expect(exportFilename("trainingSessions", "cn")).toBe("培训记录.xlsx");
   });
 
-  it("appends date range for daily activities", () => {
+  it("appends date range for daily activities and logs center", () => {
     expect(
       exportFilename("dailyActivities", "cn", {
         start: "2026-09-01",
         end: "2026-09-22",
       })
     ).toBe("日常活动导出_2026-09-01_2026-09-22.xlsx");
+    expect(
+      exportFilename("logsCenter", "en", {
+        start: "2026-10-29",
+        end: "2026-10-29",
+      })
+    ).toBe("logs-center-export_2026-10-29_2026-10-29.xlsx");
+    expect(exportFilename("logsCenter", "cn")).toBe("日志中心导出.xlsx");
   });
 
   it("builds and parses Content-Disposition with UTF-8 filename*", () => {

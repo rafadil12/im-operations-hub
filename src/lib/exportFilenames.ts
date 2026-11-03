@@ -6,7 +6,8 @@ export type ExportFileKind =
   | "sparepartDocuments"
   | "sparepartMovementHistory"
   | "trainingSessions"
-  | "dailyActivities";
+  | "dailyActivities"
+  | "logsCenter";
 
 const BASE_NAMES: Record<ExportFileKind, Record<Lang, string>> = {
   sparepartMaterials: {
@@ -33,7 +34,19 @@ const BASE_NAMES: Record<ExportFileKind, Record<Lang, string>> = {
     en: "daily-activities-export.xlsx",
     cn: "日常活动导出.xlsx",
   },
+  logsCenter: {
+    en: "logs-center-export.xlsx",
+    cn: "日志中心导出.xlsx",
+  },
 };
+
+function withDateRange(base: string, start?: string, end?: string): string {
+  if (!start || !end) return base;
+  const extIdx = base.lastIndexOf(".");
+  const stem = extIdx >= 0 ? base.slice(0, extIdx) : base;
+  const ext = extIdx >= 0 ? base.slice(extIdx) : ".xlsx";
+  return `${stem}_${start}_${end}${ext}`;
+}
 
 export function exportFilename(
   kind: ExportFileKind,
@@ -41,11 +54,8 @@ export function exportFilename(
   opts?: { start?: string; end?: string }
 ): string {
   const base = BASE_NAMES[kind][lang] ?? BASE_NAMES[kind].en;
-  if (kind === "dailyActivities" && opts?.start && opts?.end) {
-    const extIdx = base.lastIndexOf(".");
-    const stem = extIdx >= 0 ? base.slice(0, extIdx) : base;
-    const ext = extIdx >= 0 ? base.slice(extIdx) : ".xlsx";
-    return `${stem}_${opts.start}_${opts.end}${ext}`;
+  if (kind === "dailyActivities" || kind === "logsCenter") {
+    return withDateRange(base, opts?.start, opts?.end);
   }
   return base;
 }

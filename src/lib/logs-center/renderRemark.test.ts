@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderRemark } from "./renderRemark";
+import { normalizeLogsCenterAction, remarkVerb, renderRemark } from "./renderRemark";
 
 describe("renderRemark", () => {
   it("keeps legacy rows as stored", () => {
@@ -240,5 +240,46 @@ describe("renderRemark", () => {
         "en"
       )
     ).toBe("Sign-in failed");
+  });
+
+  it("stores detail actions as update and keeps the verb in remarks", () => {
+    expect(normalizeLogsCenterAction("submit", [{ field: "name", to: "MOM" }])).toEqual({
+      action: "update",
+      changes: [
+        { field: "result", to: "submitted" },
+        { field: "name", to: "MOM" },
+      ],
+    });
+    expect(normalizeLogsCenterAction("change")).toEqual({ action: "update", changes: undefined });
+    expect(remarkVerb({ action: "update", summary: "", changes: [{ field: "result", to: "saved" }] })).toBe(
+      "save"
+    );
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "week",
+          objectRef: "41",
+          changes: [
+            { field: "result", to: "submitted" },
+            { field: "name", to: "MOM", toCn: "MOM项" },
+          ],
+        },
+        "en"
+      )
+    ).toBe("Submitted week 41 MOM");
+    expect(
+      renderRemark(
+        {
+          action: "update",
+          summary: "",
+          objectType: "activities",
+          objectRef: "12",
+          changes: [{ field: "result", to: "imported" }],
+        },
+        "en"
+      )
+    ).toBe("Imported 12 activities");
   });
 });

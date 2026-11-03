@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
-import { handleGuestForbiddenResponse } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useLang } from "@/lib/i18n";
 import { organizationLanguageValue } from "@/lib/organization/copy";
@@ -91,8 +90,6 @@ type AttendanceRow = {
 const API_EMPLOYEES = "/api/organization/employees?limit=100";
 const API_SCHEDULES = "/api/organization/shift-management/schedules";
 const API_ATTENDANCE_DAILY = "/api/organization/attendance/daily";
-const API_ATTENDANCE_SYNC =
-  "/api/organization/attendance/daily/sync";
 
 function pad(value: number) {
   return String(value).padStart(2, "0");
@@ -256,13 +253,7 @@ export default function DailyAttendancePage() {
   const [loading, setLoading] =
     useState(true);
 
-  const [syncing, setSyncing] =
-    useState(false);
-
   const [error, setError] =
-    useState<string | null>(null);
-
-  const [syncError, setSyncError] =
     useState<string | null>(null);
 
   const year = selectedDate.getFullYear();
@@ -342,9 +333,9 @@ export default function DailyAttendancePage() {
    *              ↓
    *         tampilkan tabel
    *              ↓
-   *        background sync
+   *   server scheduler syncs independently at day rollover
    *              ↓
-   *        refresh attendance
+   *   opening this page only loads the synchronized data
    *
    * Jadi halaman tidak menunggu sync.
    */
@@ -354,7 +345,6 @@ export default function DailyAttendancePage() {
     async function loadData() {
       setLoading(true);
       setError(null);
-      setSyncError(null);
 
       try {
         /*
@@ -459,10 +449,6 @@ export default function DailyAttendancePage() {
 
         setLoading(false);
 
-        // AUTO SYNC: jalankan setelah data awal selesai dimuat.
-        if (!cancelled && canManageOrganizationAttendance) {
-          await runAttendanceSync();
-        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -485,66 +471,8 @@ export default function DailyAttendancePage() {
     year,
     monthIndex,
     language,
+    dailyAttendance.loadError,
   ]);
-
-  async function runAttendanceSync() {
-    setSyncing(true);
-    setSyncError(null);
-
-    try {
-      const syncResponse = await fetch(API_ATTENDANCE_SYNC, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify({
-          year,
-          month: monthIndex + 1,
-        }),
-      });
-
-      if (!syncResponse.ok) {
-        const syncPayload = (await syncResponse.json().catch(() => ({}))) as {
-          error?: string;
-        };
-
-        if (handleGuestForbiddenResponse(syncResponse.status, syncPayload, "POST")) {
-          return;
-        }
-
-        throw new Error(
-          syncPayload.error ||
-            `Attendance sync failed: ${syncResponse.status}`,
-        );
-      }
-
-      const refreshedResponse = await fetch(
-        `${API_ATTENDANCE_DAILY}?year=${year}&month=${monthIndex + 1}`,
-        {
-          cache: "no-store",
-        },
-      );
-
-      if (!refreshedResponse.ok) {
-        throw new Error(`Attendance refresh failed: ${refreshedResponse.status}`);
-      }
-
-      const refreshedPayload = (await refreshedResponse.json()) as {
-        data?: AttendanceDailyApiRow[];
-      };
-
-      setAttendanceDaily(refreshedPayload.data ?? []);
-    } catch (err) {
-      setSyncError(
-        err instanceof Error
-          ? err.message
-          : organizationText("attendanceSyncFailed", language),
-      );
-    } finally {
-      setSyncing(false);
-    }
-  }
 
   /*
    * ------------------------------------------------------
@@ -1226,19 +1154,11 @@ export default function DailyAttendancePage() {
 
               <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-300">
                 {canManageOrganizationAttendance
-                  ? syncing
-                    ? organizationText("syncing2", language)
-                    : dailyAttendance.summary.automatic
+                  ? dailyAttendance.summary.automatic
                   : organizationText("readOnly", language)}
               </p>
             </div>
           </div>
-
-          {syncError ? (
-            <div className="border-b border-border-subtle px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-200">
-              {syncError}
-            </div>
-          ) : null}
 
           {/* ERROR */}
           {error && (

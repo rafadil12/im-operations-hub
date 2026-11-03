@@ -7,7 +7,12 @@ import {
   summarizeWrites,
   type SqlWrite,
 } from "./describeWrite";
-import { renderRemark, type RemarkChange, type RemarkLink } from "./renderRemark";
+import {
+  normalizeLogsCenterAction,
+  renderRemark,
+  type RemarkChange,
+  type RemarkLink,
+} from "./renderRemark";
 
 const suppressLogs = new AsyncLocalStorage<boolean>();
 
@@ -76,18 +81,20 @@ export async function recordLogsCenter(input: LogsCenterInput): Promise<void> {
         actorLabel = actorLabel ?? actor.actorLabel ?? null;
       }
     }
+    const normalized = normalizeLogsCenterAction(input.action, input.changes);
     const event = {
-      action: input.action,
+      action: normalized.action,
       summary: input.summary ?? "",
       objectType: input.objectType,
       objectRef: input.objectRef,
-      changes: input.changes,
+      changes: normalized.changes,
       links: input.links,
     };
     const summary = (input.summary ?? renderRemark({ ...event, summary: "" }, "en")).slice(0, 500);
     const summaryCn = renderRemark(event, "cn").slice(0, 500);
     const client = await clientMetaFromRequest();
     const { pool } = await import("@/lib/db");
+    const changesJson = normalized.changes?.length ? JSON.stringify(normalized.changes) : null;
     await pool.query(
       `INSERT INTO logs_center_events
         (actor_system_user_id, actor_user_id, actor_label, module, action,
@@ -99,12 +106,12 @@ export async function recordLogsCenter(input: LogsCenterInput): Promise<void> {
         actorUserId,
         actorLabel?.slice(0, 255) ?? null,
         input.module.slice(0, 64),
-        input.action.slice(0, 32),
+        normalized.action.slice(0, 32),
         input.objectType?.slice(0, 64) ?? null,
         input.objectRef?.slice(0, 64) ?? null,
         summary,
         summaryCn,
-        input.changes?.length ? JSON.stringify(input.changes) : null,
+        changesJson,
         input.links?.length ? JSON.stringify(input.links) : null,
         client.ipAddress,
         client.userAgent,
