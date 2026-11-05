@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-11-05
+
+### Fixed
+
+- Stock Overview rows open the material detail modal again on click.
+  Material stock analysis on Movement History is unchanged.
+
 ## [0.16.1] - 2026-11-05
 
 ### Fixed
