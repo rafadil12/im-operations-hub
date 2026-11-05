@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-05
+
+### Fixed
+
+- Organization overview zoom dialogs (schedule variances, mismatch
+  employees, and recent requests) portal to `document.body` so the
+  overlay covers the full viewport outside the AppShell scroll area.
+
 ## [0.16.0] - 2026-10-28
 
 ### Added
