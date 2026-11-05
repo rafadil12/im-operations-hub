@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiGetAbs } from "@/lib/apiClient";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { localizedName, useLang } from "@/lib/i18n";
-import type { SparepartCategory, SparepartStockBalanceRow } from "@/lib/types";
+import type { SparepartCategory, SparepartItem, SparepartStockBalanceRow } from "@/lib/types";
+import { MaterialDetailModal } from "@/components/sparepart/MaterialDetailModal";
 import { SparepartDropdown } from "@/components/sparepart/SparepartDropdown";
 import { SparepartGate } from "@/components/sparepart/SparepartGate";
 import { SkeletonTable } from "@/components/ui/skeletons";
@@ -78,6 +79,7 @@ export default function StockOverviewPage() {
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [detail, setDetail] = useState<SparepartItem | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -134,6 +136,17 @@ export default function StockOverviewPage() {
     setSortKey(key);
     if (dir) setSortDir(dir);
     setPage(1);
+  };
+
+  const openDetail = async (row: SparepartStockBalanceRow) => {
+    try {
+      const data = await apiGetAbs<{ row: SparepartItem }>(
+        `/api/sparepart/materials/${row.item_id}`
+      );
+      setDetail(data.row);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t.common.error);
+    }
   };
 
   useEffect(() => {
@@ -362,11 +375,16 @@ export default function StockOverviewPage() {
             }}
             variant="stock"
             readOnly
+            onRowClick={(row) => {
+              if ("item_id" in row) openDetail(row);
+            }}
             sortKey={sortKey}
             sortDir={sortDir}
             onSortChange={handleSortChange}
           />
         )}
+
+        {detail ? <MaterialDetailModal item={detail} onClose={() => setDetail(null)} /> : null}
       </div>
     </SparepartGate>
   );
