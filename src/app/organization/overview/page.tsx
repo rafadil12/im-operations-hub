@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { OrganizationGate } from "@/components/organization/OrganizationGate";
 import { handleGuestForbiddenResponse } from "@/lib/apiClient";
@@ -70,6 +71,8 @@ type ScheduleException = {
   scheduleType: ScheduleApiRow["schedule_type"];
   attendanceValue: AttendanceValue | null;
   status: ScheduleExceptionStatus;
+  timeRange?: string;
+  uplHours?: number | null;
 };
 
 type DailyScheduleComparison = {
@@ -274,6 +277,12 @@ function valueLabel(
   return labels[value] ?? value;
 }
 
+function scheduleVarianceValueClass(value: AttendanceValue | null) {
+  return value === "MC"
+    ? "rounded-md bg-bg px-2 py-1 text-purple-400"
+    : "rounded-md bg-bg px-2 py-1 text-text-muted";
+}
+
 function requestTypeStyle(requestType: LeaveType) {
   const styles: Record<
     LeaveType,
@@ -357,6 +366,66 @@ function scheduleLabel(
   return attendanceT.off;
 }
 
+function varianceScheduleLabel(
+  scheduleType: ScheduleApiRow["schedule_type"],
+  uplHours: number | null | undefined,
+  attendanceT: Record<string, string>,
+) {
+  if (uplHours == null) return scheduleLabel(scheduleType, attendanceT);
+  return `${Number.isInteger(uplHours) ? uplHours.toFixed(0) : uplHours.toFixed(1)}h`;
+}
+
+function scheduleTimeRange(
+  scheduleType: ScheduleApiRow["schedule_type"],
+  startTime?: string | null,
+  endTime?: string | null,
+) {
+  if (startTime && endTime) {
+    const start = String(startTime).slice(0, 5);
+    const end = String(endTime).slice(0, 5);
+    if (/^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)) {
+      return `${start}–${end}`;
+    }
+  }
+
+  switch (scheduleType) {
+    case "D":
+    case "D/S":
+      return "08:00–20:00";
+    case "N":
+    case "N/S":
+      return "20:00–08:00";
+    case "1":
+      return "08:00–17:00";
+    case "4":
+      return "08:00–12:00";
+    case "OFF":
+      return "OFF";
+    default:
+      return "—";
+  }
+}
+
+function uplWorkHours(startTime?: string | null, endTime?: string | null) {
+  if (!startTime || !endTime) return null;
+  const toMinutes = (value: string) => {
+    const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  const start = toMinutes(startTime);
+  let end = toMinutes(endTime);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (end < start) end += 24 * 60;
+
+  const regularMinutes = Math.max(
+    0,
+    Math.min(end, 17 * 60) - Math.max(start, 8 * 60) -
+      Math.max(0, Math.min(end, 13 * 60) - Math.max(start, 12 * 60)),
+  );
+  const overtimeMinutes = Math.max(0, end - Math.max(start, 17 * 60 + 45));
+  return regularMinutes / 60 + Math.ceil(overtimeMinutes / 30) / 2;
+}
+
 /* =========================================================
    CARD
 ========================================================= */
@@ -416,6 +485,7 @@ function KpiCard({
   subtitle,
   icon,
   tone,
+  compact = false,
 }: {
   title: string;
   value: string;
@@ -427,6 +497,7 @@ function KpiCard({
     | "warning"
     | "danger"
     | "info";
+  compact?: boolean;
 }) {
   const iconClass = {
     accent: "bg-cyan-500/10",
@@ -437,24 +508,24 @@ function KpiCard({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 transition-all duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_34px_rgba(8,47,73,0.10)]">
+    <div className={`rounded-xl border border-border bg-surface ${compact ? "p-3" : "p-4"} transition-all duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_34px_rgba(8,47,73,0.10)]`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] uppercase tracking-wide text-text-dim">
+        <p className={`${compact ? "text-[9px]" : "text-[10px]"} uppercase tracking-wide text-text-dim`}>
           {title}
         </p>
 
         <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-md text-sm ${iconClass[tone]}`}
+          className={`flex ${compact ? "size-7 text-xs" : "size-8 text-sm"} shrink-0 items-center justify-center rounded-md ${iconClass[tone]}`}
         >
           {icon}
         </div>
       </div>
 
-      <p className="mt-2 text-2xl font-semibold text-text">
+      <p className={`${compact ? "mt-1.5 text-xl" : "mt-2 text-2xl"} font-semibold text-text`}>
         {value}
       </p>
 
-      <p className="mt-1 text-[11px] text-text-muted">
+      <p className={`${compact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"} text-text-muted`}>
         {subtitle}
       </p>
     </div>
@@ -1553,16 +1624,16 @@ function EmployeeLeaveChart({
           <span className="size-2 rounded-full bg-blue-500" />
           {ao.annualLeave}
         </span>
-        <span className="flex items-center gap-1 font-semibold text-rose-400">
-          <span className="size-2 rounded-full bg-rose-500" />
+        <span className="flex items-center gap-1 font-semibold text-purple-400">
+          <span className="size-2 rounded-full bg-purple-500" />
           {ao.sickLeave}
         </span>
         <span className="flex items-center gap-1 font-semibold text-amber-400">
           <span className="size-2 rounded-full bg-amber-500" />
           {ao.permission}
         </span>
-        <span className="flex items-center gap-1 font-semibold text-fuchsia-400">
-          <span className="size-2 rounded-full bg-fuchsia-500" />
+        <span className="flex items-center gap-1 font-semibold text-rose-400">
+          <span className="size-2 rounded-full bg-rose-500" />
           {ao.alpa}
         </span>
       </div>
@@ -1833,6 +1904,27 @@ export default function AttendanceOverviewPage() {
   const [showScheduleVarianceZoom, setShowScheduleVarianceZoom] = useState(false);
   const [showAllMismatchEmployees, setShowAllMismatchEmployees] = useState(false);
   const [showAllRecentRequests, setShowAllRecentRequests] = useState(false);
+  const overlayOpen =
+    (showScheduleVarianceZoom && showAllScheduleVariance) ||
+    showAllMismatchEmployees ||
+    showAllRecentRequests;
+
+  useEffect(() => {
+    if (!overlayOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setShowScheduleVarianceZoom(false);
+      setShowAllMismatchEmployees(false);
+      setShowAllRecentRequests(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [overlayOpen]);
 
   const [
     employees,
@@ -2365,14 +2457,36 @@ export default function AttendanceOverviewPage() {
   const allScheduleVarianceExceptions = useMemo(() => {
     return dailyScheduleComparison
       .flatMap((day) =>
-        day.exceptions.map((item) => ({
-          ...item,
-          day: day.day,
-          weekday: day.weekday,
-        })),
+        day.exceptions.map((item) => {
+          const request = leaveRows
+            .filter(
+              (row) =>
+                row.status === "Approved" &&
+                row.employee_no === item.employee.employee_no &&
+                String(row.request_date).slice(0, 10) === day.date &&
+                ["AL", "MC", "UPL", "ALPA", "OT"].includes(row.request_type) &&
+                row.start_time &&
+                row.end_time,
+            )
+            .sort((a, b) => b.id - a.id)[0];
+
+          return {
+            ...item,
+            day: day.day,
+            weekday: day.weekday,
+            timeRange: scheduleTimeRange(
+              item.scheduleType,
+              request?.start_time,
+              request?.end_time,
+            ),
+            uplHours: request?.request_type === "UPL"
+              ? uplWorkHours(request.start_time, request.end_time)
+              : null,
+          };
+        }),
       )
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [dailyScheduleComparison]);
+  }, [dailyScheduleComparison, leaveRows]);
 
   const employeeScheduleSummary = useMemo(() => {
     const map = new Map<string, {
@@ -3910,10 +4024,13 @@ const recentRequests = allRecentRequests.slice(0, 4);
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
-                          {scheduleLabel(item.scheduleType, ao)}
+                        <span className="rounded-md bg-cyan-500/10 px-2 py-1 font-semibold text-cyan-600 dark:text-cyan-300">
+                          {item.timeRange}
                         </span>
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                          {varianceScheduleLabel(item.scheduleType, item.uplHours, ao)}
+                        </span>
+                        <span className={scheduleVarianceValueClass(item.attendanceValue)}>
                           {item.attendanceValue
                             ? valueLabel(item.attendanceValue, language, ao)
                             : ao.noAttendance}
@@ -3973,7 +4090,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[9px]">
                         <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{scheduleLabel(item.scheduleType, ao)}</span>
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">{item.attendanceValue ? valueLabel(item.attendanceValue, language, ao) : (ao.noAttendance)}</span>
+                        <span className={scheduleVarianceValueClass(item.attendanceValue)}>{item.attendanceValue ? valueLabel(item.attendanceValue, language, ao) : (ao.noAttendance)}</span>
                         <span className={[
                           "rounded-md px-2 py-1 font-semibold",
                           item.status === "LEAVE"
@@ -3996,97 +4113,112 @@ const recentRequests = allRecentRequests.slice(0, 4);
           </div>
         </section>
 
-        {showScheduleVarianceZoom && showAllScheduleVariance && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm md:p-6">
-            <div
-              className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
-              role="dialog"
-              aria-modal="true"
-              aria-label={ao.allScheduleVariances}
-            >
-              <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
-                    {ao.scheduleVariance}
-                  </p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <h3 className="truncate text-base font-semibold text-text md:text-lg">
-                      {ao.allScheduleVariances}
-                    </h3>
-                    <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
-                      {allScheduleVarianceExceptions.length}
-                    </span>
-                  </div>
-                </div>
-
+        {typeof document !== "undefined" &&
+        showScheduleVarianceZoom &&
+        showAllScheduleVariance
+          ? createPortal(
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-6">
                 <button
                   type="button"
-                  onClick={() => setShowScheduleVarianceZoom(false)}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
                   aria-label={ao.close}
+                  className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
+                  onClick={() => setShowScheduleVarianceZoom(false)}
+                />
+                <div
+                  className="relative flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={ao.allScheduleVariances}
                 >
-                  ×
-                </button>
-              </div>
-
-              <div className="overflow-y-auto p-3 md:p-5">
-                <div className="space-y-3">
-                  {allScheduleVarianceExceptions.map((item, index) => (
-                    <div
-                      key={`zoom-${item.date}-${item.employee.employee_no}-${item.status}-${index}`}
-                      className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-bg/20 p-3 transition-colors duration-200 hover:border-cyan-400/15 hover:bg-surface-hover md:flex-row md:items-center md:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-bold text-rose-500 dark:text-rose-300">
-                            {String(item.day).padStart(2, "0")} {item.weekday}
-                          </span>
-                          <p className="truncate text-xs font-semibold text-text">
-                            {employeeName(item.employee, language)}
-                          </p>
-                        </div>
-                        <p className="mt-1 text-[9px] text-text-dim">
-                          {item.date} · {item.employee.employee_no} · {departmentName(item.employee, language)}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 text-[9px]">
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
-                          {scheduleLabel(item.scheduleType, ao)}
-                        </span>
-                        <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
-                          {item.attendanceValue
-                            ? valueLabel(item.attendanceValue, language, ao)
-                            : ao.noAttendance}
-                        </span>
-                        <span
-                          className={[
-                            "rounded-md px-2 py-1 font-semibold",
-                            item.status === "LEAVE"
-                              ? "bg-amber-500/10 text-amber-400"
-                              : item.status === "WORKED_ON_OFF"
-                                ? "bg-orange-500/10 text-orange-400"
-                                : item.status === "UNSCHEDULED_PRESENT"
-                                  ? "bg-violet-500/10 text-violet-400"
-                                  : "bg-rose-500/10 text-rose-400",
-                          ].join(" ")}
-                        >
-                          {item.status === "LEAVE"
-                            ? ao.leave
-                            : item.status === "WORKED_ON_OFF"
-                              ? ao.workedOnOff
-                              : item.status === "UNSCHEDULED_PRESENT"
-                                ? ao.unscheduledPresent
-                                : ao.missed}
+                  <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
+                        {ao.scheduleVariance}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <h3 className="truncate text-base font-semibold text-text md:text-lg">
+                          {ao.allScheduleVariances}
+                        </h3>
+                        <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
+                          {allScheduleVarianceExceptions.length}
                         </span>
                       </div>
                     </div>
-                  ))}
+
+                    <button
+                      type="button"
+                      onClick={() => setShowScheduleVarianceZoom(false)}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                      aria-label={ao.close}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="overflow-y-auto p-3 md:p-5">
+                    <div className="space-y-3">
+                      {allScheduleVarianceExceptions.map((item, index) => (
+                        <div
+                          key={`zoom-${item.date}-${item.employee.employee_no}-${item.status}-${index}`}
+                          className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-bg/20 p-3 transition-colors duration-200 hover:border-cyan-400/15 hover:bg-surface-hover md:flex-row md:items-center md:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-md bg-rose-500/10 px-2 py-1 text-[9px] font-bold text-rose-500 dark:text-rose-300">
+                                {String(item.day).padStart(2, "0")} {item.weekday}
+                              </span>
+                              <p className="truncate text-xs font-semibold text-text">
+                                {employeeName(item.employee, language)}
+                              </p>
+                            </div>
+                            <p className="mt-1 text-[9px] text-text-dim">
+                              {item.date} · {item.employee.employee_no} ·{" "}
+                              {departmentName(item.employee, language)}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-[9px]">
+                            <span className="rounded-md bg-cyan-500/10 px-2 py-1 font-semibold text-cyan-600 dark:text-cyan-300">
+                              {item.timeRange}
+                            </span>
+                            <span className="rounded-md bg-bg px-2 py-1 text-text-muted">
+                              {varianceScheduleLabel(item.scheduleType, item.uplHours, ao)}
+                            </span>
+                            <span className={scheduleVarianceValueClass(item.attendanceValue)}>
+                              {item.attendanceValue
+                                ? valueLabel(item.attendanceValue, language, ao)
+                                : ao.noAttendance}
+                            </span>
+                            <span
+                              className={[
+                                "rounded-md px-2 py-1 font-semibold",
+                                item.status === "LEAVE"
+                                  ? "bg-amber-500/10 text-amber-400"
+                                  : item.status === "WORKED_ON_OFF"
+                                    ? "bg-orange-500/10 text-orange-400"
+                                    : item.status === "UNSCHEDULED_PRESENT"
+                                      ? "bg-violet-500/10 text-violet-400"
+                                      : "bg-rose-500/10 text-rose-400",
+                              ].join(" ")}
+                            >
+                              {item.status === "LEAVE"
+                                ? ao.leave
+                                : item.status === "WORKED_ON_OFF"
+                                  ? ao.workedOnOff
+                                  : item.status === "UNSCHEDULED_PRESENT"
+                                    ? ao.unscheduledPresent
+                                    : ao.missed}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
+              </div>,
+              document.body,
+            )
+          : null}
 
 
         {/* =================================================
@@ -4764,82 +4896,93 @@ const recentRequests = allRecentRequests.slice(0, 4);
           </section>
         </div>
 
-        {showAllMismatchEmployees ? (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm md:p-6">
-            <div
-              className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
-              role="dialog"
-              aria-modal="true"
-              aria-label={ao.allScheduleMismatchEmployees}
-            >
-              <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
-                    {ao.scheduleMismatch}
-                  </p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <h3 className="truncate text-base font-semibold text-text md:text-lg">
-                      {ao.allMismatchEmployees}
-                    </h3>
-                    <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
-                      {mismatchEmployees.length}
-                    </span>
-                  </div>
-                </div>
-
+        {typeof document !== "undefined" && showAllMismatchEmployees
+          ? createPortal(
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-6">
                 <button
                   type="button"
-                  onClick={() => setShowAllMismatchEmployees(false)}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
                   aria-label={ao.close}
+                  className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
+                  onClick={() => setShowAllMismatchEmployees(false)}
+                />
+                <div
+                  className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={ao.allScheduleMismatchEmployees}
                 >
-                  ×
-                </button>
-              </div>
-
-              <div className="overflow-y-auto p-4 md:p-5">
-                <div className="space-y-3">
-                  {mismatchEmployees.map((item) => {
-                    const maxMismatch = Math.max(
-                      ...mismatchEmployees.map((employee) => employee.mismatch),
-                      1,
-                    );
-
-                    return (
-                      <div
-                        key={`all-mismatch-${item.employee.employee_no}`}
-                        className="rounded-lg border border-border-subtle bg-bg/20 p-3"
-                      >
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold text-text">
-                              {employeeName(item.employee, language)}
-                            </p>
-                            <p className="mt-0.5 text-[9px] text-text-dim">
-                              {item.employee.employee_no}
-                            </p>
-                          </div>
-                          <span className="text-sm font-extrabold text-rose-400">
-                            {item.mismatch}
-                          </span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-bg">
-                          <div
-                            className="h-full rounded-full bg-amber-400"
-                            style={{ width: `${(item.mismatch / maxMismatch) * 100}%` }}
-                          />
-                        </div>
+                  <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
+                        {ao.scheduleMismatch}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <h3 className="truncate text-base font-semibold text-text md:text-lg">
+                          {ao.allMismatchEmployees}
+                        </h3>
+                        <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400">
+                          {mismatchEmployees.length}
+                        </span>
                       </div>
-                    );
-                  })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAllMismatchEmployees(false)}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                      aria-label={ao.close}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="overflow-y-auto p-4 md:p-5">
+                    <div className="space-y-3">
+                      {mismatchEmployees.map((item) => {
+                        const maxMismatch = Math.max(
+                          ...mismatchEmployees.map((employee) => employee.mismatch),
+                          1,
+                        );
+
+                        return (
+                          <div
+                            key={`all-mismatch-${item.employee.employee_no}`}
+                            className="rounded-lg border border-border-subtle bg-bg/20 p-3"
+                          >
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-semibold text-text">
+                                  {employeeName(item.employee, language)}
+                                </p>
+                                <p className="mt-0.5 text-[9px] text-text-dim">
+                                  {item.employee.employee_no}
+                                </p>
+                              </div>
+                              <span className="text-sm font-extrabold text-rose-400">
+                                {item.mismatch}
+                              </span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full bg-bg">
+                              <div
+                                className="h-full rounded-full bg-amber-400"
+                                style={{
+                                  width: `${(item.mismatch / maxMismatch) * 100}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+              </div>,
+              document.body,
+            )
+          : null}
 
 
-        <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
           <section className="attendance-section rounded-xl border border-border bg-surface p-4 md:p-5">
             <SectionHeader
               title={
@@ -4995,7 +5138,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
               }
             />
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-2">
               <KpiCard
                 title={
                   ao.requestCount
@@ -5008,6 +5151,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 }
                 icon="📄"
                 tone="warning"
+                compact
               />
 
               <KpiCard
@@ -5020,6 +5164,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 subtitle="OT"
                 icon="⏱"
                 tone="accent"
+                compact
               />
 
               <KpiCard
@@ -5032,6 +5177,7 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 subtitle="OT"
                 icon="!"
                 tone="warning"
+                compact
               />
 
               <KpiCard
@@ -5044,15 +5190,16 @@ const recentRequests = allRecentRequests.slice(0, 4);
                 subtitle="OT"
                 icon="✓"
                 tone="success"
+                compact
               />
             </div>
 
-            <div className="mt-5 rounded-lg border border-border-subtle bg-bg/30 p-4">
+            <div className="mt-3 rounded-lg border border-border-subtle bg-bg/30 p-3">
               <p className="text-[10px] uppercase tracking-wide text-text-dim">
                 {ao.note}
               </p>
 
-              <p className="mt-1.5 text-[10px] leading-5 text-text-muted">
+              <p className="mt-1 text-[10px] leading-4 text-text-muted">
                 {ao.overtimeNote}
               </p>
             </div>
@@ -5201,100 +5348,114 @@ const recentRequests = allRecentRequests.slice(0, 4);
           </div>
         </section>
 
-        {showAllRecentRequests ? (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm md:p-6">
-            <div
-              className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
-              role="dialog"
-              aria-modal="true"
-              aria-label={ao.allRequests}
-            >
-              <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
-                    {ao.requests}
-                  </p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <h3 className="truncate text-base font-semibold text-text md:text-lg">
-                      {ao.allRequests}
-                    </h3>
-                    <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold text-cyan-400">
-                      {allRecentRequests.length}
-                    </span>
-                  </div>
-                </div>
-
+        {typeof document !== "undefined" && showAllRecentRequests
+          ? createPortal(
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-6">
                 <button
                   type="button"
-                  onClick={() => setShowAllRecentRequests(false)}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
                   aria-label={ao.close}
+                  className="absolute inset-0 bg-overlay backdrop-blur-[2px]"
+                  onClick={() => setShowAllRecentRequests(false)}
+                />
+                <div
+                  className="relative flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.28)]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={ao.allRequests}
                 >
-                  ×
-                </button>
-              </div>
-
-              <div className="overflow-y-auto p-3 md:p-5">
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  {allRecentRequests.map((request, index) => {
-                    const employee = {
-                      employee_no: request.employee_no,
-                      name_en: request.employee_name_en,
-                      name_cn: request.employee_name_cn,
-                    };
-                    const label =
-                      request.request_type === "ALPA"
-                        ? ao.absentShort
-                        : request.request_type === "OT"
-                          ? ao.overtime
-                          : leaveRequestLabel(request.request_type, language, ao);
-                    const statusClass =
-                      request.status === "Approved"
-                        ? "bg-emerald-500/10 text-emerald-300"
-                        : request.status === "Rejected"
-                          ? "bg-rose-500/10 text-rose-300"
-                          : "bg-amber-500/10 text-amber-300";
-                    const typeStyle = requestTypeStyle(request.request_type);
-
-                    return (
-                      <div
-                        key={`all-${request.id}-${request.employee_no}-${request.request_date}-${request.request_type}-${index}`}
-                        className={`attendance-card rounded-lg border p-3 ${typeStyle.card}`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-medium text-text">
-                              {employeeName(employee, language)}
-                            </p>
-                            <p className="mt-0.5 text-[9px] text-text-dim">
-                              {request.employee_no}
-                            </p>
-                          </div>
-                          <span className={`rounded-md px-2 py-1 text-[9px] font-medium ${statusClass}`}>
-                            {request.status}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between gap-2 border-t border-border-subtle pt-2">
-                          <span className={`truncate rounded-md px-2 py-1 text-[9px] font-medium ${typeStyle.label}`}>
-                            {label}
-                          </span>
-                          <span className="shrink-0 text-[9px] text-text-dim">
-                            {String(request.request_date).slice(0, 10)}
-                          </span>
-                        </div>
-                        {request.start_time && request.end_time ? (
-                          <p className="mt-2 text-[9px] text-text-dim">
-                            {String(request.start_time).slice(0, 5)} {"–"} {String(request.end_time).slice(0, 5)}
-                          </p>
-                        ) : null}
+                  <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-4 md:px-5">
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-cyan-400/80">
+                        {ao.requests}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <h3 className="truncate text-base font-semibold text-text md:text-lg">
+                          {ao.allRequests}
+                        </h3>
+                        <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold text-cyan-400">
+                          {allRecentRequests.length}
+                        </span>
                       </div>
-                    );
-                  })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAllRecentRequests(false)}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-bg/40 text-text-muted transition hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-300"
+                      aria-label={ao.close}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="overflow-y-auto p-3 md:p-5">
+                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      {allRecentRequests.map((request, index) => {
+                        const employee = {
+                          employee_no: request.employee_no,
+                          name_en: request.employee_name_en,
+                          name_cn: request.employee_name_cn,
+                        };
+                        const label =
+                          request.request_type === "ALPA"
+                            ? ao.absentShort
+                            : request.request_type === "OT"
+                              ? ao.overtime
+                              : leaveRequestLabel(request.request_type, language, ao);
+                        const statusClass =
+                          request.status === "Approved"
+                            ? "bg-emerald-500/10 text-emerald-300"
+                            : request.status === "Rejected"
+                              ? "bg-rose-500/10 text-rose-300"
+                              : "bg-amber-500/10 text-amber-300";
+                        const typeStyle = requestTypeStyle(request.request_type);
+
+                        return (
+                          <div
+                            key={`all-${request.id}-${request.employee_no}-${request.request_date}-${request.request_type}-${index}`}
+                            className={`attendance-card rounded-lg border p-3 ${typeStyle.card}`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-medium text-text">
+                                  {employeeName(employee, language)}
+                                </p>
+                                <p className="mt-0.5 text-[9px] text-text-dim">
+                                  {request.employee_no}
+                                </p>
+                              </div>
+                              <span
+                                className={`rounded-md px-2 py-1 text-[9px] font-medium ${statusClass}`}
+                              >
+                                {request.status}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between gap-2 border-t border-border-subtle pt-2">
+                              <span
+                                className={`truncate rounded-md px-2 py-1 text-[9px] font-medium ${typeStyle.label}`}
+                              >
+                                {label}
+                              </span>
+                              <span className="shrink-0 text-[9px] text-text-dim">
+                                {String(request.request_date).slice(0, 10)}
+                              </span>
+                            </div>
+                            {request.start_time && request.end_time ? (
+                              <p className="mt-2 text-[9px] text-text-dim">
+                                {String(request.start_time).slice(0, 5)} {"–"}{" "}
+                                {String(request.end_time).slice(0, 5)}
+                              </p>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+              </div>,
+              document.body,
+            )
+          : null}
 
         {/* =================================================
             MONTH PERFORMANCE SCORE

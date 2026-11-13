@@ -19,6 +19,9 @@ type AttendanceDailyRow = {
     | "OT"
     | "NO_ATTENDANCE";
   planned_hours: number;
+  permission_hours: number;
+  offday_regular_hours: number;
+  overtime_hours: number;
   source: "SHIFT" | "LEAVE";
   leave_request_id: number | null;
   created_at: string;
@@ -80,6 +83,26 @@ export async function GET(request: NextRequest) {
       params.push(employeeNo);
     }
 
+    const uplHoursSql = `CASE
+      WHEN lr.start_time IS NULL OR lr.end_time IS NULL THEN 0
+      WHEN lr.start_time < '17:00:00' THEN
+        GREATEST(0,
+          (LEAST(TIME_TO_SEC(lr.end_time), 17 * 3600) -
+           GREATEST(TIME_TO_SEC(lr.start_time), 8 * 3600)) / 3600
+          - GREATEST(0,
+            (LEAST(TIME_TO_SEC(lr.end_time), 13 * 3600) -
+             GREATEST(TIME_TO_SEC(lr.start_time), 12 * 3600)) / 3600
+          )
+        ) + CEIL(GREATEST(0,
+          (TIME_TO_SEC(lr.end_time) -
+           TIME_TO_SEC(GREATEST(lr.start_time, '17:45:00'))) / 60
+        ) / 30) / 2
+      ELSE CEIL(GREATEST(0,
+        (TIME_TO_SEC(lr.end_time) -
+         TIME_TO_SEC(GREATEST(lr.start_time, '17:45:00'))) / 60
+      ) / 30) / 2
+    END`;
+
     const rows = await query<AttendanceDailyRow[]>(
         `
           SELECT
@@ -95,7 +118,26 @@ export async function GET(request: NextRequest) {
               ELSE ad.attendance_value
             END AS attendance_value,
 
-            ad.planned_hours,
+            CASE
+              WHEN ad.source = 'LEAVE' AND lr.request_type = 'UPL'
+                THEN GREATEST(0,
+                  CASE
+                    WHEN ss.schedule_type IN ('D', 'N') THEN 10.5
+                    WHEN ss.schedule_type = '1' THEN 8
+                    WHEN ss.schedule_type = '4' THEN 4
+                    ELSE 0
+                  END
+                  - (${uplHoursSql})
+                )
+              ELSE ad.planned_hours
+            END AS planned_hours,
+            CASE
+              WHEN ad.source = 'LEAVE' AND lr.request_type = 'UPL'
+              THEN (${uplHoursSql})
+              ELSE 0
+            END AS permission_hours,
+            COALESCE(ot.offday_regular_hours, 0) AS offday_regular_hours,
+            COALESCE(ot.overtime_hours, 0) AS overtime_hours,
             ad.source,
             ad.leave_request_id,
             ad.created_at,
@@ -105,6 +147,38 @@ export async function GET(request: NextRequest) {
 
           LEFT JOIN attendance_leave_requests lr
             ON lr.id = ad.leave_request_id
+
+          LEFT JOIN (
+            SELECT employee_no, schedule_date, MAX(schedule_type) AS schedule_type
+            FROM shift_schedules
+            GROUP BY employee_no, schedule_date
+          ) ss ON ss.employee_no = ad.employee_no AND ss.schedule_date = ad.attendance_date
+
+          LEFT JOIN (
+            SELECT employee_no, request_date,
+                   SUM(CASE WHEN EXISTS (
+                     SELECT 1 FROM shift_schedules off_shift
+                     WHERE off_shift.employee_no = ot_request.employee_no
+                       AND off_shift.schedule_date = ot_request.request_date
+                       AND off_shift.schedule_type = 'OFF'
+                   ) THEN GREATEST(0,
+                     (LEAST(TIME_TO_SEC(end_time), 17 * 3600) -
+                      GREATEST(TIME_TO_SEC(start_time), 8 * 3600)) / 3600
+                     - GREATEST(0,
+                       (LEAST(TIME_TO_SEC(end_time), 13 * 3600) -
+                        GREATEST(TIME_TO_SEC(start_time), 12 * 3600)) / 3600
+                     )
+                   ) ELSE 0 END) AS offday_regular_hours,
+                   SUM(CEIL(GREATEST(
+                     (TIME_TO_SEC(end_time) -
+                      TIME_TO_SEC(GREATEST(start_time, '17:45:00'))) / 60,
+                     0
+                   ) / 30) / 2) AS overtime_hours
+            FROM attendance_leave_requests ot_request
+            WHERE status = 'Approved' AND request_type = 'OT'
+              AND start_time IS NOT NULL AND end_time IS NOT NULL
+            GROUP BY employee_no, request_date
+          ) ot ON ot.employee_no = ad.employee_no AND ot.request_date = ad.attendance_date
 
           WHERE ad.attendance_date >= ?
             AND ad.attendance_date < DATE_ADD(

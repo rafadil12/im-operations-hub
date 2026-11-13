@@ -33,6 +33,7 @@ import { ExportIcon } from "@/components/ui/ActionIcons";
 import { useToast } from "@/components/ui/ToastProvider";
 import type { SparepartMatDoc, SparepartMovementHistoryRow } from "@/lib/types";
 import { DocumentDetailModal } from "../documents/DocumentDetailModal";
+import { MaterialStockAnalysis } from "@/components/sparepart/MaterialStockAnalysis";
 
 const DEFAULT_PAGE_SIZE: PageSize = 10;
 
@@ -106,6 +107,7 @@ export default function MovementHistoryPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
   const [detail, setDetail] = useState<SparepartMatDoc | null>(null);
+  const [analysisMaterialId, setAnalysisMaterialId] = useState<number | null>(null);
   const [reversing, setReversing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState<MovementHistoryColumnVisibility>(
@@ -437,13 +439,22 @@ export default function MovementHistoryPage() {
                           </td>
                         ) : null}
                         <td className={td}>
-                          <button
-                            type="button"
-                            onClick={() => void openDetail(row.doc_id)}
-                            className="text-accent hover:underline"
-                          >
-                            {t.sparepart.viewDocument}
-                          </button>
+                          <div className="flex items-center gap-3 whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => void openDetail(row.doc_id)}
+                              className="text-accent hover:underline"
+                            >
+                              {t.sparepart.viewDocument}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAnalysisMaterialId(row.item_id)}
+                              className="text-accent hover:underline"
+                            >
+                              {lang === "cn" ? "查看分析" : "View Analysis"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -505,6 +516,27 @@ export default function MovementHistoryPage() {
             toastSuccess={toastSuccess}
             toastError={toastError}
           />
+        ) : null}
+        {analysisMaterialId !== null ? (
+          <div
+            className="fixed inset-0 z-40 grid h-dvh place-items-center overflow-hidden bg-black/60 p-2 sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={lang === "cn" ? "物料库存分析" : "Material stock analysis"}
+          >
+            <div className="max-h-[96dvh] w-full max-w-6xl overflow-hidden rounded-xl border border-border-subtle bg-bg p-3 shadow-2xl sm:p-4">
+              <div className="mb-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAnalysisMaterialId(null)}
+                  className="rounded-md border border-border px-3 py-1.5 text-sm text-text-muted hover:bg-surface-hover"
+                >
+                  {lang === "cn" ? "关闭" : "Close"}
+                </button>
+              </div>
+              <MaterialStockAnalysis materialId={String(analysisMaterialId)} />
+            </div>
+          </div>
         ) : null}
       </div>
     </SparepartGate>

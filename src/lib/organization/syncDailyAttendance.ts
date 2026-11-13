@@ -7,7 +7,14 @@ type LeaveType = "AL" | "MC" | "UPL" | "A" | "ALPA" | "OT" | "NO_ATTENDANCE";
 type AttendanceValue = "10.5" | "8" | "4" | "OFF";
 type EmployeeRow = { employee_no: string };
 type ScheduleRow = { employee_no: string; schedule_date: string; schedule_type: ScheduleType };
-type LeaveRow = { id: number; employee_no: string; request_date: string; request_type: LeaveType };
+type LeaveRow = {
+  id: number;
+  employee_no: string;
+  request_date: string;
+  request_type: LeaveType;
+  start_time: string | null;
+  end_time: string | null;
+};
 type ExistingRow = { id: number; employee_no: string; attendance_date: string };
 
 export type DailyAttendanceSyncSummary = {
@@ -28,6 +35,44 @@ function shiftResult(schedule: ScheduleType | null): { value: AttendanceValue; h
   if (schedule === "1") return { value: "8", hours: 8 };
   if (schedule === "4") return { value: "4", hours: 4 };
   return { value: "OFF", hours: 0 };
+}
+
+function leaveDurationHours(start: string | null, end: string | null): number {
+  if (!start || !end) return 0;
+  const minutes = (value: string) => {
+    const [hours, mins] = value.slice(0, 5).split(":").map(Number);
+    return hours * 60 + mins;
+  };
+  const startMinutes = minutes(start);
+  let endMinutes = minutes(end);
+  if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) return 0;
+  if (endMinutes < startMinutes) endMinutes += 24 * 60;
+  const duration = endMinutes - startMinutes;
+  const lunchOverlap = Math.max(
+    0,
+    Math.min(endMinutes, 13 * 60) - Math.max(startMinutes, 12 * 60),
+  );
+  return Math.max(0, duration - lunchOverlap) / 60;
+}
+
+function uplDurationHours(start: string | null, end: string | null): number {
+  if (!start || !end) return 0;
+  const toMinutes = (value: string) => {
+    const [hours, mins] = value.slice(0, 5).split(":").map(Number);
+    return hours * 60 + mins;
+  };
+  const startMinutes = toMinutes(start);
+  let endMinutes = toMinutes(end);
+  if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) return 0;
+  if (endMinutes < startMinutes) endMinutes += 24 * 60;
+
+  const normalMinutes = Math.max(
+    0,
+    Math.min(endMinutes, 17 * 60) - Math.max(startMinutes, 8 * 60) -
+      Math.max(0, Math.min(endMinutes, 13 * 60) - Math.max(startMinutes, 12 * 60)),
+  );
+  const overtimeMinutes = Math.max(0, endMinutes - Math.max(startMinutes, 17 * 60 + 45));
+  return normalMinutes / 60 + Math.ceil(overtimeMinutes / 30) / 2;
 }
 
 export async function syncDailyAttendance(
@@ -54,7 +99,7 @@ export async function syncDailyAttendance(
       [monthStart, monthStart],
     ),
     query<LeaveRow[]>(
-      `SELECT id, employee_no, request_date, request_type FROM attendance_leave_requests
+      `SELECT id, employee_no, request_date, request_type, start_time, end_time FROM attendance_leave_requests
        WHERE request_date >= ? AND request_date < DATE_ADD(?, INTERVAL 1 MONTH)
          AND status = 'Approved'
          AND request_type IN ('AL', 'MC', 'UPL', 'A', 'ALPA', 'OT', 'NO_ATTENDANCE')
@@ -70,10 +115,11 @@ export async function syncDailyAttendance(
 
   const scheduleMap = new Map<string, ScheduleType>();
   for (const row of schedules) scheduleMap.set(`${row.employee_no}|${String(row.schedule_date).slice(0, 10)}`, row.schedule_type);
-  const leaveMap = new Map<string, number>();
+  const leaveMap = new Map<string, LeaveRow[]>();
   for (const row of leaves) {
     if (row.request_type !== "OT" && row.request_type !== "NO_ATTENDANCE") {
-      leaveMap.set(`${row.employee_no}|${String(row.request_date).slice(0, 10)}`, row.id);
+      const key = `${row.employee_no}|${String(row.request_date).slice(0, 10)}`;
+      leaveMap.set(key, [...(leaveMap.get(key) ?? []), row]);
     }
   }
   const existingMap = new Map<string, number>();
@@ -91,15 +137,24 @@ export async function syncDailyAttendance(
       }
       const attendanceDate = dateKey(year, month, day);
       const key = `${employee.employee_no}|${attendanceDate}`;
-      const leaveRequestId = leaveMap.get(key) ?? null;
+      const dayLeaves = leaveMap.get(key) ?? [];
+      const leaveRequestId = dayLeaves[0]?.id ?? null;
       const shift = shiftResult(scheduleMap.get(key) ?? null);
+      const leaveHours = dayLeaves.reduce(
+        (sum, row) => sum + (row.request_type === "UPL"
+          ? uplDurationHours(row.start_time, row.end_time)
+          : leaveDurationHours(row.start_time, row.end_time)),
+        0,
+      );
+      const plannedHours = Math.max(0, shift.hours - leaveHours);
+      const attendanceValue: AttendanceValue = plannedHours > 0 ? shift.value : "OFF";
       if (existingMap.has(key)) updated++;
       else inserted++;
       values.push([
         employee.employee_no,
         attendanceDate,
-        leaveRequestId == null ? shift.value : "OFF",
-        leaveRequestId == null ? shift.hours : 0,
+        attendanceValue,
+        plannedHours,
         leaveRequestId == null ? "SHIFT" : "LEAVE",
         leaveRequestId,
       ]);

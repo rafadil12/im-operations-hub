@@ -15,7 +15,10 @@ const base: AttendanceRosterRow = {
   division_name_cn: "信息技术",
   schedule_type: "D",
   leave_type: null,
+  request_start_time: null,
+  request_end_time: null,
   is_rolling: 1,
+  work_hours: 8,
 };
 
 describe("attendance WeCom report", () => {

@@ -65,6 +65,9 @@ type AttendanceDailyApiRow = {
   attendance_date: string;
   attendance_value: Exclude<AttendanceDailyValue, "">;
   planned_hours: number | string;
+  permission_hours?: number | string;
+  offday_regular_hours?: number | string;
+  overtime_hours?: number | string;
   source: "SHIFT" | "LEAVE";
   leave_request_id: number | null;
   created_at: string;
@@ -76,6 +79,9 @@ type AttendanceRow = {
   department: string;
   values: AttendanceDailyValue[];
   totalHours: number;
+  regularHours: number;
+  overtimeHours: number;
+  uplHours: number;
   al: number;
   mc: number;
   upl: number;
@@ -585,26 +591,32 @@ export default function DailyAttendancePage() {
          * TOTAL HOURS
          * -----------------------------------------------
          */
-        const totalHours = dayKeys.reduce(
-          (sum, dayKey) => {
+        const hoursBreakdown = dayKeys.reduce(
+          (result, dayKey) => {
             const daily =
               attendanceDailyMap.get(
                 `${employee.employee_no}|${dayKey}`,
               );
 
             if (!daily) {
-              return sum;
+              return result;
             }
 
-            return (
-              sum +
-              (Number(
-                daily.planned_hours,
-              ) || 0)
-            );
+            const uplHours = Number(daily.permission_hours) || 0;
+            result.regularHours +=
+              (Number(daily.planned_hours) || 0) +
+              (Number(daily.offday_regular_hours) || 0) +
+              uplHours;
+            result.overtimeHours += Number(daily.overtime_hours) || 0;
+            result.uplHours += uplHours;
+            return result;
           },
-          0,
+          { regularHours: 0, overtimeHours: 0, uplHours: 0 },
         );
+        const totalHours =
+          hoursBreakdown.regularHours +
+          hoursBreakdown.overtimeHours -
+          hoursBreakdown.uplHours;
 
         /*
          * -----------------------------------------------
@@ -698,6 +710,7 @@ export default function DailyAttendancePage() {
           department: employeeDepartment,
           values,
           totalHours,
+          ...hoursBreakdown,
           al,
           mc,
           upl,
@@ -817,6 +830,9 @@ export default function DailyAttendancePage() {
     return rows.reduce(
       (acc, row) => {
         acc.employees += 1;
+        acc.regularHours += row.regularHours;
+        acc.overtimeHours += row.overtimeHours;
+        acc.uplHours += row.uplHours;
         acc.hours += row.totalHours;
         acc.off += row.off;
 
@@ -825,6 +841,9 @@ export default function DailyAttendancePage() {
       {
         employees: 0,
         hours: 0,
+        regularHours: 0,
+        overtimeHours: 0,
+        uplHours: 0,
         off: 0,
       },
     );
@@ -1115,6 +1134,9 @@ export default function DailyAttendancePage() {
               <p className="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-300">
                 {summary.hours.toFixed(1)}
               </p>
+              <p className="mt-1 text-[9px] font-semibold text-text-dim">
+                {summary.regularHours.toFixed(1)} + {summary.overtimeHours.toFixed(1)} − {summary.uplHours.toFixed(1)} UPL
+              </p>
             </div>
 
             <div className="border-r border-border-subtle p-4">
@@ -1369,6 +1391,32 @@ export default function DailyAttendancePage() {
                                 monthIndex &&
                               todayDay ===
                                 day;
+                            const overtimeHours = Number(
+                              attendanceDailyMap.get(
+                                `${row.employee.employee_no}|${dateKey(year, monthIndex, day)}`,
+                              )?.overtime_hours ?? 0,
+                            );
+                            const offdayRegularHours = Number(
+                              attendanceDailyMap.get(
+                                `${row.employee.employee_no}|${dateKey(year, monthIndex, day)}`,
+                              )?.offday_regular_hours ?? 0,
+                            );
+                            const workedOnOffDayHours = offdayRegularHours + overtimeHours;
+                            const displayOffDayWork = value === "OFF" && workedOnOffDayHours > 0;
+                            const dailyRecord = attendanceDailyMap.get(
+                              `${row.employee.employee_no}|${dateKey(year, monthIndex, day)}`,
+                            );
+                            const totalDayHours =
+                              (Number(dailyRecord?.planned_hours) || 0) +
+                              offdayRegularHours +
+                              overtimeHours;
+                            const showCalculatedHours =
+                              (displayOffDayWork || (value !== "OFF" && overtimeHours > 0)) &&
+                              totalDayHours > 0;
+                            const showRemainingLeaveHours =
+                              value === "UPL" && !!dailyRecord;
+                            const permissionHoursDeducted =
+                              value === "UPL" ? Number(dailyRecord?.permission_hours) || 0 : 0;
 
                             return (
                               <td
@@ -1390,6 +1438,16 @@ export default function DailyAttendancePage() {
                                {value === "OFF"
                                 ? dailyAttendance.table.off
                                 : value || "—"}
+                               {showCalculatedHours ? (
+                                 <span className="ml-1 text-[9px] font-bold text-text-muted">
+                                   + {totalDayHours.toFixed(1)}h
+                                 </span>
+                               ) : null}
+                               {showRemainingLeaveHours ? (
+                                 <span className="ml-1 text-[9px] font-bold text-text-muted">
+                                   − {permissionHoursDeducted.toFixed(1)}h
+                                 </span>
+                               ) : null}
                               </td>
                             );
                           },
@@ -1399,6 +1457,9 @@ export default function DailyAttendancePage() {
                           {row.totalHours.toFixed(
                             1,
                           )}
+                          <div className="mt-0.5 text-[8px] font-semibold text-text-dim">
+                            {row.regularHours.toFixed(1)} + {row.overtimeHours.toFixed(1)} − {row.uplHours.toFixed(1)} UPL
+                          </div>
                         </td>
 
                         <td className="min-w-[50px] border-r border-b border-border-subtle bg-surface-hover px-2 text-center text-[10px] font-black text-text">
