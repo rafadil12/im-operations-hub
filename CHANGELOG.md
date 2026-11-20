@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.4] - 2026-11-20
+
+### Fixed
+
+- Weekly report Updated By now shows the account that last saved
+  attachments or submitted the week. Created By stays the original
+  drafter.
+
 ## [0.16.3] - 2026-11-20
 
 ### Changed

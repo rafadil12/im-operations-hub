@@ -8,11 +8,28 @@ import {
   loadReportWeekAttachments,
 } from "@/lib/report/attachmentStore";
 import { jsonError, parsePositiveInt, parseWeekNumber, parseYear } from "@/lib/report/apiHelpers";
-import { ensureReportWeek, getSubmissionStatus } from "@/lib/report/lineStore";
+import {
+  ensureReportWeek,
+  getSubmissionStatus,
+  stampSubmissionActors,
+} from "@/lib/report/lineStore";
 import { isAllowedReportFile, MAX_REPORT_WEEK_ATTACHMENTS } from "@/lib/report/attachmentAccept";
 import { saveReportUploadedFile } from "@/lib/report/upload";
 
 export const runtime = "nodejs";
+
+function actorFromAccount(account: AuthAccountPublic | undefined) {
+  if (!account) {
+    return { changedBySystemUserId: null, changedByLabel: null };
+  }
+  const label = account.employeeId
+    ? `${account.employeeId} - ${account.displayName}`
+    : account.displayName;
+  return {
+    changedBySystemUserId: account.systemUserId ?? null,
+    changedByLabel: label,
+  };
+}
 
 export async function GET(request: Request) {
   const gate = await requireAnyPermission([
@@ -82,8 +99,8 @@ export async function POST(request: Request) {
     const account: AuthAccountPublic | undefined =
       "account" in gate ? (gate.account ?? undefined) : undefined;
 
-    const attachment = await suppressLogsCenter(() =>
-      insertReportWeekAttachment({
+    const attachment = await suppressLogsCenter(async () => {
+      const row = await insertReportWeekAttachment({
         weekId,
         areaId,
         originalName: uploaded.originalName,
@@ -92,8 +109,10 @@ export async function POST(request: Request) {
         mimeType: uploaded.mimeType,
         size: uploaded.size,
         uploadedBySystemUserId: account?.systemUserId ?? null,
-      })
-    );
+      });
+      await stampSubmissionActors(null, weekId, areaId, actorFromAccount(account));
+      return row;
+    });
     const area = await loadReportAreaNames(areaId);
     await recordReportAttachment({
       action: "create",

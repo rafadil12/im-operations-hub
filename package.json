@@ -1,6 +1,6 @@
 {
   "name": "im-operations-hub",
-  "version": "0.16.3",
+  "version": "0.16.4",
   "private": true,
   "scripts": {
     "dev": "node scripts/dev-with-env.mjs .env.development.local",

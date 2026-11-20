@@ -1,17 +1,31 @@
 import { unlink } from "fs/promises";
 import { NextResponse } from "next/server";
 import { PERMISSIONS, requireAnyPermission } from "@/lib/auth";
+import type { AuthAccountPublic } from "@/lib/auth/types";
 import {
   deleteReportWeekAttachment,
   getReportWeekAttachmentById,
 } from "@/lib/report/attachmentStore";
 import { jsonError, parsePositiveInt } from "@/lib/report/apiHelpers";
-import { getSubmissionStatus } from "@/lib/report/lineStore";
+import { getSubmissionStatus, stampSubmissionActors } from "@/lib/report/lineStore";
 import { resolveReportStoredFilePath } from "@/lib/report/upload";
 import { loadWeekArea, recordReportAttachment } from "@/lib/logs-center/reportRemark";
 import { suppressLogsCenter } from "@/lib/logs-center/record";
 
 export const runtime = "nodejs";
+
+function actorFromAccount(account: AuthAccountPublic | undefined) {
+  if (!account) {
+    return { changedBySystemUserId: null, changedByLabel: null };
+  }
+  const label = account.employeeId
+    ? `${account.employeeId} - ${account.displayName}`
+    : account.displayName;
+  return {
+    changedBySystemUserId: account.systemUserId ?? null,
+    changedByLabel: label,
+  };
+}
 
 export async function DELETE(
   _request: Request,
@@ -45,8 +59,16 @@ export async function DELETE(
       }
     }
 
-    await suppressLogsCenter(() => deleteReportWeekAttachment(id));
-    const place = await loadWeekArea(Number(row.week_id), Number(row.area_id));
+    const account: AuthAccountPublic | undefined =
+      "account" in gate ? (gate.account ?? undefined) : undefined;
+    const weekId = Number(row.week_id);
+    const areaId = Number(row.area_id);
+
+    await suppressLogsCenter(async () => {
+      await deleteReportWeekAttachment(id);
+      await stampSubmissionActors(null, weekId, areaId, actorFromAccount(account));
+    });
+    const place = await loadWeekArea(weekId, areaId);
     await recordReportAttachment({
       action: "delete",
       fileName: row.original_name,
