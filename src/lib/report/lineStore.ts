@@ -517,7 +517,7 @@ export async function ensureDraftSubmission(
 }
 
 export async function stampSubmissionActors(
-  conn: Queryable,
+  conn: Queryable | null | undefined,
   weekId: number,
   areaId: number,
   audit: {
@@ -556,15 +556,26 @@ export async function submitReportArea(
   await execute(
     `
       INSERT INTO report_week_submissions
-        (week_id, area_id, status, submitted_at, submitted_by_system_user_id, submitted_by_label)
-      VALUES (?, ?, 'submitted', NOW(), ?, ?)
+        (week_id, area_id, status,
+         submitted_at, submitted_by_system_user_id, submitted_by_label,
+         updated_by_system_user_id, updated_by_label)
+      VALUES (?, ?, 'submitted', NOW(), ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         status = 'submitted',
         submitted_at = NOW(),
         submitted_by_system_user_id = VALUES(submitted_by_system_user_id),
-        submitted_by_label = VALUES(submitted_by_label)
+        submitted_by_label = VALUES(submitted_by_label),
+        updated_by_system_user_id = VALUES(updated_by_system_user_id),
+        updated_by_label = VALUES(updated_by_label)
     `,
-    [weekId, areaId, submittedBySystemUserId ?? null, submittedByLabel ?? null]
+    [
+      weekId,
+      areaId,
+      submittedBySystemUserId ?? null,
+      submittedByLabel ?? null,
+      submittedBySystemUserId ?? null,
+      submittedByLabel ?? null,
+    ]
   );
 }
 
