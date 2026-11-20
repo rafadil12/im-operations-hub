@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.3] - 2026-11-20
+
+### Changed
+
+- `npm run dev` and `npm run dev:test` load the matching `.env` file through
+  `scripts/dev-with-env.mjs`, so a leftover shell `DB_NAME` does not override
+  the chosen database.
+
 ## [0.16.2] - 2026-11-05
 
 ### Fixed

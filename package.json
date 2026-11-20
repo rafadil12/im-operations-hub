@@ -1,9 +1,10 @@
 {
   "name": "im-operations-hub",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev-with-env.mjs .env.development.local",
+    "dev:test": "node scripts/dev-with-env.mjs .env.test.local",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
