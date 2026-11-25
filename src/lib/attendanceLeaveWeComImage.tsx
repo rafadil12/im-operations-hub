@@ -27,6 +27,21 @@ const requestLabels: Record<string, { en: string; cn: string }> = {
   LATE_PERMISSION: { en: "Late Arrival", cn: "迟到" },
 };
 
+function CheckIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" style={{ display: "flex" }}>
+      <path
+        d="M3.2 8.3 6.4 11.4 12.8 4.6"
+        fill="none"
+        stroke={color}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const noAttendanceLabels: Record<string, string> = {
   NO_CHECK_IN: "No check-in / 未签到",
   NO_CHECK_OUT: "No check-out / 未签退",
@@ -236,8 +251,19 @@ export async function renderAttendanceLeaveCard(data: AttendanceLeaveCardData): 
             <span style={{ display: "flex", color: "#304e67", fontSize: 13, fontWeight: 700 }}>
               {title}
             </span>
-            <span style={{ display: "flex", color: theme.color, fontSize: 12, fontWeight: 700 }}>
-              {isApproved ? "✓ APPROVED" : "● FOR REVIEW"}
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                color: theme.color,
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              {isApproved ? <CheckIcon size={14} color={theme.color} /> : "●"}
+              <span style={{ display: "flex", marginLeft: 4 }}>
+                {isApproved ? "APPROVED" : "FOR REVIEW"}
+              </span>
             </span>
           </div>
 
@@ -452,7 +478,7 @@ export async function renderAttendanceLeaveCard(data: AttendanceLeaveCardData): 
                   fontSize: 10,
                 }}
               >
-                ✓
+                <CheckIcon size={11} color="#ffffff" />
               </span>
               Approved by / 批准人: {data.approvedBy}
             </div>
