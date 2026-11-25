@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.5] - 2026-11-25
+
+### Changed
+
+- Leave and permission approval follows position. A technician is approved
+  by the staff member in the same division, and a staff member is approved
+  by the supervisor. Only a supervisor can approve their own request.
+- The Supervisor position can be selected on an employee. The supervisor
+  field is hidden when that position is selected.
+- The leave WeCom card draws approval marks as check icons.
+
 ## [0.16.4] - 2026-11-20
 
 ### Fixed
