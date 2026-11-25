@@ -23,6 +23,7 @@ type Employee = {
   name_cn: string | null;
   division_name_en: string | null;
   division_name_cn: string | null;
+  position_name_en: string | null;
   employment_status: string | null;
   is_manager: boolean;
 };
@@ -222,8 +223,6 @@ export default function LeavePermissionPage() {
   const [editingRequest, setEditingRequest] = useState<LeaveRequest | null>(null);
 
   const [currentEmployeeNo, setCurrentEmployeeNo] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [isManager, setIsManager] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [approvalId, setApprovalId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
@@ -286,14 +285,10 @@ export default function LeavePermissionPage() {
         const account = payload.account ?? null;
         const employeeNo =
           account?.employeeNo ?? account?.employee_no ?? null;
-        const userId = account?.id ?? null;
         const role = account?.roleName ?? account?.role ?? null;
 
         setCurrentEmployeeNo(
           employeeNo ? String(employeeNo).trim() : null,
-        );
-        setCurrentUserId(
-          typeof userId === "number" ? userId : null,
         );
         setCurrentUserRole(
           role ? String(role).trim().toLowerCase() : null,
@@ -302,9 +297,7 @@ export default function LeavePermissionPage() {
         if (!cancelled) {
           console.error("Failed to load current login account", error);
           setCurrentEmployeeNo(null);
-        setCurrentUserId(null);
-        setCurrentUserRole(null);
-          setIsManager(false);
+          setCurrentUserRole(null);
         }
       } finally {
         if (!cancelled) {
@@ -466,21 +459,6 @@ export default function LeavePermissionPage() {
     }
   }, [employees, language]);
 
-  React.useEffect(() => {
-    if (authLoading || !currentUserId || employees.length === 0) {
-      return;
-    }
-
-    setIsManager(
-      employees.some(
-        (employee) =>
-          // Employee API may expose manager_id even if the UI type does not.
-          (employee as Employee & { manager_id?: number | null }).manager_id ===
-          currentUserId,
-      ),
-    );
-  }, [authLoading, currentUserId, employees]);
-
   const handleEmployeeChange = (value: string) => {
     const employee = employees.find(
       (item) => item.employee_no === value,
@@ -516,9 +494,14 @@ export default function LeavePermissionPage() {
     if (item.status !== "Pending") return false;
 
     const isOwnRequest = item.employeeNo === currentEmployeeNo;
+    const currentEmployee = employees.find(
+      (employee) => employee.employee_no === currentEmployeeNo,
+    );
+    const currentIsSupervisor =
+      currentEmployee?.position_name_en?.trim().toLowerCase() === "supervisor";
 
-    if (isOwnRequest && isManager) {
-      return true;
+    if (isOwnRequest) {
+      return currentIsSupervisor;
     }
 
     return item.managerEmployeeNo === currentEmployeeNo;

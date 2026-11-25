@@ -559,12 +559,9 @@ function mapEmployee(
   };
 }
 
-/* =========================================================
-   ORGANIZATION SUPERVISOR
-   =========================================================
-   Supervisor is stored in the database through manager_id.
-   The form does not hard-code organizational hierarchy.
-========================================================= */
+function isSupervisorPositionName(name: string | null | undefined): boolean {
+  return name?.trim().toLowerCase() === "supervisor";
+}
 
 /* =========================================================
    PAGE
@@ -1169,9 +1166,14 @@ export default function OrganizationManagementPage() {
   function applyPositionHierarchy(
     positionId: string,
   ) {
+    const position = positions.find((item) => String(item.id) === positionId);
+    const supervisorPosition =
+      position?.name_en.trim().toLowerCase() === "supervisor";
+
     setForm((current) => ({
       ...current,
       positionId,
+      managerId: supervisorPosition ? "" : current.managerId,
     }));
   }
 
@@ -2602,15 +2604,17 @@ export default function OrganizationManagementPage() {
                     }
                   />
 
-                  <InfoRow
-                    label={organizationText(
-                      "manager",
-                      organizationLanguage,
-                    )}
-                    value={managerName(
-                      selectedEmployee,
-                    )}
-                  />
+                  {isSupervisorPositionName(selectedEmployee.position) ? null : (
+                    <InfoRow
+                      label={organizationText(
+                        "manager",
+                        organizationLanguage,
+                      )}
+                      value={managerName(
+                        selectedEmployee,
+                      )}
+                    />
+                  )}
 
                   <InfoRow
                     label={organizationText(
@@ -2868,24 +2872,28 @@ export default function OrganizationManagementPage() {
                         />
                       </FormField>
 
-                      <FormField label={organizationText("manager", organizationLanguage)}>
-                        <CompactSelect
-                          value={form.managerId}
-                          onChange={(value) =>
-                            setForm((current) => ({
-                              ...current,
-                              managerId: value,
-                            }))
-                          }
-                          placeholder={organizationText("noManager", organizationLanguage)}
-                          options={employees
-                            .filter((employee) => employee.id !== Number(form.userId))
-                            .map((employee) => ({
-                              value: String(employee.id),
-                              label: `${employee.employeeId} — ${organizationLanguage === "cn" ? employee.nameCn || employee.name : employee.name}`,
-                            }))}
-                        />
-                      </FormField>
+                      {isSupervisorPositionName(
+                        positions.find((position) => String(position.id) === form.positionId)?.name_en,
+                      ) ? null : (
+                        <FormField label={organizationText("manager", organizationLanguage)}>
+                          <CompactSelect
+                            value={form.managerId}
+                            onChange={(value) =>
+                              setForm((current) => ({
+                                ...current,
+                                managerId: value,
+                              }))
+                            }
+                            placeholder={organizationText("noManager", organizationLanguage)}
+                            options={employees
+                              .filter((employee) => employee.id !== Number(form.userId))
+                              .map((employee) => ({
+                                value: String(employee.id),
+                                label: `${employee.employeeId} — ${organizationLanguage === "cn" ? employee.nameCn || employee.name : employee.name}`,
+                              }))}
+                          />
+                        </FormField>
+                      )}
 
                       <FormField label={organizationText("location", organizationLanguage)}>
                         <input
