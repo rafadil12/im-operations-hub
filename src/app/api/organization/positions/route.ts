@@ -47,6 +47,7 @@ export async function GET(
 
         WHERE p.name_en IN (
           'General Manager',
+          'Supervisor',
 
           'IT Staff',
           'IT Technician',
@@ -64,29 +65,32 @@ export async function GET(
             WHEN p.name_en = 'General Manager'
               THEN 1
 
-            WHEN d.name_en = 'IT'
-              AND p.name_en = 'IT Staff'
+            WHEN p.name_en = 'Supervisor'
               THEN 2
 
             WHEN d.name_en = 'IT'
-              AND p.name_en = 'IT Technician'
+              AND p.name_en = 'IT Staff'
               THEN 3
 
-            WHEN d.name_en = 'MES'
-              AND p.name_en = 'MES Staff'
+            WHEN d.name_en = 'IT'
+              AND p.name_en = 'IT Technician'
               THEN 4
 
             WHEN d.name_en = 'MES'
-              AND p.name_en = 'MES Technician'
+              AND p.name_en = 'MES Staff'
               THEN 5
 
-            WHEN d.name_en = 'Intelligent Logistics'
-              AND p.name_en = 'Intelligent Logistics Staff'
+            WHEN d.name_en = 'MES'
+              AND p.name_en = 'MES Technician'
               THEN 6
 
             WHEN d.name_en = 'Intelligent Logistics'
-              AND p.name_en = 'Intelligent Logistics Technician'
+              AND p.name_en = 'Intelligent Logistics Staff'
               THEN 7
+
+            WHEN d.name_en = 'Intelligent Logistics'
+              AND p.name_en = 'Intelligent Logistics Technician'
+              THEN 8
 
             ELSE 99
 

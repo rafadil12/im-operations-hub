@@ -13,6 +13,10 @@ import {
   employeeCreateEvent,
   recordOrganization,
 } from "@/lib/logs-center/organizationRemark";
+import {
+  loadApprovalManagersByEmployeeNo,
+  resolveAutomaticManagerId,
+} from "@/lib/organization/approvalChain";
 
 type EmployeeRow = {
   id: number;
@@ -370,8 +374,19 @@ export async function GET(
         ],
       );
 
+    const approvalManagers = await loadApprovalManagersByEmployeeNo();
+    const data = rows.map((row) => {
+      const manager = approvalManagers.get(row.employee_no) ?? null;
+      return {
+        ...row,
+        manager_id: manager?.userId ?? null,
+        manager_name_en: manager?.nameEn ?? null,
+        manager_name_cn: manager?.nameCn ?? null,
+      };
+    });
+
     return NextResponse.json({
-      data: rows,
+      data,
 
       pagination: {
         page,
@@ -454,7 +469,6 @@ export async function POST(
     }
 
     const positionId = parseOptionalInt(body.position_id);
-    const managerId = parseOptionalInt(body.manager_id);
     const employmentType = body.employment_type || "Permanent";
     const employmentStatus = body.employment_status || "Active";
     const joinDate = parseDate(body.join_date);
@@ -494,6 +508,7 @@ export async function POST(
     }
 
     const userId = users[0].id;
+    const managerId = await resolveAutomaticManagerId(userId, positionId);
 
     if (users[0].employee_no === "SUPERADMIN") {
       return NextResponse.json(

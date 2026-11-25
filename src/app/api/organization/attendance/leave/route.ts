@@ -13,6 +13,12 @@ import {
 import { suppressLogsCenter } from "@/lib/logs-center/record";
 import { renderAttendanceLeaveCard } from "@/lib/attendanceLeaveWeComImage";
 import { sendPermissionWeComImage } from "@/lib/wecomNotification";
+import {
+  isSupervisorPosition,
+  loadApprovalManagersByEmployeeNo,
+  loadOrganizationMembers,
+  resolveManagerUserId,
+} from "@/lib/organization/approvalChain";
 
 export const dynamic = "force-dynamic";
 
@@ -526,10 +532,7 @@ export async function GET(request: NextRequest) {
             u.name_en AS employee_name_en,
             u.name_cn AS employee_name_cn,
 
-            CASE
-              WHEN u.id = 13 THEN 6
-              ELSE eo.manager_id
-            END AS manager_id,
+            eo.manager_id,
             manager.employee_no AS manager_employee_no,
             manager.name_en AS manager_name_en,
             manager.name_cn AS manager_name_cn
@@ -546,10 +549,7 @@ export async function GET(request: NextRequest) {
             ON eo.user_id = u.id
 
          LEFT JOIN users manager
-          ON manager.id = CASE
-            WHEN u.id = 13 THEN 6
-            ELSE eo.manager_id
-          END
+          ON manager.id = eo.manager_id
 
           WHERE ${pendingConditions.join(" AND ")}
 
@@ -605,10 +605,22 @@ export async function GET(request: NextRequest) {
       [...finalParams, ...pendingParams, ...historyParams],
     );
 
+    const approvalManagers = await loadApprovalManagersByEmployeeNo();
+    const data = rows.map((row) => {
+      const manager = approvalManagers.get(row.employee_no) ?? null;
+      return {
+        ...row,
+        manager_id: manager?.userId ?? null,
+        manager_employee_no: manager?.employeeNo ?? null,
+        manager_name_en: manager?.nameEn ?? null,
+        manager_name_cn: manager?.nameCn ?? null,
+      };
+    });
+
     return NextResponse.json(
       {
         success: true,
-        data: rows,
+        data,
       },
       {
         headers: {
@@ -1528,10 +1540,7 @@ export async function PATCH(request: NextRequest) {
           p.updated_at,
 
           u.id AS employee_user_id,
-          CASE
-            WHEN u.id = 13 THEN 6
-            ELSE eo.manager_id
-          END AS manager_id,
+          eo.manager_id,
           manager.employee_no AS manager_employee_no,
           manager.name_en AS manager_name_en,
           manager.name_cn AS manager_name_cn
@@ -1548,10 +1557,7 @@ export async function PATCH(request: NextRequest) {
           ON eo.user_id = u.id
 
         LEFT JOIN users manager
-        ON manager.id = CASE
-          WHEN u.id = 13 THEN 6
-          ELSE eo.manager_id
-        END
+        ON manager.id = eo.manager_id
 
         WHERE p.id = ?
         LIMIT 1
@@ -1572,11 +1578,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     /*
-     * Approval rules:
-     * 1. A Manager may approve/reject their own request.
-     * 2. For a subordinate's request, only the direct manager may approve/reject.
-     *
-     * The server verifies approvedBy against the organization hierarchy.
+     * Approval stops at Supervisor.
+     * Technician -> Staff in the same division.
+     * Staff -> Supervisor.
+     * Only a Supervisor may approve their own request.
      */
     const approverRows = await query<
       {
@@ -1625,31 +1630,30 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const managerCheckRows = await query<{ total: number }[]>(
-      `
-        SELECT COUNT(*) AS total
-        FROM employee_organization
-        WHERE manager_id = ?
-      `,
-      [approver.id],
-    );
-
-    const isManager = Number(managerCheckRows[0]?.total ?? 0) > 0;
+    const members = await loadOrganizationMembers();
+    const requester = members.find((member) => member.userId === existing.employee_user_id);
+    const approverMember = members.find((member) => member.userId === approver.id);
+    const expectedManagerId = requester ? resolveManagerUserId(requester, members) : null;
 
     const isSelfApproval =
-      existing.employee_user_id === approver.id && isManager;
+      requester != null &&
+      approverMember != null &&
+      requester.userId === approverMember.userId &&
+      isSupervisorPosition(requester.positionNameEn);
 
     const isDirectManager =
-      existing.employee_user_id !== approver.id &&
-      existing.manager_id === approver.id;
+      requester != null &&
+      approverMember != null &&
+      requester.userId !== approverMember.userId &&
+      expectedManagerId === approverMember.userId;
 
     if (!isSelfApproval && !isDirectManager) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Only the employee's direct manager can approve or reject this request, " +
-            "or a manager may approve their own request.",
+            "Only the employee's supervisor can approve or reject this request, " +
+            "or a Supervisor may approve their own request.",
         },
         { status: 403 },
       );
