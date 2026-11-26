@@ -1545,9 +1545,19 @@ export default function OrganizationManagementPage() {
             text-rendering: optimizeLegibility;
           }
 
+          [data-theme="light"] .organization-page .employee-card {
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 18px rgba(15, 23, 42, 0.05);
+          }
+
+          [data-theme="dark"] .organization-page .employee-card {
+            background: #1e2c46;
+            box-shadow: none;
+          }
+
           .organization-card {
-            border: 1px solid rgb(var(--border));
-            background: rgb(var(--surface));
+            border: 1px solid var(--border);
+            background: var(--surface);
             transition:
               border-color .25s ease,
               box-shadow .25s ease,
@@ -1598,6 +1608,66 @@ export default function OrganizationManagementPage() {
             box-shadow:
               0 0 0 3px
               rgb(var(--org-cyan) / .08);
+          }
+
+          .organization-page .directory-control {
+            cursor: pointer;
+          }
+
+          .organization-page select.directory-control {
+            appearance: none;
+            padding-right: 34px;
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+          }
+
+          [data-theme="light"] .organization-page .dept-it {
+            border-color: #67e8f9;
+            background: #cffafe;
+            color: #0e7490;
+          }
+
+          [data-theme="light"] .organization-page .dept-mes {
+            border-color: #c4b5fd;
+            background: #ede9fe;
+            color: #6d28d9;
+          }
+
+          [data-theme="light"] .organization-page .dept-logistics {
+            border-color: #fdba74;
+            background: #ffedd5;
+            color: #c2410c;
+          }
+
+          [data-theme="light"] .organization-page .directory-control {
+            background-color: #ffffff;
+            border: 1px solid #c5d0de;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+          }
+
+          [data-theme="light"] .organization-page .directory-control:hover {
+            border-color: rgb(var(--org-cyan) / .65);
+            background-color: #f8fbff;
+          }
+
+          [data-theme="light"] .organization-page select.directory-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          }
+
+          [data-theme="dark"] .organization-page .directory-control {
+            background-color: #1a2740;
+            border: 1px solid #314560;
+            color: #d5deea;
+            box-shadow: none;
+          }
+
+          [data-theme="dark"] .organization-page .directory-control:hover {
+            border-color: #45607f;
+            background-color: #21304c;
+          }
+
+          [data-theme="dark"] .organization-page select.directory-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' stroke='%239fb0cc' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
           }
 
           .organization-input::placeholder {
@@ -1729,6 +1799,23 @@ export default function OrganizationManagementPage() {
             color: #f8fafc !important;
             background: #111c31 !important;
             border-color: #334155 !important;
+          }
+
+          [data-theme="dark"] .organization-page input.directory-control,
+          [data-theme="dark"] .organization-page select.directory-control {
+            background-color: #1a2740 !important;
+            border-color: #314560 !important;
+            color: #d5deea !important;
+          }
+
+          [data-theme="dark"] .organization-page select.directory-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' stroke='%239fb0cc' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+          }
+
+          [data-theme="dark"] .organization-page .directory-control::placeholder {
+            color: #8b9bb8 !important;
           }
 
           .dark .organization-page .organization-input::placeholder {
@@ -1895,7 +1982,7 @@ export default function OrganizationManagementPage() {
             value={
               directoryEmployees.length
             }
-            icon="👥"
+            icon="people"
             tone="cyan"
           />
 
@@ -1905,7 +1992,7 @@ export default function OrganizationManagementPage() {
               organizationLanguage,
             )}
             value={activeCount}
-            icon="✓"
+            icon="check"
             tone="green"
           />
 
@@ -1915,7 +2002,7 @@ export default function OrganizationManagementPage() {
               organizationLanguage,
             )}
             value={leaveCount}
-            icon="◷"
+            icon="clock"
             tone="amber"
           />
 
@@ -1927,7 +2014,7 @@ export default function OrganizationManagementPage() {
             value={
               departments.length
             }
-            icon="▦"
+            icon="grid"
             tone="purple"
           />
 
@@ -1939,7 +2026,7 @@ export default function OrganizationManagementPage() {
             value={
               newEmployeeCount
             }
-            icon="+"
+            icon="plus"
             tone="cyan"
           />
         </div>
@@ -1949,7 +2036,7 @@ export default function OrganizationManagementPage() {
         ================================================= */}
 
         <section className="organization-card overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-          <div className="border-b border-border-subtle bg-surface-hover/60 p-4 md:p-5">
+          <div className="border-b border-border-subtle bg-surface p-4 md:p-5">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
@@ -2022,7 +2109,7 @@ export default function OrganizationManagementPage() {
                       "search",
                       organizationLanguage,
                     )}
-                    className="organization-input rounded-xl"
+                    className="organization-input directory-control rounded-xl"
                     style={{
                       paddingLeft: "40px",
                       paddingRight: "12px",
@@ -2036,7 +2123,7 @@ export default function OrganizationManagementPage() {
                   onChange={(event) =>
                     setDepartmentFilter(event.target.value)
                   }
-                  className="organization-input rounded-xl"
+                  className="organization-input directory-control rounded-xl"
                 >
                   <option value="all">
                     {organizationText(
@@ -2057,7 +2144,7 @@ export default function OrganizationManagementPage() {
                   onChange={(event) =>
                     setStatusFilter(event.target.value)
                   }
-                  className="organization-input rounded-xl"
+                  className="organization-input directory-control rounded-xl"
                 >
                   <option value="all">
                     {organizationText(
@@ -2085,7 +2172,7 @@ export default function OrganizationManagementPage() {
                   onChange={(event) =>
                     setEmploymentTypeFilter(event.target.value)
                   }
-                  className="organization-input rounded-xl"
+                  className="organization-input directory-control rounded-xl"
                 >
                   <option value="all">
                     {organizationText(
@@ -2150,7 +2237,7 @@ export default function OrganizationManagementPage() {
                 {filteredEmployees.map((employee) => (
                   <article
                     key={employee.id}
-                    className="group rounded-xl border border-border-subtle bg-surface p-3.5 transition-all duration-200 hover:border-cyan-400/20 hover:shadow-[0_4px_16px_rgba(8,47,73,0.06)]"
+                    className="employee-card group rounded-xl border border-border-subtle p-3.5 transition-all duration-200 hover:border-cyan-400/30"
                   >
                     <div className="flex items-start gap-3">
                       <button
@@ -2273,9 +2360,7 @@ export default function OrganizationManagementPage() {
                         </div>
 
                         <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                          <span className="rounded-full border border-border bg-surface-hover px-1.5 py-0.5 text-[7px] font-semibold text-text-muted">
-                            {employee.department}
-                          </span>
+                          <DepartmentBadge department={employee.department} />
                           <StatusBadge
                             status={employee.status}
                             language={organizationLanguage}
@@ -3135,6 +3220,66 @@ function CompactSelect({
    KPI
 ========================================================= */
 
+function KpiIcon({ name }: { name: "people" | "check" | "clock" | "grid" | "plus" }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    "aria-hidden": true as const,
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
+  if (name === "people") {
+    return (
+      <svg {...common}>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3.5 18.5c.7-2.6 2.8-4 5.5-4s4.8 1.4 5.5 4" />
+        <circle cx="17" cy="9" r="2.2" />
+        <path d="M16.2 14.2c2 .4 3.4 1.6 4.3 4.3" />
+      </svg>
+    );
+  }
+
+  if (name === "check") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M8.5 12.2 11 14.7 15.8 9.5" />
+      </svg>
+    );
+  }
+
+  if (name === "clock") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8.5V12l2.5 1.8" />
+      </svg>
+    );
+  }
+
+  if (name === "grid") {
+    return (
+      <svg {...common}>
+        <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
+        <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
+        <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
+        <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <path d="M12 5.5v13M5.5 12h13" />
+    </svg>
+  );
+}
+
 function KpiCard({
   title,
   value,
@@ -3143,47 +3288,41 @@ function KpiCard({
 }: {
   title: string;
   value: number;
-  icon: string;
-  tone:
-    | "cyan"
-    | "green"
-    | "amber"
-    | "purple";
+  icon: "people" | "check" | "clock" | "grid" | "plus";
+  tone: "cyan" | "green" | "amber" | "purple";
 }) {
   const styles = {
     cyan: {
-      icon: "bg-cyan-500/10 text-cyan-300",
+      card: "border-cyan-400/30 bg-cyan-500/[0.08]",
+      icon: "bg-cyan-100 text-cyan-700 dark:bg-cyan-400/20 dark:text-cyan-100",
     },
     green: {
-      icon: "bg-emerald-500/10 text-emerald-300",
+      card: "border-emerald-400/30 bg-emerald-500/[0.08]",
+      icon: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-100",
     },
     amber: {
-      icon: "bg-amber-500/10 text-amber-300",
+      card: "border-amber-400/30 bg-amber-500/[0.10]",
+      icon: "bg-amber-100 text-amber-700 dark:bg-amber-400/20 dark:text-amber-100",
     },
     purple: {
-      icon: "bg-violet-500/10 text-violet-300",
+      card: "border-violet-400/30 bg-violet-500/[0.08]",
+      icon: "bg-violet-100 text-violet-700 dark:bg-violet-400/20 dark:text-violet-100",
     },
   }[tone];
 
   return (
-    <div
-      className="organization-card rounded-xl border border-border bg-surface p-4 transition-[border-color,box-shadow,background-color] duration-300 hover:border-cyan-400/20 hover:shadow-[0_12px_32px_rgba(8,47,73,0.10)]"
-    >
+    <div className={`rounded-xl border p-4 shadow-sm ${styles.card}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-wide text-text-dim">
             {title}
           </p>
-
           <p className="mt-1 text-lg font-black text-text">
             {value}
           </p>
         </div>
-
-        <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-md text-[12px] ${styles.icon}`}
-        >
-          {icon}
+        <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${styles.icon}`}>
+          <KpiIcon name={icon} />
         </div>
       </div>
     </div>
@@ -3194,52 +3333,52 @@ function KpiCard({
    AVATAR
 ========================================================= */
 
-function getDepartmentColor(
-  department: string,
-): string {
-  const value = department
-    .trim()
-    .toLowerCase();
-
-  if (value === "it") {
-    return "#22D3EE";
-  }
-
-  if (value === "mes") {
-    return "#A78BFA";
-  }
-
-  if (
-    value === "intelligent logistics"
-  ) {
-    return "#34D399";
-  }
-
-  return "#94A3B8";
+function departmentTone(department: string): "it" | "mes" | "logistics" | "neutral" {
+  const value = department.trim().toLowerCase();
+  if (value === "it" || value.includes("infrastructure")) return "it";
+  if (value === "mes") return "mes";
+  if (value.includes("logistic")) return "logistics";
+  return "neutral";
 }
 
-function getDepartmentBorderColor(
-  department: string,
-): string {
-  const value = department
-    .trim()
-    .toLowerCase();
+function getDepartmentColor(department: string): string {
+  const tone = departmentTone(department);
+  if (tone === "it") return "#0891B2";
+  if (tone === "mes") return "#7C3AED";
+  if (tone === "logistics") return "#D97706";
+  return "#64748B";
+}
 
-  if (value === "it") {
-    return "rgba(34, 211, 238, 0.35)";
-  }
+function getDepartmentBorderColor(department: string): string {
+  const tone = departmentTone(department);
+  if (tone === "it") return "rgba(8, 145, 178, 0.45)";
+  if (tone === "mes") return "rgba(124, 58, 237, 0.45)";
+  if (tone === "logistics") return "rgba(180, 83, 9, 0.45)";
+  return "rgba(100, 116, 139, 0.4)";
+}
 
-  if (value === "mes") {
-    return "rgba(167, 139, 250, 0.35)";
-  }
+function getDepartmentFill(department: string): string {
+  const tone = departmentTone(department);
+  if (tone === "it") return "rgba(8, 145, 178, 0.12)";
+  if (tone === "mes") return "rgba(124, 58, 237, 0.12)";
+  if (tone === "logistics") return "rgba(180, 83, 9, 0.12)";
+  return "rgba(100, 116, 139, 0.12)";
+}
 
-  if (
-    value === "intelligent logistics"
-  ) {
-    return "rgba(52, 211, 153, 0.35)";
-  }
+function DepartmentBadge({ department }: { department: string }) {
+  const tone = departmentTone(department);
+  const style = {
+    it: "border-cyan-400/40 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200",
+    mes: "border-violet-400/40 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+    logistics: "border-amber-400/40 bg-amber-500/10 text-amber-900 dark:text-amber-200",
+    neutral: "border-border bg-surface-hover text-text-muted",
+  }[tone];
 
-  return "rgba(148, 163, 184, 0.35)";
+  return (
+    <span className={`dept-${tone} rounded-full border px-1.5 py-0.5 text-[7px] font-semibold ${style}`}>
+      {department}
+    </span>
+  );
 }
 
 function Avatar({
@@ -3266,22 +3405,16 @@ function Avatar({
   return (
     <div
       className={[
-        "flex shrink-0 items-center justify-center rounded-full border bg-transparent font-semibold",
+        "flex shrink-0 items-center justify-center rounded-full border-2 bg-transparent font-semibold",
 
         large
           ? "size-16 text-base"
           : "size-9 text-[9px]",
       ].join(" ")}
       style={{
-        color: getDepartmentColor(
-          department,
-        ),
-        borderColor:
-          getDepartmentBorderColor(
-            department,
-          ),
-        backgroundColor:
-          "rgba(34, 211, 238, 0.035)",
+        color: getDepartmentColor(department),
+        borderColor: getDepartmentBorderColor(department),
+        backgroundColor: getDepartmentFill(department),
       }}
     >
       {initials}
