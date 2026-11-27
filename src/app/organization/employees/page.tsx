@@ -1876,6 +1876,18 @@ export default function OrganizationManagementPage() {
             box-shadow: 0 0 0 3px rgb(var(--org-cyan) / .12);
           }
 
+          [data-theme="light"] .organization-page .assign-field::placeholder {
+            color: #0f172a;
+            opacity: 0.5;
+            font-weight: 400;
+          }
+
+          [data-theme="dark"] .organization-page .assign-field::placeholder {
+            color: #e8eef8 !important;
+            opacity: 0.5;
+            font-weight: 400;
+          }
+
           [data-theme="dark"] .organization-page .assign-field {
             background: #121c2e !important;
             border: 1px solid #2a3b55 !important;
@@ -2960,6 +2972,32 @@ export default function OrganizationManagementPage() {
                     />
 
                     <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
+                      {isSupervisorPositionName(
+                        positions.find((position) => String(position.id) === form.positionId)?.name_en,
+                      ) ? null : (
+                        <div className="md:col-span-2">
+                          <FormField label={organizationText("manager", organizationLanguage)}>
+                            <CompactSelect
+                              value={form.managerId}
+                              onChange={(value) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  managerId: value,
+                                }))
+                              }
+                              placeholder={organizationText("noManager", organizationLanguage)}
+                              leading={<SupervisorMark name={selectedSupervisorName} />}
+                              options={employees
+                                .filter((employee) => employee.id !== Number(form.userId))
+                                .map((employee) => ({
+                                  value: String(employee.id),
+                                  label: `${employee.employeeId} — ${organizationLanguage === "cn" ? employee.nameCn || employee.name : employee.name}`,
+                                }))}
+                            />
+                          </FormField>
+                        </div>
+                      )}
+
                       <FormField
                         label={organizationText("position", organizationLanguage)}
                         required
@@ -2979,30 +3017,6 @@ export default function OrganizationManagementPage() {
                           }))}
                         />
                       </FormField>
-
-                      {isSupervisorPositionName(
-                        positions.find((position) => String(position.id) === form.positionId)?.name_en,
-                      ) ? null : (
-                        <FormField label={organizationText("manager", organizationLanguage)}>
-                          <CompactSelect
-                            value={form.managerId}
-                            onChange={(value) =>
-                              setForm((current) => ({
-                                ...current,
-                                managerId: value,
-                              }))
-                            }
-                            placeholder={organizationText("noManager", organizationLanguage)}
-                            leading={<SupervisorMark name={selectedSupervisorName} />}
-                            options={employees
-                              .filter((employee) => employee.id !== Number(form.userId))
-                              .map((employee) => ({
-                                value: String(employee.id),
-                                label: `${employee.employeeId} — ${organizationLanguage === "cn" ? employee.nameCn || employee.name : employee.name}`,
-                              }))}
-                          />
-                        </FormField>
-                      )}
 
                       <FormField label={organizationText("location", organizationLanguage)}>
                         <input
@@ -3032,6 +3046,7 @@ export default function OrganizationManagementPage() {
                     />
 
                     <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
+                      <div className="md:col-span-2">
                       <FormField label={organizationText("employmentType", organizationLanguage)}>
                         <CompactSelect
                           value={form.employmentType}
@@ -3053,6 +3068,7 @@ export default function OrganizationManagementPage() {
                           }))}
                         />
                       </FormField>
+                      </div>
 
                       <FormField label={organizationText("joinDate", organizationLanguage)}>
                         <input
@@ -3285,7 +3301,7 @@ function CompactSelect({
       >
         <span className="flex min-w-0 items-center gap-2">
           {leading}
-          <span className={`truncate ${selected ? "text-text" : "text-text-dim"}`}>
+          <span className={`truncate text-text ${selected ? "font-semibold" : "font-normal"}`}>
             {selected?.label ?? placeholder}
           </span>
         </span>
