@@ -199,8 +199,8 @@ const ORGANIZATION_TEXT = {
   ],
 
   departments: [
-    "Departments",
-    "部门数量",
+    "Divisions",
+    "部门",
   ],
 
   newThisMonth: [
@@ -224,8 +224,8 @@ const ORGANIZATION_TEXT = {
   ],
 
   allDepartments: [
-    "All Departments",
-    "所有部门",
+    "All Divisions",
+    "全部部门",
   ],
 
   allStatuses: [
@@ -254,7 +254,7 @@ const ORGANIZATION_TEXT = {
   ],
 
   department: [
-    "Department",
+    "Division",
     "部门",
   ],
 
@@ -1847,22 +1847,45 @@ export default function OrganizationManagementPage() {
           }
 
           .organization-page .compact-readonly-control {
-            min-height: 36px;
+            min-height: 40px;
             display: flex;
             align-items: center;
-            padding: 0 10px;
-            border: 1px solid rgb(var(--border-subtle));
+            padding: 0 12px;
+            border: 1px solid #fbfbfd;
             border-radius: 10px;
-            background: rgb(var(--surface-hover) / .45);
-            color: rgb(var(--text));
+            background: #f4f7fb;
+            color: #64748b;
             font-size: 11px;
             font-weight: 600;
           }
 
-          .dark .organization-page .compact-readonly-control {
-            background: rgb(30 41 59 / .35);
-            border-color: #26364f;
-            color: #e2e8f0;
+          [data-theme="dark"] .organization-page .compact-readonly-control {
+            background: #1c2942;
+            border-color: #151f32;
+            color: #8b9bb8;
+          }
+
+          [data-theme="light"] .organization-page .assign-field {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+          }
+
+          [data-theme="light"] .organization-page .assign-field:focus,
+          [data-theme="light"] .organization-page .assign-field:focus-visible {
+            border-color: rgb(var(--org-cyan) / .7);
+            box-shadow: 0 0 0 3px rgb(var(--org-cyan) / .12);
+          }
+
+          [data-theme="dark"] .organization-page .assign-field {
+            background: #121c2e !important;
+            border: 1px solid #2a3b55 !important;
+            color: #e8eef8 !important;
+          }
+
+          [data-theme="dark"] .organization-page .assign-field:focus,
+          [data-theme="dark"] .organization-page .assign-field:focus-visible {
+            border-color: rgb(34 211 238 / .75) !important;
+            box-shadow: 0 0 0 3px rgb(34 211 238 / .16) !important;
           }
 
           .dark .organization-page select {
@@ -2813,9 +2836,16 @@ export default function OrganizationManagementPage() {
             ADD / EDIT MODAL
         ================================================= */}
 
-        {showForm && (
+        {showForm && (() => {
+          const supervisor = employees.find((employee) => employee.id === Number(form.managerId));
+          const selectedSupervisorName = supervisor
+            ? organizationLanguage === "cn"
+              ? supervisor.nameCn || supervisor.name
+              : supervisor.name
+            : "";
+          return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[2px] sm:p-5">
-            <div className="flex max-h-[84vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_24px_70px_rgba(15,23,42,0.28)]">
+            <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_24px_70px_rgba(15,23,42,0.28)]">
               {/* HEADER */}
               <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3.5">
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -2853,45 +2883,37 @@ export default function OrganizationManagementPage() {
               </div>
 
               {/* BODY */}
-              <div className="overflow-y-auto px-4 py-3.5">
-                <div className="space-y-4">
+              <div className="overflow-y-auto px-5 py-4">
+                <div className="space-y-5">
                   {/* PERSONAL */}
                   <section>
-                    <div className="mb-2.5 flex items-center gap-2">
-                      <span className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 text-[13px]">👤</span>
-                      <div>
-                        <h3 className="text-[10px] font-bold text-text">
-                          {organizationText("personalInformation", organizationLanguage)}
-                        </h3>
-                        <p className="text-[8px] text-text-dim">
-                          {organizationLanguage === "cn" ? "员工身份" : "Employee identity"}
-                        </p>
-                      </div>
-                    </div>
+                    <AssignSectionHeading
+                      tone="violet"
+                      icon="person"
+                      title={organizationText("personalInformation", organizationLanguage)}
+                      description={organizationLanguage === "cn" ? "员工身份" : "Employee identity"}
+                    />
 
                     <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
                       {!editingEmployee && (
-                        <FormField
-                          label={organizationText("selectEmployee", organizationLanguage)}
-                          required
-                        >
-                          <CompactSelect
-                            value={form.userId}
-                            onChange={handleUserSelect}
-                            placeholder={organizationText("selectEmployeePlaceholder", organizationLanguage)}
-                            options={availableEmployees.map((employee) => ({
-                              value: String(employee.id),
-                              label: `${employee.employeeId} — ${employee.name}`,
-                            }))}
-                          />
-                        </FormField>
-                      )}
-
-                      <FormField label={organizationText("employeeId", organizationLanguage)}>
-                        <div className="compact-readonly-control">
-                          {form.employeeId || "—"}
+                        <div className="md:col-span-2">
+                          <FormField
+                            label={organizationText("selectEmployee", organizationLanguage)}
+                            required
+                          >
+                            <CompactSelect
+                              value={form.userId}
+                              onChange={handleUserSelect}
+                              placeholder={organizationText("selectEmployeePlaceholder", organizationLanguage)}
+                              leading={<SearchGlyph />}
+                              options={availableEmployees.map((employee) => ({
+                                value: String(employee.id),
+                                label: `${employee.employeeId} — ${employee.name}`,
+                              }))}
+                            />
+                          </FormField>
                         </div>
-                      </FormField>
+                      )}
 
                       <FormField label={organizationText("fullName", organizationLanguage)}>
                         <div className="compact-readonly-control">
@@ -2902,6 +2924,12 @@ export default function OrganizationManagementPage() {
                       <FormField label={organizationText("chineseName", organizationLanguage)}>
                         <div className="compact-readonly-control">
                           {form.nameCn || "—"}
+                        </div>
+                      </FormField>
+
+                      <FormField label={organizationText("employeeId", organizationLanguage)}>
+                        <div className="compact-readonly-control">
+                          {form.employeeId || "—"}
                         </div>
                       </FormField>
 
@@ -2924,17 +2952,12 @@ export default function OrganizationManagementPage() {
 
                   {/* ORGANIZATION */}
                   <section>
-                    <div className="mb-2.5 flex items-center gap-2">
-                      <span className="flex size-7 items-center justify-center rounded-lg bg-cyan-500/10 text-[13px]">🏢</span>
-                      <div>
-                        <h3 className="text-[10px] font-bold text-text">
-                          {organizationText("organizationInformation", organizationLanguage)}
-                        </h3>
-                        <p className="text-[8px] text-text-dim">
-                          {organizationLanguage === "cn" ? "组织与汇报关系" : "Work structure and reporting line"}
-                        </p>
-                      </div>
-                    </div>
+                    <AssignSectionHeading
+                      tone="cyan"
+                      icon="building"
+                      title={organizationText("organizationInformation", organizationLanguage)}
+                      description={organizationLanguage === "cn" ? "组织与汇报关系" : "Work structure and reporting line"}
+                    />
 
                     <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
                       <FormField
@@ -2970,6 +2993,7 @@ export default function OrganizationManagementPage() {
                               }))
                             }
                             placeholder={organizationText("noManager", organizationLanguage)}
+                            leading={<SupervisorMark name={selectedSupervisorName} />}
                             options={employees
                               .filter((employee) => employee.id !== Number(form.userId))
                               .map((employee) => ({
@@ -2989,7 +3013,7 @@ export default function OrganizationManagementPage() {
                               location: event.target.value,
                             }))
                           }
-                          className="organization-input compact-form-control rounded-lg"
+                          className="organization-input assign-field compact-form-control rounded-lg"
                           placeholder="Head Office / Site A / Plant 1"
                         />
                       </FormField>
@@ -3000,17 +3024,12 @@ export default function OrganizationManagementPage() {
 
                   {/* EMPLOYMENT */}
                   <section>
-                    <div className="mb-2.5 flex items-center gap-2">
-                      <span className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-[13px]">💼</span>
-                      <div>
-                        <h3 className="text-[10px] font-bold text-text">
-                          {organizationText("employmentInformation", organizationLanguage)}
-                        </h3>
-                        <p className="text-[8px] text-text-dim">
-                          {organizationLanguage === "cn" ? "雇佣信息" : "Employment details"}
-                        </p>
-                      </div>
-                    </div>
+                    <AssignSectionHeading
+                      tone="amber"
+                      icon="briefcase"
+                      title={organizationText("employmentInformation", organizationLanguage)}
+                      description={organizationLanguage === "cn" ? "雇佣信息" : "Employment details"}
+                    />
 
                     <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
                       <FormField label={organizationText("employmentType", organizationLanguage)}>
@@ -3045,13 +3064,14 @@ export default function OrganizationManagementPage() {
                               joinDate: event.target.value,
                             }))
                           }
-                          className="organization-input compact-form-control rounded-lg"
+                          className="organization-input assign-field compact-form-control rounded-lg"
                         />
                       </FormField>
 
                       <FormField label={organizationText("status", organizationLanguage)}>
                         <CompactSelect
                           value={form.status}
+                          leading={<StatusDot status={form.status} />}
                           onChange={(value) =>
                             setForm((current) => ({
                               ...current,
@@ -3103,10 +3123,111 @@ export default function OrganizationManagementPage() {
               </div>
             </div>
           </div>
-        )}
+        );
+        })()}
       </div>
     </AppShell>
     </OrganizationGate>
+  );
+}
+
+/* =========================================================
+   ASSIGN FORM CHROME
+========================================================= */
+
+function AssignSectionHeading({
+  tone,
+  icon,
+  title,
+  description,
+}: {
+  tone: "violet" | "cyan" | "amber";
+  icon: "person" | "building" | "briefcase";
+  title: string;
+  description: string;
+}) {
+  const toneClass = {
+    violet: "bg-violet-500/10 text-violet-600 dark:text-violet-300",
+    cyan: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300",
+    amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  }[tone];
+
+  return (
+    <div className="mb-3 flex items-center gap-2.5">
+      <span className={`flex size-8 items-center justify-center rounded-lg ${toneClass}`}>
+        {icon === "person" ? <PersonGlyph /> : icon === "building" ? <BuildingGlyph /> : <BriefcaseGlyph />}
+      </span>
+      <div>
+        <h3 className="text-[12px] font-bold text-text">{title}</h3>
+        <p className="text-[9px] text-text-dim">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function PersonGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5.5 19c.8-3 3-4.5 6.5-4.5s5.7 1.5 6.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BuildingGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 20h16M6 20V6.5A1.5 1.5 0 0 1 7.5 5h9A1.5 1.5 0 0 1 18 6.5V20" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M9 9h2M13 9h2M9 13h2M13 13h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BriefcaseGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="7" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 12h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SearchGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0 text-text-dim">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M16 16.5 20 20.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StatusDot({ status }: { status: EmployeeStatus }) {
+  const color = {
+    Active: "bg-emerald-500",
+    "On Leave": "bg-amber-500",
+    Inactive: "bg-slate-400",
+    Resigned: "bg-rose-500",
+  }[status];
+  return <span className={`size-2 shrink-0 rounded-full ${color}`} aria-hidden="true" />;
+}
+
+function SupervisorMark({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+  return (
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[8px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+      {initials || (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M6 19c.7-2.6 2.8-4 6-4s5.3 1.4 6 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      )}
+    </span>
   );
 }
 
@@ -3125,12 +3246,14 @@ function CompactSelect({
   options,
   placeholder = "Select...",
   disabled = false,
+  leading,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: CompactSelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  leading?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -3156,19 +3279,26 @@ function CompactSelect({
         type="button"
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
-        className="organization-input compact-form-control flex w-full items-center justify-between gap-3 rounded-lg text-left disabled:cursor-not-allowed disabled:opacity-50"
+        className="organization-input assign-field compact-form-control flex w-full items-center justify-between gap-3 rounded-lg text-left disabled:cursor-not-allowed disabled:opacity-50"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={`truncate ${selected ? "text-text" : "text-text-dim"}`}>
-          {selected?.label ?? placeholder}
+        <span className="flex min-w-0 items-center gap-2">
+          {leading}
+          <span className={`truncate ${selected ? "text-text" : "text-text-dim"}`}>
+            {selected?.label ?? placeholder}
+          </span>
         </span>
-        <span
-          className={`shrink-0 text-[13px] text-text-dim transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
           aria-hidden="true"
+          className={`shrink-0 text-text-dim transition-transform duration-150 ${open ? "rotate-180" : ""}`}
         >
-          ⌄
-        </span>
+          <path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
 
       {open && !disabled && (
